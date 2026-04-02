@@ -159,7 +159,23 @@ export default function Hero({
   return (
     <section className="hero-section w-full flex flex-col items-center px-4 relative z-[1] -mt-[92px]">
       <div className="hero-grid w-full max-w-[1320px] grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(560px,640px)] items-start overflow-visible">
-        <div className="w-full flex flex-col items-center xl:items-start text-center xl:text-left bg-transparent">
+        <div className="hero-mobile-headline xl:hidden w-full order-1">
+          <h1
+            className="font-bold leading-[0.96] text-center"
+            style={{
+              fontSize: "clamp(2.55rem, 6.1vw + 0.5rem, 6.5rem)",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            <span className="hero-headline-primary">Public </span>
+            {identitySpan}
+            <br />
+            <span className="hero-headline-primary">Private </span>
+            {activitySpan}
+          </h1>
+        </div>
+
+        <div className="w-full flex flex-col items-center xl:items-start text-center xl:text-left bg-transparent order-3 xl:order-none">
           <div
             className="hidden xl:block w-full overflow-hidden"
             style={{
@@ -190,27 +206,11 @@ export default function Hero({
             </h1>
           </div>
 
-          <div className="hero-mobile-headline xl:hidden w-full">
-            <h1
-              className="font-bold leading-[0.96] text-center"
-              style={{
-                fontSize: "clamp(2.55rem, 6.1vw + 0.5rem, 6.5rem)",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              <span className="hero-headline-primary">Public </span>
-              {identitySpan}
-              <br />
-              <span className="hero-headline-primary">Private </span>
-              {activitySpan}
-            </h1>
-          </div>
-
           <p
             className="type-section-subtitle text-center xl:text-left"
             style={{ color: "var(--fg-body)", letterSpacing: "-0.01em", marginBottom: "1.75rem" }}
           >
-            Shielded transactions with a simple name instead of long addresses.
+            Shielded transactions with simple names instead of long addresses.
           </p>
 
           <div
@@ -254,7 +254,7 @@ export default function Hero({
         {rightPanel && (
           <div
             ref={phonePanelRef}
-            className="order-first xl:order-none w-full flex justify-center xl:justify-end items-start overflow-visible"
+            className="order-2 xl:order-none w-full flex justify-center xl:justify-end items-start overflow-visible"
           >
             {rightPanel}
           </div>

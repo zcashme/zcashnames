@@ -106,16 +106,29 @@ export default function HowItWorks() {
         </div>
       </div>
 
-      {/* Explainer text */}
+      {/* Benefits heading — same style as FAQ / How It Works */}
+      <div className="flex items-center justify-center gap-3.5 mb-14 mt-24">
+        <span
+          className="block shrink-0 w-[clamp(24px,9vw,96px)] h-px"
+          style={{ background: "linear-gradient(90deg, var(--feature-heading-line-from) 0%, var(--feature-heading-line-to) 100%)" }}
+          aria-hidden="true"
+        />
+        <p
+          className="relative z-[1] whitespace-nowrap px-3.5 m-0 bg-clip-text text-transparent type-kicker"
+          style={{ backgroundImage: "var(--feature-heading-gradient)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+        >Benefits</p>
+        <span
+          className="block shrink-0 w-[clamp(24px,9vw,96px)] h-px"
+          style={{ background: "linear-gradient(90deg, var(--feature-heading-line-to) 0%, var(--feature-heading-line-from) 100%)" }}
+          aria-hidden="true"
+        />
+      </div>
+
+      {/* Explainer box */}
       <div
         className="rounded-xl p-8"
         style={{ border: "1px solid var(--faq-border)" }}
       >
-        <h3
-          className="type-section-subtitle font-semibold mb-4 text-center"
-          style={{ color: "var(--fg-heading)" }}
-        >What You Can Do with a .zcash Name</h3>
-
         <div className="space-y-3" style={{ color: "var(--fg-muted)" }}>
           <p className="type-section-subtitle">
             <strong style={{ color: "var(--fg-heading)" }}>Send and Receive Without Long Addresses</strong>{" "}

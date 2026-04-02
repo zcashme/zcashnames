@@ -76,7 +76,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={uiSans.variable}>
         <ThemeProvider
           attribute="data-theme"
-          defaultTheme="monochrome"
+          defaultTheme="dark"
           themes={["dark", "light", "monochrome"]}
         >
         <StatusProvider>
