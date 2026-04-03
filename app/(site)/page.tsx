@@ -15,9 +15,11 @@ import { useStatus } from "@/components/StatusToggle";
 import { resolveName } from "@/lib/zns/resolve";
 import { normalizeUsername } from "@/lib/zns/name";
 import { isPopularName } from "@/lib/name-frequency";
-import type { ResolveName } from "@/lib/types";
+import type { ResolveName, Action } from "@/lib/types";
 import { confirmWaitlistEmail } from "@/lib/waitlist/waitlist";
 import SurveyForm from "@/components/SurveyForm";
+import Zip321Modal from "@/components/landing/Zip321Modal";
+import type { ModalTarget } from "@/components/landing/Zip321Modal";
 
 const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), { ssr: false });
 
@@ -44,7 +46,7 @@ function verifiedModalViewTransform(
 }
 
 export default function HomePage() {
-  const { status, isSearchMode, network, refresh } = useStatus();
+  const { status, isSearchMode, network, networkPassword, refresh } = useStatus();
 
   const [input, setInput] = useState("");
   const [results, setResults] = useState<ResolveName[]>([]);
@@ -61,6 +63,7 @@ export default function HomePage() {
   const [surveyContactMsg, setSurveyContactMsg] = useState(false);
   const [isClientMounted, setIsClientMounted] = useState(false);
   const [tokenConfirming, setTokenConfirming] = useState(false);
+  const [modalTarget, setModalTarget] = useState<ModalTarget | null>(null);
 
   useEffect(() => {
     setIsClientMounted(true);
@@ -206,7 +209,18 @@ export default function HomePage() {
               onAction={(action) => {
                 if (action === "remove") {
                   setResults((prev) => prev.filter((existing) => existing.query !== item.query));
+                  return;
                 }
+                const t: ModalTarget = {
+                  name: item.query,
+                  action: action as Action,
+                  network,
+                  networkPassword,
+                };
+                if (item.status === "registered" || item.status === "listed") {
+                  t.registrationAddress = item.registration.address;
+                }
+                setModalTarget(t);
               }}
               onDismiss={() =>
                 setResults((prev) => prev.filter((existing) => existing.query !== item.query))
@@ -502,6 +516,10 @@ export default function HomePage() {
           document.body,
         );
       })()}
+
+      {isClientMounted && modalTarget && (
+        <Zip321Modal target={modalTarget} onClose={() => setModalTarget(null)} />
+      )}
     </div>
   );
 }
