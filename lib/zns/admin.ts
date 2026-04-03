@@ -8,10 +8,11 @@
 
 import crypto from "node:crypto";
 import type { Network } from "./name";
-import { resolve, buildListMemo, buildDelistMemo, buildUpdateMemo, buildClaimMemo, buildBuyMemo } from "./client";
+import { resolve, buildListMemo, buildDelistMemo, buildReleaseMemo, buildUpdateMemo, buildClaimMemo, buildBuyMemo } from "./client";
 import {
   listPayload,
   delistPayload,
+  releasePayload,
   updatePayload,
   claimPayload,
   buyPayload,
@@ -76,6 +77,22 @@ export async function buildSignedDelistMemo(
   const payload = delistPayload(name, nonce);
   const sig = adminSign(payload);
   return { memo: buildDelistMemo(name, nonce, sig), nonce };
+}
+
+/**
+ * Build a complete signed release memo with current nonce.
+ * Permanently removes a name registration from the indexer.
+ */
+export async function buildSignedReleaseMemo(
+  name: string,
+  network: Network = "testnet"
+): Promise<{ memo: string; nonce: number }> {
+  const reg = await resolve(name, network);
+  if (!reg) throw new Error(`Name "${name}" is not registered.`);
+  const nonce = reg.nonce + 1;
+  const payload = releasePayload(name, nonce);
+  const sig = adminSign(payload);
+  return { memo: buildReleaseMemo(name, nonce, sig), nonce };
 }
 
 /**

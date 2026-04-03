@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useState } from "react";
 
 type AvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
-type ResultAction = "claim" | "buy" | "update" | "list" | "delist" | "remove" | "unlock";
+type ResultAction = "claim" | "buy" | "update" | "list" | "delist" | "release" | "remove" | "unlock";
 
 interface HomeResultCardProps {
   displayName: string;
@@ -260,6 +260,13 @@ export default function HomeResultCard({
                 >
                   Delist from Sale
                 </button>
+                <button
+                  type="button"
+                  className="home-result-action is-secondary"
+                  onClick={() => onAction("release")}
+                >
+                  Release Name
+                </button>
               </>
             )}
           </div>
@@ -285,9 +292,9 @@ export default function HomeResultCard({
           <button
             type="button"
             className="home-result-action is-secondary"
-            onClick={() => onAction("remove")}
+            onClick={() => onAction("release")}
           >
-            Remove
+            Release Name
           </button>
         </div>
       )}

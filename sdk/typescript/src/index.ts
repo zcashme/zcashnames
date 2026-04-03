@@ -25,11 +25,13 @@ export {
   buyPayload,
   listPayload,
   delistPayload,
+  releasePayload,
   updatePayload,
   buildClaimMemo,
   buildBuyMemo,
   buildListMemo,
   buildDelistMemo,
+  buildReleaseMemo,
   buildUpdateMemo,
 } from "./memo.js";
 

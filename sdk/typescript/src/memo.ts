@@ -26,6 +26,10 @@ export function delistPayload(name: string, nonce: number): string {
   return `DELIST:${name}:${nonce}`;
 }
 
+export function releasePayload(name: string, nonce: number): string {
+  return `RELEASE:${name}:${nonce}`;
+}
+
 export function updatePayload(name: string, newUa: string, nonce: number): string {
   return `UPDATE:${name}:${newUa}:${nonce}`;
 }
@@ -57,6 +61,11 @@ export function buildListMemo(
 export function buildDelistMemo(name: string, nonce: number, signature: string): string {
   requireName(name);
   return `ZNS:DELIST:${name}:${nonce}:${signature}`;
+}
+
+export function buildReleaseMemo(name: string, nonce: number, signature: string): string {
+  requireName(name);
+  return `ZNS:RELEASE:${name}:${nonce}:${signature}`;
 }
 
 export function buildUpdateMemo(

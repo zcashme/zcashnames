@@ -52,7 +52,7 @@ export type ZnsStatus = {
 export type ZnsEvent = {
   id: number;
   name: string;
-  action: "CLAIM" | "BUY" | "LIST" | "DELIST" | "UPDATE";
+  action: "CLAIM" | "BUY" | "LIST" | "DELIST" | "UPDATE" | "RELEASE";
   ua: string | null;
   txid: string;
   height: number;
@@ -189,6 +189,14 @@ export function buildDelistMemo(
   return `ZNS:DELIST:${name}:${nonce}:${signature}`;
 }
 
+export function buildReleaseMemo(
+  name: string,
+  nonce: number,
+  signature: string
+): string {
+  return `ZNS:RELEASE:${name}:${nonce}:${signature}`;
+}
+
 export function buildUpdateMemo(
   name: string,
   newUa: string,
@@ -216,6 +224,10 @@ export function listPayload(name: string, price: number, nonce: number): string 
 
 export function delistPayload(name: string, nonce: number): string {
   return `DELIST:${name}:${nonce}`;
+}
+
+export function releasePayload(name: string, nonce: number): string {
+  return `RELEASE:${name}:${nonce}`;
 }
 
 export function updatePayload(name: string, newUa: string, nonce: number): string {

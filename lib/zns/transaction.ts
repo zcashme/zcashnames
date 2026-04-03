@@ -6,6 +6,7 @@ import {
   buildSignedBuyMemo,
   buildSignedListMemo,
   buildSignedDelistMemo,
+  buildSignedReleaseMemo,
   buildSignedUpdateMemo,
 } from "@/lib/zns/admin";
 import { normalizeUsername, isValidUsername, validateAddress, zatsToZec, type Network } from "@/lib/zns/name";
@@ -58,7 +59,7 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
   if (!verifyNetworkPassword(network, input.password)) {
     return { ok: false, error: "Invalid network password." };
   }
-  const needsOtp = input.action === "update" || input.action === "list" || input.action === "delist";
+  const needsOtp = input.action === "update" || input.action === "list" || input.action === "delist" || input.action === "release";
 
   let reg = needsOtp ? await resolve(name, network) : null;
   if (needsOtp) {
@@ -142,6 +143,15 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
       }
       case "delist": {
         const { memo } = await buildSignedDelistMemo(name, network);
+        return {
+          ok: true,
+          memo,
+          amount: 100_000,
+          amountZec: 0.001,
+        };
+      }
+      case "release": {
+        const { memo } = await buildSignedReleaseMemo(name, network);
         return {
           ok: true,
           memo,

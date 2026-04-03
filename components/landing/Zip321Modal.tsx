@@ -56,6 +56,7 @@ const ACTION_LABEL: Record<Action, string> = {
   update: "Update Address",
   list: "List for Sale",
   delist: "Delist",
+  release: "Release Name",
 };
 
 function parsePrice(raw: string): number | null {
@@ -76,7 +77,7 @@ export default function Zip321Modal({ target, onClose }: Zip321ModalProps) {
 
   const needsAddress = action === "claim" || action === "buy" || action === "update";
   const needsPrice = action === "list";
-  const needsOtp = action === "update" || action === "list" || action === "delist";
+  const needsOtp = action === "update" || action === "list" || action === "delist" || action === "release";
   const displayName = `${name}.zcash`;
 
   // Phase
@@ -322,13 +323,15 @@ export default function Zip321Modal({ target, onClose }: Zip321ModalProps) {
                 {ACTION_LABEL[action]}
               </h2>
               <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
-                {action === "delist"
-                  ? <>Remove <strong>{displayName}</strong> from sale.</>
-                  : action === "list"
-                    ? <>Set a price for <strong>{displayName}</strong>.</>
-                    : action === "update"
-                      ? <>Set a new address for <strong>{displayName}</strong>.</>
-                      : <><strong>{displayName}</strong></>}
+                {action === "release"
+                  ? <>Permanently release <strong>{displayName}</strong>. This cannot be undone.</>
+                  : action === "delist"
+                    ? <>Remove <strong>{displayName}</strong> from sale.</>
+                    : action === "list"
+                      ? <>Set a price for <strong>{displayName}</strong>.</>
+                      : action === "update"
+                        ? <>Set a new address for <strong>{displayName}</strong>.</>
+                        : <><strong>{displayName}</strong></>}
               </p>
             </div>
 

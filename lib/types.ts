@@ -50,7 +50,7 @@ export function getNetworkConstants(network: Network = "testnet"): NetworkConsta
 export const MAX_LIST_FOR_SALE_AMOUNT = 21_000_000;
 
 /** The five operations a user can perform on a Zcash name. */
-export type Action = "claim" | "buy" | "update" | "list" | "delist";
+export type Action = "claim" | "buy" | "update" | "list" | "delist" | "release";
 
 /**
  * Result of resolving a name query. Discriminated union representing the three possible states.
