@@ -118,7 +118,8 @@ export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Pro
 
     const rafId = requestAnimationFrame(() => {
       const target = nameFieldTopRef.current;
-      if (target) {
+      const isMobile = window.innerWidth < 768;
+      if (isMobile && target) {
         const top = window.scrollY + target.getBoundingClientRect().top;
         const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         window.scrollTo({ top, behavior: prefersReducedMotion ? "auto" : "smooth" });
