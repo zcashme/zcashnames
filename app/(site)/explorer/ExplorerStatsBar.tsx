@@ -11,16 +11,21 @@ export type ExplorerStats = {
   uivk: string;
 } | null;
 
-export function useExplorerStats(network: Network) {
+export function useExplorerStats(network: Network, refreshKey = 0) {
   const [stats, setStats] = useState<ExplorerStats>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     getHomeStats(network).then((s) => {
-      if (!cancelled) setStats(s);
+      if (!cancelled) {
+        setStats(s);
+        setLoading(false);
+      }
     });
     return () => { cancelled = true; };
-  }, [network]);
+  }, [network, refreshKey]);
 
-  return stats;
+  return { stats, loading };
 }
