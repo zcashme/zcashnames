@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { checkNetworkPassword } from "@/lib/zns/transaction";
 import { getHomeStats } from "@/lib/zns/resolve";
 import { getWaitlistStats } from "@/lib/waitlist/waitlist";
@@ -117,6 +118,7 @@ const TABS: { key: StatusState; label: string }[] = [
 ];
 
 export default function StatusToggle() {
+  const pathname = usePathname();
   const { status, setStatus, setNetworkPassword } = useStatus();
 
   const [showModal, setShowModal] = useState(false);
@@ -168,6 +170,8 @@ export default function StatusToggle() {
     setInput("");
     setError(false);
   }
+
+  if (pathname !== "/") return null;
 
   return (
     <>

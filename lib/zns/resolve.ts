@@ -1,6 +1,6 @@
 "use server";
 
-import { resolve, registrationStatus, status, fetchClaimCost, events } from "@/lib/zns/client";
+import { resolve, registrationStatus, status, fetchClaimCost, events, listForSale, type ZnsListing } from "@/lib/zns/client";
 import { normalizeUsername, isValidUsername, zatsToZec, type Network } from "@/lib/zns/name";
 import { getExchangeRate } from "@/lib/exchange-rate";
 import { getReservedName } from "@/lib/zns/reserved";
@@ -96,6 +96,14 @@ export async function getHomeStats(network: Network = "testnet"): Promise<{ clai
 
 export async function getUsdPerZec(): Promise<number | null> {
   return getExchangeRate();
+}
+
+export async function getListings(network: Network = "testnet"): Promise<ZnsListing[]> {
+  try {
+    return await listForSale(network);
+  } catch {
+    return [];
+  }
 }
 
 export async function getEvents(

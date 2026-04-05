@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function ExplorerPage() {
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-8 sm:px-6">
+    <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-4 sm:px-6">
       <ExplorerShell />
     </main>
   );

@@ -60,20 +60,20 @@ const ExplorerSearch = forwardRef<ExplorerSearchHandle, { network: Network; onAc
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
             placeholder="Search a name or address..."
-            className="flex-1 rounded-xl px-4 py-3 text-sm outline-none"
+            className="flex-1 rounded-2xl border px-4 py-3 text-sm outline-none"
             style={{
               background: "var(--color-raised)",
-              border: "1.5px solid var(--faq-border)",
+              borderColor: "var(--leaders-card-border)",
               color: "var(--fg-heading)",
             }}
           />
           <button
             type="button"
             onClick={() => handleSearch()}
-            className="rounded-xl px-5 py-3 text-sm font-bold transition-opacity hover:opacity-80 cursor-pointer"
+            className="rounded-2xl px-5 py-3 text-sm font-bold transition-opacity hover:opacity-80 cursor-pointer"
             style={{
-              background: "var(--fg-heading)",
-              color: "var(--bg-base, #fff)",
+              background: "var(--leaders-rank-gold)",
+              color: "var(--leaders-rank-text)",
             }}
           >
             Search
@@ -82,12 +82,12 @@ const ExplorerSearch = forwardRef<ExplorerSearchHandle, { network: Network; onAc
 
         {isActive && (
           <div
-            className="rounded-xl p-5"
-            style={{ background: "var(--feature-card-bg)", border: "1px solid var(--faq-border)" }}
+            className="rounded-2xl border p-5"
+            style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)" }}
           >
             {searching ? (
               <div className="flex items-center gap-2 text-fg-muted text-sm">
-                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-fg-dim border-t-fg-heading" />
+                <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-fg-dim border-t-transparent" />
                 Searching...
               </div>
             ) : nameResult && (
@@ -99,11 +99,11 @@ const ExplorerSearch = forwardRef<ExplorerSearchHandle, { network: Network; onAc
                       className="rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide"
                       style={{
                         background: nameResult.status === "available"
-                          ? "var(--accent-green, #22c55e)"
+                          ? "var(--color-accent-green)"
                           : nameResult.status === "listed"
                           ? "var(--color-brand-blue, #3b82f6)"
                           : "var(--fg-dim)",
-                        color: "#fff",
+                        color: "var(--leaders-rank-text)",
                       }}
                     >
                       {nameResult.status === "listed" ? "For Sale" : nameResult.status}
@@ -149,7 +149,7 @@ const ExplorerSearch = forwardRef<ExplorerSearchHandle, { network: Network; onAc
                 )}
 
                 {nameEvents.length > 0 && (
-                  <div className="flex flex-col gap-2 border-t pt-3" style={{ borderColor: "var(--faq-border)" }}>
+                  <div className="flex flex-col gap-2 border-t pt-3" style={{ borderColor: "var(--leaders-card-border)" }}>
                     <h3 className="text-sm font-semibold text-fg-heading">History</h3>
                     {nameEvents.map((ev) => (
                       <div key={ev.id} className="flex items-center gap-3 text-sm">
