@@ -110,8 +110,8 @@ export default function FAQ() {
   };
 
   return (
-    <section className="w-full max-w-3xl mx-auto px-6 py-24">
-      <div className="flex items-center justify-center gap-3.5 mb-12">
+    <section className="w-full max-w-3xl mx-auto px-6 pt-0 pb-24">
+      <div className="flex items-center justify-center gap-3.5 mb-14">
         <span
           className="block shrink-0 w-[clamp(24px,9vw,96px)] h-px"
           style={{ background: "linear-gradient(90deg, var(--feature-heading-line-from) 0%, var(--feature-heading-line-to) 100%)" }}

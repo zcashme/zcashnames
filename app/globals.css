@@ -812,7 +812,7 @@ body::after {
 
 @media (min-width: 640px) {
   .hero-section {
-    padding-top: 148px;
+    padding-top: calc(92px + 3.5rem);
     padding-bottom: 7rem; /* preserves sm:pb-28 */
   }
 }

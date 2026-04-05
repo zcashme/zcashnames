@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "ZcashNames — Public names. Private lives.";
+export const alt = "ZcashNames — Personal name. Shielded address.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -52,7 +52,7 @@ export default async function OGImage() {
               color: "#888888",
             }}
           >
-            Public names. Private lives.
+            Personal name. Shielded address.
           </span>
         </div>
       </div>

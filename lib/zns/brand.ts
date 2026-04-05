@@ -1,7 +1,7 @@
 export const BRAND = {
   name: "ZcashNames",
   title: "ZcashNames",
-  description: "Public names. Private lives.",
+  description: "Personal name. Shielded address.",
   url: "https://www.zcashnames.com",
   logo: "https://www.zcashnames.com/landing/z4.png",
   twitter: "@zcashnames",

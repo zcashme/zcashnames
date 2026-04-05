@@ -33,4 +33,5 @@ npm-debug.log*
 
 # source copy / scaffolds
 .source_zcashname/
+_upstream_zcashname/
 spell-ui/

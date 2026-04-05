@@ -130,7 +130,7 @@ export default function Hero({
       style={{ color: "var(--hero-headline-accent)" }}
       onMouseEnter={handleActivityHover}
     >
-      lives.
+      address.
       <span className="hero-redact-bar" />
     </span>
   );
@@ -141,7 +141,7 @@ export default function Hero({
       onMouseEnter={handleIdentityHover}
     >
       <span className="hero-identity-text" style={{ color: "var(--hero-headline-accent)" }}>
-        names.
+        name.
       </span>
       <svg className="hero-checkmark-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path
@@ -158,7 +158,7 @@ export default function Hero({
 
   return (
     <section className="hero-section w-full flex flex-col items-center px-4 relative z-[1] -mt-[92px]">
-      <div className="hero-grid w-full max-w-[1320px] grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(560px,640px)] items-start overflow-visible">
+      <div className="hero-grid w-full max-w-[1320px] grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(560px,640px)] items-start xl:items-center overflow-visible">
         <div className="hero-mobile-headline xl:hidden w-full order-1">
           <h1
             className="font-bold leading-[0.96] text-center"
@@ -167,12 +167,18 @@ export default function Hero({
               letterSpacing: "-0.02em",
             }}
           >
-            <span className="hero-headline-primary">Public </span>
+            <span className="hero-headline-primary">Personal </span>
             {identitySpan}
             <br />
-            <span className="hero-headline-primary">Private </span>
+            <span className="hero-headline-primary">Shielded </span>
             {activitySpan}
           </h1>
+          <p
+            className="type-section-subtitle text-center mt-4"
+            style={{ color: "var(--fg-body)", letterSpacing: "-0.01em" }}
+          >
+            Private transactions with human names instead of long strings.
+          </p>
         </div>
 
         <div className="w-full flex flex-col items-center xl:items-start text-center xl:text-left bg-transparent order-3 xl:order-none">
@@ -196,21 +202,21 @@ export default function Hero({
                 letterSpacing: "-0.02em",
               }}
             >
-              <span className="hero-headline-primary">Public</span>
+              <span className="hero-headline-primary">Personal</span>
               <br />
               {identitySpan}
               <br />
-              <span className="hero-headline-primary">Private</span>
+              <span className="hero-headline-primary">Shielded</span>
               <br />
               {activitySpan}
             </h1>
           </div>
 
           <p
-            className="type-section-subtitle text-center xl:text-left"
+            className="type-section-subtitle hidden xl:block text-center xl:text-left"
             style={{ color: "var(--fg-body)", letterSpacing: "-0.01em", marginBottom: "1.75rem" }}
           >
-            Shielded transactions with simple names instead of long addresses.
+            Private transactions with human names instead of long strings.
           </p>
 
           <div
