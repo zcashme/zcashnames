@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import ExplorerToolbar, { type Environment, type SortBy } from "./ExplorerToolbar";
-import ExplorerContent, { type ExplorerTab, type TabCounts } from "./ExplorerContent";
+import ExplorerContent, { type ExplorerTab, type TabCounts, type TaggedEvent, type TaggedListing } from "./ExplorerContent";
 import ExplorerNameDetail from "./ExplorerNameDetail";
-import { useExplorerStats } from "./ExplorerStatsBar";
+import type { ResolveName } from "@/lib/types";
+import type { ZnsEvent } from "@/lib/zns/client";
 
 const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "all", label: "All" },
@@ -22,68 +24,133 @@ const MORE_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "RELEASE", label: "Release" },
 ];
 
-export default function ExplorerShell() {
+interface ExplorerShellProps {
+  initialEvents: TaggedEvent[];
+  initialEventsTotal: number;
+  initialListings: TaggedListing[];
+  stats: {
+    claimed: number;
+    forSale: number;
+    verifiedOnZcashMe: number;
+    syncedHeight: number;
+    uivk: string;
+  };
+  environment: Environment;
+  nameQuery: string;
+  nameResult: ResolveName | null;
+  nameEvents: (ZnsEvent & { network: string })[];
+}
+
+export default function ExplorerShell({
+  initialEvents,
+  initialEventsTotal,
+  initialListings,
+  stats,
+  environment,
+  nameQuery,
+  nameResult,
+  nameEvents,
+}: ExplorerShellProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [optimisticEnv, setOptimisticEnv] = useOptimistic(environment);
+  const [optimisticName, setOptimisticName] = useOptimistic(nameQuery);
+
   const [activeTab, setActiveTab] = useState<ExplorerTab>("all");
-  const [environment, setEnvironment] = useState<Environment>("testnet");
   const [sortBy, setSortBy] = useState<SortBy>("height");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [nameDetailQuery, setNameDetailQuery] = useState("");
-  const [tabCounts, setTabCounts] = useState<TabCounts | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [searchQuery, setSearchQuery] = useState(nameQuery || "");
+
+  const ACTION_TYPES = ["CLAIM", "BUY", "LIST", "DELIST", "UPDATE", "RELEASE"] as const;
+  const tabCounts = useMemo(() => {
+    const counts: TabCounts = {
+      all: initialEvents.length,
+      forsale: initialListings.length,
+      registered: initialEvents.filter((ev) => ev.action === "CLAIM").length,
+      admin: initialEvents.filter((ev) => ev.name === "").length,
+    };
+    for (const action of ACTION_TYPES) {
+      counts[action] = initialEvents.filter((ev) => ev.action === action).length;
+    }
+    return counts;
+  }, [initialEvents, initialListings]);
+
+  // Sync search input with URL name param (back/forward navigation)
+  const [prevNameQuery, setPrevNameQuery] = useState(nameQuery);
+  if (prevNameQuery !== nameQuery) {
+    setPrevNameQuery(nameQuery);
+    setSearchQuery(nameQuery);
+  }
 
   const [moreOpen, setMoreOpen] = useState(false);
-  const moreRef = useRef<HTMLDivElement>(null);
 
   const [uivkOpen, setUivkOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Close "More" dropdown on outside click
-  useEffect(() => {
-    if (!moreOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
-        setMoreOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [moreOpen]);
-
   const isMoreTabActive = MORE_TABS.some((t) => t.key === activeTab);
   const activeMoreLabel = MORE_TABS.find((t) => t.key === activeTab)?.label;
 
-  const effectiveNetwork = environment === "mainnet" ? "mainnet" : "testnet";
-  const { stats: explorerStats, loading: statsLoading } = useExplorerStats(effectiveNetwork, refreshKey);
+  function makeUrl(overrides: { env?: string; name?: string | null }) {
+    const params = new URLSearchParams();
+    const env = overrides.env ?? optimisticEnv;
+    if (env && env !== "testnet") params.set("env", env);
+    const name = overrides.name === undefined ? nameQuery : overrides.name;
+    if (name) params.set("name", name);
+    const qs = params.toString();
+    return qs ? `/explorer?${qs}` : "/explorer";
+  }
 
-  function copyUivk() {
-    if (!explorerStats?.uivk) return;
-    navigator.clipboard.writeText(explorerStats.uivk);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  function handleEnvironmentChange(env: Environment) {
+    const url = makeUrl({ env });
+    startTransition(() => {
+      setOptimisticEnv(env);
+      router.push(url);
+    });
   }
 
   function handleSearchSubmit() {
     const q = searchQuery.trim();
-    if (q) setNameDetailQuery(q);
+    if (!q) return;
+    const url = makeUrl({ name: q });
+    startTransition(() => {
+      setOptimisticName(q);
+      router.push(url);
+    });
   }
 
   function handleNameClick(name: string) {
     setSearchQuery(name);
-    setNameDetailQuery(name);
+    const url = makeUrl({ name });
+    startTransition(() => {
+      setOptimisticName(name);
+      router.push(url);
+    });
   }
 
   function clearNameDetail() {
-    setNameDetailQuery("");
     setSearchQuery("");
+    const url = makeUrl({ name: null });
+    startTransition(() => {
+      setOptimisticName("");
+      router.push(url);
+    });
   }
 
   function handleRefresh() {
-    setRefreshKey((k) => k + 1);
+    startTransition(() => {
+      router.refresh();
+    });
   }
 
-  const handleCountsChange = useCallback((counts: TabCounts) => {
-    setTabCounts(counts);
-  }, []);
+  function copyUivk() {
+    if (!stats.uivk) return;
+    navigator.clipboard.writeText(stats.uivk);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+
+  const showNameDetail = !!optimisticName;
+  const nameDataReady = optimisticName === nameQuery;
 
   return (
     <div className="flex flex-col gap-6">
@@ -105,10 +172,10 @@ export default function ExplorerShell() {
               title="Refresh"
             >
               Block{" "}
-              {statsLoading ? (
+              {isPending ? (
                 <span className="inline-block h-[0.75em] w-14 animate-pulse rounded-md bg-fg-dim/20 align-middle" />
               ) : (
-                explorerStats?.syncedHeight.toLocaleString() ?? "—"
+                stats.syncedHeight.toLocaleString()
               )}
               <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
                 <path
@@ -126,7 +193,7 @@ export default function ExplorerShell() {
                 />
               </svg>
             </button>
-            {explorerStats?.uivk && (
+            {stats.uivk && (
               <button
                 type="button"
                 onClick={() => setUivkOpen(true)}
@@ -173,7 +240,7 @@ export default function ExplorerShell() {
         })}
 
         {/* More dropdown */}
-        <div className="relative shrink-0" ref={moreRef}>
+        <div className="relative shrink-0">
           <button
             type="button"
             onClick={() => setMoreOpen((v) => !v)}
@@ -192,6 +259,8 @@ export default function ExplorerShell() {
             )}
           </button>
           {moreOpen && (
+            <>
+            <div className="fixed inset-0 z-20" onClick={() => setMoreOpen(false)} />
             <div
               className="absolute left-0 top-full z-30 mt-1 min-w-[160px] rounded-xl border py-1"
               style={{
@@ -221,6 +290,7 @@ export default function ExplorerShell() {
                 );
               })}
             </div>
+            </>
           )}
         </div>
       </div>
@@ -230,33 +300,39 @@ export default function ExplorerShell() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onSearchSubmit={handleSearchSubmit}
-        environment={environment}
-        onEnvironmentChange={setEnvironment}
+        environment={optimisticEnv}
+        onEnvironmentChange={handleEnvironmentChange}
         sortBy={sortBy}
         onSortChange={setSortBy}
       />
 
       {/* Name detail (when a specific name is searched) */}
-      {nameDetailQuery && (
+      {showNameDetail && (
         <ExplorerNameDetail
-          query={nameDetailQuery}
-          network={effectiveNetwork}
+          query={optimisticName}
+          result={nameDataReady ? nameResult : null}
+          events={nameDataReady ? nameEvents : []}
+          isPending={isPending && !nameDataReady}
           onClear={clearNameDetail}
         />
       )}
 
-      {/* Content */}
-      {!nameDetailQuery && (
-        <ExplorerContent
-          key={refreshKey}
-          tab={activeTab}
-          environment={environment}
-          sortBy={sortBy}
-          searchQuery={searchQuery}
-          onNameClick={handleNameClick}
-          onCountsChange={handleCountsChange}
-        />
-      )}
+      {/* Content (hidden while name detail is showing, kept mounted to preserve load-more state) */}
+      <div className={showNameDetail ? "hidden" : ""}>
+        <div className={isPending && !showNameDetail ? "opacity-60 pointer-events-none transition-opacity" : "transition-opacity"}>
+          <ExplorerContent
+            tab={activeTab}
+            environment={environment}
+            sortBy={sortBy}
+            searchQuery={searchQuery}
+            onNameClick={handleNameClick}
+
+            initialEvents={initialEvents}
+            initialEventsTotal={initialEventsTotal}
+            initialListings={initialListings}
+          />
+        </div>
+      </div>
 
       {/* UIVK Modal */}
       {uivkOpen && (
@@ -292,7 +368,7 @@ export default function ExplorerShell() {
             </div>
 
             <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">
-              {explorerStats?.uivk}
+              {stats.uivk}
             </p>
 
             <button

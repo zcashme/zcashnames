@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { getEvents, getListings } from "@/lib/zns/resolve";
+import { useMemo, useState } from "react";
+import { getEvents } from "@/lib/zns/resolve";
 import { zatsToZec } from "@/lib/zns/name";
 import type { Network } from "@/lib/zns/name";
 import type { ZnsEvent, ZnsListing } from "@/lib/zns/client";
@@ -12,14 +12,10 @@ export type ExplorerTab = "all" | "registered" | "forsale" | "admin" | "CLAIM" |
 
 export type TabCounts = Record<string, number>;
 
+export type TaggedEvent = ZnsEvent & { network: Network };
+export type TaggedListing = ZnsListing & { network: Network };
+
 const ACTION_TYPES = ["CLAIM", "BUY", "LIST", "DELIST", "UPDATE", "RELEASE"] as const;
-
-function Skeleton({ w = "w-12" }: { w?: string }) {
-  return <span className={`inline-block h-[0.85em] ${w} animate-pulse rounded-md bg-fg-dim/20 align-middle`} />;
-}
-
-type TaggedEvent = ZnsEvent & { network: Network };
-type TaggedListing = ZnsListing & { network: Network };
 
 function getNetworks(env: Environment): Network[] {
   if (env === "all") return ["testnet", "mainnet"];
@@ -48,79 +44,35 @@ export default function ExplorerContent({
   sortBy,
   searchQuery,
   onNameClick,
-  onCountsChange,
+  initialEvents,
+  initialEventsTotal,
+  initialListings,
 }: {
   tab: ExplorerTab;
   environment: Environment;
   sortBy: SortBy;
   searchQuery: string;
   onNameClick: (name: string) => void;
-  onCountsChange: (counts: TabCounts) => void;
+  initialEvents: TaggedEvent[];
+  initialEventsTotal: number;
+  initialListings: TaggedListing[];
 }) {
-  const [events, setEvents] = useState<TaggedEvent[]>([]);
-  const [eventsTotal, setEventsTotal] = useState(0);
-  const [eventsLoading, setEventsLoading] = useState(true);
+  const [events, setEvents] = useState(initialEvents);
+  const [eventsTotal, setEventsTotal] = useState(initialEventsTotal);
   const [offsets, setOffsets] = useState<Record<Network, number>>({ testnet: 0, mainnet: 0 });
 
-  const [listings, setListings] = useState<TaggedListing[]>([]);
-  const [listingsLoading, setListingsLoading] = useState(true);
+  // Reset state when server data changes (refresh or environment switch)
+  const [prevInitial, setPrevInitial] = useState(initialEvents);
+  if (prevInitial !== initialEvents) {
+    setPrevInitial(initialEvents);
+    setEvents(initialEvents);
+    setEventsTotal(initialEventsTotal);
+    setOffsets({ testnet: 0, mainnet: 0 });
+  }
 
+  const listings = initialListings;
   const networks = useMemo(() => getNetworks(environment), [environment]);
 
-  // Fetch events
-  useEffect(() => {
-    let cancelled = false;
-    setEventsLoading(true);
-    setOffsets({ testnet: 0, mainnet: 0 });
-
-    Promise.all(
-      networks.map((n) => getEvents({ limit: 100 }, n).then((r) => ({
-        events: r.events.map((ev) => ({ ...ev, network: n })),
-        total: r.total,
-        network: n,
-      })))
-    ).then((results) => {
-      if (cancelled) return;
-      const merged = results.flatMap((r) => r.events);
-      const total = results.reduce((sum, r) => sum + r.total, 0);
-      setEvents(merged);
-      setEventsTotal(total);
-      setEventsLoading(false);
-    });
-
-    return () => { cancelled = true; };
-  }, [environment]);
-
-  // Fetch listings
-  useEffect(() => {
-    let cancelled = false;
-    setListingsLoading(true);
-
-    Promise.all(
-      networks.map((n) => getListings(n).then((items) => items.map((l) => ({ ...l, network: n }))))
-    ).then((results) => {
-      if (cancelled) return;
-      setListings(results.flat());
-      setListingsLoading(false);
-    });
-
-    return () => { cancelled = true; };
-  }, [environment]);
-
-  // Report counts
-  useEffect(() => {
-    if (eventsLoading || listingsLoading) return;
-    const counts: TabCounts = {
-      all: events.length,
-      forsale: listings.length,
-      registered: events.filter((ev) => ev.action === "CLAIM").length,
-      admin: events.filter((ev) => ev.name === "").length,
-    };
-    for (const action of ACTION_TYPES) {
-      counts[action] = events.filter((ev) => ev.action === action).length;
-    }
-    onCountsChange(counts);
-  }, [eventsLoading, listingsLoading, events, listings]);
 
   async function loadMoreEvents() {
     const results = await Promise.all(
@@ -148,7 +100,6 @@ export default function ExplorerContent({
     if (tab === "all") return events;
     if (tab === "registered") return events.filter((ev) => ev.action === "CLAIM");
     if (tab === "admin") return events.filter((ev) => ev.name === "");
-    // Per-action tab
     if (ACTION_TYPES.includes(tab as typeof ACTION_TYPES[number])) {
       return events.filter((ev) => ev.action === tab);
     }
@@ -167,8 +118,6 @@ export default function ExplorerContent({
     const filtered = q ? listings.filter((l) => l.name.toLowerCase().includes(q)) : listings;
     return sortListings(filtered, sortBy);
   }, [listings, searchQuery, sortBy]);
-
-  const loading = tab === "forsale" ? listingsLoading : eventsLoading;
 
   // For Sale tab — table
   if (tab === "forsale") {
@@ -191,16 +140,7 @@ export default function ExplorerContent({
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <tr key={i} className="border-b last:border-b-0" style={{ borderColor: "var(--leaders-card-border)" }}>
-                    <td className="px-4 py-3 sm:px-6"><Skeleton w="w-24" /></td>
-                    <td className="px-4 py-3 text-right sm:px-6"><Skeleton w="w-16" /></td>
-                    <td className="px-4 py-3 text-right sm:px-6"><Skeleton w="w-14" /></td>
-                    {environment === "all" && <td className="px-4 py-3 text-right sm:px-6"><Skeleton w="w-6" /></td>}
-                  </tr>
-                ))
-              ) : filteredListings.length === 0 ? (
+              {filteredListings.length === 0 ? (
                 <tr>
                   <td colSpan={environment === "all" ? 4 : 3} className="px-4 py-12 text-center text-fg-muted">
                     No names listed for sale.
@@ -268,17 +208,7 @@ export default function ExplorerContent({
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="border-b last:border-b-0" style={{ borderColor: "var(--leaders-card-border)" }}>
-                  <td className="px-4 py-3 sm:px-6"><Skeleton w="w-16" /></td>
-                  <td className="px-4 py-3 sm:px-6"><Skeleton w="w-24" /></td>
-                  <td className="hidden sm:table-cell px-4 py-3 sm:px-6"><Skeleton w="w-28" /></td>
-                  <td className="px-4 py-3 text-right sm:px-6"><Skeleton w="w-14" /></td>
-                  {environment === "all" && <td className="px-4 py-3 text-right sm:px-6"><Skeleton w="w-6" /></td>}
-                </tr>
-              ))
-            ) : filteredEvents.length === 0 ? (
+            {filteredEvents.length === 0 ? (
               <tr>
                 <td colSpan={environment === "all" ? 5 : 4} className="px-4 py-12 text-center text-fg-muted">
                   No events found.
@@ -336,7 +266,7 @@ export default function ExplorerContent({
           </tbody>
         </table>
       </div>
-      {events.length < eventsTotal && !loading && (
+      {events.length < eventsTotal && (
         <div className="border-t px-5 py-3" style={{ borderColor: "var(--leaders-card-border)" }}>
           <button
             type="button"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 export type Environment = "all" | "mainnet" | "testnet";
 export type SortBy = "height" | "name" | "type";
@@ -15,20 +15,10 @@ function Dropdown({
   options: { value: string; label: string }[];
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
   const activeLabel = options.find((o) => o.value === value)?.label ?? value;
 
-  useEffect(() => {
-    if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -45,6 +35,8 @@ function Dropdown({
         </svg>
       </button>
       {open && (
+        <>
+        <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
         <div
           className="absolute right-0 top-full z-30 mt-1 min-w-full rounded-xl border py-1"
           style={{
@@ -68,6 +60,7 @@ function Dropdown({
             </button>
           ))}
         </div>
+        </>
       )}
     </div>
   );
