@@ -130,7 +130,7 @@ export default function Hero({
       style={{ color: "var(--hero-headline-accent)" }}
       onMouseEnter={handleActivityHover}
     >
-      address.
+      addresses.
       <span className="hero-redact-bar" />
     </span>
   );
@@ -141,7 +141,7 @@ export default function Hero({
       onMouseEnter={handleIdentityHover}
     >
       <span className="hero-identity-text" style={{ color: "var(--hero-headline-accent)" }}>
-        name.
+        names
       </span>
       <svg className="hero-checkmark-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path
@@ -170,7 +170,8 @@ export default function Hero({
             <span className="hero-headline-primary">Personal </span>
             {identitySpan}
             <br />
-            <span className="hero-headline-primary">Shielded </span>
+            <span className="hero-headline-primary" style={{ fontFamily: "var(--font-cursive)", fontSize: "0.85em", fontWeight: 500 }}>for </span>
+            <span className="hero-headline-primary">shielded </span>
             {activitySpan}
           </h1>
           <p
@@ -202,12 +203,11 @@ export default function Hero({
                 letterSpacing: "-0.02em",
               }}
             >
-              <span className="hero-headline-primary">Personal</span>
-              <br />
+              <span className="hero-headline-primary">Personal </span>
               {identitySpan}
+              <span className="hero-headline-primary" style={{ fontFamily: "var(--font-cursive)", fontSize: "0.85em", fontWeight: 500 }}> for</span>
               <br />
-              <span className="hero-headline-primary">Shielded</span>
-              <br />
+              <span className="hero-headline-primary">shielded </span>
               {activitySpan}
             </h1>
           </div>
