@@ -33,9 +33,9 @@ export default function BetaApplyPage() {
           className="text-base"
           style={{ color: "var(--fg-body)", lineHeight: 1.65 }}
         >
-          Tell us a bit about yourself. We&rsquo;re running a small,
-          high-signal beta. We're seeking a few testers to provide lots of detail. If
-          there&rsquo;s a spot for you, we&rsquo;ll reach out via your
+          We&rsquo;re running a small,
+          high-signal beta. We're seeking a few testers to provide lots of detail. Tell us a bit about yourself. 
+          If there&rsquo;s a spot for you, we&rsquo;ll reach out via your
           preferred contact with an invite code.
         </p>
         <p
