@@ -46,7 +46,7 @@ The authoritative tester registry and the application table, in one. Key columns
 - `id` — `tester_<slug>_<6 hex>`, generated server-side
 - `display_name`
 - `code_hash` — sha256 of the invite code
-- `invite_code` — plaintext (yes, by your call — see "Why plaintext")
+- `invite_code` — plaintext
 - `status` — enum: `applied | invited | active | revoked`
 - `submitted_at`, `code_sent_at`, `activated_at`, `revoked_at`
 - Application fields: `why`, `wallets`, `experience`, `referral_source`
@@ -238,14 +238,11 @@ lib/beta/
   actions.ts              ALL server actions: apply, verify access, submit feedback,
                           checklist progress, sign out, etc.
   gate.ts                 HMAC cookie helpers + stage cookie
-  testers.ts              Tester lookup (DB-first, JSON fallback)
+  testers.ts              Tester lookup
   checklist.ts            Canonical test items (single source of truth)
 
 lib/email/
   beta-application.ts     Application notification email (Resend, plain text)
-
-beta-testers.json         Gitignored fallback registry (used if DB is unreachable)
-beta-testers.example.json Schema example, committed
 ```
 
 ---
@@ -258,18 +255,6 @@ Two httpOnly cookies, both signed/scoped, both 30-day TTL:
 - `zn_beta_stage` — plain `testnet` or `mainnet`. Set on every successful network unlock (both invite-code and anonymous paths). Read by the standalone popout window so it knows which stage to log against.
 
 Both cleared by `signOutBetaTester` (currently unwired — there's no UI to call it).
-
----
-
-## Why plaintext invite codes in the DB
-
-You decided this was an acceptable trade because:
-
-- The DB is private (RLS service-role only), and only you have the keys.
-- You need plaintext to manually DM to applicants.
-- The closed beta is small and time-bounded.
-
-The code is also stored as `code_hash` (sha256), which is what `findTesterByCode` actually queries. If you ever decide to drop the plaintext column and adopt a one-time-reveal flow, the lookup logic stays unchanged — only the application action and the operator workflow shift.
 
 ---
 
@@ -288,6 +273,5 @@ The code is also stored as `code_hash` (sha256), which is what `findTesterByCode
 
 - **Don't forget to seed `beta_testers` for early manual testers.** The application form is the only path that writes to that table now; manually-added testers need an INSERT.
 - **The `tester_demo` row from the original schema seed is still there.** Either delete it, or set its status to `revoked` once you're past testing.
-- **`beta-testers.json` is the offline fallback only.** It's not the source of truth anymore — the DB is. But if the DB is unreachable for any reason (bad credentials, rate limit, network blip), `findTesterByCode` falls back to the JSON file. Keep at least one entry in there (or an empty array) to avoid noisy errors.
 - **Screenshot uploads don't deduplicate.** Each upload gets a fresh path under a fresh report UUID. No risk of collision.
 - **The popout window inherits the stage cookie at the moment it's opened.** If a tester opens the popout, then switches networks in the main window, the popout still thinks it's on the old stage. They need to close + reopen it. Acceptable edge case.

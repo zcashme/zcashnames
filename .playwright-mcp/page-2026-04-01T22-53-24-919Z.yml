@@ -1,0 +1,333 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "ZcashNames" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img "ZcashNames" [ref=e6]
+        - generic [ref=e7]: ZcashNames
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - button "Mainnet" [ref=e10] [cursor=pointer]:
+            - generic [ref=e11]: Mainnet
+          - button "Testnet" [ref=e12] [cursor=pointer]:
+            - generic [ref=e13]: Testnet
+          - button "Waitlist" [pressed] [ref=e14] [cursor=pointer]:
+            - generic [ref=e15]: Waitlist
+        - generic [ref=e16]:
+          - button "dark theme" [pressed] [ref=e17] [cursor=pointer]:
+            - img [ref=e18]
+          - button "light theme" [ref=e20] [cursor=pointer]:
+            - img [ref=e21]
+          - button "monochrome theme" [ref=e27] [cursor=pointer]:
+            - img [ref=e28]
+  - generic [ref=e31]:
+    - generic [ref=e34]:
+      - generic [ref=e35]:
+        - heading "Public names. Private lives." [level=1] [ref=e37]:
+          - text: Public
+          - generic [ref=e38]:
+            - text: names.
+            - img
+          - text: Private
+          - generic [ref=e39]: lives.
+        - paragraph [ref=e40]: Shielded transactions with a simple name instead of long addresses.
+        - generic [ref=e41]:
+          - generic [ref=e43]:
+            - generic [ref=e45]:
+              - generic:
+                - generic: yourname
+                - generic: .zcash
+              - textbox "Enter your desired ZcashName" [ref=e46]:
+                - /placeholder: ""
+            - button "Get Early Access" [disabled] [ref=e47] [cursor=pointer]
+            - button "Next" [disabled] [ref=e48]:
+              - img [ref=e50]
+          - paragraph [ref=e52]:
+            - text: Be first to claim a name you can use, hold, or sell.
+            - img [ref=e53]
+      - generic [ref=e57]:
+        - 'button "Own Names: No Renewals. Drag to reposition." [ref=e59]':
+          - generic [ref=e62]:
+            - img [ref=e64]
+            - generic [ref=e67]:
+              - generic [ref=e68]: Own Names
+              - generic [ref=e69]: No Renewals
+        - 'button "Share Names: Not Transactions. Drag to reposition." [ref=e71]':
+          - generic [ref=e74]:
+            - img [ref=e76]
+            - generic [ref=e81]:
+              - generic [ref=e82]: Share Names
+              - generic [ref=e83]: Not Transactions
+        - 'button "On-Chain: No Middlemen. Drag to reposition." [ref=e85]':
+          - generic [ref=e88]:
+            - img [ref=e90]
+            - generic [ref=e93]:
+              - generic [ref=e94]: On-Chain
+              - generic [ref=e95]: No Middlemen
+        - 'button "ZcashMe Ready: Avoid Imposters. Drag to reposition." [ref=e97]':
+          - generic [ref=e100]:
+            - img [ref=e102]
+            - generic [ref=e105]:
+              - generic [ref=e106]: ZcashMe Ready
+              - generic [ref=e107]: Avoid Imposters
+        - status [ref=e108]
+        - status [ref=e109]
+        - generic [ref=e110]:
+          - generic [ref=e119] [cursor=pointer]:
+            - generic [ref=e120]:
+              - generic [ref=e121]: 9:41
+              - generic [ref=e123]:
+                - img [ref=e124]
+                - img [ref=e129]
+            - generic [ref=e137]:
+              - generic [ref=e138]:
+                - img [ref=e139]
+                - generic [ref=e141]: Send
+              - generic [ref=e142]:
+                - generic [ref=e143]: To
+                - generic [ref=e144]:
+                  - generic [ref=e145]: zooko.zcash
+                  - img [ref=e146]
+              - generic [ref=e149]:
+                - generic [ref=e150]: Amount
+                - generic [ref=e151]:
+                  - generic [ref=e152]: "5.0"
+                  - generic [ref=e153]:
+                    - generic [ref=e154]: ZEC
+                    - generic [ref=e155]: $1,153.50 USD
+              - generic [ref=e156]:
+                - generic [ref=e157]: Memo
+                - generic [ref=e158]: grocery money - april
+              - generic [ref=e159]:
+                - generic [ref=e160]: Network fee
+                - generic [ref=e161]: 0.00001 ZEC
+              - button "Send" [ref=e163]
+          - generic [ref=e174] [cursor=pointer]:
+            - generic [ref=e175]:
+              - generic [ref=e176]: 9:41
+              - generic [ref=e178]:
+                - img [ref=e179]
+                - img [ref=e184]
+            - generic [ref=e193]:
+              - generic [ref=e194]:
+                - img [ref=e195]
+                - generic [ref=e197]: Address Book
+                - img [ref=e198]
+              - generic [ref=e200]:
+                - generic [ref=e201]: Directory
+                - generic [ref=e203]: Contacts
+              - generic [ref=e205]:
+                - generic [ref=e207]: J
+                - generic [ref=e208]: jswihart.zcash
+              - generic [ref=e209]:
+                - generic [ref=e211]: V
+                - generic [ref=e212]: viksharma.zcash
+              - generic [ref=e213]:
+                - generic [ref=e215]: P
+                - generic [ref=e216]: paulpuey.zcash
+              - generic [ref=e217]:
+                - generic [ref=e219]: E
+                - generic [ref=e220]: esengulov.zcash
+              - generic [ref=e221]:
+                - generic [ref=e223]: K
+                - generic [ref=e224]: kenbak.zcash
+              - generic [ref=e227]:
+                - img [ref=e228]
+                - img [ref=e231]
+                - generic [ref=e233]:
+                  - img [ref=e234]
+                  - generic [ref=e237]: Contacts
+                - img [ref=e238]
+          - generic [ref=e253] [cursor=pointer]:
+            - generic [ref=e254]:
+              - generic [ref=e255]: 9:41
+              - generic [ref=e257]:
+                - img [ref=e258]
+                - img [ref=e263]
+            - generic [ref=e272]:
+              - generic [ref=e273]: Messages
+              - generic [ref=e275]:
+                - generic [ref=e277]:
+                  - generic [ref=e278]: satoshi.zcash
+                  - generic [ref=e279]: Hey, just sent 2 ZEC your way
+                  - generic [ref=e280]:
+                    - generic [ref=e281]: Mar 24, 10:22
+                    - img [ref=e282]
+                - generic [ref=e286]:
+                  - generic [ref=e287]: hal.zcash
+                  - generic [ref=e288]: Got it, thanks! What was it for?
+                  - generic [ref=e290]: Mar 24, 10:23
+                - generic [ref=e292]:
+                  - generic [ref=e293]: satoshi.zcash
+                  - generic [ref=e294]: For the server costs last month
+                  - generic [ref=e295]:
+                    - generic [ref=e296]: Mar 24, 10:24
+                    - img [ref=e297]
+                - generic [ref=e301]:
+                  - generic [ref=e302]: hal.zcash
+                  - generic [ref=e303]: Perfect, appreciate it
+                  - generic [ref=e305]: Mar 24, 10:25
+                - generic [ref=e307]:
+                  - generic [ref=e308]: satoshi.zcash
+                  - generic [ref=e309]: Anytime 🤝
+                  - generic [ref=e310]:
+                    - generic [ref=e311]: Mar 24, 10:26
+                    - img [ref=e312]
+    - generic [ref=e318]:
+      - generic [ref=e319]:
+        - button "Waitlist" [ref=e320] [cursor=pointer]:
+          - generic [ref=e324]: Waitlist
+        - button "Referred" [ref=e325] [cursor=pointer]:
+          - generic [ref=e329]: Referred
+        - button "Rewards" [ref=e330] [cursor=pointer]:
+          - generic [ref=e334]: Rewards
+      - generic:
+        - paragraph
+    - link "Leaderboard →" [ref=e336] [cursor=pointer]:
+      - /url: /leaders
+      - img [ref=e337]
+      - text: Leaderboard →
+    - generic [ref=e339]:
+      - paragraph [ref=e342]: How It Works
+      - generic [ref=e344]:
+        - generic [ref=e345]:
+          - generic [ref=e346]: "1"
+          - heading "Get Early Access" [level=3] [ref=e347]
+          - paragraph [ref=e348]: Invites are sent in order, and the earliest users get first pick of the most valuable .zcash names before others can claim them. Free to join. No commitment.
+        - img [ref=e350]
+        - generic [ref=e352]:
+          - generic [ref=e353]: "2"
+          - heading "Move Up + Earn ZEC" [level=3] [ref=e354]
+          - paragraph [ref=e355]: Every referral pushes you closer to the front of the line, giving you a better chance at high-demand names. Plus, earn ZEC when your referrals claim a name.
+        - img [ref=e357]
+        - generic [ref=e359]:
+          - generic [ref=e360]: "3"
+          - heading "Claim Your Name" [level=3] [ref=e361]
+          - paragraph [ref=e362]: You’ll receive an email when it’s your turn. Log in, choose your .zcash name, and secure it before the public launch. Keep it, use it to transact, or sell it as demand grows.
+      - generic [ref=e363]:
+        - heading "What You Can Do with a .zcash Name" [level=3] [ref=e364]
+        - generic [ref=e365]:
+          - paragraph [ref=e366]:
+            - strong [ref=e367]: Send and Receive Without Long Addresses
+            - text: — Use a name people can read and remember instead of copying and pasting wallet strings.
+          - paragraph [ref=e368]:
+            - strong [ref=e369]: Use One Name Across Zcash Apps
+            - text: — Sign in with your .zcash name across supported apps and prove ownership of your address without extra accounts.
+          - paragraph [ref=e370]:
+            - strong [ref=e371]: Verify Who You’re Dealing With
+            - text: — Connect your .zcash name to a
+            - link "Zcash.me" [ref=e372] [cursor=pointer]:
+              - /url: https://zcash.me
+            - text: profile so others can confirm identity, linked accounts, and reputation before they transact.
+          - paragraph [ref=e373]:
+            - strong [ref=e374]: Buy, Sell, and Hold Valuable Names
+            - text: — Claim a name to use it, keep it as a digital asset, or list it for sale as demand grows.
+    - generic [ref=e375]:
+      - paragraph [ref=e378]: Frequently Asked Questions
+      - generic [ref=e380]:
+        - generic [ref=e381]:
+          - button "What is a .zcash name? +" [ref=e382] [cursor=pointer]:
+            - generic [ref=e383]: What is a .zcash name?
+            - generic [ref=e384]: +
+          - paragraph [ref=e385]: .zcash is a human-readable name that maps to a Zcash address and profile links. Instead of sharing a long cryptographic address, you share something like yourname.zcash.
+        - generic [ref=e386]:
+          - button "What can I do with my .zcash name? +" [ref=e387] [cursor=pointer]:
+            - generic [ref=e388]: What can I do with my .zcash name?
+            - generic [ref=e389]: +
+          - paragraph [ref=e390]:
+            - text: Your .zcash name replaces long wallet addresses with a simple, human-readable name for sending and receiving payments. Each name can be linked to a
+            - link "Zcash.me" [ref=e391] [cursor=pointer]:
+              - /url: https://zcash.me
+            - text: profile so others can verify who they’re transacting with. You can claim a name to use it, hold it as a digital asset, or sell it later as demand grows.
+        - generic [ref=e392]:
+          - button "Do I really own my name? +" [ref=e393] [cursor=pointer]:
+            - generic [ref=e394]: Do I really own my name?
+            - generic [ref=e395]: +
+          - paragraph [ref=e396]: Yes. Your name is registered on an on-chain registry linked to your address. There are no renewal fees — stay active once every 180 days to maintain it. You can sell, transfer, or buy additional names at any time.
+        - generic [ref=e397]:
+          - button "How do payments stay private? +" [ref=e398] [cursor=pointer]:
+            - generic [ref=e399]: How do payments stay private?
+            - generic [ref=e400]: +
+          - paragraph [ref=e401]: Payments made using Zcash shielded transactions do not publicly expose amounts and balances on the public ledger.
+        - generic [ref=e402]:
+          - button "Can people pay me with other cryptocurrencies? +" [ref=e403] [cursor=pointer]:
+            - generic [ref=e404]: Can people pay me with other cryptocurrencies?
+            - generic [ref=e405]: +
+          - paragraph [ref=e406]: Yes. Cross-pay flows let senders use popular assets while settlement can still arrive in Zcash to the address associated with your ZcashName.
+        - generic [ref=e407]:
+          - button "How does Log in with Zcash work? +" [ref=e408] [cursor=pointer]:
+            - generic [ref=e409]: How does Log in with Zcash work?
+            - generic [ref=e410]: +
+          - paragraph [ref=e411]: Your .zcash name resolves to an address. That address receives a one-time passcode. Replying with the one-time passcode proves you own that address. No passwords or third-party accounts are required — just your name.
+        - generic [ref=e412]:
+          - button "What is testnet mode? +" [ref=e413] [cursor=pointer]:
+            - generic [ref=e414]: What is testnet mode?
+            - generic [ref=e415]: +
+          - paragraph [ref=e416]: Testnet mode lets you explore ZcashNames without using real ZEC. All transactions on testnet use TAZ (testnet ZEC), which has no monetary value. It's a safe way to try registering names, updating addresses, and listing names for sale before going live on mainnet.
+        - generic [ref=e417]:
+          - button "How do waitlist referrals work? +" [ref=e418] [cursor=pointer]:
+            - generic [ref=e419]: How do waitlist referrals work?
+            - generic [ref=e420]: +
+          - paragraph [ref=e421]: When you join the waitlist you receive a unique referral link. Sharing it moves you up the queue — the more people you refer, the earlier you get access when ZcashNames launches. Plus, if they purchase a name after our launch, you earn 0.05 ZEC per name.
+        - generic [ref=e422]:
+          - button "How do I become an ambassador? +" [ref=e423] [cursor=pointer]:
+            - generic [ref=e424]: How do I become an ambassador?
+            - generic [ref=e425]: +
+          - paragraph [ref=e426]:
+            - text: The Ambassador Program is for people who want to grow adoption in their region, host community events, and help onboard new users. Fill out the interest form
+            - link "here" [ref=e427] [cursor=pointer]:
+              - /url: https://form.typeform.com/to/oBd1YeoI
+            - text: to get started.
+        - generic [ref=e428]:
+          - button "How do I build on ZcashNames? +" [ref=e429] [cursor=pointer]:
+            - generic [ref=e430]: How do I build on ZcashNames?
+            - generic [ref=e431]: +
+          - paragraph [ref=e432]:
+            - text: The
+            - link "Developer’s Guide" [ref=e433] [cursor=pointer]:
+              - /url: /docs
+            - text: has implementation guides and references for building apps, integrations, and identity flows on top of ZcashNames.
+        - generic [ref=e434]:
+          - button "How do I partner with ZcashNames? +" [ref=e435] [cursor=pointer]:
+            - generic [ref=e436]: How do I partner with ZcashNames?
+            - generic [ref=e437]: +
+          - paragraph [ref=e438]:
+            - text: We collaborate with wallets, platforms, and products to expand the Zcash ecosystem.
+            - link "Book a meeting" [ref=e439] [cursor=pointer]:
+              - /url: https://cal.com/zcash
+            - text: or
+            - link "email us" [ref=e440] [cursor=pointer]:
+              - /url: mailto:partner@zcash.me
+            - text: to start the conversation.
+        - generic [ref=e441]:
+          - button "Who is building and supporting ZcashNames? +" [ref=e442] [cursor=pointer]:
+            - generic [ref=e443]: Who is building and supporting ZcashNames?
+            - generic [ref=e444]: +
+          - paragraph [ref=e445]:
+            - text: ZcashNames is built by Zechariah (Founder) and craftsoldier (Engineer), with support from collaborators across the ecosystem including
+            - link "CipherScan" [ref=e446] [cursor=pointer]:
+              - /url: https://cipherscan.app
+            - text: (block explorer),
+            - link "Zcash.me" [ref=e447] [cursor=pointer]:
+              - /url: https://zcash.me
+            - text: (profiles), Cake Labs (wallets), ZecHub (community), ambassadors like CriptoWilli, Jenkins, and ZcashRu, and investors and advisors including Balaji Srinivasan. Additional wallet integrations with Zingo!, Zucchini, and Zodl are on the wishlist.
+  - contentinfo [ref=e448]:
+    - generic [ref=e449]:
+      - generic [ref=e450]:
+        - link "ZcashNames" [ref=e451] [cursor=pointer]:
+          - /url: /
+        - paragraph [ref=e452]: © 2026 ZcashMe
+      - generic [ref=e453]:
+        - link "X / Twitter" [ref=e454] [cursor=pointer]:
+          - /url: https://x.com/zcashnames
+          - img [ref=e455]
+        - link "Discord" [ref=e457] [cursor=pointer]:
+          - /url: https://discord.gg/z2H23QgAGf
+          - img [ref=e458]
+        - link "Telegram" [ref=e460] [cursor=pointer]:
+          - /url: https://t.me/zcashnames
+          - img [ref=e461]
+        - link "Signal" [ref=e463] [cursor=pointer]:
+          - /url: https://signal.group/#CjQKIKDM76KMttnFqmbtbKzcfDrGeLtR6wWQq82YM8LWdyNhEhBGKNSZVjTREwDLqhatYhLH
+          - img [ref=e464]
+  - alert [ref=e466]

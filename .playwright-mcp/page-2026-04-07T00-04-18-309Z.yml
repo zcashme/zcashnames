@@ -1,0 +1,349 @@
+- generic [active] [ref=e1]:
+  - link "Skip to Content" [ref=e2] [cursor=pointer]:
+    - /url: "#nextra-skip-nav"
+  - banner [ref=e3]:
+    - navigation [ref=e5]:
+      - link "Home page" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: ZcashNames Docs
+      - generic [ref=e10]:
+        - combobox "Search documentation…" [ref=e11]
+        - generic:
+          - generic: ⌘
+          - text: K
+      - link "Project repository" [ref=e12] [cursor=pointer]:
+        - /url: https://github.com/zcashme/zcashnames
+        - img "Project repository" [ref=e13]
+  - generic [ref=e15]:
+    - complementary [ref=e16]:
+      - list [ref=e19]:
+        - listitem [ref=e20]:
+          - link "Welcome" [ref=e21] [cursor=pointer]:
+            - /url: /docs
+        - listitem [ref=e22]:
+          - button "Learn" [ref=e23] [cursor=pointer]:
+            - text: Learn
+            - img [ref=e24]
+          - list [ref=e27]:
+            - listitem [ref=e28]:
+              - link "What is ZNS?" [ref=e29] [cursor=pointer]:
+                - /url: /docs/learn/what-is-zns
+            - listitem [ref=e30]:
+              - link "Protocol Overview" [ref=e31] [cursor=pointer]:
+                - /url: /docs/learn/protocol-overview
+            - listitem [ref=e32]:
+              - link "Resolution" [ref=e33] [cursor=pointer]:
+                - /url: /docs/learn/resolution
+            - listitem [ref=e34]:
+              - link "Name Lifecycle" [ref=e35] [cursor=pointer]:
+                - /url: /docs/learn/name-lifecycle
+            - listitem [ref=e36]:
+              - link "Pricing" [ref=e37] [cursor=pointer]:
+                - /url: /docs/learn/pricing
+        - listitem [ref=e38]:
+          - button "Use ZNS" [ref=e39] [cursor=pointer]:
+            - text: Use ZNS
+            - img [ref=e40]
+          - list [ref=e43]:
+            - listitem [ref=e44]:
+              - link "Claiming a Name" [ref=e45] [cursor=pointer]:
+                - /url: /docs/use/claiming
+            - listitem [ref=e46]:
+              - link "Buying & Selling" [ref=e47] [cursor=pointer]:
+                - /url: /docs/use/buying-and-selling
+            - listitem [ref=e48]:
+              - link "Managing Names" [ref=e49] [cursor=pointer]:
+                - /url: /docs/use/managing
+            - listitem [ref=e50]:
+              - link "Reserved Names" [ref=e51] [cursor=pointer]:
+                - /url: /docs/use/reserved-names
+            - listitem [ref=e52]:
+              - link "OTP Verification" [ref=e53] [cursor=pointer]:
+                - /url: /docs/use/otp-verification
+            - listitem [ref=e54]:
+              - link "Wallet Compatibility" [ref=e55] [cursor=pointer]:
+                - /url: /docs/use/wallets
+        - listitem [ref=e56]:
+          - button "Protocol" [ref=e57] [cursor=pointer]:
+            - text: Protocol
+            - img [ref=e58]
+          - list [ref=e61]:
+            - listitem [ref=e62]:
+              - link "Memo Format" [ref=e63] [cursor=pointer]:
+                - /url: /docs/protocol/memo-format
+            - listitem [ref=e64]:
+              - link "Signature Scheme" [ref=e65] [cursor=pointer]:
+                - /url: /docs/protocol/signatures
+            - listitem [ref=e66]:
+              - link "Name Validation" [ref=e67] [cursor=pointer]:
+                - /url: /docs/protocol/name-validation
+            - listitem [ref=e68]:
+              - link "Address Types" [ref=e69] [cursor=pointer]:
+                - /url: /docs/protocol/address-types
+            - listitem [ref=e70]:
+              - link "ZIP-321 Integration" [ref=e71] [cursor=pointer]:
+                - /url: /docs/protocol/zip321
+            - listitem [ref=e72]:
+              - link "OTP Protocol (ZVS)" [ref=e73] [cursor=pointer]:
+                - /url: /docs/protocol/otp-protocol
+            - listitem [ref=e74]:
+              - link "Reserved Names" [ref=e75] [cursor=pointer]:
+                - /url: /docs/protocol/reserved-names
+        - listitem [ref=e76]:
+          - button "Indexer & RPC" [ref=e77] [cursor=pointer]:
+            - text: Indexer & RPC
+            - img [ref=e78]
+          - list [ref=e81]:
+            - listitem [ref=e82]:
+              - link "Architecture" [ref=e83] [cursor=pointer]:
+                - /url: /docs/indexer/architecture
+            - listitem [ref=e84]:
+              - link "Running an Indexer" [ref=e85] [cursor=pointer]:
+                - /url: /docs/indexer/running
+            - listitem [ref=e86]:
+              - link "JSON-RPC Reference" [ref=e87] [cursor=pointer]:
+                - /url: /docs/indexer/rpc-reference
+            - listitem [ref=e88]:
+              - link "OpenRPC Explorer" [ref=e89] [cursor=pointer]:
+                - /url: /docs/indexer/openrpc
+            - listitem [ref=e90]:
+              - link "Verifying State" [ref=e91] [cursor=pointer]:
+                - /url: /docs/indexer/verifying-state
+        - listitem [ref=e92]:
+          - button "SDKs" [ref=e93] [cursor=pointer]:
+            - text: SDKs
+            - img [ref=e94]
+          - list [ref=e97]:
+            - listitem [ref=e98]:
+              - link "Libraries" [ref=e99] [cursor=pointer]:
+                - /url: /docs/sdk
+            - listitem [ref=e100]:
+              - link "TypeScript Reference" [ref=e101] [cursor=pointer]:
+                - /url: /docs/sdk/typescript
+            - listitem [ref=e102]:
+              - link "TypeScript Recipes" [ref=e103] [cursor=pointer]:
+                - /url: /docs/sdk/quickstart
+            - listitem [ref=e104]:
+              - link "Direct RPC" [ref=e105] [cursor=pointer]:
+                - /url: /docs/sdk/direct-rpc
+        - listitem [ref=e106]:
+          - link "FAQ" [ref=e107] [cursor=pointer]:
+            - /url: /docs/faq
+      - generic [ref=e108]:
+        - button "Dark" [ref=e109] [cursor=pointer]:
+          - img [ref=e110]
+          - text: Dark
+        - button "Collapse sidebar" [expanded] [ref=e112] [cursor=pointer]:
+          - img [ref=e113]
+    - navigation "table of contents" [ref=e116]:
+      - generic [ref=e117]:
+        - paragraph [ref=e118]: On This Page
+        - list [ref=e119]:
+          - listitem [ref=e120]:
+            - link "Where to start" [ref=e121] [cursor=pointer]:
+              - /url: "#where-to-start"
+          - listitem [ref=e122]:
+            - link "See it live" [ref=e123] [cursor=pointer]:
+              - /url: "#see-it-live"
+          - listitem [ref=e124]:
+            - link "Networks" [ref=e125] [cursor=pointer]:
+              - /url: "#networks"
+        - generic [ref=e126]:
+          - link "Question? Give us feedback" [ref=e127] [cursor=pointer]:
+            - /url: https://github.com/zcashme/zcashnames/issues/new?title=Feedback%20for%20%E2%80%9CZcash%20Name%20Service%E2%80%9D&labels=feedback
+            - text: Question? Give us feedback
+            - img [ref=e128]
+          - link "Edit this page" [ref=e131] [cursor=pointer]:
+            - /url: https://github.com/zcashme/zcashnames/tree/main/content/docs/content/index.mdx
+            - text: Edit this page
+            - img [ref=e132]
+          - button [disabled] [ref=e135] [cursor=pointer]:
+            - text: Scroll to top
+            - img [ref=e136]
+    - article [ref=e138]:
+      - generic "Welcome" [ref=e140]
+      - generic [ref=e141]:
+        - button "Copy page" [ref=e142] [cursor=pointer]:
+          - img [ref=e143]
+          - text: Copy page
+        - button [ref=e146] [cursor=pointer]:
+          - img [ref=e147]
+      - main [ref=e149]:
+        - heading "Zcash Name Service" [level=1] [ref=e150]
+        - paragraph [ref=e151]:
+          - text: ZNS maps human-readable names like
+          - code [ref=e152]: alice.zcash
+          - text: to Zcash shielded addresses.
+        - heading "Where to startPermalink for this section" [level=2] [ref=e153]:
+          - text: Where to start
+          - link "Permalink for this section" [ref=e154] [cursor=pointer]:
+            - /url: "#where-to-start"
+            - text: "#"
+        - generic [ref=e155]:
+          - generic [ref=e156]:
+            - heading "Learn" [level=3] [ref=e157]
+            - list [ref=e158]:
+              - listitem [ref=e159]:
+                - link "What is ZNS?" [ref=e160] [cursor=pointer]:
+                  - /url: /docs/learn/what-is-zns
+              - listitem [ref=e161]:
+                - link "Protocol Overview" [ref=e162] [cursor=pointer]:
+                  - /url: /docs/learn/protocol-overview
+              - listitem [ref=e163]:
+                - link "Resolution" [ref=e164] [cursor=pointer]:
+                  - /url: /docs/learn/resolution
+              - listitem [ref=e165]:
+                - link "Name Lifecycle" [ref=e166] [cursor=pointer]:
+                  - /url: /docs/learn/name-lifecycle
+              - listitem [ref=e167]:
+                - link "Pricing" [ref=e168] [cursor=pointer]:
+                  - /url: /docs/learn/pricing
+          - generic [ref=e169]:
+            - heading "Use ZNS" [level=3] [ref=e170]
+            - list [ref=e171]:
+              - listitem [ref=e172]:
+                - link "Claiming a Name" [ref=e173] [cursor=pointer]:
+                  - /url: /docs/use/claiming
+              - listitem [ref=e174]:
+                - link "Buying & Selling" [ref=e175] [cursor=pointer]:
+                  - /url: /docs/use/buying-and-selling
+              - listitem [ref=e176]:
+                - link "Managing Names" [ref=e177] [cursor=pointer]:
+                  - /url: /docs/use/managing
+              - listitem [ref=e178]:
+                - link "Reserved Names" [ref=e179] [cursor=pointer]:
+                  - /url: /docs/use/reserved-names
+              - listitem [ref=e180]:
+                - link "OTP Verification" [ref=e181] [cursor=pointer]:
+                  - /url: /docs/use/otp-verification
+              - listitem [ref=e182]:
+                - link "Wallet Compatibility" [ref=e183] [cursor=pointer]:
+                  - /url: /docs/use/wallets
+          - generic [ref=e184]:
+            - heading "Protocol" [level=3] [ref=e185]
+            - list [ref=e186]:
+              - listitem [ref=e187]:
+                - link "Memo Format" [ref=e188] [cursor=pointer]:
+                  - /url: /docs/protocol/memo-format
+              - listitem [ref=e189]:
+                - link "Signature Scheme" [ref=e190] [cursor=pointer]:
+                  - /url: /docs/protocol/signatures
+              - listitem [ref=e191]:
+                - link "Name Validation" [ref=e192] [cursor=pointer]:
+                  - /url: /docs/protocol/name-validation
+              - listitem [ref=e193]:
+                - link "Address Types" [ref=e194] [cursor=pointer]:
+                  - /url: /docs/protocol/address-types
+              - listitem [ref=e195]:
+                - link "ZIP-321 Integration" [ref=e196] [cursor=pointer]:
+                  - /url: /docs/protocol/zip321
+              - listitem [ref=e197]:
+                - link "OTP Protocol (ZVS)" [ref=e198] [cursor=pointer]:
+                  - /url: /docs/protocol/otp-protocol
+              - listitem [ref=e199]:
+                - link "Reserved Names" [ref=e200] [cursor=pointer]:
+                  - /url: /docs/protocol/reserved-names
+          - generic [ref=e201]:
+            - heading "Indexer & RPC" [level=3] [ref=e202]
+            - list [ref=e203]:
+              - listitem [ref=e204]:
+                - link "Architecture" [ref=e205] [cursor=pointer]:
+                  - /url: /docs/indexer/architecture
+              - listitem [ref=e206]:
+                - link "Running an Indexer" [ref=e207] [cursor=pointer]:
+                  - /url: /docs/indexer/running
+              - listitem [ref=e208]:
+                - link "JSON-RPC Reference" [ref=e209] [cursor=pointer]:
+                  - /url: /docs/indexer/rpc-reference
+              - listitem [ref=e210]:
+                - link "OpenRPC Explorer" [ref=e211] [cursor=pointer]:
+                  - /url: /docs/indexer/openrpc
+              - listitem [ref=e212]:
+                - link "Verifying State" [ref=e213] [cursor=pointer]:
+                  - /url: /docs/indexer/verifying-state
+          - generic [ref=e214]:
+            - heading "SDKs" [level=3] [ref=e215]
+            - list [ref=e216]:
+              - listitem [ref=e217]:
+                - link "Libraries" [ref=e218] [cursor=pointer]:
+                  - /url: /docs/sdk
+              - listitem [ref=e219]:
+                - link "TypeScript Reference" [ref=e220] [cursor=pointer]:
+                  - /url: /docs/sdk/typescript
+              - listitem [ref=e221]:
+                - link "TypeScript Recipes" [ref=e222] [cursor=pointer]:
+                  - /url: /docs/sdk/quickstart
+              - listitem [ref=e223]:
+                - link "Direct RPC" [ref=e224] [cursor=pointer]:
+                  - /url: /docs/sdk/direct-rpc
+          - generic [ref=e225]:
+            - heading "More" [level=3] [ref=e226]
+            - list [ref=e227]:
+              - listitem [ref=e228]:
+                - link "FAQ" [ref=e229] [cursor=pointer]:
+                  - /url: /docs/faq
+              - listitem [ref=e230]:
+                - link "Live Explorer" [ref=e231] [cursor=pointer]:
+                  - /url: /explorer
+              - listitem [ref=e232]:
+                - link "OpenRPC Spec" [ref=e233] [cursor=pointer]:
+                  - /url: /openrpc.json
+              - listitem [ref=e234]:
+                - link "GitHub — zcashnames" [ref=e235] [cursor=pointer]:
+                  - /url: https://github.com/zcashme/zcashnames
+              - listitem [ref=e236]:
+                - link "GitHub — ZNS Indexer" [ref=e237] [cursor=pointer]:
+                  - /url: https://github.com/zcashme/ZNS
+        - heading "See it livePermalink for this section" [level=2] [ref=e238]:
+          - text: See it live
+          - link "Permalink for this section" [ref=e239] [cursor=pointer]:
+            - /url: "#see-it-live"
+            - text: "#"
+        - paragraph [ref=e240]:
+          - text: Browse registered names, listings, and event history at the
+          - link "Explorer" [ref=e241] [cursor=pointer]:
+            - /url: /explorer
+          - text: . Filter by network and action type, search by name, and watch your transactions land after broadcast.
+        - heading "NetworksPermalink for this section" [level=2] [ref=e242]:
+          - text: Networks
+          - link "Permalink for this section" [ref=e243] [cursor=pointer]:
+            - /url: "#networks"
+            - text: "#"
+        - table [ref=e244]:
+          - rowgroup [ref=e245]:
+            - row "Network Status RPC endpoint" [ref=e246]:
+              - columnheader "Network" [ref=e247]
+              - columnheader "Status" [ref=e248]
+              - columnheader "RPC endpoint" [ref=e249]
+          - rowgroup [ref=e250]:
+            - row "Testnet Active https://light.zcash.me/zns-testnet" [ref=e251]:
+              - cell "Testnet" [ref=e252]
+              - cell "Active" [ref=e253]
+              - cell "https://light.zcash.me/zns-testnet" [ref=e254]:
+                - code [ref=e255]: https://light.zcash.me/zns-testnet
+            - row "Mainnet Beta https://light.zcash.me/zns-mainnet-test" [ref=e256]:
+              - cell "Mainnet" [ref=e257]
+              - cell "Beta" [ref=e258]
+              - cell "https://light.zcash.me/zns-mainnet-test" [ref=e259]:
+                - code [ref=e260]: https://light.zcash.me/zns-mainnet-test
+        - paragraph [ref=e261]:
+          - text: "Canonical spec:"
+          - link "openrpc.json" [ref=e262] [cursor=pointer]:
+            - /url: https://github.com/zcashme/ZNS/blob/master/openrpc.json
+            - code [ref=e263]: openrpc.json
+          - text: (also served at
+          - link "/openrpc.json" [ref=e264] [cursor=pointer]:
+            - /url: /openrpc.json
+            - code [ref=e265]: /openrpc.json
+          - text: ).
+      - generic [ref=e266]:
+        - text: Last updated on
+        - time [ref=e267]: April 3, 2026
+      - link "What is ZNS?" [ref=e269] [cursor=pointer]:
+        - /url: /docs/learn/what-is-zns
+        - text: What is ZNS?
+        - img [ref=e270]
+  - generic [ref=e272]:
+    - separator [ref=e273]
+    - contentinfo [ref=e274]: MIT 2026 © ZcashMe
+  - alert [ref=e275]

@@ -35,6 +35,3 @@ npm-debug.log*
 .source_zcashname/
 _upstream_zcashname/
 spell-ui/
-
-# closed beta tester registry (codes are sensitive)
-beta-testers.json
