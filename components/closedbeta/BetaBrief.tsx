@@ -1,5 +1,14 @@
 import Link from "next/link";
 import { BRAND } from "@/lib/zns/brand";
+import {
+  InlineCollapseChevron,
+  InlineNetworkToggle,
+  InlinePopoutIcon,
+  InlinePreview,
+  InlineReadMeBtn,
+  InlineReportingBanner,
+  InlineSubmitFeedbackBtn,
+} from "./BriefInline";
 
 const SOCIAL_PATHS: Record<string, string> = {
   "X / Twitter":
@@ -99,7 +108,7 @@ export default function BetaBrief() {
           ZcashNames Closed Beta
         </h1>
         <p style={p}>
-          Welcome. ZcashNames (ZNS) is a name registration protocol on Zcash. You
+          Welcome. Zcash Name Service (ZNS) is a name registration protocol on Zcash. You
           register a short name (e.g. <code style={inlineCode}>pacu.zcash</code>,{" "}
           <code style={inlineCode}>nullc0py.zcash</code>) and it resolves to your
           unified address.
@@ -158,6 +167,9 @@ export default function BetaBrief() {
           <li style={li}>
             Click <strong>Mainnet</strong> or <strong>Testnet</strong> in the header
             bar (start with Testnet for Phase 1).
+            <InlinePreview>
+              <InlineNetworkToggle />
+            </InlinePreview>
           </li>
           <li style={li}>
             When the password modal appears, enter the <strong>invite code I sent
@@ -166,20 +178,18 @@ export default function BetaBrief() {
           <li style={li}>
             You&rsquo;ll see a small &ldquo;Welcome&rdquo; toast and a floating{" "}
             <strong>Submit Feedback</strong> button in the bottom-right corner.
-            Click it &mdash; the panel opens on the <strong>Checklist</strong>{" "}
+            Click it to open the panel on the <strong>Checklist</strong>{" "}
             tab with your test plan. Reports filed from this session will be
             auto-attributed to you.
+            <InlinePreview>
+              <InlineSubmitFeedbackBtn />
+            </InlinePreview>
           </li>
         </ol>
         <p style={{ ...p, marginTop: "1rem" }}>
           See the <a href="#submitting-feedback" style={{ color: "var(--fg-heading)", textDecoration: "underline" }}>The Feedback Panel</a>{" "}
-          section below for how the panel works in detail &mdash; it&rsquo;s
+          section below for how the panel works in detail. It&rsquo;s
           worth reading once before you start.
-        </p>
-        <p style={p}>
-          The plain network passwords (<code style={inlineCode}>mainnet</code>,{" "}
-          <code style={inlineCode}>testnet</code>) still work, but submissions
-          made from those sessions are anonymous.
         </p>
       </section>
 
@@ -190,16 +200,16 @@ export default function BetaBrief() {
         <h2 style={h2}>How It Works</h2>
         <p style={p}>
           You send a shielded transaction to the ZNS registry address with a
-          specifically formatted memo &mdash; the indexer picks it up, validates the
+          specifically formatted memo. The indexer picks it up, validates the
           admin signature, and updates the registry. Names are resolved with a simple
           JSON-RPC call to the indexer.
         </p>
         <p style={p}>
           For actions that require proving you own the name (update, list, delist,
           release), there is a one-time-password flow: you send a tiny verification
-          transaction and receive a 6-digit code back in your memo. The OTP flow
-          proves that you control the unified address linked to the registered name
-          &mdash; you enter that code in the UI to authorize the action.
+          transaction and receive a 6-digit code back in your memo. The One-Time Passcode (OTP) flow
+          proves that you control the unified address linked to the registered name.
+          You enter that OTP in the UI to authorize the action.
         </p>
       </section>
 
@@ -211,27 +221,26 @@ export default function BetaBrief() {
 
         <h3 style={h3}>Phase 1: Testnet</h3>
         <p style={p}>
-          Test everything on testnet first. No real ZEC involved. I&rsquo;ll send you
-          a faucet link. Testnet names registered during beta will persist after the
-          program ends &mdash; feel free to set up a real testnet identity.
+          Try everything on testnet first where no real ZEC involved. I&rsquo;ll send you
+          a passphrase to a wallet containing TAZ (Testnet Acquired Zcash). Testnet names registered during beta may persist after the
+          program ends.
         </p>
 
-        <h3 style={h3}>Phase 2: Mainnet Baby</h3>
+        <h3 style={h3}>Phase 2: Mainnet</h3>
         <p style={p}>
-          Same flows, on mainnet, at 1/100th of full pricing. I&rsquo;ll send you{" "}
-          <strong>0.125 ZEC</strong> at the start of this phase &mdash; that covers
-          your test costs with room to spare.
+          Try the same flows on mainnet but at 1/100th of full pricing. I&rsquo;ll send you a passphrase to a wallet containing {" "}
+          <strong>0.125 ZEC</strong> at the start of this phase to cover
+          your beta test costs with room to spare.
         </p>
         <p style={p}>
           One thing to be clear about upfront:{" "}
           <strong>mainnet beta names will be wiped when the program ends.</strong>{" "}
-          This is a test environment running at reduced prices. When beta closes,
-          pricing moves to full rates and the registry resets.
+          This is a demo environment running at reduced prices. When beta closes,
+           the registry resets and the pricing moves to full rates.
         </p>
         <p style={p}>
           The 0.125 ZEC is yours to use for testing. Whatever&rsquo;s left over when
-          the program ends is yours to keep &mdash; or donate, if you&rsquo;d rather
-          pay it forward.
+          the program ends is yours to keep or donate.
         </p>
       </section>
 
@@ -241,15 +250,12 @@ export default function BetaBrief() {
       <section id="what-to-test">
         <h2 style={h2}>What to Test</h2>
         <p style={p}>
-          The full test plan lives in the <strong>Checklist</strong> tab of the
-          feedback panel &mdash; every individual test you should run, with
-          progress tracking. The flagship test to make sure you cover:{" "}
-          <strong>have another tester send ZEC to your name from their wallet</strong>.
-          That&rsquo;s where wallet/ZIP-321 quirks are most likely to surface.
+          The full beta test plan lives in the <strong>Checklist</strong> tab of the
+          feedback panel. It contains every individual test you should run and helps you track progress.
         </p>
         <p style={p}>
-          I want coverage across wallets. Let me know which wallet(s) you&rsquo;ll
-          be using &mdash; Zingo, Zodl, and a couple others are the targets.
+        Record which wallet(s), version(s) and operating system(s) you&rsquo;ll
+          be using as part of any report. 
         </p>
       </section>
 
@@ -263,8 +269,8 @@ export default function BetaBrief() {
           floating <strong>Submit Feedback</strong> button stays pinned to the
           bottom-right corner. Clicking it slides a panel in from the right side;
           the rest of the page reflows to fit, so you can keep using the site
-          alongside it. The top-left chevron collapses the panel; the floating
-          button reappears.
+          alongside it. The top-left chevron <InlineCollapseChevron /> collapses
+          the panel; the floating button reappears.
         </p>
 
         <h3 style={h3}>The two tabs</h3>
@@ -293,16 +299,18 @@ export default function BetaBrief() {
             The active item shows a <strong>green outline</strong> in the
             Checklist tab and a <strong>green &ldquo;Reporting on&rdquo; banner</strong>{" "}
             above the Report tab.
+            <InlinePreview>
+              <InlineReportingBanner />
+            </InlinePreview>
           </li>
           <li style={li}>
             <strong>Submitting a report does not check off the item.</strong>{" "}
             The checkbox is yours to mark when <em>you</em> consider that test
-            complete &mdash; you might file several reports against one item
+            complete. In fact, you might file several reports against one item
             before ticking it off.
           </li>
           <li style={li}>
-            Wallet + version is <strong>remembered across reports</strong>{" "}
-            &mdash; fill it in once.
+            Wallet + version + OS is <strong>remembered across reports</strong>{" "}.  Fill it out once and you'll see it on each report until you change it.
           </li>
           <li style={li}>
             All fields are optional, but you need at least one of{" "}
@@ -325,17 +333,18 @@ export default function BetaBrief() {
 
         <h3 style={h3}>Test in one window, write in another</h3>
         <p style={p}>
-          The popout icon at the top-right of the panel opens the same form in
-          a small standalone window. Keep that on one side of your screen while
-          you run the test on the other. Same cookie, same attribution, same
-          wallet, same checklist progress &mdash; synced live across tabs and
-          windows.
+          The popout icon <InlinePopoutIcon /> at the top-right of the panel
+          opens the same form in a small standalone window. Keep that on one
+          side of your screen while you run the test on the other. It syncs the
+          same cookie, same attribution, same wallet, same checklist progress
+          live across tabs and windows.
         </p>
 
         <h3 style={h3}>Re-reading the instructions</h3>
         <p style={p}>
-          The book icon next to the popout (top-right of the panel) opens this
-          page in a new tab anytime you need to re-read the brief.
+          The Read Me button <InlineReadMeBtn /> next to the popout (top-right
+          of the panel) opens this page in a new tab anytime you need to
+          re-read the brief.
         </p>
 
         <h3 style={h3}>Indexer lag is normal</h3>
@@ -403,8 +412,8 @@ export default function BetaBrief() {
         <h2 style={h2}>What You Need</h2>
         <ul className="list-disc pl-5">
           <li style={li}>A Zcash wallet that supports custom memos and can display received memos (Zingo and Zodl both work)</li>
-          <li style={li}>Testnet funds for Phase 1 (I&rsquo;ll send faucet)</li>
-          <li style={li}>About an hour spread across 20 days</li>
+          <li style={li}>Testnet funds for Phase 1 (I&rsquo;ll send passphrase)</li>
+          <li style={li}>About one hour</li>
         </ul>
       </section>
 
@@ -416,7 +425,7 @@ export default function BetaBrief() {
         <p style={p}>
           Rough target: Phase 1 starts within the next two weeks once I confirm
           everyone is onboarded. I&rsquo;ll share the private repo, the endpoint URLs,
-          and a testnet faucet link once you confirm you&rsquo;re in.
+          and a testnet wallet passphrase once you confirm you&rsquo;re in.
         </p>
       </section>
 
