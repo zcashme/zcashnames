@@ -1,8 +1,6 @@
 # How it works
 
-ZcashNames is a small protocol layered on top of standard Zcash.
-
-## The four moving parts
+## Architecture
 
 ```mermaid
 flowchart TD
@@ -17,22 +15,25 @@ flowchart TD
     zvs -->|shielded reply memo| clients
 ```
 
-- **Zcash blockchain** is the source of truth. Every ZcashNames action is a memo in a normal shielded transaction.
-- **Indexer** watches the chain, verifies memos, and builds the registry. Anyone can run one. They all produce the same result.
-- **ZVS** handles ownership proofs via shielded one-time codes. It never touches the registry.
-- **Wallets, apps, explorers** read from the indexer over a JSON-RPC API.
+- The Zcash blockchain is the source of truth. Every ZcashNames action is a memo in a normal shielded transaction.
+- The indexer watches the chain, verifies memos, and builds the registry. Anyone can run one. They all produce the same result.
+- ZVS handles ownership proofs via shielded one-time codes. It never touches the registry.
+- Wallets, apps, and explorers read from the indexer over a JSON-RPC API.
 
-## Claiming a name
+## Claiming a Name
 
-1. Search for an available name and provide your unified address.
-2. The app gets a signed `CLAIM` memo from the admin server.
-3. Your wallet broadcasts a shielded transaction carrying that memo and the claim cost.
-4. The indexer verifies and indexes it. From that block on, `resolve("alice")` returns your address.
+ZNS uses the shielded transaction's memo field to write name operations to the chain.
 
-The registration comes back with a signature so any client can verify it without trusting the indexer. See [Trust Model](/docs/protocol/trust-model).
+Registering `alice` has the user send a memo like so:
 
-## Read next
+```
+ZNS:CLAIM:alice:u1...<your address>:<signature>
+```
 
-- [Name lifecycle](/docs/learn/name-lifecycle)
-- [Trust model](/docs/protocol/trust-model)
-- [Claim a name](/docs/use/claiming)
+The user's wallet sends the memo as a normal shielded payment. Upon transaction confirmation, the name is registered.
+
+## Resolving a name
+
+To pay someone at `alice.zcash`, a wallet asks an indexer: `resolve("alice")`. The response includes the address and a signature. The wallet can verify that signature locally, without trusting the indexer.
+
+If the name does not exist, `resolve` returns `null`.

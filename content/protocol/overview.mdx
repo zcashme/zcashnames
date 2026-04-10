@@ -37,17 +37,6 @@ A separate Rust service for OTP-based address-ownership verification. The client
 
 The web app, the SDKs ([TypeScript here](https://github.com/zcashme/zcashnames/tree/main/sdk/typescript), Rust/Dart/Kotlin/Swift/Python/Go ports under [`zcashme/ZNS/sdk`](https://github.com/zcashme/ZNS/tree/master/sdk)), and wallet integrations all consume the same JSON-RPC surface. A correctly-implemented client verifies the signature returned with every registration against a hardcoded `admin_pubkey`, and ideally runs its own indexer against a hardcoded UIVK.
 
-## End-to-end: claiming `alice`
-
-1. Client calls `resolve("alice")`. Indexer returns `null`.
-2. Client calls `status()` and reads the claim cost for a 5-character name.
-3. User provides a unified address `u1…`.
-4. Client requests an admin Ed25519 signature over the pre-image `CLAIM:alice:u1…`.
-5. Client builds the memo `ZNS:CLAIM:alice:u1…:<sig>` and a ZIP-321 URI for the claim cost.
-6. The wallet broadcasts the Orchard shielded transaction.
-7. The indexer decrypts the output, verifies the signature, checks the name is unclaimed and the note value covers the claim cost, and inserts the row.
-8. Subsequent `resolve("alice")` calls return the registration with its signature, which the client re-verifies against `admin_pubkey`.
-
 ## Read next
 
 - [Memo Format](/docs/protocol/memo-format) - the normative grammar for all seven actions.

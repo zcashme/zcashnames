@@ -15,8 +15,6 @@ Any wallet that does these three things can broadcast a ZNS transaction generate
 
 ### Maintained shielded Zcash wallets
 
-These all satisfy the three requirements (test before relying - wallet versions vary):
-
 | Wallet | Platforms | Notes |
 |--------|-----------|-------|
 | **[Cake Wallet](https://cakewallet.com)** | iOS, Android, desktop | Shielded-by-default Zcash since v5.7.0 (2026), with AnyPay and Cake Pay against shielded ZEC. |
@@ -26,7 +24,6 @@ These all satisfy the three requirements (test before relying - wallet versions 
 | **[Zkool](https://github.com/hhanh00/zkool2)** | iOS, Android, desktop | Successor to Ywallet by the same author (`hanh`). Multi-account, encrypted wallet files. |
 | **[Zingo!](https://www.zingolabs.org)** | iOS, Android, desktop | Orchard-native lightwallet by Zingo Labs. |
 
-> Always run a test send first. ZIP-321 + verbatim-memo behavior is the make-or-break detail and varies by wallet version. Send yourself a test ZNS memo and verify the bytes match what the web app generated. Report mismatches at [`zcashme/zcashnames`](https://github.com/zcashme/zcashnames/issues).
 
 ## In-wallet name resolution
 
@@ -45,7 +42,6 @@ These wallets are working with us on adding `.zcash` resolution to their send fl
 - **[Edge](https://edge.app)**
 - **[Unstoppable](https://unstoppable.money)**
 
-If you maintain one of them and want a status update - or you're a wallet team interested in shipping ZNS resolution - see the next section.
 
 ## Become a partner wallet
 
@@ -56,7 +52,7 @@ Adding ZNS resolution to a wallet is small. The integration is one RPC call (`re
 - Substitute the returned `address` into your existing send form and proceed normally.
 - Optionally verify the returned signature against the pinned `admin_pubkey` ([Signature Scheme](/docs/protocol/signatures)) for trust-minimized resolution.
 
-That's it - ZNS does not require changes to how the wallet builds or signs transactions. Open an issue at [`zcashme/zcashnames`](https://github.com/zcashme/zcashnames/issues) or reach out via the [community Signal group](https://signal.group/#CjQKIKDM76KMttnFqmbtbKzcfDrGeLtR6wWQq82YM8LWdyNhEhBGKNSZVjTREwDLqhatYhLH) and we'll help with review and test vectors.
+That's it - ZNS does not require changes to how the wallet builds or signs transactions. Open an issue at [`zcashme/zcashnames`](https://github.com/zcashme/zcashnames/issues) or reach out via the [community Signal group](https://signal.group/#CjQKIKDM76KMttnFqmbtbKzcfDrGeLtR6wWQq82YM8LWdyNhEhBGKNSZVjTREwDLqhatYhLH) and we'll help with review integrations.
 
 ## Wallets to avoid
 
@@ -74,5 +70,3 @@ If you find a wallet that *should* work but doesn't, file an issue at [`zcashme/
 - The exact ZIP-321 URI the web app generated
 - The memo the wallet actually sent (from the tx history, not the confirmation screen)
 - The txid if the transaction was broadcast
-
-The culprit is almost always memo mangling or a non-Orchard output.

@@ -24,14 +24,6 @@ Both `.zcash` and `.zec` suffixes point to the same name - they're interchangeab
 
 After you broadcast, the [Explorer](/explorer) is the fastest way to confirm the indexer picked up your claim - search for your name and watch the `CLAIM` event appear once the block lands.
 
-If you're curious what the app is doing under the hood: it fetches the current claim cost, gets a signed `CLAIM:{name}:{address}` pre-image, and builds a memo of the form:
-
-```
-ZNS:CLAIM:<name>:<your_ua>:<base64_signature>
-```
-
-Your wallet wraps that memo into a standard Orchard shielded note and sends it to the registry address with the claim-cost amount. The [indexer](/docs/indexer/running) picks it up from there.
-
 ## Things to know
 
 - **First-come-first-served.** If two people try to claim the same name, whoever's transaction is mined first wins. A CLAIM in a later block for the same name is silently ignored by the indexer. The default is no automated refund - but disputes are resolved case-by-case via the [community Signal group](https://signal.group/#CjQKIKDM76KMttnFqmbtbKzcfDrGeLtR6wWQq82YM8LWdyNhEhBGKNSZVjTREwDLqhatYhLH) by sharing your wallet's full viewing key so the team can verify the transaction. See the [FAQ](/docs/faq#can-i-get-a-refund-if-my-claim-fails) for the process.

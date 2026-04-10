@@ -1,6 +1,6 @@
 # Pricing
 
-Claiming a name on ZcashNames costs ZEC. The price depends on how long the name is. Shorter names cost more because there are fewer of them.
+Claiming a .zcash name involves sending ZEC to a registry wallet with the name price depending on how long the name is. (Shorter names cost more because there are fewer of them.)
 
 ## What a name costs
 
@@ -14,31 +14,33 @@ Claiming a name on ZcashNames costs ZEC. The price depends on how long the name 
 | 6 characters | 0.50 |
 | 7 characters or more | 0.25 |
 
-These are the current default tiers on testnet and mainnet beta. They are illustrative: the authoritative source is whatever the indexer reports as the current pricing, which can change.
+These are the current default tiers on testnet 
 
 ## How you pay
 
-When you claim a name, the [ZcashNames site](https://www.zcashnames.com) generates a payment URI with the exact amount and the encoded claim memo. You send the transaction from your wallet (any wallet that supports ZIP-321 and Orchard memos, see [Wallet Compatibility](/docs/use/wallets)) and that's the payment.
+When you claim a name, the [ZcashNames site](https://www.zcashnames.com) generates a payment URI with the exact amount and the signed claim memo. 
 
-There is no separate fee, no setup cost, no annual renewal. One transaction, one payment, one name.
+You send the transaction from any wallet that supports ZIP-321 and Orchard memos, see [Wallet Compatibility](/docs/use/wallets)) and that's the payment for name-registration.
 
 ## Why tiered pricing
 
 Shorter names are more valuable to attackers and squatters. Tiered pricing makes it expensive enough to deter casual squatting on `a` or `bob` while keeping ordinary 7+ character names cheap enough to be worth it for individual users.
 
-The team that runs ZcashNames can adjust pricing by broadcasting a `SETPRICE` memo to the chain. This is signed by the admin key, and any indexer will pick it up at the block it lands in. The tiers above can move down, up, or stay where they are.
+Pricing is adjusted by broadcasting an admin-signed `SETPRICE` memo to the chain. Every honest indexer will pick it up at the block it lands in and update the ZNS pricing tier.
 
 ## Marketplace pricing
 
-If you buy a name that's already registered and listed for sale, you pay the **listing price**, not the claim cost. Listing prices are set by the seller and can be anything they like (with a small minimum on the web UI). See [Buying & Selling](/docs/use/buying-and-selling) for the marketplace flow.
+If you buy a name that's already registered and listed for sale, you pay the **listing price**, not the claim cost. 
+
+Listing prices are set by the seller and can be anything they like (with a small minimum). See [Buying & Selling](/docs/use/buying-and-selling) for the marketplace flow.
 
 ## Renewal
 
-There is no renewal. Once you've paid the claim cost, you own the name until you release it. There are no expiration dates, no grace periods, and no annual fees.
+Unlike traditional name-registration, ZNS has no renewal fees. Once you've paid the claim cost, you own the name unless you decide to release it. 
 
 ## Reading current prices
 
-Wallets and apps that need to display the live cost can read it from the indexer's `status` RPC method, in the `pricing.tiers` field. See [JSON-RPC Reference](/docs/indexer/rpc-reference#status) for the exact response shape, or use one of the [SDK ports](/docs/sdk).
+Wallets and apps may display the live pricing tier by reading it from the indexer's `status` RPC method, in the `pricing.tiers` field. See [JSON-RPC Reference](/docs/indexer/rpc-reference#status) for the exact response shape, or use one of the [SDK ports](/docs/sdk).
 
 For the protocol-level details (`SETPRICE` memo grammar, the bootstrap requirement, trust-minimized pricing verification, USD display), see [Pricing (Protocol)](/docs/protocol/pricing).
 

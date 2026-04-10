@@ -1,7 +1,8 @@
 # Running an Indexer
 
-The ZNS indexer is open-source Rust. Anyone can run their own instance to independently verify registry state - this is what makes ZNS trust-minimized. An indexer you run yourself will derive the exact same database as everyone else watching the same chain with the same UIVK and admin pubkey.
+The ZNS indexer can be run to independently verify registry state - this is what makes ZNS trust-minimized. 
 
+An indexer you run yourself will derive the exact same name-registry database as everyone else watching the same chain with the same UIVK and admin pubkey.
 
 ## Build
 
@@ -20,12 +21,6 @@ export ZNS_UIVK="uivktest1qqq…"
 export ZNS_ADMIN_PUBKEY="0123abcd…64 hex chars…"
 
 cargo run --release --features testnet
-```
-
-Or directly from the binary:
-
-```sh
-./target/release/zns-indexer
 ```
 
 The RPC server binds to `127.0.0.1:3000` by default. To expose it externally, front it with a reverse proxy (nginx, caddy) - the indexer has no built-in auth, TLS, or rate limiting.
