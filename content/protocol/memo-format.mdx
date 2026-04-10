@@ -1,14 +1,12 @@
 # Memo Format
 
-This page is the normative grammar for every ZNS memo. The reference implementation is [`src/memo.rs`](https://github.com/zcashme/ZNS/blob/master/src/memo.rs) in the indexer repo.
-
-## Framing
+## Overview
 
 Every ZNS memo is a UTF-8 string stored verbatim in the 512-byte Orchard memo field of a Zcash shielded note. Trailing NUL bytes are trimmed during parsing. Each memo begins with the literal prefix `ZNS:` followed by an action keyword.
 
 The colon byte `:` (0x3A) is the only delimiter. It is forbidden inside any field value - names, addresses, nonces, prices, signatures all exclude it. The parser uses a small number of `splitn` calls on `:`, so getting the arity wrong results in a rejected memo.
 
-## Action grammar
+## Memo Format
 
 | Action | Memo format |
 |--------|-------------|
@@ -22,11 +20,10 @@ The colon byte `:` (0x3A) is the only delimiter. It is forbidden inside any fiel
 
 Field conventions:
 
-- `<name>` - 1–62 characters of lowercase ASCII letters and digits only. No hyphens, no underscores, no unicode. See [Name Validation](/docs/protocol/name-validation).
-- `<ua>`, `<new_ua>`, `<buyer_ua>` - the exact bech32m unified-address string, byte-for-byte.
-- `<nonce>`, `<price>`, `<p1>…<pN>`, `<count>` - decimal ASCII, no leading zeros, no sign, no padding.
-- `<sig>` - 64-byte Ed25519 signature encoded as **standard base64 with padding** (88 characters). Not base64url.
-- Pricing tiers are in multiples of 10,000 zats (the indexer multiplies on the way out).
+- `<name>` - 1–62 characters of lowercase ASCII letters and digits only. See [Name Validation](/docs/protocol/name-validation).
+- `<ua>`, `<new_ua>`, `<buyer_ua>` - a bech32m zcash unified-address string.
+- `<nonce>`, `<price>`, `<p1>…<pN>`, `<count>` - a plain decimal ASCII integer.
+- `<sig>` - 64-byte Ed25519 signature encoded as base64, not base64url (88 characters with padding).
 
 The signature is always the last colon-separated field. See [Signature Scheme](/docs/protocol/signatures) for the pre-image templates and the verification procedure.
 
@@ -44,14 +41,14 @@ Register a new name. Admission rules:
 - `name` is not already in `registrations`.
 - Signature over `CLAIM:{name}:{ua}` verifies against `admin_pubkey`.
 - Note value ≥ current claim cost for `name.length` (from the pricing table).
-- Pricing has been initialized at least once (a `SETPRICE` has been observed on chain).
+- Pricing has been initialized with a `SETPRICE` memo observed on chain
 
 **Example:**
 ```
 ZNS:CLAIM:alice:utest1f32kn6c4zvn54xr8wfsnxmj9hzpu2mwgtxzpzwcw3490…:AQIDBAUG…
 ```
 
-On success: insert a row with `nonce = 0` and `last_action = "CLAIM"`.
+On success: the name is registered.
 
 ---
 
@@ -61,7 +58,7 @@ On success: insert a row with `nonce = 0` and `last_action = "CLAIM"`.
 ZNS:UPDATE:<name>:<new_ua>:<nonce>:<sig>
 ```
 
-Rewrite the address a name resolves to.
+Update the address a name resolves to.
 
 - `name` exists.
 - Signature over `UPDATE:{name}:{new_ua}:{nonce}` verifies.
@@ -141,14 +138,16 @@ On success: both the `registrations` row and any `listings` row for the name are
 ZNS:SETPRICE:<count>:<p1>:<p2>:…:<pN>:<nonce>:<sig>
 ```
 
-Update the claim-pricing table.
+Update the claim-pricing table.*
 
 - `count` = number of tier values that follow. Required; disambiguates the end of the tier list from the nonce and signature even when tiers include zeros.
 - `p1` through `pN` are decimal integers in multiples of 10,000 zats, indexed by name length (`p1` for 1-char names, etc.). The last value is the catchall for names of that length and longer. `0` = free.
 - `nonce > current_pricing_nonce`.
-- Signature over `SETPRICE:{count}:{p1}:…:{pN}:{nonce}` verifies.
+- Signature over `SETPRICE:{count}:{p1}:…:{pN}:{nonce}` verifies against `admin_pubkey`.
 
 SETPRICE does not require a payment - it's typically a 0.0001 ZEC self-send that only exists to carry the memo.
+
+*Admin-only action. Only the protocol admin can update pricing. Pricing initializes when the first SETPRICE memo is confirmed on-chain.
 
 See [Pricing](/docs/learn/pricing) for activation semantics and the bootstrap requirement.
 
