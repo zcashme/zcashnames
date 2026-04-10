@@ -1,27 +1,22 @@
-# Integrate ZcashNames
+# First Steps
 
-Adding ZcashNames support to a wallet, block explorer, or payments app. Most integrations are small.
+## Claims
 
-## What's here
+Claiming a new name is currently a web flow at [zcashnames.com](https://www.zcashnames.com). Wallets that want to support claims today should deep-link or open the web flow.
 
-[Wallet: Resolve a Name](/docs/integrate/wallet-resolution) is the smallest viable wallet integration. Detect a name in the recipient field, call `resolve`, substitute the returned address into the existing send flow. One JSON-RPC call.
+## What to read
 
-[Explorer Integration](/docs/integrate/explorer-integration) covers reading from the indexer's `events` RPC, or parsing memos directly from the chain, to surface ZcashNames activity alongside normal Zcash transactions.
+- [Wallet: Resolve a Name](/docs/integrate/wallet-resolution) for the implementation path
+- [Explorer Integration](/docs/integrate/explorer-integration) if you want registry activity in an explorer or app
+- [Testing](/docs/integrate/testing) for endpoints and fixtures
 
-[Testing](/docs/integrate/testing) lists the testnet endpoints, fixtures, and how to verify an integration before shipping.
+## Current rollout
 
-## A note on claims
+- mainnet is live in beta
+- wallet resolution has not shipped yet
+- Edge and Unstoppable are implementing support
+## SDKs and spec
 
-The full claim flow, where a user registers a new name, is currently a web flow at [zcashnames.com](https://www.zcashnames.com), not an in-wallet flow. Wallets that want to support claiming should deep-link or webview to the web app for now. A public signing API for in-wallet claims is a future direction, not a shipped feature.
+There are first-party SDKs for TypeScript, React Native, Rust, Python, Kotlin, Swift, Go, and Dart. See [SDKs](/docs/sdk).
 
-## Available SDKs
-
-ZNS has first-party SDKs for TypeScript/JavaScript, React Native, Rust, Python, Kotlin/JVM, Swift, Go, and Dart. They all wrap the same JSON-RPC API. Pick the one that matches your stack, or hit the indexer directly with any HTTP client. See [SDKs](/docs/sdk).
-
-The canonical machine-readable spec is at [`/openrpc.json`](/openrpc.json). Point any OpenRPC code generator at it to scaffold a typed client.
-
-## Read next
-
-- [Wallet: Resolve a Name](/docs/integrate/wallet-resolution)
-- [Testing](/docs/integrate/testing)
-- [SDKs](/docs/sdk)
+The machine-readable RPC spec is at [`/openrpc.json`](/openrpc.json).

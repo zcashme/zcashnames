@@ -1,8 +1,6 @@
 # Explorer Integration
 
-How a block explorer or payments app surfaces ZcashNames activity alongside the normal Zcash transactions it already displays.
-
-## Read the events RPC
+## Events RPC
 
 The indexer's [`events`](/docs/indexer/rpc-reference) method returns the activity log newest-first, with each event carrying its txid, height, signature, and the relevant address. To poll for new events, track the highest `height` you have ingested and pass it as `since_height` on the next call.
 

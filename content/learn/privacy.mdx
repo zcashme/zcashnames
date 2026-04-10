@@ -1,0 +1,59 @@
+# Privacy
+
+This page answers a different question from the trust model: if you use ZcashNames, what becomes visible about you?
+
+## Visibility
+
+- The claim transaction is **publicly** readable on chain as the indexer's uivk is public.
+- The registry is **public**, so anyone who knows your name can resolve it to your unified address.
+- On Zcash, knowing a unified address does **not** reveal your balance, transaction history, or counterparties.
+- The biggest privacy risk is usually the **name you choose** - not the address format underneath it.
+
+## What happens when you claim a name
+
+ZNS writes its actions inside Orchard shielded memos. Those memos are not readable by ordinary chain observers.
+
+That means someone watching the chain can see that a shielded transaction happened, but they cannot read the name and address pair out of the memo just by scanning the blockchain.
+
+## What becomes public later
+
+Once a name is registered, the registry is meant to be queried. Anyone can ask the resolver for:
+
+`alice.zcash -> u1...`
+
+That lookup is public by design. If someone knows your name, they can learn the unified address it points to.
+
+## Why this is different from a naming service on a transparent chain
+
+On a transparent chain, knowing an address usually reveals a full financial fingerprint.
+
+On Zcash, a unified address does not expose:
+
+- current balance
+- transaction history
+- counterparties
+
+So making your unified address publicly queryable is a much smaller privacy leak than it would be on Ethereum or Bitcoin.
+
+## Who can see the name-address pair
+
+Two parties have direct visibility into the registration data as operated today:
+
+- the indexer operator, because the indexer scans the registry wallet's incoming viewing key
+- the service that signs claim payloads for the web flow
+
+That is different from saying the pair is public on chain. The chain exposure and the operator exposure are not the same thing.
+
+## Practical advice
+
+If privacy matters to you:
+
+- use a dedicated unified address for your ZNS name
+- choose a pseudonymous name unless you want the identity link
+- treat the public name itself as the main disclosure
+
+## Read next
+
+- [What is ZcashNames?](/docs/learn/what-is-zns)
+- [Trust model](/docs/learn/trust-model)
+- [Claiming a name](/docs/use/claiming)

@@ -2,7 +2,6 @@ import type { MetaRecord } from 'nextra'
 
 const meta: MetaRecord = {
   overview: 'Overview',
-  'trust-model': 'Trust Model',
   'memo-format': 'Memo Format',
   signatures: 'Signature Scheme',
   'name-validation': 'Name Validation',

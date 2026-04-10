@@ -1,6 +1,8 @@
 # Resolution
 
-Resolution is the process of going from a name or address to a registration. In ZNS, resolution is a single `resolve` RPC call that returns everything a client needs - including the signature to verify the result.
+Resolution is the process of going from a name or address to a registration. 
+
+In ZNS, resolution is a single `resolve` RPC call  to the indexer that returns everything a client needs - including the signature to verify the result.
 
 ## Two resolution modes
 
@@ -90,24 +92,6 @@ Given a unified address, `resolve` returns every name bound to that address. A s
 ```
 
 An empty array means the address has no registered names.
-
-The by-address mode is the natural reverse lookup: "which names does this address own?" Unlike ENS's reverse resolution (which requires the owner to opt in by setting a primary name), ZNS derives this directly from the `registrations` table, so no extra setup is needed.
-
-### Why it returns an array
-
-In earlier versions of ZNS the protocol enforced one name per address. That constraint has been lifted at the indexer level - the `registrations` table uses `name` as its primary key with no uniqueness constraint on the address column. A wallet can claim `alice`, `alice-blog`, and `alice-dev` all to the same UA.
-
-Clients that still want a one-to-one view can pick whichever element they prefer (oldest, most recent, lexicographically first). The protocol doesn't impose an ordering.
-
-## Caching
-
-The JSON-RPC API does not expose cache hints. Safe defaults:
-
-- `resolve` results: cache briefly (5–10 seconds) or not at all. The indexer is cheap.
-- `status`: cache for a few seconds - synced height changes per block.
-- `list_for_sale`: cache briefly or refetch on focus.
-
-Longer cache lifetimes are fine if you are also verifying signatures - stale data is still cryptographically valid data.
 
 ## Error handling
 

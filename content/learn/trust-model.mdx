@@ -1,0 +1,54 @@
+# Trust model
+
+- You trust **Zcash consensus** to keep confirmed shielded transactions immutable.
+- You trust the **admin key** to authorize valid registry actions.
+- You do **not** have to trust a hosted indexer to invent names, move names, or rewrite history.
+- If you want stronger assurance, you can run your own indexer and compare results.
+
+## What the team can do
+
+The project controls an Ed25519 signing key that signs state-changing actions such as `CLAIM`, `UPDATE`, `LIST`, `DELIST`, `BUY`, `RELEASE`, and `SETPRICE`.
+
+That means the registrar admin can
+
+- authorize valid writes to the registry
+- change pricing tiers by publishing a signed on-chain `SETPRICE`
+- operate a public indexer and public web app
+
+## What the team cannot do
+
+The team cannot:
+
+- forge a confirmed Zcash transaction that never happened
+- rewrite the order of confirmed registrations
+- move your funds
+- make a name point somewhere else without publishing a signed action that clients can verify
+
+## What you could verify yourself
+
+### 1. Pin the expected keys
+
+A client can pin the registry's `uivk` (Unified Incoming Viewing Key) and `admin_pubkey` and refuse to talk to an indexer that reports different values.
+
+### 2. Verify signatures on returned rows
+
+Each registration returned by the resolver includes a signature - a wallet, explorer, or SDK can reconstruct the expected pre-image and verify that signature locally against the pinned admin public key.
+
+### 3. Run your own indexer
+
+The registry is a pure function of:
+
+- the Zcash chain
+- the ZNS UIVK (Unified Incoming Viewing Key)
+- the published admin Ed25519 public key
+
+If two indexers scan the same chain with the same inputs, they should converge on the same state at the same height.
+
+For the operational procedure, see [Running an Indexer](/docs/indexer/running) and [Verifying State](/docs/indexer/verifying-state).
+
+## Read next
+
+- [How it works](/docs/learn/how-it-works)
+- [Privacy](/docs/learn/privacy)
+- [Protocol overview](/docs/protocol/overview)
+- [Signature Scheme](/docs/protocol/signatures)

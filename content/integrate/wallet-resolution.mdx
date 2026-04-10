@@ -1,8 +1,13 @@
 # Wallet: Resolve a Name
 
-The minimum viable ZcashNames integration: detect a name in the recipient field, call resolve, substitute the returned address, and proceed with the existing send flow.
+The minimum viable ZcashNames integration is:
 
-To support ZcashNames in a wallet, you do not need to change how transactions are built or signed. You add one lookup in front of your existing recipient parser.
+1. detect a name in the recipient field
+2. call `resolve`
+3. substitute the returned address
+4. proceed with the existing send flow
+
+You do not need to change transaction construction or signing.
 
 ## What counts as a name
 
@@ -89,7 +94,7 @@ The other `ErrorType` values (`UivkMismatch`, `InvalidParams`, `InternalError`) 
 
 Most wallets do not need this. The resolver returns a `signature` field over the registration's pre-image, signed by the protocol's admin Ed25519 key. A wallet that wants trust-minimized resolution can verify it locally against the pinned `admin_pubkey` from `status` before substituting the address.
 
-The full procedure and threat model live at [Trust Model](/docs/protocol/trust-model). The SDK does not yet ship a `verifyRegistration` helper, so you bring your own Ed25519 library (`@noble/ed25519` works in browsers and Node).
+The full procedure and threat model live at [Trust model](/docs/learn/trust-model). The SDK does not yet ship a `verifyRegistration` helper, so you bring your own Ed25519 library (`@noble/ed25519` works in browsers and Node).
 
 Wallets that want to also support claiming names can deep-link the user to zcashnames.com. Claiming is out of scope for the resolution path.
 

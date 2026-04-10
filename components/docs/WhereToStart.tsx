@@ -1,8 +1,6 @@
 /**
- * Six-column link grid for the welcome page's "Where to start" section.
- * Mirrors the bottom half of https://docs.ens.domains - section headers in
- * bold, links in blue, no card chrome. Rendered inside the normal Nextra
- * docs layout (sidebar + navbar still visible).
+ * Link grid for the docs welcome page. The groups below are meant to route
+ * different reader types to the one page that can move them forward fastest.
  */
 
 interface LinkItem {
@@ -17,10 +15,20 @@ interface Section {
 
 const SECTIONS: Section[] = [
   {
-    title: "Introduction",
+    title: "Start Here",
     links: [
       { label: "What is ZcashNames?", href: "/docs/learn/what-is-zns" },
+      { label: "I use zcash.me", href: "/docs/learn/what-is-zns#already-using-zcashme" },
+      { label: "I already claimed a name", href: "/docs/use/managing" },
+      { label: "Will this expose me?", href: "/docs/learn/privacy" },
+    ],
+  },
+  {
+    title: "Introduction",
+    links: [
       { label: "How it works", href: "/docs/learn/how-it-works" },
+      { label: "Trust model", href: "/docs/learn/trust-model" },
+      { label: "Privacy", href: "/docs/learn/privacy" },
       { label: "Name Lifecycle", href: "/docs/learn/name-lifecycle" },
       { label: "Pricing", href: "/docs/learn/pricing" },
     ],
@@ -38,7 +46,7 @@ const SECTIONS: Section[] = [
   {
     title: "Integrate",
     links: [
-      { label: "Overview", href: "/docs/integrate" },
+      { label: "First Steps", href: "/docs/integrate" },
       { label: "Wallet: Resolve a Name", href: "/docs/integrate/wallet-resolution" },
       { label: "Explorer Integration", href: "/docs/integrate/explorer-integration" },
       { label: "Testing", href: "/docs/integrate/testing" },
@@ -56,11 +64,10 @@ const SECTIONS: Section[] = [
     title: "Protocol",
     links: [
       { label: "Overview", href: "/docs/protocol/overview" },
-      { label: "Trust Model", href: "/docs/protocol/trust-model" },
       { label: "Memo Format", href: "/docs/protocol/memo-format" },
       { label: "Signature Scheme", href: "/docs/protocol/signatures" },
       { label: "Pricing", href: "/docs/protocol/pricing" },
-      { label: "ZIP-321 Integration", href: "/docs/protocol/zip321" },
+      { label: "Address Types", href: "/docs/protocol/address-types" },
     ],
   },
   {

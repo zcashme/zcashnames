@@ -1,130 +1,17 @@
 # Trust Model
 
-The trust model for ZNS is the formal answer to two questions: what does a client have to trust, and what can a client verify on its own?
+The reader-facing trust model has moved to [Learn / Trust model](/docs/learn/trust-model).
 
-## What you trust
+That page explains:
 
-A client trusts Zcash itself. Once an Orchard shielded transaction is confirmed at sufficient depth, its memo is immutable, its ordering is fixed, and the underlying note is unforgeable. Every property in this document inherits from that assumption. ZNS adds no consensus, no validators, and no fork choice of its own.
+- what the team controls
+- what the team cannot do
+- what a client can verify locally
+- when running your own indexer matters
 
-A client trusts the admin key. Every state-changing action in ZNS (CLAIM, UPDATE, LIST, DELIST, BUY, RELEASE, SETPRICE) is authenticated by an Ed25519 signature. The signing key is held off-chain by the protocol operator. The public half is published as `status.admin_pubkey` and is meant to be pinned by clients alongside the registry's UIVK. Trust in ZNS is, in practice, trust that the admin key has not been compromised and that the published public key is the real one.
-
-## What you verify
-
-Everything else is verifiable. The following table is the canonical inventory of what each component claims and how a client checks the claim.
-
-| Component | What it claims | How to check |
-|-----------|----------------|--------------|
-| Zcash chain | Memos remain immutable once confirmed on chain. | None required; the property is inherited from Zcash consensus. |
-| `status.uivk` | The indexer is scanning the published Unified Incoming Viewing Key. | Hardcode the expected UIVK in the client; refuse to proceed if the indexer reports a different value. |
-| `status.admin_pubkey` | All signed actions are authenticated under this Ed25519 public key. | Hardcode the expected public key alongside the UIVK; the same mismatch check applies. |
-| `signature` on each row | The admin key authorized this specific pre-image. | Reconstruct the pre-image from the row's fields and check the signature against the public key you hardcoded. |
-| `status.pricing` | The reported tiers reflect the most recent on-chain SETPRICE memo. | Query the `events` stream filtered to `SETPRICE`, fetch the underlying memo, and reconstruct the tiers. |
-| Indexer availability | The operator continues to run the indexer and serve it on the documented endpoint. | Run an independent indexer against the same UIVK and admin public key. |
-
-The rest of this page expands the rightmost column into three layers of paranoia.
-
-## Three layers of verification
-
-### Layer 1: Pin the UIVK and admin pubkey
-
-The minimum bar. The client hardcodes the expected `uivk` and `admin_pubkey`, calls `status` on connect, and refuses to proceed if either field differs from the pinned value.
-
-```typescript
-const s = await rpc("status");
-if (s.uivk !== EXPECTED_UIVK) throw new Error("UIVK mismatch");
-if (s.admin_pubkey !== EXPECTED_ADMIN_PUBKEY) throw new Error("admin pubkey mismatch");
-```
-
-**What it catches.** A wrong indexer, a malicious indexer pointing at a different registry wallet, or a MITM forwarding requests to a fake endpoint. Forging a `status` response that matches the pinned values requires controlling the admin private key, which is the trust assumption itself.
-
-**What it does not catch.** A correctly-configured indexer that lies about individual `resolve` or `events` responses. The status banner is honest; the rows below it are not. Layer 2 covers that.
-
-**Who needs it.** Every client. The TypeScript SDK's `createClient` performs this check automatically against a built-in `KNOWN_UIVKS` set covering testnet and mainnet, and refuses to construct a client if the returned UIVK is not in the set. Custom clients in other languages must replicate the check explicitly.
-
-### Layer 2: Verify every signature
-
-Every `Registration`, `Listing`, and `Event` returned by the RPC carries an Ed25519 signature. Layer 2 means re-verifying each one against the pinned `admin_pubkey` before acting on the data, using the pre-image template selected by `last_action` (for registrations) or `action` (for events).
-
-```typescript
-const reg = await resolve("alice");
-const preimage = (() => {
-  switch (reg.last_action) {
-    case "CLAIM":  return `CLAIM:${reg.name}:${reg.address}`;
-    case "UPDATE": return `UPDATE:${reg.name}:${reg.address}:${reg.nonce}`;
-    case "BUY":    return `BUY:${reg.name}:${reg.address}`;
-    case "DELIST": return `DELIST:${reg.name}:${reg.nonce}`;
-  }
-})();
-const ok = await ed25519.verify(
-  Buffer.from(reg.signature, "base64"),
-  new TextEncoder().encode(preimage),
-  Buffer.from(EXPECTED_ADMIN_PUBKEY, "base64"),
-);
-if (!ok) throw new Error("Registration signature invalid");
-```
-
-**What it catches.** Fabricated rows. Without the admin private key, an indexer cannot produce a signature that verifies against the pinned public key, so any forged registration, listing, or event is rejected on receipt.
-
-**What it does not catch.** Omissions. If a name was claimed on chain but the indexer pretends it does not exist, there is nothing to verify against, and Layer 2 silently passes. Stale data, where a real `UPDATE` exists on chain but the indexer continues to serve a previous nonce, falls in the same category: the older signed row still verifies cleanly.
-
-**Who needs it.** Wallets, explorers, SDKs, and any client that displays registry state to users or signs transactions based on it.
-
-### Layer 3: Run your own indexer
-
-The registry is a pure function of `(chain, UIVK, admin_pubkey)`. Two indexers configured with the same three inputs converge on byte-identical SQLite state at the same `synced_height`. Running a local instance and cross-checking against a hosted one closes the omission gap.
-
-The cheapest cross-check is comparing the `status` triple at the same height:
-
-```sh
-curl -sX POST $HOSTED -d '{"jsonrpc":"2.0","id":1,"method":"status","params":{}}' \
-  | jq -r '.result | "\(.synced_height)\t\(.registered)\t\(.listed)"'
-curl -sX POST http://localhost:3000 -d '{"jsonrpc":"2.0","id":1,"method":"status","params":{}}' \
-  | jq -r '.result | "\(.synced_height)\t\(.registered)\t\(.listed)"'
-```
-
-At the same height, `registered` and `listed` must match exactly. Diffing individual `resolve` results gives stronger assurance at slightly higher cost.
-
-**What it catches.** Everything the previous layers miss, plus everything they cover. Omissions, stale data, misreported pricing, and silent indexer bugs all surface as a divergence at the same `synced_height`. If the local and hosted indexers disagree, the local one (built directly from the chain the client already trusts) is the authoritative answer.
-
-**What it does not catch.** Errors in the chain itself, which is the trust root, or compromise of the admin key, which is the other trust root. Neither is something Layer 3 is meant to address.
-
-**Who needs it.** Production services, exchanges, custodians, and anyone whose loss from a bad row exceeds the operational cost of a Rust process and a SQLite file. See [Running an Indexer](/docs/indexer/running) and [Verifying State](/docs/indexer/verifying-state).
-
-## Verifying a registration
-
-Given a `Registration` from `resolve` or `events`, the client performs the following steps. The full normative procedure (encoding rules, worked example, and per-action template list) lives in [Signature Scheme](/docs/protocol/signatures).
-
-1. Select the pre-image template keyed on `last_action`. A `Registration`'s `last_action` is always one of `CLAIM`, `UPDATE`, `BUY`, or `DELIST`.
-2. Substitute `name`, `address`, and `nonce` verbatim. `CLAIM` and `BUY` do not consume the nonce; `UPDATE` and `DELIST` do.
-3. Encode the resulting ASCII string as UTF-8.
-4. Base64-decode `signature` to 64 bytes and `status.admin_pubkey` to 32 bytes. Both fields use standard base64 (RFC 4648 section 4), not base64url.
-5. Run pure Ed25519 verify (no context, no pre-hashing) per [RFC 8032](https://datatracker.ietf.org/doc/html/rfc8032).
-
-The four candidate templates:
-
-```
-CLAIM:{name}:{address}
-UPDATE:{name}:{address}:{nonce}
-BUY:{name}:{address}
-DELIST:{name}:{nonce}
-```
-
-Listings carry a separate signature over `LIST:{name}:{price}:{nonce}` and must be verified independently of the enclosing registration. Verifying only one of the two does not establish that the listing is authorized: the registration signature proves ownership, the listing signature proves the owner authorized that exact price at that nonce, and a client must check both before trusting "alice is listed at 1 ZEC".
-
-Worked example. For `name = alice`, `address = u1example`, `nonce = 2`, `last_action = UPDATE`, the pre-image is the literal ASCII string `UPDATE:alice:u1example:2`. Its UTF-8 bytes are 24 bytes long and feed directly into a standards-compliant Ed25519 verifier alongside the decoded signature and admin pubkey. No newline, no normalization, no canonicalization step.
-
-## The pricing caveat
-
-`status.pricing` is the one field that escapes Layer 1 and Layer 2. The admin signs every on-chain `SETPRICE` memo, but the `status` endpoint flattens the result without re-attaching that signature, and the `events` row for a `SETPRICE` does not expose the structured tier list. A client that displays `status.pricing` as-returned is trusting the indexer for that one piece of data. The trust-minimized fix is Layer 3: a self-run indexer derives pricing from the chain the same way the hosted one does, and the unsigned status field becomes irrelevant. Full discussion in [Pricing](/docs/protocol/pricing).
-
-## What the trust model does not protect against
-
-Cryptography cannot detect an indexer that lies by omission. A hosted indexer that quietly drops a registration, refuses to acknowledge a `CLAIM` event, or stops syncing at a chosen height looks exactly like an honest one to a client doing only Layer 1 and Layer 2 checks. There is no signature on "the absence of a row". The only defense is Layer 3: run an independent indexer against the same `(UIVK, admin_pubkey)` pair and compare. Any client whose threat model includes a hostile indexer operator must treat Layer 3 as mandatory, not optional.
-
-## Read next
+For the protocol details that support those claims, continue with:
 
 - [Signature Scheme](/docs/protocol/signatures)
 - [Memo Format](/docs/protocol/memo-format)
 - [Pricing](/docs/protocol/pricing)
 - [Verifying State](/docs/indexer/verifying-state)
-- [Running an Indexer](/docs/indexer/running)

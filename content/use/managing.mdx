@@ -1,54 +1,65 @@
 # Managing Names
 
-Once you own a name you have four operations available, all of which require [OTP verification](/docs/use/otp-verification) to prove you control the address the name is registered to.
+If you just claimed a name and it does not resolve in a wallet yet, that is expected.
 
-| Operation | Effect |
-|-----------|--------|
-| **Update** | Point the name at a different address |
-| **List** | Put it on the marketplace |
-| **Delist** | Remove it from the marketplace |
-| **Release** | Permanently give up the registration |
+Your registration can be real even while wallet integrations are still being rolled out. Once the claim confirms and the indexer sees it:
 
-List and Delist are covered in [Buying & Selling](/docs/use/buying-and-selling). This page walks through Update and Release.
+- the name exists
+- the matching `zcash.me` profile exists
+- you can manage the name
 
-## Updating the address
+What is not live yet is in-wallet resolution.
 
-If you rotate your wallet keys, or you want the name to resolve to a different address:
+## The actions you will see
 
-1. Search for your registered name.
+| Action | What it means |
+|--------|----------------|
+| **Update** | Change the unified address the name points to |
+| **List** | Put the name up for sale |
+| **Delist** | Take the name off the market |
+| **Release** | Give up the registration entirely |
+
+`List`, `Delist`, and `Buy` belong to the marketplace flow and are covered in [Buying & Selling](/docs/use/buying-and-selling). This page focuses on `Update` and `Release`.
+
+## Update
+
+Use `Update` when you want the name to point to a different unified address.
+
+1. Search for the name you own.
 2. Click **Update Address**.
-3. Complete OTP verification against the **current** registered address.
-4. Enter the new Zcash unified address.
+3. Complete OTP verification against the current registered address.
+4. Enter the new unified address.
 5. Send the transaction.
 
-The memo is `ZNS:UPDATE:<name>:<new_ua>:<nonce>:<sig>`. Once the indexer processes the block, the name points at the new address. The old address is free to register a different name.
+After the transaction confirms and the indexer processes it, the name resolves to the new address.
 
-## Releasing a name
+## Release
 
-Release permanently gives up the registration. After a release the name returns to the **Available** state and anyone (including you) can claim it.
+Use `Release` only if you want to give the name back completely.
 
-1. Search for your registered name.
+1. Search for the name you own.
 2. Click **Release**.
 3. Complete OTP verification.
-4. Confirm - this is irreversible.
+4. Confirm the action.
 5. Send the transaction.
 
-The memo is `ZNS:RELEASE:<name>:<nonce>:<sig>`. On success the indexer deletes the registration and any active listing for the name.
+After release, the name becomes available for anyone to claim.
 
-**When would you release?** You probably won't. Release exists for names you never want to own again - for example, if you claimed something by mistake or a name has become unwanted baggage. For any other case, `UPDATE` to a burn address is cheaper and reversible.
+## Why OTP is involved
 
-## Why OTP verification?
+ZNS has no username-password account system. Management actions need proof that you still control the address currently attached to the name.
 
-ZNS has no accounts. The only way to prove you control a registered name is to prove you can spend from the address it's registered to. OTP verification does that by requiring a shielded transaction from that address - only the owner can authorize the operation. See [OTP Verification](/docs/use/otp-verification) for the mechanism.
+That is what [OTP Verification](/docs/use/otp-verification) provides.
 
-## Gotchas
+## Things to keep in mind
 
-- **Update requires verifying the current address, not the new one.** You're proving you own the thing you're changing.
-- **Every management action consumes a nonce.** The indexer enforces strictly increasing nonces, so if two management actions race, the one with the higher nonce wins and the other is silently dropped.
-- **A name has exactly one address at any given time.** You can't "add" a second address with UPDATE - it replaces.
-- **Release is irrevocable the moment it's in a block.** The name can be re-claimed by anyone.
+- `Update` proves control of the current address, not the new one.
+- each management action consumes a nonce
+- a name points to exactly one unified address at a time
+- `Release` is irreversible once confirmed
 
 ## Next
 
-- [OTP Verification](/docs/use/otp-verification) - the verification mechanism.
-- [Name Lifecycle](/docs/learn/name-lifecycle) - all state transitions.
+- [Buying & Selling](/docs/use/buying-and-selling)
+- [OTP Verification](/docs/use/otp-verification)
+- [Name Lifecycle](/docs/learn/name-lifecycle)

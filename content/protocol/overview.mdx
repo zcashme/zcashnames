@@ -17,7 +17,7 @@ flowchart TD
 
 ## State is a pure function
 
-State is a pure function of `(chain, UIVK, admin_pubkey)`. Any operator with those three inputs produces the same database, byte-for-byte. The indexer is not a trusted oracle; it is a deterministic reducer over an append-only log of memos. For the formal trust model and verification procedures, see [Trust Model](/docs/protocol/trust-model).
+State is a pure function of `(chain, UIVK, admin_pubkey)`. Any operator with those three inputs produces the same database, byte-for-byte. The indexer is not a trusted oracle; it is a deterministic reducer over an append-only log of memos. For the reader-facing trust explanation, see [Trust model](/docs/learn/trust-model).
 
 ## Components
 
@@ -41,5 +41,5 @@ The web app, the SDKs ([TypeScript here](https://github.com/zcashme/zcashnames/t
 
 - [Memo Format](/docs/protocol/memo-format) - the normative grammar for all seven actions.
 - [Signature Scheme](/docs/protocol/signatures) - pre-image templates and verification procedure.
-- [Trust Model](/docs/protocol/trust-model) - what the protocol assumes and how to check it.
+- [Trust model](/docs/learn/trust-model) - what the system assumes and how to check it.
 - [How it works](/docs/learn/how-it-works) - the friendlier sister page for non-implementers.

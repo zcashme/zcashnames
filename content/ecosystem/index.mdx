@@ -7,7 +7,7 @@ A snapshot of what is deployed, what is shipping, and what is open. This page is
 | Component | State |
 |-----------|-------|
 | Zcash testnet | Active. Registrations open, marketplace working, OTP verification working. |
-| Zcash mainnet | Beta. Indexer running, treat as experimental software. |
+| Zcash mainnet | Beta. Indexer running, treat as experimental software. Claim pricing is currently 1/100th of intended production tiers. |
 | Indexer | Open source at [`zcashme/ZNS`](https://github.com/zcashme/ZNS). Public endpoints at `https://light.zcash.me/zns-testnet` and `https://light.zcash.me/zns-mainnet-test`. |
 | Web app | Open source at [`zcashme/zcashnames`](https://github.com/zcashme/zcashnames). Hosted at [zcashnames.com](https://www.zcashnames.com). |
 | ZVS (verification service) | Running on testnet and mainnet. Same repo as the web app. |
@@ -36,9 +36,10 @@ ZcashNames resolution lets a wallet user type `alice.zcash` in the recipient fie
 
 | Wallet | Resolution support |
 |--------|-------------------|
-| [Cake Wallet](https://cakewallet.com) | Shipped in v5.8.0 |
-| [Edge](https://edge.app) | In progress |
-| [Unstoppable](https://unstoppable.money) | In progress |
+| [Edge](https://edge.app) | Implementing |
+| [Unstoppable](https://unstoppable.money) | Implementing |
+
+No wallet has shipped ZNS resolution yet.
 
 For the integration list and the wallets that handle ZNS *transactions* (every modern shielded Zcash wallet that supports ZIP-321 and verbatim Orchard memos), see [Wallet Compatibility](/docs/use/wallets).
 
@@ -52,7 +53,7 @@ The whole stack is MIT or Apache licensed and lives in two repos:
 
 ## Trust assumptions, in one paragraph
 
-Every state-changing action in ZNS is signed by an Ed25519 admin key held by the maintainers. That key gates writes to the registry. It does NOT gate reads (anyone can run an indexer with the published UIVK and arrive at the same database) and it does NOT control any user funds. The full picture is on the [Trust Model](/docs/protocol/trust-model) page.
+Every state-changing action in ZNS is signed by an Ed25519 admin key held by the maintainers. That key gates writes to the registry. It does not gate reads, because anyone can run an indexer with the published UIVK and arrive at the same database. It does not control user funds. The full picture is on the [Trust model](/docs/learn/trust-model) page.
 
 ## Where to engage
 
@@ -63,4 +64,4 @@ Every state-changing action in ZNS is signed by an Ed25519 admin key held by the
 
 - [What is ZcashNames?](/docs/learn/what-is-zns) - the friendly intro
 - [How it works](/docs/learn/how-it-works) - the system in 80 lines
-- [Trust Model](/docs/protocol/trust-model) - what to trust, what to verify
+- [Trust model](/docs/learn/trust-model) - what to trust, what to verify

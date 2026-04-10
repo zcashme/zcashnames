@@ -1,17 +1,47 @@
 # What is ZcashNames?
 
-A Zcash unified address looks like this:
+ZcashNames lets someone publish a human-readable name like `alice.zcash` that resolves to a Zcash unified address.
+
+The registry is derived from standard Zcash shielded transactions, not from a centralized off-chain database.
+
+## What problem it solves
+
+A Zcash unified address looks like so.
 
 ```
 u1gphl7vrklduuv96kpw4eetx4vrs8nnk7w9tuzvppyuuctw0tuskkpmfulrjapr05zh78p3chpxhx3tm28qau3uwd36k94vgucpxphyv5hkg36nhvr4ax
 ```
 
-ZcashNames lets people pay you at `alice.zcash` instead. The name is short, memorable, and resolves to your unified address every time.
+With ZcashNames, a wallet or app can resolve `alice.zcash` to a user's address before sending.
+
+## Why the on-chain part matters
+
+ZNS uses the Zcash blockchain to serve name registration.
+
+- Name registrations are anchored in confirmed Zcash transactions
+- Registry state can be re-created by anyone running the ZNS indexer
+
+
+## Already using zcash.me?
+
+If you already like having a profile on `zcash.me`, ZcashNames is the upgrade path for that identity.
+
+Registering a ZcashNames name automatically creates the matching `zcash.me` profile - you may customize your profile with a bio, links, and an avatar.
+
+A .zcash name also becomes an on-chain identifier that Zcash apps (wallets, block-explorers, forums etc. ) can resolve. 
 
 ## Where it stands today
 
-Testnet is active with registrations open and a stable protocol. Mainnet is in beta — the indexer is running, but treat it as experimental software.
+- Testnet is active with registrations open.
+- Mainnet is live in beta.
+- During beta, mainnet claim prices are set to **1/100th** of the intended production pricing tiers.
 
-[Cake Wallet](https://cakewallet.com) ships name resolution as of v5.8.0. Other wallet integrations are in progress. For a full picture of what is deployed and who is using it, see [Ecosystem](/docs/ecosystem).
+For the current rollout picture, see [Ecosystem](/docs/ecosystem).
 
-The canonical spec is the [`openrpc.json`](https://github.com/zcashme/ZNS/blob/master/openrpc.json) file plus the [Memo Format](/docs/protocol/memo-format) page.
+## What to read next
+
+If you'd like to learn more, read [How it works](/docs/learn/how-it-works) and then [Trust model](/docs/learn/trust-model).
+
+If your first question is privacy, read [Privacy](/docs/learn/privacy).
+
+If you are ready to use it, go to [Claiming a name](/docs/use/claiming).

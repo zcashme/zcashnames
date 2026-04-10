@@ -1,58 +1,75 @@
 # Claiming a Name
 
-## Searching for a name
+This page is for the moment when you are ready to register.
 
-Type any name into the search bar on the homepage. The system checks if it's available, already taken, reserved, or listed for sale.
+## Search for the name first
+
+Type the name into the homepage search bar. The app will tell you whether it is available, already taken, reserved, or listed for sale.
 
 | Status | What it means |
 |--------|---------------|
 | **Available** | Nobody owns this name. You can claim it. |
-| **For Sale** | Someone owns it but has listed it on the marketplace. You can [buy it](/docs/use/buying-and-selling). |
-| **Registered** | Taken and not for sale. |
-| **Reserved** | Set aside for a brand, project, or community. Requires an [unlock code](/docs/use/reserved-names). |
-| **Blocked** | Permanently unavailable (slurs, impersonation, legally protected terms). |
+| **For Sale** | Somebody owns it and has listed it. You can [buy it](/docs/use/buying-and-selling). |
+| **Registered** | Taken and not currently for sale. |
+| **Reserved** | Protected for a brand, project, or community. Requires an [unlock code](/docs/use/reserved-names). |
+| **Blocked** | Permanently unavailable. |
 
-Both `.zcash` and `.zec` suffixes point to the same name - they're interchangeable.
+Both `.zcash` and `.zec` refer to the same underlying name.
 
-## How claiming works
+## The claim flow
 
-1. Search for a name that shows as **Available**.
-2. Enter your Zcash unified address - this is where the name will resolve.
-3. The app generates a ZIP-321 payment URI with the exact amount and memo.
-4. Open the link in your Zcash wallet (or scan the QR) and send the transaction.
-5. Once the transaction confirms and the indexer processes the block, the name is yours.
+1. Search for a name that is marked **Available**.
+2. Enter the Zcash unified address the name should point to.
+3. Let the site generate the ZIP-321 payment request.
+4. Open that request in your wallet and send the transaction.
+5. Wait for confirmation and indexer processing.
 
-After you broadcast, the [Explorer](/explorer) is the fastest way to confirm the indexer picked up your claim - search for your name and watch the `CLAIM` event appear once the block lands.
+Once the claim lands, the name is live in the registry.
 
-## Things to know
+The matching `zcash.me` profile is also created automatically. You can add a bio, links, and avatar later.
 
-- **First-come-first-served.** If two people try to claim the same name, whoever's transaction is mined first wins. A CLAIM in a later block for the same name is silently ignored by the indexer. The default is no automated refund - but disputes are resolved case-by-case via the [community Signal group](https://signal.group/#CjQKIKDM76KMttnFqmbtbKzcfDrGeLtR6wWQq82YM8LWdyNhEhBGKNSZVjTREwDLqhatYhLH) by sharing your wallet's full viewing key so the team can verify the transaction. See the [FAQ](/docs/faq#can-i-get-a-refund-if-my-claim-fails) for the process.
-- **Use a unified address** (`u1…` on mainnet, `utest1…` on testnet). Only unified addresses have an Orchard receiver — other address types don't work. See [Address Types](/docs/protocol/address-types).
-- **Shorter names cost more.** Pricing is tiered by length and lives on-chain. See [Pricing](/docs/learn/pricing).
-- **Names are permanent.** Registrations don't expire. There are no renewal fees.
+If you want to confirm quickly, search for the name in the [Explorer](/explorer) and look for the `CLAIM` event.
+
+## Important expectations
+
+- **Claims are first-come, first-served.** If two people race for the same name, the first confirmed transaction wins.
+- **Use a unified address.** Only unified addresses include the Orchard receiver needed for ZNS. See [Address Types](/docs/protocol/address-types).
+- **Names are permanent.** There are no renewals.
+- **Pricing is tiered by name length.** See [Pricing](/docs/learn/pricing).
 
 ## Wallet requirements
 
-Your wallet must support three things:
+Your wallet needs to support:
 
-1. **ZIP-321 payment URIs** - to parse the `zcash:` links the app generates.
-2. **Orchard shielded transactions** - all ZNS operations use the Orchard pool.
-3. **Verbatim memos** - the memo must be included exactly as provided. Even a trailing whitespace change will break signature verification.
+1. ZIP-321 payment URIs
+2. Orchard shielded transactions
+3. verbatim memos
 
-See [Wallet Compatibility](/docs/use/wallets) for a list of known-working wallets.
+See [Wallet Compatibility](/docs/use/wallets).
 
-## What if my wallet already sent the transaction but the name doesn't show up?
+## After you claim
+
+Two things are true:
+
+- your name is real once the claim confirms
+- wallet resolution is not live yet
+
+So if you cannot type the name into a wallet recipient field today, that does not mean your claim failed. It means the wallet-side resolution rollout is still ahead of us.
+
+For the post-claim walkthrough, go to [Managing Names](/docs/use/managing).
+
+## If the name does not appear
 
 Three common causes:
 
-1. **The indexer hasn't caught up.** Check `status.synced_height` against the block your transaction was mined in.
-2. **The name was claimed first.** Check `resolve(<name>)` - if someone else owns it.
-3. **The memo was modified.** Some wallets normalize or re-encode memos. Verify the memo in your wallet's transaction history matches what the app showed you. If it doesn't, the wallet is broken for ZNS.
+1. The indexer has not caught up to the block yet.
+2. Someone else claimed the name first.
+3. The wallet altered the memo bytes before broadcast.
 
-If none of those apply, ask in [Discord](https://discord.gg/z2H23QgAGf) with your txid.
+If none of those fit, bring the txid to the community channels or open an issue.
 
 ## Next
 
-- [Buying & Selling](/docs/use/buying-and-selling)
 - [Managing Names](/docs/use/managing)
+- [Buying & Selling](/docs/use/buying-and-selling)
 - [Name Lifecycle](/docs/learn/name-lifecycle)

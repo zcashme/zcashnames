@@ -1,11 +1,25 @@
 # Pricing
 
-Claiming a .zcash name involves sending ZEC to a registry wallet with the name price depending on how long the name is. (Shorter names cost more because there are fewer of them.)
+ZcashNames uses tiered pricing by name length. Shorter names cost more because they are scarcer and more attractive to squatters.
 
-## What a name costs
+## Mainnet beta pricing
 
-| Name length | Cost (ZEC) |
-|-------------|-----------|
+Mainnet is still in beta. During beta, live claim prices are set to **1/100th** of the intended production tiers.
+
+| Name length | Beta price (ZEC) |
+|-------------|------------------|
+| 1 character | 0.06 |
+| 2 characters | 0.0425 |
+| 3 characters | 0.03 |
+| 4 characters | 0.015 |
+| 5 characters | 0.0075 |
+| 6 characters | 0.005 |
+| 7 characters or more | 0.0025 |
+
+## Intended production pricing
+
+| Name length | Intended price (ZEC) |
+|-------------|----------------------|
 | 1 character | 6.00 |
 | 2 characters | 4.25 |
 | 3 characters | 3.00 |
@@ -14,38 +28,30 @@ Claiming a .zcash name involves sending ZEC to a registry wallet with the name p
 | 6 characters | 0.50 |
 | 7 characters or more | 0.25 |
 
-These are the current default tiers on testnet 
+## How payment works
 
-## How you pay
+When you claim a name, the web app generates a ZIP-321 payment URI with the exact amount and the signed claim memo. Your wallet broadcasts that transaction, and that payment is the claim itself.
 
-When you claim a name, the [ZcashNames site](https://www.zcashnames.com) generates a payment URI with the exact amount and the signed claim memo. 
+For wallet requirements, see [Wallet Compatibility](/docs/use/wallets).
 
-You send the transaction from any wallet that supports ZIP-321 and Orchard memos, see [Wallet Compatibility](/docs/use/wallets)) and that's the payment for name-registration.
+## Why the tiers exist
 
-## Why tiered pricing
+Tiered pricing is mostly an anti-squatting tool. It makes one-character and short dictionary names materially more expensive while keeping ordinary names cheap enough for normal users.
 
-Shorter names are more valuable to attackers and squatters. Tiered pricing makes it expensive enough to deter casual squatting on `a` or `bob` while keeping ordinary 7+ character names cheap enough to be worth it for individual users.
-
-Pricing is adjusted by broadcasting an admin-signed `SETPRICE` memo to the chain. Every honest indexer will pick it up at the block it lands in and update the ZNS pricing tier.
+Pricing is administrator controlled by the sending signed on-chain `SETPRICE` memo. Honest indexers update to the new tier at the block where that memo lands.
 
 ## Marketplace pricing
 
-If you buy a name that's already registered and listed for sale, you pay the **listing price**, not the claim cost. 
+If you buy a name that is already registered and listed for sale, you pay the seller's listing price, not the protocol claim cost.
 
-Listing prices are set by the seller and can be anything they like (with a small minimum). See [Buying & Selling](/docs/use/buying-and-selling) for the marketplace flow.
+See [Buying & Selling](/docs/use/buying-and-selling) for the marketplace flow.
 
 ## Renewal
 
-Unlike traditional name-registration, ZNS has no renewal fees. Once you've paid the claim cost, you own the name unless you decide to release it. 
-
-## Reading current prices
-
-Wallets and apps may display the live pricing tier by reading it from the indexer's `status` RPC method, in the `pricing.tiers` field. See [JSON-RPC Reference](/docs/indexer/rpc-reference#status) for the exact response shape, or use one of the [SDK ports](/docs/sdk).
-
-For the protocol-level details (`SETPRICE` memo grammar, the bootstrap requirement, trust-minimized pricing verification, USD display), see [Pricing (Protocol)](/docs/protocol/pricing).
+There are no renewal fees. Once you have claimed a name, it stays yours until you sell it or release it.
 
 ## Read next
 
-- [Claim a name](/docs/use/claiming) - the actual claim flow.
-- [Buying & Selling](/docs/use/buying-and-selling) - marketplace prices.
-- [Pricing (Protocol)](/docs/protocol/pricing) - the SETPRICE memo and verification details.
+- [Claiming a name](/docs/use/claiming)
+- [Buying & Selling](/docs/use/buying-and-selling)
+- [Pricing (Protocol)](/docs/protocol/pricing)
