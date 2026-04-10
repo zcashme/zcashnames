@@ -3,7 +3,6 @@
 import { cookies, headers } from "next/headers";
 import { createHash, randomBytes, randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import { allowRateLimit } from "@/lib/security/rate-limit";
 import type { Network } from "@/lib/zns/name";
 import { findTesterByCode } from "./testers";
 import {
@@ -57,10 +56,6 @@ export async function verifyNetworkAccess(
 ): Promise<NetworkAccessResult> {
   const trimmed = (password ?? "").trim();
   if (!trimmed) return { ok: false, error: "Password required." };
-
-  if (!allowRateLimit("beta-network-access:global", 60, 60_000)) {
-    return { ok: false, error: "Too many attempts. Try again in a minute." };
-  }
 
   // 1. Beta invite code path (sets attribution cookie).
   const tester = await findTesterByCode(trimmed);
@@ -146,11 +141,6 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
   const tester = await readCurrentTester();
   const testerId = tester?.id ?? null;
   const testerName = tester?.displayName ?? "anonymous";
-
-  const rateKey = testerId ? `beta-feedback:${testerId}` : "beta-feedback:anonymous";
-  if (!allowRateLimit(rateKey, 10, 60_000)) {
-    return { ok: false, error: "Too many submissions. Slow down a moment." };
-  }
 
   const reqHeaders = await headers();
   const userAgent = reqHeaders.get("user-agent")?.slice(0, 500) ?? null;
@@ -275,10 +265,6 @@ export async function saveChecklistProgress(
   if (!itemId) return { ok: true };
   if (input.stage !== "testnet" && input.stage !== "mainnet") return { ok: true };
 
-  if (!allowRateLimit(`beta-checklist:${tester.id}`, 120, 60_000)) {
-    return { ok: true };
-  }
-
   const { error } = await db
     .from("beta_checklist_progress")
     .upsert(
@@ -384,18 +370,6 @@ function isValidEmail(v: string): boolean {
 export async function submitBetaApplication(
   formData: FormData,
 ): Promise<BetaApplicationResult> {
-  // Rate limit (anon, by global bucket — IP-keyed bucket below for tighter
-  // per-source throttling).
-  if (!allowRateLimit("beta-apply:global", 30, 10 * 60_000)) {
-    return { ok: false, error: "Too many applications. Try again in a few minutes." };
-  }
-
-  const { ip, userAgent } = await readClientMeta();
-  const ipBucketKey = ip ? `beta-apply:ip:${ip}` : "beta-apply:ip:unknown";
-  if (!allowRateLimit(ipBucketKey, 3, 60 * 60_000)) {
-    return { ok: false, error: "You've already submitted recently. Please wait." };
-  }
-
   // Required fields
   const displayName = String(formData.get("display_name") ?? "").trim();
   const why = String(formData.get("why") ?? "").trim();
@@ -459,6 +433,7 @@ export async function submitBetaApplication(
   const codeHash = hashInviteCode(inviteCode);
 
   const submittedAtIso = new Date().toISOString();
+  const { ip, userAgent } = await readClientMeta();
 
   const { error: insertError } = await db.from("beta_testers").insert({
     id: testerId,

@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { sendFollowUp } from "@/lib/email/followup";
 import { sendWaitlistConfirmationEmail } from "@/lib/email/waitlist";
-import { allowRateLimit } from "@/lib/security/rate-limit";
 import {
   buildWaitlistConfirmToken,
   isWaitlistConfirmSignatureValid,
@@ -16,12 +15,6 @@ import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
 import { normalizeUsername } from "@/lib/zns/name";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
-const CONFIRM_IP_LIMIT = 40;
-const CONFIRM_IP_WINDOW_MS = 15 * 60 * 1000;
-const WAITLIST_IP_LIMIT = 12;
-const WAITLIST_IP_WINDOW_MS = 10 * 60 * 1000;
-const WAITLIST_EMAIL_LIMIT = 4;
-const WAITLIST_EMAIL_WINDOW_MS = 30 * 60 * 1000;
 const MAX_REFERRAL_CODE_RETRIES = 6;
 
 export interface WaitlistPayload {
@@ -89,21 +82,6 @@ function normalizeReferredBy(input: string | null): string | null {
   return isValidReferralCode(code) ? code : null;
 }
 
-function sanitizeEmailKey(email: string): string {
-  return createHash("sha256").update(email).digest("hex").slice(0, 20);
-}
-
-function resolveClientIp(headerStore: { get(name: string): string | null }): string {
-  const forwardedFor = headerStore.get("x-forwarded-for");
-  if (forwardedFor) {
-    const first = forwardedFor.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  const realIp = headerStore.get("x-real-ip");
-  if (realIp?.trim()) return realIp.trim();
-  return "unknown";
-}
-
 function resolveBaseUrl(headerStore: { get(name: string): string | null }): string {
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
   if (fromEnv) return fromEnv.replace(/\/$/, "");
@@ -126,21 +104,6 @@ export async function submitWaitlist(
   }
 
   const headerStore = await headers();
-  const ip = resolveClientIp(headerStore);
-
-  const ipAllowed = allowRateLimit(
-    `waitlist:ip:${ip}`,
-    WAITLIST_IP_LIMIT,
-    WAITLIST_IP_WINDOW_MS,
-  );
-  const emailAllowed = allowRateLimit(
-    `waitlist:email:${sanitizeEmailKey(normalizedEmail)}`,
-    WAITLIST_EMAIL_LIMIT,
-    WAITLIST_EMAIL_WINDOW_MS,
-  );
-  if (!ipAllowed || !emailAllowed) {
-    return { error: GENERIC_ERROR };
-  }
 
   const { data: existingRows, error: existingError } = await db
     .from("zn_waitlist")
@@ -340,13 +303,6 @@ export interface ConfirmWaitlistResult {
 export async function confirmWaitlistEmail(
   token: string,
 ): Promise<ConfirmWaitlistResult> {
-  const headerStore = await headers();
-  const ip = resolveClientIp(headerStore);
-
-  if (!allowRateLimit(`confirm:ip:${ip}`, CONFIRM_IP_LIMIT, CONFIRM_IP_WINDOW_MS)) {
-    return { status: "invalid" };
-  }
-
   const parsed = parseWaitlistConfirmToken(token);
   if (!parsed || isWaitlistConfirmTokenExpired(parsed)) {
     return { status: "invalid" };
