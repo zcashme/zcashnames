@@ -2,9 +2,9 @@
 
 import type React from "react";
 import Image from "next/image";
+import type { Action } from "@/lib/types";
 
 type AvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
-type ResultAction = "claim" | "buy" | "update" | "list" | "delist" | "release" | "remove";
 
 interface HomeResultCardProps {
   displayName: string;
@@ -12,7 +12,7 @@ interface HomeResultCardProps {
   priceLabel?: string;
   usdLabel?: string;
   isPopularName?: boolean;
-  onAction: (action: ResultAction) => void;
+  onAction: (action: Action) => void;
   onDismiss?: () => void;
 }
 

@@ -131,13 +131,9 @@ export default function HomePage() {
                   : undefined
               }
               onAction={(action) => {
-                if (action === "remove") {
-                  removeResult(item.query);
-                  return;
-                }
                 const t: ModalTarget = {
                   name: item.query,
-                  action: action as Action,
+                  action,
                   network,
                   networkPassword,
                   isReserved: item.status === "reserved",
