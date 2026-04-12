@@ -124,6 +124,11 @@ function decodeBase64ToBytes(value: string): Uint8Array | null {
   }
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  // Ensure we pass a real ArrayBuffer (not a view over SharedArrayBuffer) to WebCrypto.
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -347,7 +352,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
           try {
             pubKey = await window.crypto.subtle.importKey(
               "raw",
-              pubBytes,
+              toArrayBuffer(pubBytes),
               { name: "Ed25519" },
               false,
               ["verify"],
@@ -362,7 +367,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
           try {
             pubKey = await window.crypto.subtle.importKey(
               "raw",
-              pubBytes,
+              toArrayBuffer(pubBytes),
               { name: "Ed25519" },
               false,
               ["verify"],
@@ -386,7 +391,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
               try {
                 pubKey = await window.crypto.subtle.importKey(
                   "raw",
-                  pubBytes,
+                  toArrayBuffer(pubBytes),
                   { name: "Ed25519" },
                   false,
                   ["verify"],
@@ -399,7 +404,12 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
           if (!pubKey) signatureError = "Enter a valid public key first.";
           else {
             const payloadBytes = new TextEncoder().encode(sovereignPayload);
-            const verified = await window.crypto.subtle.verify("Ed25519", pubKey, sigBytes, payloadBytes);
+            const verified = await window.crypto.subtle.verify(
+              "Ed25519",
+              pubKey,
+              toArrayBuffer(sigBytes),
+              payloadBytes,
+            );
             if (!verified) signatureError = "Signature does not match the payload and public key.";
           }
         }
@@ -587,7 +597,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
       try {
         importedPubkey = await window.crypto.subtle.importKey(
           "raw",
-          pubBytes,
+          toArrayBuffer(pubBytes),
           { name: "Ed25519" },
           false,
           ["verify"],
@@ -601,7 +611,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
       const locallyVerified = await window.crypto.subtle.verify(
         "Ed25519",
         importedPubkey,
-        sigBytes,
+        toArrayBuffer(sigBytes),
         payloadBytes,
       );
       if (!locallyVerified) {
