@@ -188,6 +188,9 @@
   --home-result-status-positive-fg: #9de7cd;
   --home-result-status-negative-bg: rgba(255, 116, 116, 0.17);
   --home-result-status-negative-fg: #ffc0c0;
+  --home-result-status-forsale-bg: var(--feature-chip-bg);
+  --home-result-status-forsale-border: var(--feature-chip-border-color);
+  --home-result-status-forsale-fg: var(--home-result-link-fg);
   --home-result-link-border: rgba(255, 255, 255, 0.16);
   --home-result-link-bg: rgba(255, 255, 255, 0.06);
   --home-result-link-fg: var(--fg-body);
@@ -363,6 +366,9 @@
   --home-result-status-positive-fg: #1f774e;
   --home-result-status-negative-bg: #fdecea;
   --home-result-status-negative-fg: #8b2f2f;
+  --home-result-status-forsale-bg: linear-gradient(116deg, #2a6be6 0%, #2b8feb 62%, #46b7ff 100%);
+  --home-result-status-forsale-border: rgba(42, 107, 230, 0.74);
+  --home-result-status-forsale-fg: #f8fbff;
   --home-result-link-border: #d6dbe7;
   --home-result-link-bg: #f6f8fc;
   --home-result-link-fg: #33415c;
@@ -1547,6 +1553,8 @@ body::after {
 }
 
 .home-result-link {
+  display: inline-flex;
+  align-items: center;
   border-radius: 999px;
   border: 1px solid var(--home-result-link-border);
   background: var(--home-result-link-bg);
@@ -1555,6 +1563,7 @@ body::after {
   color: var(--home-result-link-fg);
   font-size: 0.79rem;
   font-weight: 700;
+  line-height: 1;
   text-decoration: none;
   flex-shrink: 0;
   transition: transform 140ms ease, background-color 150ms ease;

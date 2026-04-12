@@ -35,6 +35,10 @@ interface ExplorerShellProps {
     syncedHeight: number;
     uivk: string;
   };
+  uivks: {
+    mainnet: string;
+    testnet: string;
+  };
   environment: Environment;
   nameQuery: string;
   nameResult: ResolveName | null;
@@ -46,6 +50,7 @@ export default function ExplorerShell({
   initialEventsTotal,
   initialListings,
   stats,
+  uivks,
   environment,
   nameQuery,
   nameResult,
@@ -84,7 +89,7 @@ export default function ExplorerShell({
   const [moreOpen, setMoreOpen] = useState(false);
 
   const [uivkOpen, setUivkOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"mainnet" | "testnet" | null>(null);
 
   const isMoreTabActive = MORE_TABS.some((t) => t.key === activeTab);
   const activeMoreLabel = MORE_TABS.find((t) => t.key === activeTab)?.label;
@@ -92,7 +97,7 @@ export default function ExplorerShell({
   function makeUrl(overrides: { env?: string; name?: string | null }) {
     const params = new URLSearchParams();
     const env = overrides.env ?? optimisticEnv;
-    if (env && env !== "testnet") params.set("env", env);
+    if (env && env !== "mainnet") params.set("env", env);
     const name = overrides.name === undefined ? nameQuery : overrides.name;
     if (name) params.set("name", name);
     const qs = params.toString();
@@ -141,11 +146,12 @@ export default function ExplorerShell({
     });
   }
 
-  function copyUivk() {
-    if (!stats.uivk) return;
-    navigator.clipboard.writeText(stats.uivk);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  function copyUivk(network: "mainnet" | "testnet") {
+    const value = uivks[network];
+    if (!value) return;
+    navigator.clipboard.writeText(value);
+    setCopied(network);
+    setTimeout(() => setCopied(null), 2000);
   }
 
 
@@ -193,7 +199,7 @@ export default function ExplorerShell({
                 />
               </svg>
             </button>
-            {stats.uivk && (
+            {(uivks.mainnet || uivks.testnet) && (
               <button
                 type="button"
                 onClick={() => setUivkOpen(true)}
@@ -367,21 +373,51 @@ export default function ExplorerShell({
               </button>
             </div>
 
-            <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">
-              {stats.uivk}
-            </p>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                  Mainnet
+                </div>
+                <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">
+                  {uivks.mainnet || "Unavailable"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => copyUivk("mainnet")}
+                  disabled={!uivks.mainnet}
+                  className="self-start rounded-full px-5 py-2 text-sm font-bold cursor-pointer transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{
+                    background: "var(--leaders-rank-gold)",
+                    color: "var(--leaders-rank-text)",
+                  }}
+                >
+                  {copied === "mainnet" ? "Copied!" : "Copy Mainnet"}
+                </button>
+              </div>
 
-            <button
-              type="button"
-              onClick={copyUivk}
-              className="self-start rounded-full px-5 py-2 text-sm font-bold cursor-pointer transition-opacity hover:opacity-80"
-              style={{
-                background: "var(--leaders-rank-gold)",
-                color: "var(--leaders-rank-text)",
-              }}
-            >
-              {copied ? "Copied!" : "Copy"}
-            </button>
+              <div className="h-px w-full bg-[var(--leaders-card-border)]" />
+
+              <div className="flex flex-col gap-2">
+                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                  Testnet
+                </div>
+                <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">
+                  {uivks.testnet || "Unavailable"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => copyUivk("testnet")}
+                  disabled={!uivks.testnet}
+                  className="self-start rounded-full px-5 py-2 text-sm font-bold cursor-pointer transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{
+                    background: "var(--leaders-rank-gold)",
+                    color: "var(--leaders-rank-text)",
+                  }}
+                >
+                  {copied === "testnet" ? "Copied!" : "Copy Testnet"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

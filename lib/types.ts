@@ -60,11 +60,13 @@ export type ResolveName =
       status: 'available'
       query: string
       claimCost: { zats: number; zec: number }
+      firstBucket?: number
     }
   | {
       status: 'reserved'
       query: string
       claimCost: { zats: number; zec: number }
+      firstBucket?: number
     }
   | {
       status: 'blocked'
@@ -74,10 +76,12 @@ export type ResolveName =
       status: 'registered'
       query: string
       registration: { name: string; address: string; txid: string; height: number; nonce: number }
+      firstBucket?: number
     }
   | {
       status: 'listed'
       query: string
       registration: { name: string; address: string; txid: string; height: number; nonce: number }
       listingPrice: { zats: number; zec: number }
+      firstBucket?: number
     }

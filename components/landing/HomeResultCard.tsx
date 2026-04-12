@@ -3,11 +3,14 @@
 import type React from "react";
 import Image from "next/image";
 import type { Action } from "@/lib/types";
+import type { Network } from "@/lib/zns/name";
 
 type AvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
 
 interface HomeResultCardProps {
   displayName: string;
+  network: Network;
+  firstBucket?: number;
   availabilityState: AvailabilityState;
   priceLabel?: string;
   usdLabel?: string;
@@ -16,18 +19,16 @@ interface HomeResultCardProps {
   onDismiss?: () => void;
 }
 
-function firstBucketForName(charCount: number): number {
-  return Math.max(100, Math.ceil((charCount * 100) / 100) * 100);
-}
-
 function StatusBadge({
   variant,
   label,
   icon,
+  style,
 }: {
   variant: "positive" | "negative" | "neutral";
   label: string;
   icon?: React.ReactNode;
+  style?: React.CSSProperties;
 }) {
   const toneClass =
     variant === "negative"
@@ -39,6 +40,7 @@ function StatusBadge({
   return (
     <span
       className={`inline-flex min-h-[30px] items-center gap-1.5 rounded-[10px] px-3 text-[0.85rem] font-extrabold leading-none backdrop-blur-md ${toneClass}`}
+      style={style}
     >
       {icon}
       {label}
@@ -48,6 +50,8 @@ function StatusBadge({
 
 export default function HomeResultCard({
   displayName,
+  network,
+  firstBucket,
   availabilityState,
   priceLabel,
   usdLabel,
@@ -58,8 +62,11 @@ export default function HomeResultCard({
   const plainName = displayName.replace(/\.(zcash|zec)$/i, "");
   const encodedName = encodeURIComponent(plainName);
   const charCount = plainName.length;
-  const firstBucket = firstBucketForName(charCount);
-  const cipherscanUrl = `https://cipherscan.app/?name=${encodedName}`;
+  const firstBucketLabel = firstBucket ? `First ${firstBucket}` : null;
+  const explorerUrl =
+    network === "testnet"
+      ? `/explorer?env=testnet&name=${encodedName}`
+      : `/explorer?name=${encodedName}`;
   const zcashMeUrl = `https://zcash.me/${encodedName}`;
 
   const isAvailable = availabilityState === "available";
@@ -71,14 +78,14 @@ export default function HomeResultCard({
   const footerChips = isAvailable
     ? [
         `${charCount} characters`,
-        `First ${firstBucket}`,
+        ...(firstBucketLabel ? [firstBucketLabel] : []),
         "No previous owners",
         ...(isPopularName ? ["Popular name"] : []),
       ]
     : isForSale
       ? [
           `${charCount} characters`,
-          `First ${firstBucket}`,
+          ...(firstBucketLabel ? [firstBucketLabel] : []),
           ...(isPopularName ? ["Popular name"] : []),
         ]
       : [];
@@ -132,20 +139,16 @@ export default function HomeResultCard({
           )}
 
           {isForSale && (
-            <StatusBadge
-              variant="neutral"
-              label="For Sale"
-              icon={
-                <Image
-                  src="/assets/icons/zcash-icon.png"
-                  alt=""
-                  width={12}
-                  height={12}
-                  className="theme-media-home"
-                  aria-hidden="true"
-                />
-              }
-            />
+            <span
+              className="rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide"
+              style={{
+                background: "var(--home-result-status-forsale-bg)",
+                color: "var(--home-result-status-forsale-fg)",
+                border: "1px solid var(--home-result-status-forsale-border)",
+              }}
+            >
+              For Sale
+            </span>
           )}
 
           {isUnavailable && (
@@ -332,19 +335,19 @@ export default function HomeResultCard({
           {showFooterLinks && (
             <div className="home-result-links">
               <a
-                href={cipherscanUrl}
+                href={explorerUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="home-result-link inline-flex items-center gap-1.5 whitespace-nowrap leading-none"
               >
                 <Image
-                  src="/cs-logo.png"
-                  alt="CipherScan logo"
-                  width={11}
-                  height={11}
+                  src="/landing/z5.png"
+                  alt="Explorer logo"
+                  width={18}
+                  height={18}
                   className="theme-media-home"
                 />
-                <span>View on CipherScan</span>
+                <span className="inline-flex items-center leading-none">View in Explorer</span>
               </a>
               <a
                 href={zcashMeUrl}
@@ -359,7 +362,7 @@ export default function HomeResultCard({
                   height={18}
                   className="theme-media-home scale-[1.35]"
                 />
-                <span>View on ZcashMe</span>
+                <span className="inline-flex items-center leading-none">View on ZcashMe</span>
               </a>
             </div>
           )}

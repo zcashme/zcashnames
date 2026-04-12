@@ -1,10 +1,71 @@
 "use server";
 
-import { resolve, registrationStatus, status, fetchClaimCost, events, listForSale, type ZnsListing } from "@/lib/zns/client";
+import { resolve, registrationStatus, status, events, listForSale, type ZnsListing } from "@/lib/zns/client";
 import { normalizeUsername, isValidUsername, zatsToZec, type Network } from "@/lib/zns/name";
 import { getExchangeRate } from "@/lib/exchange-rate";
 import { getReservedName } from "@/lib/zns/reserved";
 import type { Action, ResolveName } from "@/lib/types";
+
+const FIRST_BUCKET_SIZE = 100;
+
+function toFirstBucket(ordinal: number): number {
+  return Math.max(FIRST_BUCKET_SIZE, Math.ceil(ordinal / FIRST_BUCKET_SIZE) * FIRST_BUCKET_SIZE);
+}
+
+async function getClaimOrdinal(name: string, network: Network): Promise<number | null> {
+  const byName = await events({ name, action: "CLAIM", limit: 1 }, network);
+  const claim = byName.events[0];
+  if (!claim) return null;
+
+  const [allClaims, claimsAfterBlock] = await Promise.all([
+    events({ action: "CLAIM", limit: 1 }, network),
+    events({ action: "CLAIM", since_height: claim.height, limit: 1 }, network),
+  ]);
+
+  if (allClaims.total <= 0) return null;
+
+  // Events are newest-first. Start from the boundary where claims at this block begin.
+  let positionFromNewest = claimsAfterBlock.total;
+  let offset = claimsAfterBlock.total;
+  const pageSize = 200;
+
+  while (offset < allClaims.total) {
+    const page = await events({ action: "CLAIM", limit: pageSize, offset }, network);
+    if (page.events.length === 0) break;
+
+    let stop = false;
+    for (let i = 0; i < page.events.length; i += 1) {
+      const ev = page.events[i];
+      if (ev.height < claim.height) {
+        stop = true;
+        break;
+      }
+      if (ev.txid === claim.txid) {
+        positionFromNewest = offset + i;
+        stop = true;
+        break;
+      }
+    }
+
+    if (stop) break;
+
+    const oldest = page.events[page.events.length - 1];
+    if (oldest.height < claim.height) break;
+    offset += page.events.length;
+  }
+
+  // Convert "newest-first position" to "chronological claim number".
+  return Math.max(1, allClaims.total - positionFromNewest);
+}
+
+async function getFirstBucketForClaim(name: string, network: Network): Promise<number | null> {
+  try {
+    const ordinal = await getClaimOrdinal(name, network);
+    return ordinal ? toFirstBucket(ordinal) : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function resolveName(
   rawName: string,
@@ -26,16 +87,21 @@ export async function resolveName(
       return { status: "blocked", query: normalized };
     }
 
-    const claimCostZats = await fetchClaimCost(normalized, network);
-    if (claimCostZats == null) {
+    const s = await status(network);
+    if (!s.pricing?.tiers?.length) {
       throw new Error("Pricing unavailable - indexer may be down.");
     }
+    const tiers = s.pricing.tiers;
+    const idx = Math.min(normalized.length - 1, tiers.length - 1);
+    const claimCostZats = tiers[idx];
+    const firstBucket = toFirstBucket(s.registered + 1);
 
     if (reserved && !reserved.redeemed) {
       return {
         status: "reserved",
         query: normalized,
         claimCost: { zats: claimCostZats, zec: zatsToZec(claimCostZats) },
+        firstBucket,
       };
     }
 
@@ -43,6 +109,7 @@ export async function resolveName(
       status: "available",
       query: normalized,
       claimCost: { zats: claimCostZats, zec: zatsToZec(claimCostZats) },
+      firstBucket,
     };
   }
 
@@ -55,6 +122,7 @@ export async function resolveName(
   };
 
   if (nameStatus === "forsale") {
+    const firstBucket = await getFirstBucketForClaim(normalized, network);
     return {
       status: "listed",
       query: normalized,
@@ -63,13 +131,16 @@ export async function resolveName(
         zats: registration!.listing!.price,
         zec: zatsToZec(registration!.listing!.price),
       },
+      firstBucket: firstBucket ?? undefined,
     };
   }
 
+  const firstBucket = await getFirstBucketForClaim(normalized, network);
   return {
     status: "registered",
     query: normalized,
     registration: reg,
+    firstBucket: firstBucket ?? undefined,
   };
 }
 

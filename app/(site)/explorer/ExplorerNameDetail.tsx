@@ -37,12 +37,20 @@ export default function ExplorerNameDetail({
               <span
                 className="rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide"
                 style={{
-                  background: result.status === "available"
-                    ? "var(--color-accent-green)"
-                    : result.status === "listed"
-                    ? "var(--color-brand-blue, #3b82f6)"
-                    : "var(--fg-dim)",
-                  color: "var(--leaders-rank-text)",
+                  background:
+                    result.status === "available"
+                      ? "var(--color-accent-green)"
+                      : result.status === "listed"
+                        ? "var(--home-result-status-forsale-bg)"
+                        : "var(--fg-dim)",
+                  color:
+                    result.status === "listed"
+                      ? "var(--home-result-status-forsale-fg)"
+                      : "var(--leaders-rank-text)",
+                  border:
+                    result.status === "listed"
+                      ? "1px solid var(--home-result-status-forsale-border)"
+                      : "1px solid transparent",
                 }}
               >
                 {result.status === "listed" ? "For Sale" : result.status}

@@ -100,6 +100,8 @@ export default function HomePage() {
             <HomeResultCard
               key={item.query}
               displayName={`${item.query}.zcash`}
+              network={network}
+              firstBucket={"firstBucket" in item ? item.firstBucket : undefined}
               isPopularName={isPopularName(item.query)}
               availabilityState={
                 item.status === "available"
@@ -232,7 +234,7 @@ export default function HomePage() {
       <div className="relative z-[2] -mt-4 mb-2 flex justify-center">
         {isSearchMode ? (
           <Link
-            href="/explorer"
+            href={network === "testnet" ? "/explorer?env=testnet" : "/explorer"}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--home-result-link-border)] bg-[var(--home-result-link-bg)] px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform,background-color] duration-[140ms] hover:-translate-y-px hover:bg-[var(--home-result-link-hover-bg)]"
           >
             <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">

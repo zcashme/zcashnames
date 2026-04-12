@@ -98,6 +98,10 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   const needsOtp = action === "update" || action === "list" || action === "delist" || action === "release";
   const needsUnlock = isReserved && action === "claim";
   const displayName = `${name}.zcash`;
+  const explorerHref =
+    network === "testnet"
+      ? `/explorer?env=testnet&name=${encodeURIComponent(name)}`
+      : `/explorer?name=${encodeURIComponent(name)}`;
 
   // Phase
   const [phase, setPhase] = useState<Phase>(needsUnlock ? "unlock" : "input");
@@ -784,7 +788,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
                 Back
               </button>
               <a
-                href={`/explorer?name=${encodeURIComponent(name)}`}
+                href={explorerHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
