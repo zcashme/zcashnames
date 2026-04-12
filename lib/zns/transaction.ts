@@ -1,6 +1,15 @@
 "use server";
 
-import { resolve, fetchClaimCost } from "@/lib/zns/client";
+import {
+  resolve,
+  fetchClaimCost,
+  buildClaimMemo,
+  buildBuyMemo,
+  buildListMemo,
+  buildDelistMemo,
+  buildReleaseMemo,
+  buildUpdateMemo,
+} from "@/lib/zns/client";
 import {
   buildSignedClaimMemo,
   buildSignedBuyMemo,
@@ -41,6 +50,8 @@ export type TransactionResult =
   | { ok: true; memo: string; amount: number; amountZec: number }
   | { ok: false; error: string };
 
+export type AuthMode = "default" | "otp" | "sovereign";
+
 interface TransactionInput {
   name: string;
   action: Action;
@@ -51,6 +62,10 @@ interface TransactionInput {
   memo?: string;
   otp?: string;
   unlockCode?: string;
+  authMode?: AuthMode;
+  sovereignSignature?: string;
+  sovereignPubkey?: string;
+  sovereignPayload?: string;
 }
 
 export async function buildTransaction(input: TransactionInput): Promise<TransactionResult> {
@@ -64,14 +79,31 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
   if (!verifyNetworkPassword(network, input.password)) {
     return { ok: false, error: "Invalid network password." };
   }
-  const needsOtp = input.action === "update" || input.action === "list" || input.action === "delist" || input.action === "release";
 
-  const reg = needsOtp ? await resolve(name, network) : null;
-  if (needsOtp) {
+  const ownerAction =
+    input.action === "update" || input.action === "list" || input.action === "delist" || input.action === "release";
+  const authMode: AuthMode =
+    input.authMode === "sovereign"
+      ? "sovereign"
+      : ownerAction
+        ? "otp"
+        : "default";
+
+  const reg = ownerAction ? await resolve(name, network) : null;
+  if (ownerAction) {
     if (!reg) return { ok: false, error: "Name is not registered." };
-    if (!input.memo || !input.otp) return { ok: false, error: "Verification required." };
-    const valid = await verifyOtp(input.memo, input.otp, reg.address);
-    if (!valid) return { ok: false, error: "Invalid code. Check your wallet and try again." };
+    if (authMode === "otp") {
+      if (!input.memo || !input.otp) return { ok: false, error: "Verification required." };
+      const valid = await verifyOtp(input.memo, input.otp, reg.address);
+      if (!valid) return { ok: false, error: "Invalid code. Check your wallet and try again." };
+    } else {
+      if (!input.sovereignSignature?.trim()) {
+        return { ok: false, error: "Signature is required for sovereign verification." };
+      }
+      if (!reg.pubkey && !input.sovereignPubkey?.trim()) {
+        return { ok: false, error: "Owner public key unavailable. Refresh and try again." };
+      }
+    }
   }
 
   try {
@@ -97,7 +129,16 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
 
         const costZats = await fetchClaimCost(name, network);
         if (costZats == null) return { ok: false, error: "Pricing unavailable - indexer may be down." };
-        const memo = await buildSignedClaimMemo(name, address, network);
+        const memo =
+          authMode === "sovereign"
+            ? (() => {
+                const sig = input.sovereignSignature?.trim();
+                const pub = input.sovereignPubkey?.trim();
+                if (!sig) throw new Error("Signature is required for sovereign claim.");
+                if (!pub) throw new Error("Public key is required for sovereign claim.");
+                return `${buildClaimMemo(name, address, sig)}:${pub}`;
+              })()
+            : await buildSignedClaimMemo(name, address, network);
         return {
           ok: true,
           memo,
@@ -112,7 +153,16 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         if (!addrCheck.valid) return { ok: false, error: addrCheck.warning || "Invalid address format." };
         const buyReg = await resolve(name, network);
         if (!buyReg?.listing) return { ok: false, error: "Name is not listed for sale." };
-        const memo = await buildSignedBuyMemo(name, address, network);
+        const memo =
+          authMode === "sovereign"
+            ? (() => {
+                const sig = input.sovereignSignature?.trim();
+                const pub = input.sovereignPubkey?.trim();
+                if (!sig) throw new Error("Signature is required for sovereign buy.");
+                if (!pub) throw new Error("Public key is required for sovereign buy.");
+                return `${buildBuyMemo(name, address, sig)}:${pub}`;
+              })()
+            : await buildSignedBuyMemo(name, address, network);
         return {
           ok: true,
           memo,
@@ -125,7 +175,15 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         if (!address) return { ok: false, error: "Address is required for update." };
         const addrCheck = validateAddress(address);
         if (!addrCheck.valid) return { ok: false, error: addrCheck.warning || "Invalid address format." };
-        const { memo } = await buildSignedUpdateMemo(name, address, network);
+        const memo =
+          authMode === "sovereign"
+            ? (() => {
+                const sig = input.sovereignSignature?.trim();
+                if (!sig) throw new Error("Signature is required for sovereign update.");
+                const nonce = (reg?.nonce ?? 0) + 1;
+                return buildUpdateMemo(name, address, nonce, sig);
+              })()
+            : (await buildSignedUpdateMemo(name, address, network)).memo;
         return {
           ok: true,
           memo,
@@ -138,7 +196,15 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         if (!input.priceZats || input.priceZats < 100_000 || input.priceZats > maxZats) {
           return { ok: false, error: "Price must be between 0.001 and 21,000,000 ZEC." };
         }
-        const { memo } = await buildSignedListMemo(name, input.priceZats, network);
+        const memo =
+          authMode === "sovereign"
+            ? (() => {
+                const sig = input.sovereignSignature?.trim();
+                if (!sig) throw new Error("Signature is required for sovereign list.");
+                const nonce = (reg?.nonce ?? 0) + 1;
+                return buildListMemo(name, input.priceZats!, nonce, sig);
+              })()
+            : (await buildSignedListMemo(name, input.priceZats, network)).memo;
         return {
           ok: true,
           memo,
@@ -147,7 +213,15 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         };
       }
       case "delist": {
-        const { memo } = await buildSignedDelistMemo(name, network);
+        const memo =
+          authMode === "sovereign"
+            ? (() => {
+                const sig = input.sovereignSignature?.trim();
+                if (!sig) throw new Error("Signature is required for sovereign delist.");
+                const nonce = (reg?.nonce ?? 0) + 1;
+                return buildDelistMemo(name, nonce, sig);
+              })()
+            : (await buildSignedDelistMemo(name, network)).memo;
         return {
           ok: true,
           memo,
@@ -156,7 +230,15 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         };
       }
       case "release": {
-        const { memo } = await buildSignedReleaseMemo(name, network);
+        const memo =
+          authMode === "sovereign"
+            ? (() => {
+                const sig = input.sovereignSignature?.trim();
+                if (!sig) throw new Error("Signature is required for sovereign release.");
+                const nonce = (reg?.nonce ?? 0) + 1;
+                return buildReleaseMemo(name, nonce, sig);
+              })()
+            : (await buildSignedReleaseMemo(name, network)).memo;
         return {
           ok: true,
           memo,

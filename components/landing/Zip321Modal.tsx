@@ -22,6 +22,8 @@ export interface ModalTarget {
   name: string;
   action: Action;
   registrationAddress?: string;
+  registrationNonce?: number;
+  registrationPubkey?: string | null;
   network: Network;
   networkPassword: string;
   isReserved?: boolean;
@@ -37,7 +39,9 @@ interface Zip321ModalProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
-type Phase = "unlock" | "input" | "otp" | "payment" | "scanning";
+type Phase = "unlock" | "input" | "otp" | "sign" | "payment" | "scanning";
+
+type AuthMode = "default" | "otp" | "sovereign";
 
 type ScanState = "loading" | "not_detected" | "in_mempool" | "being_mined" | "mined";
 
@@ -84,18 +88,63 @@ function parsePrice(raw: string): number | null {
   return Number.isFinite(num) && num > 0 ? num : null;
 }
 
+function buildSovereignPayload(
+  action: Action,
+  name: string,
+  _network: Network,
+  params: { address?: string; priceZats?: number; nonce?: number },
+): string {
+  switch (action) {
+    case "claim":
+      return `CLAIM:${name}:${params.address ?? ""}`;
+    case "buy":
+      return `BUY:${name}:${params.address ?? ""}`;
+    case "update":
+      return `UPDATE:${name}:${params.address ?? ""}:${params.nonce ?? ""}`;
+    case "list":
+      return `LIST:${name}:${params.priceZats ?? ""}:${params.nonce ?? ""}`;
+    case "delist":
+      return `DELIST:${name}:${params.nonce ?? ""}`;
+    case "release":
+      return `RELEASE:${name}:${params.nonce ?? ""}`;
+  }
+}
+
+function decodeBase64ToBytes(value: string): Uint8Array | null {
+  const normalized = value.trim().replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
+  if (!normalized) return null;
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  try {
+    const bin = atob(padded);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalProps) {
-  const { name, action, registrationAddress, network, networkPassword, isReserved } = target;
+  const {
+    name,
+    action,
+    registrationAddress,
+    registrationNonce,
+    registrationPubkey,
+    network,
+    networkPassword,
+    isReserved,
+  } = target;
   const { ZIP321_RECIPIENT_ADDRESS, OTP_SIGNIN_ADDR, OTP_AMOUNT, OTP_MAX_ATTEMPTS } =
     getNetworkConstants(network);
 
   const needsAddress = action === "claim" || action === "buy" || action === "update";
   const needsPrice = action === "list";
-  const needsOtp = action === "update" || action === "list" || action === "delist" || action === "release";
+  const ownerAction = action === "update" || action === "list" || action === "delist" || action === "release";
   const needsUnlock = isReserved && action === "claim";
   const displayName = `${name}.zcash`;
   const explorerHref =
@@ -117,6 +166,13 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   const [priceInput, setPriceInput] = useState("");
   const [inputError, setInputError] = useState("");
   const [inputLoading, setInputLoading] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>(ownerAction ? "otp" : "default");
+  const [signError, setSignError] = useState("");
+  const [signLoading, setSignLoading] = useState(false);
+  const [sovereignPubkeyInput, setSovereignPubkeyInput] = useState("");
+  const [signatureInput, setSignatureInput] = useState("");
+  const [pubkeyLiveError, setPubkeyLiveError] = useState("");
+  const [signatureLiveError, setSignatureLiveError] = useState("");
 
   // OTP phase
   const [zvsMemo, setZvsMemo] = useState("");
@@ -130,6 +186,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   const [paymentUri, setPaymentUri] = useState("");
   const [paymentAmountZec, setPaymentAmountZec] = useState(0);
   const [uriCopied, setUriCopied] = useState(false);
+  const [sovereignPayloadCopied, setSovereignPayloadCopied] = useState(false);
 
   // Scanning phase
   const [scanState, setScanState] = useState<ScanState>("loading");
@@ -156,6 +213,8 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   // Focus first input on mount
   const addressRef = useRef<HTMLInputElement>(null);
   const priceRef = useRef<HTMLInputElement>(null);
+  const sovereignPubkeyRef = useRef<HTMLInputElement>(null);
+  const signatureRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (needsAddress) addressRef.current?.focus();
     else if (needsPrice) priceRef.current?.focus();
@@ -245,6 +304,123 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
 
   // OTP URI
   const otpUri = zvsMemo ? buildZcashUri(OTP_SIGNIN_ADDR, OTP_AMOUNT, zvsMemo) : "";
+  const isSovereignMode = authMode === "sovereign";
+  const usesOtpFlow = ownerAction && authMode === "otp";
+  const requiresPubkeyInput = !ownerAction || !registrationPubkey;
+  const nextOwnerNonce = ownerAction ? (registrationNonce ?? 0) + 1 : undefined;
+  const parsedPrice = parsePrice(priceInput);
+  const priceZats = needsPrice && parsedPrice ? Math.round(parsedPrice * 1e8) : undefined;
+  const sovereignPayload = buildSovereignPayload(action, name, network, {
+    address: needsAddress ? addressInput.trim() : undefined,
+    priceZats,
+    nonce: nextOwnerNonce,
+  });
+
+  useEffect(() => {
+    if (phase !== "sign") return;
+    if (requiresPubkeyInput) sovereignPubkeyRef.current?.focus();
+    else signatureRef.current?.focus();
+  }, [phase, requiresPubkeyInput]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (phase !== "sign") {
+      setPubkeyLiveError("");
+      setSignatureLiveError("");
+      return;
+    }
+
+    const effectivePub = (registrationPubkey ?? sovereignPubkeyInput).trim();
+    const sig = signatureInput.trim();
+
+    (async () => {
+      let pubError = "";
+      let signatureError = "";
+      let pubKey: CryptoKey | null = null;
+
+      if (requiresPubkeyInput && sovereignPubkeyInput.trim()) {
+        const pubBytes = decodeBase64ToBytes(sovereignPubkeyInput);
+        if (!pubBytes) pubError = "Public key must be valid base64.";
+        else if (pubBytes.length !== 32) pubError = "Public key must decode to 32 bytes.";
+        else if (!window.crypto?.subtle) pubError = "WebCrypto is unavailable in this browser.";
+        else {
+          try {
+            pubKey = await window.crypto.subtle.importKey(
+              "raw",
+              pubBytes,
+              { name: "Ed25519" },
+              false,
+              ["verify"],
+            );
+          } catch {
+            pubError = "Public key is not a valid Ed25519 key.";
+          }
+        }
+      } else if (!requiresPubkeyInput && effectivePub && window.crypto?.subtle) {
+        const pubBytes = decodeBase64ToBytes(effectivePub);
+        if (pubBytes && pubBytes.length === 32) {
+          try {
+            pubKey = await window.crypto.subtle.importKey(
+              "raw",
+              pubBytes,
+              { name: "Ed25519" },
+              false,
+              ["verify"],
+            );
+          } catch {
+            pubKey = null;
+          }
+        }
+      }
+
+      if (sig) {
+        const sigBytes = decodeBase64ToBytes(sig);
+        if (!sigBytes) signatureError = "Signature must be valid base64.";
+        else if (sigBytes.length !== 64) signatureError = "Signature must decode to 64 bytes.";
+        else if (!effectivePub) signatureError = "Enter a valid public key first.";
+        else if (!window.crypto?.subtle) signatureError = "WebCrypto is unavailable in this browser.";
+        else {
+          if (!pubKey) {
+            const pubBytes = decodeBase64ToBytes(effectivePub);
+            if (pubBytes && pubBytes.length === 32) {
+              try {
+                pubKey = await window.crypto.subtle.importKey(
+                  "raw",
+                  pubBytes,
+                  { name: "Ed25519" },
+                  false,
+                  ["verify"],
+                );
+              } catch {
+                pubKey = null;
+              }
+            }
+          }
+          if (!pubKey) signatureError = "Enter a valid public key first.";
+          else {
+            const payloadBytes = new TextEncoder().encode(sovereignPayload);
+            const verified = await window.crypto.subtle.verify("Ed25519", pubKey, sigBytes, payloadBytes);
+            if (!verified) signatureError = "Signature does not match the payload and public key.";
+          }
+        }
+      }
+
+      if (cancelled) return;
+      setPubkeyLiveError(pubError);
+      setSignatureLiveError(signatureError);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, requiresPubkeyInput, registrationPubkey, sovereignPubkeyInput, signatureInput, sovereignPayload]);
+
+  const canSubmitSovereign =
+    !signLoading &&
+    !!signatureInput.trim() &&
+    (!requiresPubkeyInput || !!sovereignPubkeyInput.trim()) &&
+    !pubkeyLiveError &&
+    !signatureLiveError;
 
   // ---- Handlers ----
 
@@ -282,7 +458,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
 
     // Validate price
     if (needsPrice) {
-      const zec = parsePrice(priceInput);
+      const zec = parsedPrice;
       if (!zec) { setInputError("Enter a valid price."); return; }
       if (zec < 0.001 || zec > MAX_LIST_FOR_SALE_AMOUNT) {
         setInputError("Price must be between 0.001 and 21,000,000 ZEC.");
@@ -290,10 +466,24 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
       }
     }
 
-    if (needsOtp) {
+    if (isSovereignMode) {
+      if (ownerAction && !registrationNonce && registrationNonce !== 0) {
+        setInputError("Registration nonce unavailable. Search the name again and retry.");
+        return;
+      }
+      setSignError("");
+      setPhase("sign");
+      return;
+    }
+
+    if (usesOtpFlow) {
+      if (!registrationAddress) {
+        setInputError("Registration address unavailable. Search the name again and retry.");
+        return;
+      }
       // Generate OTP session and go to OTP phase
       const sid = generateSessionId();
-      const memo = buildZvsMemo(sid, registrationAddress!);
+      const memo = buildZvsMemo(sid, registrationAddress);
       setZvsMemo(memo);
       setOtpInput("");
       setOtpAttempts(0);
@@ -309,9 +499,11 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
         name,
         action,
         address: addressInput.trim() || undefined,
+        priceZats,
         network,
         password: networkPassword,
         unlockCode: verifiedUnlockCode,
+        authMode: "default",
       });
 
       if (!result.ok) { setInputError(result.error); return; }
@@ -336,12 +528,13 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
         name,
         action,
         address: needsAddress ? addressInput.trim() : undefined,
-        priceZats: needsPrice ? Math.round(parsePrice(priceInput)! * 1e8) : undefined,
+        priceZats,
         network,
         password: networkPassword,
         unlockCode: verifiedUnlockCode,
         memo: zvsMemo,
         otp: code,
+        authMode: "otp",
       });
       if (!result.ok) {
         setOtpAttempts((a) => a + 1);
@@ -357,9 +550,97 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
     }
   }
 
+  async function handleVerifySovereign() {
+    if (signLoading) return;
+    const sig = signatureInput.trim();
+    const pub = (registrationPubkey ?? sovereignPubkeyInput).trim();
+
+    if (!sig) {
+      setSignError("Signature is required.");
+      return;
+    }
+    if (requiresPubkeyInput && !pub) {
+      setSignError("Public key is required.");
+      return;
+    }
+
+    setSignError("");
+    setSignLoading(true);
+    try {
+      if (!window.crypto?.subtle) {
+        setSignError("WebCrypto is unavailable in this browser.");
+        return;
+      }
+
+      const pubBytes = decodeBase64ToBytes(pub);
+      if (!pubBytes || pubBytes.length !== 32) {
+        setSignError("Enter a valid base64 Ed25519 public key (32 bytes).");
+        return;
+      }
+      const sigBytes = decodeBase64ToBytes(sig);
+      if (!sigBytes || sigBytes.length !== 64) {
+        setSignError("Enter a valid base64 Ed25519 signature (64 bytes).");
+        return;
+      }
+
+      let importedPubkey: CryptoKey;
+      try {
+        importedPubkey = await window.crypto.subtle.importKey(
+          "raw",
+          pubBytes,
+          { name: "Ed25519" },
+          false,
+          ["verify"],
+        );
+      } catch {
+        setSignError("Public key is not a valid Ed25519 key.");
+        return;
+      }
+
+      const payloadBytes = new TextEncoder().encode(sovereignPayload);
+      const locallyVerified = await window.crypto.subtle.verify(
+        "Ed25519",
+        importedPubkey,
+        sigBytes,
+        payloadBytes,
+      );
+      if (!locallyVerified) {
+        setSignError("Signature does not match the payload and public key.");
+        return;
+      }
+
+      const result = await buildTransaction({
+        name,
+        action,
+        address: needsAddress ? addressInput.trim() : undefined,
+        priceZats,
+        network,
+        password: networkPassword,
+        unlockCode: verifiedUnlockCode,
+        authMode: "sovereign",
+        sovereignSignature: sig,
+        sovereignPubkey: pub || undefined,
+        sovereignPayload,
+      });
+      if (!result.ok) {
+        setSignError(result.error);
+        return;
+      }
+      goToPayment(result.memo, result.amountZec);
+    } catch {
+      setSignError("Something went wrong. Try again.");
+    } finally {
+      setSignLoading(false);
+    }
+  }
+
   function handleStartOver() {
+    if (!registrationAddress) {
+      setOtpError("Registration address unavailable. Search the name again and retry.");
+      return;
+    }
     const sid = generateSessionId();
-    const memo = buildZvsMemo(sid, registrationAddress!);
+    const memo = buildZvsMemo(sid, registrationAddress);
     setZvsMemo(memo);
     setOtpInput("");
     setOtpAttempts(0);
@@ -379,6 +660,14 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
       setUriCopied(true);
       setTimeout(() => setUriCopied(false), 2000);
     } catch { /* clipboard API blocked - user can copy from the code block */ }
+  }
+
+  async function handleCopySovereignPayload() {
+    try {
+      await navigator.clipboard.writeText(sovereignPayload);
+      setSovereignPayloadCopied(true);
+      setTimeout(() => setSovereignPayloadCopied(false), 2000);
+    } catch { /* clipboard API blocked */ }
   }
 
   // ---- Shared styles ----
@@ -536,6 +825,65 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
               </div>
             )}
 
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                Changes to this name will be authorized by
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {ownerAction ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setAuthMode("otp"); setInputError(""); setSignError(""); }}
+                      className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+                      style={{
+                        ...(authMode === "otp" ? primaryBtnStyle : secondaryBtnStyle),
+                        opacity: authMode === "otp" ? 1 : 0.85,
+                      }}
+                    >
+                      Passcodes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAuthMode("sovereign"); setInputError(""); setSignError(""); }}
+                      className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+                      style={{
+                        ...(authMode === "sovereign" ? primaryBtnStyle : secondaryBtnStyle),
+                        opacity: authMode === "sovereign" ? 1 : 0.85,
+                      }}
+                    >
+                      Keypairs
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setAuthMode("default"); setInputError(""); setSignError(""); }}
+                      className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+                      style={{
+                        ...(authMode === "default" ? primaryBtnStyle : secondaryBtnStyle),
+                        opacity: authMode === "default" ? 1 : 0.85,
+                      }}
+                    >
+                      Passcodes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAuthMode("sovereign"); setInputError(""); setSignError(""); }}
+                      className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+                      style={{
+                        ...(authMode === "sovereign" ? primaryBtnStyle : secondaryBtnStyle),
+                        opacity: authMode === "sovereign" ? 1 : 0.85,
+                      }}
+                    >
+                      Keypairs
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
             {inputError && (
               <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
                 {inputError}
@@ -558,7 +906,13 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
                 className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50"
                 style={primaryBtnStyle}
               >
-                {inputLoading ? "Signing…" : needsOtp ? "Continue" : ACTION_LABEL[action]}
+                {inputLoading
+                  ? "Preparing…"
+                  : isSovereignMode
+                    ? "Continue to Sign"
+                    : usesOtpFlow
+                      ? "Continue"
+                      : ACTION_LABEL[action]}
               </button>
             </div>
           </div>
@@ -661,7 +1015,132 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
           </div>
         )}
 
-        {/* ── Phase 3: Payment ── */}
+        {/* ── Phase 3: Sovereign Sign ── */}
+        {phase === "sign" && (
+          <div className="p-8 flex flex-col gap-5">
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
+                Sovereign Signature
+              </h2>
+              <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
+                Sign this payload with your Ed25519 private key to authorize <strong>{ACTION_LABEL[action].toLowerCase()}</strong> for <strong>{displayName}</strong>.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                Payload to Sign
+              </label>
+              <code
+                className="w-full text-left break-all rounded-lg px-3 py-2 text-xs select-all font-mono"
+                style={{ background: "var(--color-raised)", color: "var(--fg-body)", border: "1px solid var(--border-muted)" }}
+              >
+                {sovereignPayload}
+              </code>
+              <div className="self-start flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopySovereignPayload}
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                  style={secondaryBtnStyle}
+                >
+                  {sovereignPayloadCopied ? "Copied!" : "Copy Payload"}
+                </button>
+                <a
+                  href={`/keypair?payload=${encodeURIComponent(sovereignPayload)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-80"
+                  style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)", textDecoration: "none" }}
+                >
+                  Open Keypair Tool
+                </a>
+              </div>
+            </div>
+
+            {ownerAction && registrationPubkey && (
+              <p className="text-xs break-all" style={{ color: "var(--fg-muted)" }}>
+                Owner public key from resolver: <span className="font-mono">{registrationPubkey}</span>
+              </p>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                Signature (base64)
+              </label>
+              <textarea
+                ref={signatureRef}
+                value={signatureInput}
+                onChange={(e) => { setSignatureInput(e.target.value.trim()); setSignError(""); }}
+                rows={3}
+                placeholder="Paste signed payload"
+                className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono resize-none"
+                style={inputStyle(signatureLiveError ? "var(--accent-red, #e05252)" : undefined)}
+              />
+              {signatureInput.trim() && (
+                <p
+                  className="text-xs"
+                  style={{ color: signatureLiveError ? "var(--accent-red, #e05252)" : "var(--color-accent-green)" }}
+                >
+                  {signatureLiveError || "Valid Ed25519 signature for this payload."}
+                </p>
+              )}
+            </div>
+
+            {requiresPubkeyInput && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                  Public key (base64)
+                </label>
+                <input
+                  ref={sovereignPubkeyRef}
+                  type="text"
+                  value={sovereignPubkeyInput}
+                  onChange={(e) => { setSovereignPubkeyInput(e.target.value.trim()); setSignError(""); }}
+                  placeholder="Paste your ed25519 public key"
+                  className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono"
+                  style={inputStyle(pubkeyLiveError ? "var(--accent-red, #e05252)" : undefined)}
+                />
+                {sovereignPubkeyInput.trim() && (
+                  <p
+                    className="text-xs"
+                    style={{ color: pubkeyLiveError ? "var(--accent-red, #e05252)" : "var(--color-accent-green)" }}
+                  >
+                    {pubkeyLiveError || "Valid Ed25519 public key."}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {signError && (
+              <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
+                {signError}
+              </p>
+            )}
+
+            <div className="flex gap-3 justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setPhase("input")}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                style={secondaryBtnStyle}
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={handleVerifySovereign}
+                disabled={!canSubmitSovereign}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={primaryBtnStyle}
+              >
+                {signLoading ? "Verifying…" : "Use Signature"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Phase 4: Payment ── */}
         {phase === "payment" && (
           <div className="p-8 flex flex-col items-center gap-5 text-center">
             <span
@@ -717,7 +1196,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
           </div>
         )}
 
-        {/* ── Phase 4: Scanning ── */}
+        {/* ── Phase 5: Scanning ── */}
         {phase === "scanning" && (
           <div className="p-8 flex flex-col items-center gap-5 text-center">
             <div>

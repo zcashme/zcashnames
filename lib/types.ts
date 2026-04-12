@@ -75,13 +75,13 @@ export type ResolveName =
   | {
       status: 'registered'
       query: string
-      registration: { name: string; address: string; txid: string; height: number; nonce: number }
+      registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null }
       firstBucket?: number
     }
   | {
       status: 'listed'
       query: string
-      registration: { name: string; address: string; txid: string; height: number; nonce: number }
+      registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null }
       listingPrice: { zats: number; zec: number }
       firstBucket?: number
     }

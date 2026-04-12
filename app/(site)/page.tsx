@@ -142,6 +142,8 @@ export default function HomePage() {
                 };
                 if (item.status === "registered" || item.status === "listed") {
                   t.registrationAddress = item.registration.address;
+                  t.registrationNonce = item.registration.nonce;
+                  t.registrationPubkey = item.registration.pubkey ?? null;
                 }
                 setModalTarget(t);
               }}

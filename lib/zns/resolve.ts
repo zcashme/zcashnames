@@ -119,6 +119,7 @@ export async function resolveName(
     txid: registration!.txid,
     height: registration!.height,
     nonce: registration!.nonce,
+    pubkey: registration!.pubkey ?? null,
   };
 
   if (nameStatus === "forsale") {

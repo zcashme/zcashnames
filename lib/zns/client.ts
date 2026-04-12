@@ -19,6 +19,7 @@ const RPC_TIMEOUT_MS = 6000;
 export type ZnsListing = {
   name: string;
   price: number; // zatoshis
+  nonce: number;
   txid: string;
   height: number;
   signature: string;
@@ -31,6 +32,8 @@ export type ZnsRegistration = {
   height: number;
   nonce: number;
   signature: string | null;
+  last_action?: "CLAIM" | "UPDATE" | "DELIST" | "BUY";
+  pubkey?: string | null;
   listing: ZnsListing | null;
 };
 
@@ -51,14 +54,15 @@ export type ZnsStatus = {
 
 export type ZnsEvent = {
   id: number;
-  name: string;
-  action: "CLAIM" | "BUY" | "LIST" | "DELIST" | "UPDATE" | "RELEASE";
+  name: string; // empty string for SETPRICE events
+  action: "CLAIM" | "BUY" | "LIST" | "DELIST" | "UPDATE" | "RELEASE" | "SETPRICE";
   ua: string | null;
   txid: string;
   height: number;
   nonce: number | null;
   price: number | null; // zatoshis, present on LIST events
   signature: string;
+  pubkey?: string | null;
 };
 
 export type ZnsError = {
