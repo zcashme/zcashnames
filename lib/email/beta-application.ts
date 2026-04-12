@@ -17,6 +17,13 @@ interface BetaApplicationNotice {
   submittedAt: string;
 }
 
+export type BetaApplicationNoticeStatus = "sent" | "failed" | "skipped";
+
+export interface BetaApplicationNoticeResult {
+  status: BetaApplicationNoticeStatus;
+  error: string | null;
+}
+
 const FOCUS_LABEL: Record<"user" | "sdk", string> = {
   user: "User flow",
   sdk: "SDK / developer",
@@ -27,10 +34,13 @@ function row(label: string, value: string | null | undefined): string {
   return `${label}: ${value}\n`;
 }
 
-export async function sendBetaApplicationNotice(notice: BetaApplicationNotice): Promise<void> {
+export async function sendBetaApplicationNotice(
+  notice: BetaApplicationNotice,
+): Promise<BetaApplicationNoticeResult> {
   if (!process.env.RESEND_API_KEY) {
-    console.error("[beta-application] RESEND_API_KEY not set; skipping notification email");
-    return;
+    const message = "RESEND_API_KEY not set; skipping notification email";
+    console.error(`[beta-application] ${message}`);
+    return { status: "skipped", error: message };
   }
 
   const contactBlock = notice.contacts
@@ -72,7 +82,10 @@ export async function sendBetaApplicationNotice(notice: BetaApplicationNotice): 
       subject: `New beta application: ${notice.displayName}`,
       text: body,
     });
+    return { status: "sent", error: null };
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error("[beta-application] notification email failed:", err);
+    return { status: "failed", error: message };
   }
 }

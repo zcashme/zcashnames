@@ -303,6 +303,8 @@ export interface ConfirmWaitlistResult {
 export async function confirmWaitlistEmail(
   token: string,
 ): Promise<ConfirmWaitlistResult> {
+  const headerStore = await headers();
+
   const parsed = parseWaitlistConfirmToken(token);
   if (!parsed || isWaitlistConfirmTokenExpired(parsed)) {
     return { status: "invalid" };
