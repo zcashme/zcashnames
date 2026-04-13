@@ -59,6 +59,7 @@ export default function InfluencerDeck({
   const [chatError, setChatError] = useState("");
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const chatPanelRef = useRef<HTMLFormElement | null>(null);
+  const activeTocItemRef = useRef<HTMLLIElement | null>(null);
   const shouldScrollChatRef = useRef(false);
 
   const goTo = useCallback(
@@ -133,6 +134,20 @@ export default function InfluencerDeck({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [goNext, goPrevious]);
+
+  useEffect(() => {
+    if (tocCollapsed) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      activeTocItemRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeIndex, tocCollapsed]);
 
   const activeSlide = slides[activeIndex];
 
@@ -239,7 +254,7 @@ export default function InfluencerDeck({
                   const slideIndex = slides.findIndex((candidate) => candidate.id === slide.id);
                   const active = slideIndex === activeIndex;
                   return (
-                    <li key={slide.id}>
+                    <li key={slide.id} ref={active ? activeTocItemRef : null}>
                       <button
                         type="button"
                         className="influencer-toc-button"
