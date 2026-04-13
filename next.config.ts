@@ -62,7 +62,7 @@ const nextConfig: NextConfig = {
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: https://www.zcashnames.com",
+            "img-src 'self' data: https://www.zcashnames.com https://hackmd.io",
             "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
             "connect-src 'self' https://vitals.vercel-insights.com",
           ].join("; ") },

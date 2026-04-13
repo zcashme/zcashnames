@@ -40,6 +40,7 @@ export default function Header() {
           </span>
           <span className="hidden sm:inline">ZcashNames</span>
         </Link>
+        <span id="site-route-title" className="ml-3 min-w-0" />
 
         <div className="flex-1" />
 
