@@ -6,7 +6,7 @@ title: Cabal
 
 [ZcashNames](https://zcashnames.com) refers to the on-chain naming system that maps human-readable names to shielded Zcash addresses.
 
-We are onboarding a small group of creators for launch: The ZcashNames cabal.
+We are onboarding a small group of creators for launch.
 
 ---
 
@@ -232,7 +232,7 @@ Equity is granted immediately upon hitting each milestone, with no vesting perio
 | 5,000+       | 0.75%          | 2.0%         |
 
 ---
-`Appendix: Equity`
+`Appendix`
 
 ### Example Equity Value
 
