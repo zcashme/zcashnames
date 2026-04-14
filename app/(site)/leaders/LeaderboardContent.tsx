@@ -506,7 +506,7 @@ export default function LeaderboardContent() {
                 <th className="px-4 py-3 sm:px-6">Rank</th>
                 <th className="px-4 py-3 sm:px-6">ZcashName</th>
                 <th className="px-4 py-3 text-right sm:px-6">
-                  <span className="inline-block w-[10ch] text-center">Refs</span>
+                  <span>Refs</span>
                 </th>
                 <th className="px-4 py-3 text-right sm:px-6">24h</th>
                 <th className="px-4 py-3 text-right sm:px-6">Rewards</th>
@@ -619,13 +619,7 @@ export default function LeaderboardContent() {
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums sm:px-6">
-                      <span className="inline-grid grid-cols-[5ch_1ch_4ch] items-baseline justify-end whitespace-nowrap">
-                        <span className="text-right font-semibold text-fg-heading">{entry.referrals}</span>
-                        <span className="text-center text-[0.78em] font-medium text-fg-muted">/</span>
-                        <span className="text-left text-[0.78em] font-medium text-fg-muted">
-                          {entry.indirectReferrals}
-                        </span>
-                      </span>
+                      <span className="font-semibold text-fg-heading">{entry.attributedReferrals}</span>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-fg-muted sm:px-6">
                       {entry.recent > 0 ? `+${entry.recent}` : "\u2014"}
