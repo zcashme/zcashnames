@@ -513,7 +513,9 @@ export default function LeaderboardContent() {
                     </td>
                     <td className="px-4 py-3 sm:px-6">
                       <div className="font-semibold text-fg-heading">
-                        {entry.name}
+                        <Link href={`/leaders/ref/${encodeURIComponent(entry.referral_code)}`} className="underline-offset-2 hover:underline">
+                          {entry.name}
+                        </Link>
                         {entry.streak && (
                           <img
                             src="/icons/fire-red.apng"

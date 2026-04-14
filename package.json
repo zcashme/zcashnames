@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "test:referral-dashboard": "node --experimental-strip-types --test lib/leaders/referral-dashboard.test.ts",
     "start": "next start"
   },
   "dependencies": {

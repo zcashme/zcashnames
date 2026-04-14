@@ -1,6 +1,11 @@
 "use server";
 
 import { db } from "@/lib/db";
+import {
+  buildReferralDashboard,
+  type ReferralDashboardData,
+  type WaitlistReferralRow,
+} from "@/lib/leaders/referral-dashboard";
 
 export interface TimeSeriesPoint {
   date: string;
@@ -403,5 +408,38 @@ export async function getDailyNewNames(date: string): Promise<DailyNewNameEntry[
       .filter((row) => Boolean(row.name));
   } catch {
     return [];
+  }
+}
+
+export async function getReferralDashboard(
+  referralCode: string,
+  scope: ReferralScope = "all",
+): Promise<ReferralDashboardData | null> {
+  try {
+    const normalizedCode = referralCode.trim();
+    if (!normalizedCode) return null;
+
+    const { data, error } = await db
+      .from("zn_waitlist")
+      .select("name, referral_code, referred_by, created_at, email_verified, cabal")
+      .not("referral_code", "is", null)
+      .order("created_at", { ascending: true });
+
+    if (error || !data) return null;
+
+    const rows: WaitlistReferralRow[] = data
+      .map((row) => ({
+        name: (row.name as string | null) ?? "",
+        referral_code: (row.referral_code as string | null) ?? "",
+        referred_by: (row.referred_by as string | null) ?? null,
+        created_at: row.created_at as string,
+        email_verified: Boolean(row.email_verified),
+        cabal: Boolean(row.cabal),
+      }))
+      .filter((row) => Boolean(row.referral_code));
+
+    return buildReferralDashboard(normalizedCode, rows, scope);
+  } catch {
+    return null;
   }
 }
