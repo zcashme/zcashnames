@@ -2,8 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { readCurrentCabalInvite, setCabalAccessCookie, verifyCabalPassword } from "@/lib/cabal/access";
+import { db } from "@/lib/db";
 import { sendCabalAccessNotice } from "@/lib/email/cabal-access";
-import { sendCabalChatNotice } from "@/lib/email/cabal-chat";
+import { sendCabalChatNotice, sendCabalInterestNotice } from "@/lib/email/cabal-chat";
 
 export type CabalAccessState = {
   error: string;
@@ -65,6 +66,49 @@ export async function submitCabalChat(
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Failed to send message.";
     console.error("[cabal-chat] failed:", error);
+    return { status: "error", error: msg };
+  }
+}
+
+export async function submitCabalInterest(
+  name: string,
+  preferredContact: string,
+  note: string,
+  slideNumber: string,
+  slideTitle: string,
+  deckTitle: string,
+): Promise<CabalChatState> {
+  const currentInvite = await readCurrentCabalInvite();
+  if (!currentInvite) return { status: "error", error: "Cabal access required." };
+
+  if (!preferredContact.trim()) return { status: "error", error: "Preferred contact is required." };
+  if (!slideNumber || !slideTitle) return { status: "error", error: "Slide context is required." };
+
+  try {
+    await sendCabalInterestNotice({
+      name,
+      accessName: currentInvite.displayName,
+      preferredContact: preferredContact.trim(),
+      note,
+      slideNumber,
+      slideTitle,
+      deckTitle,
+      submittedAt: new Date().toISOString(),
+    });
+
+    const { error: updateError } = await db
+      .from("cabal_invites")
+      .update({ join_us_submitted_at: new Date().toISOString() })
+      .eq("id", currentInvite.id);
+
+    if (updateError) {
+      console.error("[cabal-interest] failed to update invite join_us_submitted_at:", updateError);
+    }
+
+    return { status: "sent" };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Failed to send interest.";
+    console.error("[cabal-interest] failed:", error);
     return { status: "error", error: msg };
   }
 }

@@ -1,10 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type TouchEvent } from "react";
+import {
+  Children,
+  isValidElement,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactElement,
+  type ReactNode,
+  type TouchEvent,
+} from "react";
 import { createPortal } from "react-dom";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { submitCabalChat } from "@/app/(site)/cabal/actions";
+import { submitCabalChat, submitCabalInterest } from "@/app/(site)/cabal/actions";
 
 export type InfluencerSlide = {
   id: string;
@@ -20,6 +31,138 @@ type InfluencerDeckProps = {
   slides: InfluencerSlide[];
   deckTitle: string;
   initialCommentName?: string;
+};
+
+type CabalPanelMode = "comment" | "interest";
+
+type AccordionItem = {
+  summary: string;
+  body: string;
+};
+
+type CodeElementProps = {
+  className?: string;
+  children?: ReactNode;
+};
+
+const ACCORDION_COLUMN_COUNT = 3;
+
+function hasLanguageClass(className: string | undefined, language: string): boolean {
+  return !!className?.split(/\s+/).includes(`language-${language}`);
+}
+
+function reactNodeToText(node: ReactNode): string {
+  return Children.toArray(node)
+    .map((child) => (typeof child === "string" || typeof child === "number" ? String(child) : ""))
+    .join("");
+}
+
+function isAccordionCodeElement(node: ReactNode): node is ReactElement<CodeElementProps> {
+  return isValidElement<CodeElementProps>(node) && hasLanguageClass(node.props.className, "accordion");
+}
+
+function parseAccordionItems(source: string): AccordionItem[] {
+  const items: AccordionItem[] = [];
+  let current: { summary: string; bodyLines: string[] } | null = null;
+
+  for (const line of source.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    if (trimmed.startsWith(">>")) {
+      if (current) current.bodyLines.push(trimmed.replace(/^>>\s?/, "").trim());
+      continue;
+    }
+
+    if (trimmed.startsWith(">")) {
+      if (current?.summary) {
+        items.push({ summary: current.summary, body: current.bodyLines.join(" ") });
+      }
+
+      current = { summary: trimmed.replace(/^>\s?/, "").trim(), bodyLines: [] };
+    }
+  }
+
+  if (current?.summary) {
+    items.push({ summary: current.summary, body: current.bodyLines.join(" ") });
+  }
+
+  return items;
+}
+
+function AccordionCodeBlock({ source }: { source: string }) {
+  const items = parseAccordionItems(source);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const columns = Array.from({ length: ACCORDION_COLUMN_COUNT }, () => [] as Array<AccordionItem & { sourceIndex: number }>);
+
+  if (!items.length) {
+    return (
+      <pre>
+        <code className="language-accordion">{source}</code>
+      </pre>
+    );
+  }
+
+  items.forEach((item, index) => {
+    columns[index % ACCORDION_COLUMN_COUNT].push({ ...item, sourceIndex: index });
+  });
+
+  return (
+    <div className="influencer-accordion">
+      {columns.map((column, columnIndex) => (
+        <div className="influencer-accordion-column" key={`accordion-column-${columnIndex}`}>
+          {column.map((item) => (
+            <div
+              className="influencer-accordion-item"
+              key={`${item.summary}-${item.sourceIndex}`}
+              data-open={openIndex === item.sourceIndex}
+            >
+              <button
+                type="button"
+                className="influencer-accordion-trigger"
+                aria-expanded={openIndex === item.sourceIndex}
+                aria-controls={`accordion-panel-${item.sourceIndex}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setOpenIndex((current) => (current === item.sourceIndex ? null : item.sourceIndex));
+                }}
+              >
+                {item.summary}
+              </button>
+              <div
+                className="influencer-accordion-panel"
+                id={`accordion-panel-${item.sourceIndex}`}
+                aria-hidden={openIndex !== item.sourceIndex}
+              >
+                <div className="influencer-accordion-panel-inner">
+                  <p>{item.body}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const markdownComponents: Components = {
+  pre({ children, node: _node, ...props }) {
+    const accordionCode = Children.toArray(children).find(isAccordionCodeElement);
+
+    if (accordionCode) {
+      return <AccordionCodeBlock source={reactNodeToText(accordionCode.props.children).replace(/\n$/, "")} />;
+    }
+
+    return <pre {...props}>{children}</pre>;
+  },
+  code({ className, children, node: _node, ...props }) {
+    return (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  },
 };
 
 export function InfluencerHeaderTitle({ title }: { title: string }) {
@@ -53,13 +196,15 @@ export default function InfluencerDeck({
 }: InfluencerDeckProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [tocCollapsed, setTocCollapsed] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [panelMode, setPanelMode] = useState<CabalPanelMode | null>(null);
   const [chatName, setChatName] = useState(initialCommentName);
   const [chatMessage, setChatMessage] = useState("");
+  const [interestContact, setInterestContact] = useState("");
+  const [interestNote, setInterestNote] = useState("");
   const [chatStatus, setChatStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [chatError, setChatError] = useState("");
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const chatPanelRef = useRef<HTMLFormElement | null>(null);
+  const chatPanelRef = useRef<HTMLDivElement | null>(null);
   const activeTocItemRef = useRef<HTMLLIElement | null>(null);
   const shouldScrollChatRef = useRef(false);
 
@@ -98,15 +243,15 @@ export default function InfluencerDeck({
   }, [chatName]);
 
   useEffect(() => {
-    if (!chatOpen || !shouldScrollChatRef.current) return;
+    if (!panelMode || !shouldScrollChatRef.current) return;
     shouldScrollChatRef.current = false;
 
-    const frame = window.requestAnimationFrame(() => {
+    const timeout = window.setTimeout(() => {
       chatPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-    });
+    }, 220);
 
-    return () => window.cancelAnimationFrame(frame);
-  }, [chatOpen]);
+    return () => window.clearTimeout(timeout);
+  }, [panelMode]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -204,6 +349,37 @@ export default function InfluencerDeck({
     [activeSlide, chatMessage, chatName, deckTitle],
   );
 
+  const handleInterestSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!activeSlide || !interestContact.trim()) return;
+
+      setChatStatus("sending");
+      setChatError("");
+
+      try {
+        const result = await submitCabalInterest(
+          chatName,
+          interestContact,
+          interestNote,
+          activeSlide.tocNumber,
+          activeSlide.title,
+          deckTitle,
+        );
+
+        if (result.status === "error") throw new Error(result.error || "Message failed to send.");
+
+        setInterestContact("");
+        setInterestNote("");
+        setChatStatus("sent");
+      } catch (error) {
+        setChatStatus("error");
+        setChatError(error instanceof Error ? error.message : "Message failed to send.");
+      }
+    },
+    [activeSlide, chatName, deckTitle, interestContact, interestNote],
+  );
+
   if (!activeSlide) {
     return (
       <main className="influencer-shell">
@@ -215,6 +391,8 @@ export default function InfluencerDeck({
   const visibleTocSlides = slides.filter((slide) =>
     shouldShowTocItem(slide.tocNumber, activeSlide.tocNumber),
   );
+  const appendixIndex = slides.findIndex((slide) => slide.title === "Appendix");
+  const showJoinHighlight = appendixIndex >= 0 && activeIndex >= appendixIndex;
 
   return (
     <main className="influencer-shell" aria-label="Influencer proposal slides">
@@ -234,37 +412,46 @@ export default function InfluencerDeck({
                 {tocCollapsed ? "Expand" : "Collapse"}
               </button>
             </div>
-            {tocCollapsed ? (
-              <button
-                type="button"
-                className="influencer-toc-current"
-                onClick={() => setTocCollapsed(false)}
-              >
-                <span className="influencer-toc-number">{activeSlide.tocNumber}</span>
-                <span>{activeSlide.title}</span>
-              </button>
-            ) : (
-              <ol>
-                {visibleTocSlides.map((slide) => {
-                  const slideIndex = slides.findIndex((candidate) => candidate.id === slide.id);
-                  const active = slideIndex === activeIndex;
-                  return (
-                    <li key={slide.id} ref={active ? activeTocItemRef : null}>
-                      <button
-                        type="button"
-                        className="influencer-toc-button"
-                        data-heading-level={slide.headingLevel}
-                        aria-current={active ? "step" : undefined}
-                        onClick={() => goTo(slideIndex)}
-                      >
-                        <span className="influencer-toc-number">{slide.tocNumber}</span>
-                        <span>{slide.title}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
+            <div className="influencer-toc-panels">
+              <div className="influencer-toc-panel" data-open={tocCollapsed} aria-hidden={!tocCollapsed}>
+                <div className="influencer-toc-panel-inner">
+                  <button
+                    type="button"
+                    className="influencer-toc-current"
+                    tabIndex={tocCollapsed ? 0 : -1}
+                    onClick={() => setTocCollapsed(false)}
+                  >
+                    <span className="influencer-toc-number">{activeSlide.tocNumber}</span>
+                    <span>{activeSlide.title}</span>
+                  </button>
+                </div>
+              </div>
+              <div className="influencer-toc-panel" data-open={!tocCollapsed} aria-hidden={tocCollapsed}>
+                <div className="influencer-toc-panel-inner">
+                  <ol>
+                    {visibleTocSlides.map((slide) => {
+                      const slideIndex = slides.findIndex((candidate) => candidate.id === slide.id);
+                      const active = slideIndex === activeIndex;
+                      return (
+                        <li key={slide.id} ref={active ? activeTocItemRef : null}>
+                          <button
+                            type="button"
+                            className="influencer-toc-button"
+                            data-heading-level={slide.headingLevel}
+                            aria-current={active ? "step" : undefined}
+                            tabIndex={tocCollapsed ? -1 : 0}
+                            onClick={() => goTo(slideIndex)}
+                          >
+                            <span className="influencer-toc-number">{slide.tocNumber}</span>
+                            <span>{slide.title}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              </div>
+            </div>
           </nav>
         </aside>
 
@@ -308,7 +495,9 @@ export default function InfluencerDeck({
               </div>
             ) : (
               <div className="influencer-markdown">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{activeSlide.content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                  {activeSlide.content}
+                </ReactMarkdown>
               </div>
             )}
           </article>
@@ -322,9 +511,10 @@ export default function InfluencerDeck({
               type="button"
               className="influencer-chat-button"
               onClick={() => {
-                setChatOpen((value) => {
-                  if (!value) shouldScrollChatRef.current = true;
-                  return !value;
+                setPanelMode((value) => {
+                  const next = value === "comment" ? null : "comment";
+                  if (next) shouldScrollChatRef.current = true;
+                  return next;
                 });
                 setChatStatus("idle");
                 setChatError("");
@@ -332,48 +522,133 @@ export default function InfluencerDeck({
             >
               Comment
             </button>
+            <button
+              type="button"
+              className={`influencer-chat-button${showJoinHighlight ? " is-highlighted" : ""}`}
+              onClick={() => {
+                setPanelMode((value) => {
+                  const next = value === "interest" ? null : "interest";
+                  if (next) shouldScrollChatRef.current = true;
+                  return next;
+                });
+                setChatStatus("idle");
+                setChatError("");
+              }}
+            >
+              Join Us
+            </button>
             <button type="button" onClick={goNext} disabled={activeIndex === slides.length - 1}>
               Next
               <span aria-hidden="true">-&gt;</span>
             </button>
           </div>
-          {chatOpen ? (
-            <form ref={chatPanelRef} className="influencer-chat-panel" onSubmit={handleChatSubmit}>
-              <label>
-                <span>Name</span>
-                <input
-                  type="text"
-                  value={chatName}
-                  onChange={(event) => setChatName(event.target.value)}
-                  placeholder="Optional"
-                  autoComplete="name"
-                />
-              </label>
-              <label>
-                <span>Question or comment</span>
-                <textarea
-                  value={chatMessage}
-                  onChange={(event) => {
-                    setChatMessage(event.target.value);
-                    if (chatStatus !== "sending") setChatStatus("idle");
-                  }}
-                  placeholder={`About ${activeSlide.tocNumber} ${activeSlide.title}`}
-                  rows={4}
-                  required
-                />
-              </label>
-              <div className="influencer-chat-footer">
-                <p>
-                  References slide {activeSlide.tocNumber}: {activeSlide.title}
-                </p>
-                <button type="submit" disabled={chatStatus === "sending" || !chatMessage.trim()}>
-                  {chatStatus === "sending" ? "Sending" : "Send"}
-                </button>
+          <div ref={chatPanelRef} className="influencer-action-panels">
+            <div className="influencer-action-panel" data-open={panelMode === "comment"} aria-hidden={panelMode !== "comment"}>
+              <div className="influencer-action-panel-inner">
+                <form className="influencer-chat-panel" onSubmit={handleChatSubmit}>
+                  <fieldset className="influencer-chat-fieldset" disabled={panelMode !== "comment"}>
+                    <label>
+                      <span>Name</span>
+                      <input
+                        type="text"
+                        value={chatName}
+                        onChange={(event) => setChatName(event.target.value)}
+                        placeholder="Optional"
+                        autoComplete="name"
+                      />
+                    </label>
+                    <label>
+                      <span>Question or comment</span>
+                      <textarea
+                        value={chatMessage}
+                        onChange={(event) => {
+                          setChatMessage(event.target.value);
+                          if (chatStatus !== "sending") setChatStatus("idle");
+                        }}
+                        placeholder={`About ${activeSlide.tocNumber} ${activeSlide.title}`}
+                        rows={4}
+                        required
+                      />
+                    </label>
+                    <div className="influencer-chat-footer">
+                      <p>
+                        References slide {activeSlide.tocNumber}: {activeSlide.title}
+                      </p>
+                      <button type="submit" disabled={chatStatus === "sending" || !chatMessage.trim()}>
+                        {chatStatus === "sending" ? "Sending" : "Send"}
+                      </button>
+                    </div>
+                    {chatStatus === "sent" && panelMode === "comment" ? (
+                      <p className="influencer-chat-status">Sent.</p>
+                    ) : null}
+                    {chatStatus === "error" && panelMode === "comment" ? (
+                      <p className="influencer-chat-status is-error">{chatError}</p>
+                    ) : null}
+                  </fieldset>
+                </form>
               </div>
-              {chatStatus === "sent" ? <p className="influencer-chat-status">Sent.</p> : null}
-              {chatStatus === "error" ? <p className="influencer-chat-status is-error">{chatError}</p> : null}
-            </form>
-          ) : null}
+            </div>
+            <div className="influencer-action-panel" data-open={panelMode === "interest"} aria-hidden={panelMode !== "interest"}>
+              <div className="influencer-action-panel-inner">
+                <form className="influencer-chat-panel" onSubmit={handleInterestSubmit}>
+                  <fieldset className="influencer-chat-fieldset" disabled={panelMode !== "interest"}>
+                    <p className="influencer-chat-intro">
+                      Great. We&rsquo;ll set up your personal dashboard so you can track referrals and
+                      access the content kit.
+                    </p>
+                    <label>
+                      <span>Name</span>
+                      <input
+                        type="text"
+                        value={chatName}
+                        onChange={(event) => setChatName(event.target.value)}
+                        placeholder="Optional"
+                        autoComplete="name"
+                      />
+                    </label>
+                    <label>
+                      <span>Preferred contact</span>
+                      <input
+                        type="text"
+                        value={interestContact}
+                        onChange={(event) => {
+                          setInterestContact(event.target.value);
+                          if (chatStatus !== "sending") setChatStatus("idle");
+                        }}
+                        placeholder="Email, Telegram, Signal, X, etc."
+                        autoComplete="email"
+                        required
+                      />
+                    </label>
+                    <label>
+                      <span>Optional note</span>
+                      <textarea
+                        value={interestNote}
+                        onChange={(event) => {
+                          setInterestNote(event.target.value);
+                          if (chatStatus !== "sending") setChatStatus("idle");
+                        }}
+                        placeholder="Anything we should know before following up?"
+                        rows={4}
+                      />
+                    </label>
+                    <div className="influencer-chat-footer">
+                      <span aria-hidden="true" />
+                      <button type="submit" disabled={chatStatus === "sending" || !interestContact.trim()}>
+                        {chatStatus === "sending" ? "Sending" : "Send"}
+                      </button>
+                    </div>
+                    {chatStatus === "sent" && panelMode === "interest" ? (
+                      <p className="influencer-chat-status">Got it. We&rsquo;ll follow up directly.</p>
+                    ) : null}
+                    {chatStatus === "error" && panelMode === "interest" ? (
+                      <p className="influencer-chat-status is-error">{chatError}</p>
+                    ) : null}
+                  </fieldset>
+                </form>
+              </div>
+            </div>
+          </div>
         </section>
       </div>
     </main>

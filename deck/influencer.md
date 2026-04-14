@@ -12,7 +12,7 @@ We are onboarding a small group of creators for launch.
 
 # Objective
 
-We want 7,000+ high-intent waitlist signups before launch.
+We want 10,000+ high-intent waitlist signups before launch.
 
 We want to help users understand usernames, on-chain privacy, and how ZcashNames works.
 
@@ -75,14 +75,27 @@ We produce long-form articles and provide content kits that include:
 ## Video Content
 
 - Explain what ZcashNames is, show how it works, and share your referral link. We provide examples and kits as needed:
-```
-    > Show how your audience can join the waitlist using your link and earn ZEC. Walk through how the leaderboard works, how much they can earn, and how they can invite others.
-    > People think it's antithetical to associate a name with a Zcash address. Explain why names map to shielded addresses are a game changer.
-    > Demonstrate how Zcash names connect to Zcash.me profiles to reduce impersonation.
-    > Show how subdomains work with examples like bday.influencer, gigs.influencer, salary.influencer.
-    > Explain that both .zec and .zcash are valid ZcashNames, and neither are actually necessary, depending on the Zcash wallet you're using.
-    > Give a simple mental model of a name service: Domain Name Service maps names to IP addresses. Zcash Name Service maps names to shielded Zcash addresses. Both make it easier to interact with bits and bytes.
-    > Demonstrate how names work inside supported wallets, especially in contrast to addresses, so people can see the flow end to end.
+```accordion
+> Waitlist & Rewards
+>> Show how your audience can join the waitlist using your link and earn ZEC. Walk through how the leaderboard works, how much they can earn, and how they can invite others.
+
+> Names vs Privacy
+>> People think it's antithetical to associate a name with a Zcash address. Explain why names map to shielded addresses are a game changer.
+
+> Anti-Impersonation
+>> Demonstrate how Zcash names connect to Zcash.me profiles to reduce impersonation.
+
+> Subdomain Examples
+>> Show how subdomains work with examples like bday.influencer, gigs.influencer, salary.influencer.
+
+> .zec vs .zcash
+>> Explain that both .zec and .zcash are valid ZcashNames, and neither are actually necessary, depending on the Zcash wallet you're using.
+
+> Name Service Model
+>> Give a simple mental model of a name service: Domain Name Service maps names to IP addresses. Zcash Name Service maps names to shielded Zcash addresses. Both make it easier to interact with bits and bytes.
+
+> Wallet Flow Demo
+>> Demonstrate how names work inside supported wallets, especially in contrast to addresses, so people can see the flow end to end.
 ```
 
 ---
@@ -139,16 +152,15 @@ We produce long-form articles and provide content kits that include:
 | 5,000  | $100      | $500k | $150k | 30%       |
 
 
-**This assumes:** 
-1. a small % of your audience converts (0.5%-2%), and 
-2. average price decreases as premium names are taken up first. 
+*Assumes a small % of your audience converts (0.5%-2%), and* 
+*average price decreases as premium names are taken up first.* 
 
 
 ---
 `Compensation`
 ## Revenue Share
 
-- **If total sales reach 7,000 names by May 30**, you receive 2% of total primary sale revenue, independent of referral attribution. This target is based on current ENS registrations (see Appendix). Earnings Projection:
+- If **7,000 names are sold by May 30**, you earn 2% of all primary sales revenue, regardless of referrals. This target is based on current ENS registrations (see Appendix). Earnings projection:
 
     | Names Sold | Avg Price | Revenue    | 2% Bonus |
     |------------|-----------|------------|----------|
@@ -212,9 +224,9 @@ Pricing is not final. It may change based on ZEC/USD and demand. Some names may 
 | Mar 2026 | 9,190         |
 | Apr 2026 | 1,345         |
 
-via https://dune.com/queries/5676/11221
+*via https://dune.com/queries/5676/11221*
 
-also see: [ENS Revenue Reports](https://discuss.ens.domains/t/ens-revenue-reports/20577)
+*also see: [ENS Revenue Reports](https://discuss.ens.domains/t/ens-revenue-reports/20577)*
 
 ---
 
@@ -241,4 +253,6 @@ Equity is granted immediately upon hitting each milestone, with no vesting perio
 | $10M           | $50k    | $125k     | $200k    |
 | $25M           | $125k    | $312k     | $500k    |
 | $50M           | $250k    | $625k     | $1M  |
+
+*assumes that no revenue multiple is applied to enterprise value of ZcashMe, Inc.*
 

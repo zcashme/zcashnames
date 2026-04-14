@@ -109,6 +109,15 @@ export async function verifyCabalPassword(password: string): Promise<CabalInvite
   const match = Array.isArray(data) ? data[0] : data;
   if (!match?.id || !match?.display_name) return null;
 
+  const { error: updateError } = await db
+    .from("cabal_invites")
+    .update({ last_used_at: new Date().toISOString() })
+    .eq("id", match.id);
+
+  if (updateError) {
+    console.error("[cabal] failed to update invite last_used_at:", updateError);
+  }
+
   return { id: match.id as string, displayName: match.display_name as string };
 }
 

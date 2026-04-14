@@ -13,6 +13,17 @@ export type CabalChatNotice = {
   submittedAt: string;
 };
 
+export type CabalInterestNotice = {
+  name: string;
+  accessName: string;
+  preferredContact: string;
+  note: string;
+  slideNumber: string;
+  slideTitle: string;
+  deckTitle: string;
+  submittedAt: string;
+};
+
 export async function sendCabalChatNotice(notice: CabalChatNotice): Promise<void> {
   const resend = getResend();
   const typedName = notice.name.trim();
@@ -34,6 +45,32 @@ export async function sendCabalChatNotice(notice: CabalChatNotice): Promise<void
     from: FROM_EMAIL,
     to: TO_EMAIL,
     subject: `Cabal deck comment: ${notice.slideNumber} ${notice.slideTitle}`,
+    text: body,
+  });
+}
+
+export async function sendCabalInterestNotice(notice: CabalInterestNotice): Promise<void> {
+  const resend = getResend();
+  const typedName = notice.name.trim();
+  const sender = typedName || notice.accessName.trim() || "Anonymous";
+  const body = [
+    `New cabal interest from ${sender}`,
+    "",
+    `Deck:              ${notice.deckTitle || "Cabal"}`,
+    `Slide:             ${notice.slideNumber} - ${notice.slideTitle}`,
+    `Access:            ${notice.accessName || "Unknown"}`,
+    `Name field:        ${typedName || "Blank"}`,
+    `Preferred contact: ${notice.preferredContact}`,
+    `Submitted:         ${notice.submittedAt}`,
+    "",
+    "Optional note:",
+    notice.note.trim() || "(none)",
+  ].join("\n");
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: TO_EMAIL,
+    subject: `Cabal interest: ${sender}`,
     text: body,
   });
 }
