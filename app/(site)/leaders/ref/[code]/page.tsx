@@ -441,7 +441,7 @@ function RewardSchedule({
         <div className="mt-5 max-w-full overflow-x-auto">
           <div className="grid min-w-[460px] gap-3">
             <div className="grid grid-cols-[1.5rem_1fr_1fr_1fr_1fr_1fr] gap-3 px-3 text-right text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-              <span>Lvl</span>
+              <span className="text-left">Lvl</span>
               <span>Refs</span>
               <span>24h</span>
               <span>7d</span>
@@ -491,7 +491,7 @@ function FixedScheduleRow({
       className="grid grid-cols-[1.5rem_1fr_1fr_1fr_1fr_1fr] items-center gap-3 rounded-lg border px-3 py-2"
       style={{ borderColor: "var(--leaders-card-border)" }}
     >
-      <p className="text-right text-sm font-bold text-fg-heading">{toRoman(level)}</p>
+      <p className="text-left text-sm font-bold text-fg-heading">{toRoman(level)}</p>
       <ScheduleMetric value={attributedCount.toLocaleString()} />
       <ScheduleMetric value={formatDelta(recentCounts.day)} muted={recentCounts.day === 0} />
       <ScheduleMetric value={formatDelta(recentCounts.week)} muted={recentCounts.week === 0} />
