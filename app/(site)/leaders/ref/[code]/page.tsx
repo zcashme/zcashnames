@@ -221,7 +221,28 @@ export default function ReferralDashboardPage() {
                 />
               )}
             </h1>
-            <p className="mt-1 font-mono text-sm text-fg-muted">{data.referralCode}</p>
+            <div className="mt-1 flex items-center gap-1.5">
+              <span className="font-mono text-sm text-fg-muted">{data.referralCode}</span>
+              <button
+                type="button"
+                title="Copy referral link"
+                className="cursor-pointer text-fg-muted transition-colors hover:text-fg-heading"
+                onClick={() => {
+                  void navigator.clipboard.writeText(`https://zcashnames.com/?ref=${data.referralCode}`);
+                }}
+              >
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className="h-3.5 w-3.5"
+                >
+                  <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+                  <path d="M10.5 5.5V3.5a1.5 1.5 0 0 0-1.5-1.5H3.5A1.5 1.5 0 0 0 2 3.5V9a1.5 1.5 0 0 0 1.5 1.5h2" />
+                </svg>
+              </button>
+            </div>
           </div>
           <div className="text-right">
             <p className="inline-block rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted" style={{ borderColor: "var(--leaders-card-border)" }}>
@@ -642,22 +663,27 @@ function ReferralDashboardSkeleton() {
         className="mb-8 rounded-2xl border p-5 sm:p-6"
         style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)" }}
       >
-        <div className="flex items-center justify-between gap-3">
-          <Skeleton w="w-36" />
-          <Skeleton w="w-16" />
-        </div>
-        <div className="mt-5 flex items-end justify-between gap-4">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <Skeleton w="w-44" />
-            <div className="mt-3">
+            <div className="mt-3 flex items-center gap-1.5">
               <Skeleton w="w-28" />
+              <Skeleton w="w-4" />
             </div>
           </div>
-          <Skeleton w="w-24" />
+          <div className="text-right">
+            <Skeleton w="w-16" />
+            <div className="mt-3">
+              <Skeleton w="w-24" />
+            </div>
+          </div>
         </div>
         <div className="mt-6 border-t pt-5" style={{ borderColor: "var(--leaders-card-border)" }}>
           <div className="mb-3 flex items-center justify-between">
-            <Skeleton w="w-28" />
+            <div className="flex items-center gap-3">
+              <Skeleton w="w-20" />
+              <Skeleton w="w-16" />
+            </div>
             <Skeleton w="w-20" />
           </div>
           <div className="relative h-[240px] overflow-hidden rounded-lg">
@@ -674,19 +700,33 @@ function ReferralDashboardSkeleton() {
         <MetricSkeleton />
       </section>
       <DashboardShell>
-        <Skeleton w="w-32" />
-        <div className="mt-5 grid min-w-[460px] gap-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div
-              key={index}
-              className="grid grid-cols-[1.5rem_1fr_1fr_1fr_1fr_1fr] items-center gap-3 rounded-lg border px-3 py-2"
-              style={{ borderColor: "var(--leaders-card-border)" }}
-            >
-              {Array.from({ length: 6 }).map((__, cellIndex) => (
-                <Skeleton key={cellIndex} w={cellIndex === 0 ? "w-5" : "w-12"} />
+        <div className="flex items-center justify-between gap-3">
+          <Skeleton w="w-24" />
+          <Skeleton w="w-28" />
+        </div>
+        <div className="mt-5 max-w-full overflow-hidden">
+          <table className="w-full min-w-[420px] text-left text-sm">
+            <thead>
+              <tr className="border-b" style={{ borderColor: "var(--leaders-card-border)" }}>
+                <th className="py-2 pr-3"><Skeleton w="w-5" /></th>
+                <th className="px-3 py-2"><Skeleton w="w-20" /></th>
+                <th className="w-[6.5rem] px-2 py-2"><Skeleton w="w-14" /></th>
+                <th className="w-[3.5rem] px-2 py-2 text-right"><Skeleton w="w-8" /></th>
+                <th className="py-2 pl-3 text-right"><Skeleton w="w-14" /></th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 5 }).map((_, index) => (
+                <tr key={index} className="border-b last:border-b-0" style={{ borderColor: "var(--leaders-card-border)" }}>
+                  <td className="py-2 pr-3"><Skeleton w="w-5" /></td>
+                  <td className="px-3 py-2"><Skeleton w="w-24" /></td>
+                  <td className="w-[6.5rem] px-2 py-2"><Skeleton w="w-20" /></td>
+                  <td className="w-[3.5rem] px-2 py-2 text-right"><Skeleton w="w-6" /></td>
+                  <td className="py-2 pl-3 text-right"><Skeleton w="w-14" /></td>
+                </tr>
               ))}
-            </div>
-          ))}
+            </tbody>
+          </table>
         </div>
       </DashboardShell>
     </>
@@ -696,13 +736,11 @@ function ReferralDashboardSkeleton() {
 function MetricSkeleton() {
   return (
     <div
-      className="rounded-2xl border p-3 sm:p-5"
+      className="flex flex-col items-center gap-1 rounded-2xl border px-6 py-5 text-center"
       style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)" }}
     >
       <Skeleton w="w-16" />
-      <div className="mt-3">
-        <Skeleton w="w-12" />
-      </div>
+      <Skeleton w="w-12" />
     </div>
   );
 }
