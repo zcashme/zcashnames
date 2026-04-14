@@ -5,6 +5,7 @@ import { Suspense, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { validatePayload, payloadBorderStyle, payloadMessageColor } from "@/lib/zns/payload";
 import type { PayloadValidation } from "@/lib/zns/payload";
+import { useCopy } from "@/lib/useCopy";
 
 function bytesToBase64(bytes: ArrayBuffer | Uint8Array): string {
   return btoa(String.fromCharCode(...new Uint8Array(bytes)));
@@ -19,16 +20,20 @@ function tryBase64ToBytes(value: string): Uint8Array | null {
   }
 }
 
-function CopyBtn({ value, label, onCopy }: { value: string; label: string; onCopy: () => void }) {
+function CopyBtn({ value, label, copied, onCopy }: { value: string; label: string; copied: boolean; onCopy: () => void }) {
   return (
     <button
       type="button"
       onClick={onCopy}
       disabled={!value}
       className="self-start rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
-      style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+      style={{
+        background: copied ? "var(--color-accent-green-light)" : "transparent",
+        border: `1.5px solid ${copied ? "var(--color-accent-green)" : "var(--border-muted)"}`,
+        color: copied ? "var(--color-accent-green)" : "var(--fg-body)",
+      }}
     >
-      {label}
+      {copied ? "Copied!" : label}
     </button>
   );
 }
@@ -37,6 +42,11 @@ function KeypairPageInner() {
   const searchParams = useSearchParams();
   const initialPayload = searchParams.get("payload") ?? "";
   const importFileInputRef = useRef<HTMLInputElement>(null);
+
+  const pubkeyCopy = useCopy();
+  const privkeyCopy = useCopy();
+  const memoCopy = useCopy();
+  const signatureCopy = useCopy();
 
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"generate" | "import">("import");
@@ -102,14 +112,6 @@ function KeypairPageInner() {
       setImportPrivError("Invalid Ed25519 key.");
       setSeed(null);
       setPubkeyB64("");
-    }
-  }
-
-  async function copyText(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      setError("Clipboard unavailable. Copy manually.");
     }
   }
 
@@ -272,7 +274,7 @@ function KeypairPageInner() {
                   className="w-full rounded-xl px-3 py-2 text-xs font-mono"
                   style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
                 />
-                <CopyBtn value={pubkeyB64} label="Copy Public Key" onCopy={() => void copyText(pubkeyB64)} />
+                <CopyBtn value={pubkeyB64} label="Copy Public Key" copied={pubkeyCopy.copied} onCopy={() => pubkeyCopy.copy(pubkeyB64)} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
@@ -291,7 +293,7 @@ function KeypairPageInner() {
                     Save this private key before continuing.
                   </p>
                 )}
-                <CopyBtn value={privkeyB64} label="Copy Private Key" onCopy={() => void copyText(privkeyB64)} />
+                <CopyBtn value={privkeyB64} label="Copy Private Key" copied={privkeyCopy.copied} onCopy={() => privkeyCopy.copy(privkeyB64)} />
               </div>
               <div className="flex flex-wrap items-center justify-start gap-2">
                 <button
@@ -376,7 +378,7 @@ function KeypairPageInner() {
                     className="w-full rounded-xl px-3 py-2 text-xs font-mono"
                     style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
                   />
-                  <CopyBtn value={pubkeyB64} label="Copy Public Key" onCopy={() => void copyText(pubkeyB64)} />
+                  <CopyBtn value={pubkeyB64} label="Copy Public Key" copied={pubkeyCopy.copied} onCopy={() => pubkeyCopy.copy(pubkeyB64)} />
                 </div>
               )}
 
@@ -473,7 +475,7 @@ function KeypairPageInner() {
                 className="w-full rounded-xl px-3 py-2 text-xs font-mono"
                 style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
               />
-              <CopyBtn value={assembledMemo} label="Copy Memo" onCopy={() => void copyText(assembledMemo)} />
+              <CopyBtn value={assembledMemo} label="Copy Memo" copied={memoCopy.copied} onCopy={() => memoCopy.copy(assembledMemo)} />
             </div>
 
             <div className="mt-3 flex flex-col gap-1.5">
@@ -487,7 +489,7 @@ function KeypairPageInner() {
                 className="w-full rounded-xl px-3 py-2 text-xs font-mono"
                 style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
               />
-                <CopyBtn value={pubkeyB64} label="Copy Public Key" onCopy={() => void copyText(pubkeyB64)} />
+                <CopyBtn value={pubkeyB64} label="Copy Public Key" copied={pubkeyCopy.copied} onCopy={() => pubkeyCopy.copy(pubkeyB64)} />
             </div>
 
             <div className="mt-3 flex flex-col gap-1.5">
@@ -501,7 +503,7 @@ function KeypairPageInner() {
                 className="w-full rounded-xl px-3 py-2 text-xs font-mono"
                 style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
               />
-              <CopyBtn value={signatureB64} label="Copy Signature" onCopy={() => void copyText(signatureB64)} />
+              <CopyBtn value={signatureB64} label="Copy Signature" copied={signatureCopy.copied} onCopy={() => signatureCopy.copy(signatureB64)} />
             </div>
           </div>
         )}

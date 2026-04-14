@@ -13,6 +13,7 @@ import { generateSessionId, buildZvsMemo } from "@/lib/payment/memo";
 import { getNetworkConstants, MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import type { Network } from "@/lib/zns/name";
+import { useCopy } from "@/lib/useCopy";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -159,6 +160,10 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
 
   // Phase
   const [phase, setPhase] = useState<Phase>(needsUnlock ? "unlock" : "input");
+
+  const otpCopy = useCopy();
+  const payloadCopy = useCopy();
+  const uriCopy = useCopy();
 
   // Unlock phase
   const [unlockInput, setUnlockInput] = useState("");
@@ -956,17 +961,11 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
               </code>
               <button
                 type="button"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(otpUri);
-                    setOtpCopied(true);
-                    setTimeout(() => setOtpCopied(false), 2000);
-                  } catch { /* clipboard blocked */ }
-                }}
+                onClick={() => otpCopy.copy(otpUri)}
                 className="self-end px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
                 style={secondaryBtnStyle}
               >
-                {otpCopied ? "Copied!" : "Copy URI"}
+                {otpCopy.copied ? "Copied!" : "Copy URI"}
               </button>
             </div>
 
@@ -1050,11 +1049,11 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
               <div className="self-start flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleCopySovereignPayload}
+                  onClick={() => payloadCopy.copy(sovereignPayload)}
                   className="rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
                   style={secondaryBtnStyle}
                 >
-                  {sovereignPayloadCopied ? "Copied!" : "Copy Payload"}
+                  {payloadCopy.copied ? "Copied!" : "Copy Payload"}
                 </button>
                 <a
                   href={`/keypair?payload=${encodeURIComponent(sovereignPayload)}`}
@@ -1188,11 +1187,11 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
             <div className="flex gap-3 w-full justify-center pt-1">
               <button
                 type="button"
-                onClick={handleCopyUri}
+                onClick={() => uriCopy.copy(paymentUri)}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
                 style={secondaryBtnStyle}
               >
-                {uriCopied ? "Copied!" : "Copy URI"}
+                {uriCopy.copied ? "Copied!" : "Copy URI"}
               </button>
               <button
                 type="button"
