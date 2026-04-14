@@ -52,7 +52,7 @@ export default function ReferralDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [projectionOpen, setProjectionOpen] = useState(false);
   const [referralLevelFilter, setReferralLevelFilter] = useState<"all" | number>("all");
-  const [activeMetricKey, setActiveMetricKey] = useState<"direct" | "attributed" | "payout" | null>(null);
+  const [activeMetricKey, setActiveMetricKey] = useState<"direct" | "indirect" | "payout" | null>(null);
   const [prices, setPrices] = useState<PriceByBucket>(DEFAULT_PRICE_BY_BUCKET);
   const [conversions, setConversions] = useState<ConversionByBucket>(DEFAULT_CONVERSION_BY_BUCKET);
 
@@ -74,6 +74,9 @@ export default function ReferralDashboardPage() {
   }, [referralCode, scope]);
 
   const model: ProjectionModel = data?.root?.cabal ? "commission" : "fixed";
+  const indirectReferrals = data
+    ? Math.max(0, data.totalAttributedReferrals - data.directReferrals.length)
+    : 0;
 
   const projection = useMemo(() => {
     if (!data) return null;
@@ -200,10 +203,10 @@ export default function ReferralDashboardPage() {
           onClick={() => setActiveMetricKey((current) => (current === "direct" ? null : "direct"))}
         />
         <MetricCard
-          label="Attributed"
-          value={data.totalAttributedReferrals.toLocaleString()}
-          active={activeMetricKey === "attributed"}
-          onClick={() => setActiveMetricKey((current) => (current === "attributed" ? null : "attributed"))}
+          label="Indirect"
+          value={indirectReferrals.toLocaleString()}
+          active={activeMetricKey === "indirect"}
+          onClick={() => setActiveMetricKey((current) => (current === "indirect" ? null : "indirect"))}
         />
         <MetricCard
           label="Rewards"
@@ -227,7 +230,7 @@ export default function ReferralDashboardPage() {
           }}
         >
           {activeMetricKey === "direct" && "People who joined using this referral code."}
-          {activeMetricKey === "attributed" && "All referrals connected to this code across every level."}
+          {activeMetricKey === "indirect" && "People referred by your referrals, and by the levels below them."}
           {activeMetricKey === "payout" && "Projected until referrals complete purchases."}
         </p>
       </div>
@@ -277,8 +280,8 @@ export default function ReferralDashboardPage() {
               <table className="w-full min-w-[460px] text-left text-sm">
                 <thead>
                   <tr className="border-b text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted" style={{ borderColor: "var(--leaders-card-border)" }}>
-                    <th className="py-2 pr-3">Name</th>
-                    <th className="px-3 py-2 text-right">Lvl</th>
+                    <th className="py-2 pr-3">Lvl</th>
+                    <th className="px-3 py-2">Name</th>
                     <th className="px-3 py-2">Joined</th>
                     <th className="py-2 pl-3 text-right">Refs</th>
                     <th className="py-2 pl-3 text-right">Reward</th>
@@ -292,12 +295,12 @@ export default function ReferralDashboardPage() {
                   ) : (
                     visibleReferrals.map((entry) => (
                       <tr key={entry.referral_code} className="border-b last:border-b-0 transition-colors duration-300" style={{ borderColor: "var(--leaders-card-border)" }}>
-                        <td className="py-2 pr-3 font-semibold text-fg-heading">
+                        <td className="py-2 pr-3 tabular-nums text-fg-body">{toRoman(entry.depth)}</td>
+                        <td className="px-3 py-2 font-semibold text-fg-heading">
                           <Link href={`/leaders/ref/${encodeURIComponent(entry.referral_code)}`} className="underline-offset-2 hover:underline">
                             {entry.name}
                           </Link>
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums text-fg-body">{toRoman(entry.depth)}</td>
                         <td className="px-3 py-2 text-fg-body">{formatDate(entry.created_at)}</td>
                         <td className="py-2 pl-3 text-right font-semibold tabular-nums text-fg-heading">{entry.initiated_referrals}</td>
                         <td className="py-2 pl-3 text-right font-semibold tabular-nums text-fg-heading">
