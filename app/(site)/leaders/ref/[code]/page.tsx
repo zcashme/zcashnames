@@ -29,7 +29,7 @@ import {
 
 const DIRECT_CHART_COLOR = "var(--leaders-area-referred)";
 const INDIRECT_CHART_COLOR = "var(--leaders-area-non-referred)";
-const REWARDS_CHART_COLOR = "#22c55e";
+const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
 
 interface ReferralChartPoint {
   date: string;

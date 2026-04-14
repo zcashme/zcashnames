@@ -25,7 +25,7 @@ import {
   type TimeSeriesPoint,
 } from "@/lib/leaders/leaders";
 
-const REWARDS_CHART_COLOR = "#22c55e";
+const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
 
 function ZecSymbol({ className }: { className?: string }) {
   return (

@@ -134,6 +134,7 @@
   --leaders-tooltip-border: rgba(255, 255, 255, 0.15);
   --leaders-area-referred: #F4B728;
   --leaders-area-non-referred: #3b82f6;
+  --leaders-area-rewards: #22c55e;
   --leaders-rank-gold: linear-gradient(135deg, #F4B728, #ffe08b);
   --leaders-rank-silver: linear-gradient(135deg, #94a3b8, #cbd5e1);
   --leaders-rank-bronze: linear-gradient(135deg, #cd7f32, #e6a55a);
@@ -336,8 +337,9 @@
   --leaders-card-border: rgba(126, 150, 196, 0.32);
   --leaders-tooltip-bg: rgba(255, 255, 255, 0.95);
   --leaders-tooltip-border: rgba(126, 150, 196, 0.35);
-  --leaders-area-referred: #d09a24;
-  --leaders-area-non-referred: #2563eb;
+  --leaders-area-referred: #F4B728;
+  --leaders-area-non-referred: #3b82f6;
+  --leaders-area-rewards: #22c55e;
   --leaders-rank-gold: linear-gradient(135deg, #F4B728, #ffe08b);
   --leaders-rank-silver: linear-gradient(135deg, #94a3b8, #cbd5e1);
   --leaders-rank-bronze: linear-gradient(135deg, #cd7f32, #e6a55a);
@@ -512,8 +514,9 @@
   --leaders-card-border: rgba(139, 172, 15, 0.46);
   --leaders-tooltip-bg: rgba(15, 56, 15, 0.92);
   --leaders-tooltip-border: rgba(139, 172, 15, 0.46);
-  --leaders-area-referred: var(--mono-3);
-  --leaders-area-non-referred: var(--mono-2);
+  --leaders-area-referred: #F4B728;
+  --leaders-area-non-referred: #3b82f6;
+  --leaders-area-rewards: #22c55e;
   --leaders-rank-gold: linear-gradient(135deg, var(--mono-3), var(--mono-2));
   --leaders-rank-silver: linear-gradient(135deg, var(--mono-2), var(--mono-1));
   --leaders-rank-bronze: linear-gradient(135deg, var(--mono-2), var(--mono-1));
