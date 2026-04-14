@@ -1,9 +1,7 @@
 import "server-only";
 
-import { Resend } from "resend";
-
-const FROM_EMAIL = "zechariah@updates.zcashnames.com";
-const TO_EMAIL = "partner@zcash.me";
+import { FROM_EMAIL, TO_EMAIL } from "@/lib/email/constants";
+import { getResend } from "@/lib/email/client";
 
 export type CabalChatNotice = {
   name: string;
@@ -16,10 +14,7 @@ export type CabalChatNotice = {
 };
 
 export async function sendCabalChatNotice(notice: CabalChatNotice): Promise<void> {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error("RESEND_API_KEY is not set");
-  }
-
+  const resend = getResend();
   const typedName = notice.name.trim();
   const sender = typedName || notice.accessName.trim() || "Anonymous";
   const body = [
@@ -35,7 +30,6 @@ export async function sendCabalChatNotice(notice: CabalChatNotice): Promise<void
     notice.message,
   ].join("\n");
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
   await resend.emails.send({
     from: FROM_EMAIL,
     to: TO_EMAIL,

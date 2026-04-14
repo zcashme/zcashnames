@@ -467,8 +467,7 @@ export async function submitBetaApplication(
     return { ok: false, error: "Couldn't save your application. Try again." };
   }
 
-  // Best-effort admin notification.
-  const noticeResult = await sendBetaApplicationNotice({
+  await sendBetaApplicationNotice({
     testerId,
     displayName,
     inviteCode,
@@ -483,27 +482,6 @@ export async function submitBetaApplication(
     })),
     submittedAt: submittedAtIso,
   });
-
-  const { error: noticeUpdateError } = await db
-    .from("beta_testers")
-    .update({
-      notice_status: noticeResult.status,
-      notice_error: noticeResult.error,
-      notice_attempted_at: new Date().toISOString(),
-    })
-    .eq("id", testerId);
-
-  if (noticeUpdateError) {
-    console.error("[beta-apply] failed to persist notification status:", testerId, noticeUpdateError);
-  }
-
-  if (noticeResult.status !== "sent") {
-    console.error("[beta-apply] admin notification not sent:", {
-      testerId,
-      status: noticeResult.status,
-      error: noticeResult.error,
-    });
-  }
 
   return { ok: true };
 }

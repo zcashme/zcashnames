@@ -3,8 +3,8 @@ import "server-only";
 import { Resend } from "resend";
 import ConfirmEmail from "@/components/emails/ConfirmEmail";
 import WaitlistEmail from "@/components/emails/WaitlistEmail";
-
-const FROM_EMAIL = "zechariah@updates.zcashnames.com";
+import { FROM_EMAIL } from "@/lib/email/constants";
+import { getResend } from "@/lib/email/client";
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
@@ -19,7 +19,7 @@ export async function sendWaitlistConfirmationEmail({
   name: string;
   confirmUrl: string;
 }): Promise<void> {
-  const resend = new Resend(process.env.RESEND_API_KEY!);
+  const resend = getResend();
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
@@ -39,14 +39,14 @@ export async function sendWaitlistWelcomeEmail({
   referralCode: string;
   baseUrl: string;
 }): Promise<void> {
-  const resend = new Resend(process.env.RESEND_API_KEY!);
+  const resend = getResend();
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
   const referralUrl = `${normalizedBaseUrl}/?ref=${referralCode}`;
 
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
-    subject: "You’re on the waitlist!",
+    subject: "You're on the waitlist!",
     react: WaitlistEmail({ name, referralUrl }),
   });
 }

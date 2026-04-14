@@ -1,9 +1,7 @@
 import "server-only";
 
-import { Resend } from "resend";
-
-const FROM_EMAIL = "zechariah@updates.zcashnames.com";
-const TO_EMAIL = "partner@zcash.me";
+import { FROM_EMAIL, TO_EMAIL } from "@/lib/email/constants";
+import { getResend } from "@/lib/email/client";
 
 export type CabalAccessNotice = {
   name: string;
@@ -11,10 +9,7 @@ export type CabalAccessNotice = {
 };
 
 export async function sendCabalAccessNotice(notice: CabalAccessNotice): Promise<void> {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error("RESEND_API_KEY is not set");
-  }
-
+  const resend = getResend();
   const name = notice.name.trim() || "Unknown visitor";
   const body = [
     `${name} is viewing your proposal.`,
@@ -23,7 +18,6 @@ export async function sendCabalAccessNotice(notice: CabalAccessNotice): Promise<
     `Viewed at: ${notice.submittedAt}`,
   ].join("\n");
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
   await resend.emails.send({
     from: FROM_EMAIL,
     to: TO_EMAIL,

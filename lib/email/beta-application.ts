@@ -1,9 +1,7 @@
 import "server-only";
 
-import { Resend } from "resend";
-
-const FROM_EMAIL = "zechariah@updates.zcashnames.com";
-const TO_EMAIL = "partner@zcash.me";
+import { FROM_EMAIL, TO_EMAIL } from "@/lib/email/constants";
+import { getResend } from "@/lib/email/client";
 
 interface BetaApplicationNotice {
   testerId: string;
@@ -15,13 +13,6 @@ interface BetaApplicationNotice {
   referralSource?: string | null;
   contacts: { kind: string; value: string; isBest: boolean }[];
   submittedAt: string;
-}
-
-export type BetaApplicationNoticeStatus = "sent" | "failed" | "skipped";
-
-export interface BetaApplicationNoticeResult {
-  status: BetaApplicationNoticeStatus;
-  error: string | null;
 }
 
 const FOCUS_LABEL: Record<"user" | "sdk", string> = {
@@ -36,13 +27,8 @@ function row(label: string, value: string | null | undefined): string {
 
 export async function sendBetaApplicationNotice(
   notice: BetaApplicationNotice,
-): Promise<BetaApplicationNoticeResult> {
-  if (!process.env.RESEND_API_KEY) {
-    const message = "RESEND_API_KEY not set; skipping notification email";
-    console.error(`[beta-application] ${message}`);
-    return { status: "skipped", error: message };
-  }
-
+): Promise<void> {
+  const resend = getResend();
   const contactBlock = notice.contacts
     .map((c) => `  - ${c.kind}${c.isBest ? " (best)" : ""}: ${c.value}`)
     .join("\n");
@@ -70,22 +56,12 @@ export async function sendBetaApplicationNotice(
     "",
     "—",
     "Open the beta_testers table in Supabase to flip status when you've sent the code.",
-  ]
-    .filter((line) => line !== "")
-    .join("\n");
+  ].join("\n");
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  try {
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: TO_EMAIL,
-      subject: `New beta application: ${notice.displayName}`,
-      text: body,
-    });
-    return { status: "sent", error: null };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[beta-application] notification email failed:", err);
-    return { status: "failed", error: message };
-  }
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: TO_EMAIL,
+    subject: `New beta application: ${notice.displayName}`,
+    text: body,
+  });
 }

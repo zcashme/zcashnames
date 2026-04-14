@@ -1,4 +1,7 @@
-import { Resend } from "resend";
+import "server-only";
+
+import { FROM_EMAIL } from "@/lib/email/constants";
+import { getResend } from "@/lib/email/client";
 import FollowUpEmail from "@/components/emails/FollowUpEmail";
 
 export async function sendFollowUp(
@@ -6,9 +9,9 @@ export async function sendFollowUp(
   name: string,
   reasonCopy: string,
 ): Promise<void> {
-  const resend = new Resend(process.env.RESEND_API_KEY!);
+  const resend = getResend();
   await resend.emails.send({
-    from: "zechariah@updates.zcashnames.com",
+    from: FROM_EMAIL,
     to: email,
     subject: "Let\u2019s connect",
     react: FollowUpEmail({ name, reasonCopy }),
