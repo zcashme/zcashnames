@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type TouchEve
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { submitCabalChat } from "@/app/(site)/cabal/actions";
 
 export type InfluencerSlide = {
   id: string;
@@ -183,21 +184,15 @@ export default function InfluencerDeck({
       setChatError("");
 
       try {
-        const response = await fetch("/api/cabal-chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: chatName,
-            message: chatMessage,
-            slideNumber: activeSlide.tocNumber,
-            slideTitle: activeSlide.title,
-            slideIndex: activeIndex,
-            deckTitle,
-          }),
-        });
+        const result = await submitCabalChat(
+          chatName,
+          chatMessage,
+          activeSlide.tocNumber,
+          activeSlide.title,
+          deckTitle,
+        );
 
-        const result = (await response.json()) as { error?: string };
-        if (!response.ok) throw new Error(result.error || "Message failed to send.");
+        if (result.status === "error") throw new Error(result.error || "Message failed to send.");
 
         setChatMessage("");
         setChatStatus("sent");
@@ -206,7 +201,7 @@ export default function InfluencerDeck({
         setChatError(error instanceof Error ? error.message : "Message failed to send.");
       }
     },
-    [activeIndex, activeSlide, chatMessage, chatName, deckTitle],
+    [activeSlide, chatMessage, chatName, deckTitle],
   );
 
   if (!activeSlide) {

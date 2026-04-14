@@ -11,7 +11,6 @@ export type CabalChatNotice = {
   message: string;
   slideNumber: string;
   slideTitle: string;
-  slideIndex: number;
   deckTitle: string;
   submittedAt: string;
 };
@@ -28,7 +27,6 @@ export async function sendCabalChatNotice(notice: CabalChatNotice): Promise<void
     "",
     `Deck:       ${notice.deckTitle || "Cabal"}`,
     `Slide:      ${notice.slideNumber} - ${notice.slideTitle}`,
-    `Slide idx:  ${notice.slideIndex + 1}`,
     `Access:     ${notice.accessName || "Unknown"}`,
     `Name field: ${typedName || "Blank"}`,
     `Submitted:  ${notice.submittedAt}`,
