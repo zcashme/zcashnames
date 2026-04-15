@@ -8,6 +8,7 @@ import {
   AreaChart,
   CartesianGrid,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -26,6 +27,30 @@ import {
 } from "@/lib/leaders/leaders";
 
 const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
+const GUIDE_LINE_PROPS = {
+  strokeDasharray: "4 4",
+  strokeWidth: 1,
+  opacity: 0.35,
+  ifOverflow: "extendDomain" as const,
+};
+
+function getActiveChartPoint<T extends { date: string }>(state: unknown, data: T[]): T | null {
+  const chartState = state as
+    | { activeTooltipIndex?: number | string; tooltipIndex?: number | string; activeLabel?: string }
+    | null;
+  const rawIndex = chartState?.activeTooltipIndex ?? chartState?.tooltipIndex;
+  const index = rawIndex === undefined ? NaN : Number(rawIndex);
+
+  if (Number.isInteger(index) && index >= 0 && index < data.length) {
+    return data[index];
+  }
+
+  if (chartState?.activeLabel) {
+    return data.find((point) => point.date === chartState.activeLabel) ?? null;
+  }
+
+  return null;
+}
 
 function ZecSymbol({ className }: { className?: string }) {
   return (
@@ -211,6 +236,7 @@ export default function LeaderboardContent() {
   const [stats, setStats] = useState({ waitlist: 0, referred: 0, rewardsPot: 0 });
   const [loading, setLoading] = useState(true);
   const [activeStatKey, setActiveStatKey] = useState<"waitlist" | "referred" | "rewards" | null>(null);
+  const [activeChartPoint, setActiveChartPoint] = useState<TimeSeriesPoint | null>(null);
 
   const filteredDailyRows = useMemo(
     () => dailyRows.filter((row) => row.date >= "2026-03-30"),
@@ -226,6 +252,8 @@ export default function LeaderboardContent() {
     () => leaderboard.slice(0, visibleLeaderboardRows),
     [leaderboard, visibleLeaderboardRows],
   );
+  const chartGuidePoint = activeChartPoint ?? timeSeries[timeSeries.length - 1] ?? null;
+  const chartGuideWaitlist = chartGuidePoint ? chartGuidePoint.referred + chartGuidePoint.nonReferred : 0;
 
   const canShowMoreLeaderboardRows = visibleLeaderboardRows < leaderboard.length;
   const canHideLeaderboardRows = visibleLeaderboardRows > 10;
@@ -355,6 +383,10 @@ export default function LeaderboardContent() {
         }}
       >
         <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-heading">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: REWARDS_CHART_COLOR }} />
+            Rewards
+          </div>
           <div className="flex items-center gap-3 text-sm font-semibold text-fg-heading">
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--leaders-area-non-referred)" }} />
@@ -364,10 +396,6 @@ export default function LeaderboardContent() {
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--leaders-area-referred)" }} />
               Referred
             </span>
-          </div>
-          <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-heading">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: REWARDS_CHART_COLOR }} />
-            Rewards
           </div>
         </div>
 
@@ -379,7 +407,12 @@ export default function LeaderboardContent() {
           <p className="py-20 text-center text-fg-muted">No data yet.</p>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={timeSeries} margin={{ top: 4, right: -12, bottom: 0, left: -12 }}>
+            <AreaChart
+              data={timeSeries}
+              margin={{ top: 4, right: -12, bottom: 0, left: -12 }}
+              onMouseMove={(state) => setActiveChartPoint(getActiveChartPoint(state, timeSeries))}
+              onMouseLeave={() => setActiveChartPoint(null)}
+            >
               <defs>
                 <linearGradient id="gradReferred" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--leaders-area-referred)" stopOpacity={0.4} />
@@ -398,20 +431,42 @@ export default function LeaderboardContent() {
                 axisLine={{ stroke: "var(--border)" }}
               />
               <YAxis
-                yAxisId="waitlist"
-                tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
-                tickLine={false}
-                axisLine={{ stroke: "var(--border)" }}
-                allowDecimals={false}
-              />
-              <YAxis
                 yAxisId="rewards"
-                orientation="right"
                 tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
                 tickFormatter={(value) => `${Math.round(Number(value))}`}
               />
+              <YAxis
+                yAxisId="waitlist"
+                orientation="right"
+                tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
+                tickLine={false}
+                axisLine={{ stroke: "var(--border)" }}
+                allowDecimals={false}
+              />
+              {chartGuidePoint && (
+                <>
+                  <ReferenceLine
+                    yAxisId="rewards"
+                    y={chartGuidePoint.rewardsPot}
+                    stroke={REWARDS_CHART_COLOR}
+                    {...GUIDE_LINE_PROPS}
+                  />
+                  <ReferenceLine
+                    yAxisId="waitlist"
+                    y={chartGuideWaitlist}
+                    stroke="var(--leaders-area-non-referred)"
+                    {...GUIDE_LINE_PROPS}
+                  />
+                  <ReferenceLine
+                    yAxisId="waitlist"
+                    y={chartGuidePoint.referred}
+                    stroke="var(--leaders-area-referred)"
+                    {...GUIDE_LINE_PROPS}
+                  />
+                </>
+              )}
               <Tooltip content={<ChartTooltip />} />
               <Area
                 yAxisId="waitlist"
@@ -975,7 +1030,12 @@ function RankingCell({
   return (
     <div className="leading-tight">
       <div className="font-semibold text-fg-heading">
-        {entry.name}
+        <Link
+          href={`/leaders/ref/${encodeURIComponent(entry.referral_code)}`}
+          className="underline-offset-2 hover:underline"
+        >
+          {entry.name}
+        </Link>
         {badgeType && (
           <img
             src={badgeType === "red" ? "/icons/fire-red.apng" : "/icons/fire-blue.apng"}

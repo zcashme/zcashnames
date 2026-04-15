@@ -8,6 +8,7 @@ import {
   AreaChart,
   CartesianGrid,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -30,6 +31,30 @@ import {
 const DIRECT_CHART_COLOR = "var(--leaders-area-referred)";
 const INDIRECT_CHART_COLOR = "var(--leaders-area-non-referred)";
 const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
+const GUIDE_LINE_PROPS = {
+  strokeDasharray: "4 4",
+  strokeWidth: 1,
+  opacity: 0.35,
+  ifOverflow: "extendDomain" as const,
+};
+
+function getActiveChartPoint<T extends { date: string }>(state: unknown, data: T[]): T | null {
+  const chartState = state as
+    | { activeTooltipIndex?: number | string; tooltipIndex?: number | string; activeLabel?: string }
+    | null;
+  const rawIndex = chartState?.activeTooltipIndex ?? chartState?.tooltipIndex;
+  const index = rawIndex === undefined ? NaN : Number(rawIndex);
+
+  if (Number.isInteger(index) && index >= 0 && index < data.length) {
+    return data[index];
+  }
+
+  if (chartState?.activeLabel) {
+    return data.find((point) => point.date === chartState.activeLabel) ?? null;
+  }
+
+  return null;
+}
 
 interface ReferralChartPoint {
   date: string;
@@ -506,29 +531,38 @@ function BackLink() {
 }
 
 function ReferralGrowthChart({ data }: { data: ReferralChartPoint[] }) {
+  const [activeChartPoint, setActiveChartPoint] = useState<ReferralChartPoint | null>(null);
+  const chartGuidePoint = activeChartPoint ?? data[data.length - 1] ?? null;
+  const chartGuideReferrals = chartGuidePoint ? chartGuidePoint.direct + chartGuidePoint.indirect : 0;
+
   return (
     <div className="mt-6 border-t pt-5" style={{ borderColor: "var(--leaders-card-border)" }}>
       <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-heading">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: REWARDS_CHART_COLOR }} />
+          Rewards
+        </div>
         <div className="flex items-center gap-3 text-sm font-semibold text-fg-heading">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: INDIRECT_CHART_COLOR }} />
-            Referrals
-          </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full" style={{ background: DIRECT_CHART_COLOR }} />
             Direct
           </span>
-        </div>
-        <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-heading">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: REWARDS_CHART_COLOR }} />
-          Rewards
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: INDIRECT_CHART_COLOR }} />
+            Referrals
+          </span>
         </div>
       </div>
       {data.length === 0 ? (
         <p className="py-16 text-center text-sm text-fg-muted">No referral history yet.</p>
       ) : (
         <ResponsiveContainer width="100%" height={240}>
-          <AreaChart data={data} margin={{ top: 4, right: -12, bottom: 0, left: -12 }}>
+          <AreaChart
+            data={data}
+            margin={{ top: 4, right: -12, bottom: 0, left: -12 }}
+            onMouseMove={(state) => setActiveChartPoint(getActiveChartPoint(state, data))}
+            onMouseLeave={() => setActiveChartPoint(null)}
+          >
             <defs>
               <linearGradient id="gradDashboardDirect" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={DIRECT_CHART_COLOR} stopOpacity={0.4} />
@@ -547,20 +581,42 @@ function ReferralGrowthChart({ data }: { data: ReferralChartPoint[] }) {
               axisLine={{ stroke: "var(--border)" }}
             />
             <YAxis
-              yAxisId="referrals"
-              tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
-              tickLine={false}
-              axisLine={{ stroke: "var(--border)" }}
-              allowDecimals={false}
-            />
-            <YAxis
               yAxisId="rewards"
-              orientation="right"
               tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
               tickLine={false}
               axisLine={{ stroke: "var(--border)" }}
               tickFormatter={formatRewardAxisTick}
             />
+            <YAxis
+              yAxisId="referrals"
+              orientation="right"
+              tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
+              tickLine={false}
+              axisLine={{ stroke: "var(--border)" }}
+              allowDecimals={false}
+            />
+            {chartGuidePoint && (
+              <>
+                <ReferenceLine
+                  yAxisId="rewards"
+                  y={chartGuidePoint.rewards}
+                  stroke={REWARDS_CHART_COLOR}
+                  {...GUIDE_LINE_PROPS}
+                />
+                <ReferenceLine
+                  yAxisId="referrals"
+                  y={chartGuideReferrals}
+                  stroke={INDIRECT_CHART_COLOR}
+                  {...GUIDE_LINE_PROPS}
+                />
+                <ReferenceLine
+                  yAxisId="referrals"
+                  y={chartGuidePoint.direct}
+                  stroke={DIRECT_CHART_COLOR}
+                  {...GUIDE_LINE_PROPS}
+                />
+              </>
+            )}
             <Tooltip content={<ReferralChartTooltip />} />
             <Area
               yAxisId="referrals"
