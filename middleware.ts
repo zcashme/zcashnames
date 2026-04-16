@@ -7,7 +7,13 @@ export function middleware(request: NextRequest) {
   if (host.startsWith("docs.")) {
     const { pathname } = request.nextUrl;
 
-    if (pathname.startsWith("/docs") || pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {
+    // Do not rewrite real static assets or API routes — otherwise `/landing/*`, `/icons/*`, etc.
+    // resolve under `/docs/...` and break favicons and images.
+    const passthroughPrefixes = ["/docs", "/_next", "/favicon", "/landing", "/icons", "/assets", "/api"];
+    if (passthroughPrefixes.some((p) => pathname.startsWith(p))) {
+      return NextResponse.next();
+    }
+    if (pathname === "/logo.svg" || pathname === "/llms.txt") {
       return NextResponse.next();
     }
 
