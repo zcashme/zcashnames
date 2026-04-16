@@ -533,7 +533,7 @@ export default function ReferralDashboardPage() {
           {activeMetricKey === "payout" &&
             (model === "commission"
               ? "Projected rewards if all referrals purchase names during early access."
-              : "Calculate rewards when referrals complete purchases based on assumptions.")}
+              : "Projected rewards if all referrals purchase names during early access.")}
         </p>
       </div>
 
