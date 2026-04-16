@@ -1,8 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
+import { sendCommissionPinEmail } from "@/lib/email/commission-pin";
 import {
   clearCommissionAccessCookie,
+  getCommissionPin,
   hasCommissionAccess,
   setCommissionAccessCookie,
   verifyCommissionPin,
@@ -79,6 +82,14 @@ export type ReferralCommissionModeResult =
   | { ok: true }
   | { ok: false; error: string };
 
+export type ReferralCommissionPinRequestResult =
+  | { ok: true; message: string }
+  | { ok: false; error: string };
+
+const COMMISSION_PIN_SENT_MESSAGE = "We will send the code to your email address.";
+const COMMISSION_PIN_RATE_LIMIT_MESSAGE = "We already sent you a code today";
+const COMMISSION_PIN_RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
+
 function toWaitlistReferralRows(data: Record<string, unknown>[]): WaitlistReferralRow[] {
   return data
     .map((row) => ({
@@ -94,6 +105,23 @@ function toWaitlistReferralRows(data: Record<string, unknown>[]): WaitlistReferr
 
 function roundZec(value: number): number {
   return Math.round(value * 10000) / 10000;
+}
+
+function resolveBaseUrl(headerStore: { get(name: string): string | null }): string {
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
+  if (fromEnv) return fromEnv.replace(/\/$/, "");
+
+  const proto = headerStore.get("x-forwarded-proto") || "https";
+  const host = headerStore.get("x-forwarded-host") || headerStore.get("host");
+  if (host) return `${proto}://${host}`;
+  return "https://zcashnames.com";
+}
+
+function wasCommissionPinSentToday(value: unknown): boolean {
+  if (typeof value !== "string" || !value) return false;
+  const sentAt = new Date(value).getTime();
+  if (!Number.isFinite(sentAt)) return false;
+  return Date.now() - sentAt < COMMISSION_PIN_RATE_LIMIT_MS;
 }
 
 function calculateRewardsPot(rows: WaitlistReferralRow[], scope: ReferralScope): number {
@@ -546,5 +574,56 @@ export async function lockReferralCommissionMode(): Promise<ReferralCommissionMo
     return { ok: true };
   } catch {
     return { ok: false, error: "Could not switch modes." };
+  }
+}
+
+export async function requestReferralCommissionPin(
+  referralCode: string,
+): Promise<ReferralCommissionPinRequestResult> {
+  try {
+    const normalizedCode = referralCode.trim();
+    if (!normalizedCode) return { ok: true, message: COMMISSION_PIN_SENT_MESSAGE };
+
+    const { data, error } = await db
+      .from("zn_waitlist")
+      .select("name, email, referral_code, cabal, commission_pin_email_sent_at")
+      .eq("referral_code", normalizedCode)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[leaders-commission-pin] waitlist lookup failed:", error);
+      return { ok: false, error: "Could not send code right now." };
+    }
+
+    if (!data || !data.cabal || !data.email || !data.referral_code) {
+      return { ok: true, message: COMMISSION_PIN_SENT_MESSAGE };
+    }
+
+    if (wasCommissionPinSentToday(data.commission_pin_email_sent_at)) {
+      return { ok: true, message: COMMISSION_PIN_RATE_LIMIT_MESSAGE };
+    }
+
+    const headerStore = await headers();
+    await sendCommissionPinEmail({
+      email: String(data.email),
+      name: String(data.name || "there"),
+      pin: getCommissionPin(String(data.referral_code)),
+      referralCode: String(data.referral_code),
+      baseUrl: resolveBaseUrl(headerStore),
+    });
+
+    const { error: updateError } = await db
+      .from("zn_waitlist")
+      .update({ commission_pin_email_sent_at: new Date().toISOString() })
+      .eq("referral_code", normalizedCode);
+
+    if (updateError) {
+      console.error("[leaders-commission-pin] sent_at update failed:", updateError);
+    }
+
+    return { ok: true, message: COMMISSION_PIN_SENT_MESSAGE };
+  } catch (error) {
+    console.error("[leaders-commission-pin] request failed:", error);
+    return { ok: false, error: "Could not send code right now." };
   }
 }

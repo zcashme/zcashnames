@@ -84,6 +84,10 @@ export function verifyCommissionPin(referralCode: string, pin: string): boolean 
   return safeEqual(normalizedPin, expected);
 }
 
+export function getCommissionPin(referralCode: string): string {
+  return deriveCommissionPin(referralCode, getSecret());
+}
+
 export async function setCommissionAccessCookie(referralCode: string): Promise<void> {
   const { value, expiresAt } = buildCookieValue(referralCode);
   const maxAge = expiresAt - Math.floor(Date.now() / 1000);

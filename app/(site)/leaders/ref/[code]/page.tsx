@@ -19,6 +19,7 @@ import {
 import {
   getReferralDashboard,
   lockReferralCommissionMode,
+  requestReferralCommissionPin,
   unlockReferralCommissionMode,
   type ReferralScope,
 } from "@/lib/leaders/leaders";
@@ -174,6 +175,8 @@ export default function ReferralDashboardPage() {
   const [commissionPin, setCommissionPin] = useState("");
   const [commissionError, setCommissionError] = useState("");
   const [commissionSubmitting, setCommissionSubmitting] = useState(false);
+  const [commissionPinRequesting, setCommissionPinRequesting] = useState(false);
+  const [commissionPinMessage, setCommissionPinMessage] = useState("");
   const [modeSwitching, setModeSwitching] = useState(false);
 
   useEffect(() => {
@@ -247,6 +250,7 @@ export default function ReferralDashboardPage() {
     setCommissionPromptOpen(false);
     setCommissionPin("");
     setCommissionError("");
+    setCommissionPinMessage("");
   }, [referralCode]);
 
   const handleCommissionAccessGesture = () => {
@@ -262,6 +266,7 @@ export default function ReferralDashboardPage() {
           setCommissionPromptOpen(true);
         }
         setCommissionError("");
+        setCommissionPinMessage("");
         return { count: 0, lastAt: 0 };
       }
 
@@ -277,6 +282,7 @@ export default function ReferralDashboardPage() {
       setCommissionPromptOpen(false);
       setCommissionPin("");
       setCommissionError("");
+      setCommissionPinMessage("");
       setProjectionOpen(false);
     } else {
       setCommissionError(result.error);
@@ -301,6 +307,23 @@ export default function ReferralDashboardPage() {
     }
 
     setCommissionSubmitting(false);
+  };
+
+  const requestCommissionPin = async () => {
+    if (!data || commissionPinRequesting) return;
+
+    setCommissionPinRequesting(true);
+    setCommissionError("");
+    setCommissionPinMessage("");
+
+    const result = await requestReferralCommissionPin(data.referralCode);
+    if (result.ok) {
+      setCommissionPinMessage(result.message);
+    } else {
+      setCommissionError(result.error);
+    }
+
+    setCommissionPinRequesting(false);
   };
 
   const projectedReferralPayout = (name: string, depth: number): number => {
@@ -452,6 +475,7 @@ export default function ReferralDashboardPage() {
                 onChange={(event) => {
                   setCommissionPin(event.target.value.replace(/\D/g, "").slice(0, 6));
                   setCommissionError("");
+                  setCommissionPinMessage("");
                 }}
                 className="w-28 rounded-lg border bg-transparent px-3 py-2 text-center font-mono text-base tracking-[0.18em] text-fg-heading"
                 style={{ borderColor: "var(--leaders-card-border)" }}
@@ -471,12 +495,22 @@ export default function ReferralDashboardPage() {
                   setCommissionPromptOpen(false);
                   setCommissionPin("");
                   setCommissionError("");
+                  setCommissionPinMessage("");
                 }}
               >
                 Cancel
               </button>
+              <button
+                type="button"
+                className="cursor-pointer px-2 py-2 text-sm font-semibold text-fg-muted underline-offset-2 transition-colors hover:text-fg-heading hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={commissionPinRequesting}
+                onClick={requestCommissionPin}
+              >
+                {commissionPinRequesting ? "Sending" : "Forgot pin?"}
+              </button>
             </div>
             {commissionError && <p className="mt-2 text-sm text-fg-muted">{commissionError}</p>}
+            {commissionPinMessage && <p className="mt-2 text-sm text-fg-muted">{commissionPinMessage}</p>}
           </form>
         )}
         <ReferralGrowthChart data={referralChartSeries} />
