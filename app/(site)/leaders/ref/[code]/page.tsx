@@ -222,8 +222,17 @@ export default function ReferralDashboardPage() {
 
   const visibleReferrals = useMemo(() => {
     if (!data) return [];
-    if (referralLevelFilter === "all") return data.descendants;
-    return data.descendants.filter((entry) => entry.depth === referralLevelFilter);
+    return data.descendants
+      .filter((entry) => referralLevelFilter === "all" || entry.depth === referralLevelFilter)
+      .sort((a, b) => {
+        if (a.depth !== b.depth) return a.depth - b.depth;
+
+        const timeA = new Date(a.created_at).getTime();
+        const timeB = new Date(b.created_at).getTime();
+        if (timeA !== timeB) return timeB - timeA;
+
+        return a.referral_code.localeCompare(b.referral_code);
+      });
   }, [data, referralLevelFilter]);
   const visibleReferralTableRows = useMemo(
     () => visibleReferrals.slice(0, visibleReferralRows),
