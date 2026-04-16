@@ -12,6 +12,8 @@ export interface ChecklistItem {
   id: string;
   label: string;
   hint?: string;
+  /** Optional display-only grouping inside a checklist sub-list. */
+  section?: string;
   /** If set, the item label becomes a link to this href (opens in a new tab). */
   link?: { href: string };
   group: ChecklistGroup;
@@ -19,16 +21,21 @@ export interface ChecklistItem {
 
 export const BETA_CHECKLIST: ChecklistItem[] = [
   // ── User experience ──────────────────────────────────────────────────────
-  { id: "claim-short", label: "Claim a 1-character name", hint: "Tests reserved/short-name handling and pricing tier.", group: "user" },
-  { id: "claim-mid",   label: "Claim a 3-character name", group: "user" },
-  { id: "claim-long",  label: "Claim a 7+ character name", group: "user" },
-  { id: "otp-update",  label: "Update your address (OTP flow)", hint: "Send the verification tx, get the 6-digit memo, enter the code.", group: "user" },
-  { id: "otp-list",    label: "List a name for sale (OTP flow)", group: "user" },
-  { id: "otp-delist",  label: "Delist a name (OTP flow)", group: "user" },
-  { id: "otp-release", label: "Release a name (OTP flow)", group: "user" },
-  { id: "buy-listed",  label: "Buy a name another tester has listed", group: "user" },
-  { id: "send-to-name", label: "Have another tester send ZEC to your name", hint: "Flagship use case. Coordinate with another tester via Signal/Discord.", group: "user" },
-  { id: "qr-scan",     label: "Scan a QR code from the web UI through your wallet", group: "user" },
+  { id: "ux-e1", label: "General Feedback", hint: "Report issues, inconsistencies, feature requests, or UI improvements.", group: "user" },
+
+  { id: "ux-a1", label: "1. Claim a name", hint: "Get a name no one else has. Set authorization to passcode.", section: "Passcode Authorization", group: "user" },
+  { id: "ux-a2", label: "2. List name for sale", hint: "Sell your name for any price.", section: "Passcode Authorization", group: "user" },
+  { id: "ux-a3", label: "3. Delist name", hint: "Remove your name from the market.", section: "Passcode Authorization", group: "user" },
+  { id: "ux-b1", label: "4. Buy a listed name", hint: "Buy a name listed for sale. For example, esengulov, paulpuey, viksharma, jswihart. Set authorization to passcode.", section: "Passcode Authorization", group: "user" },
+  { id: "ux-b2", label: "5. Update address", hint: "Change the address associated with the name you bought.", section: "Passcode Authorization", group: "user" },
+  { id: "ux-b3", label: "6. Release name", hint: "Let go of the name you bought. Someone else can claim it.", section: "Passcode Authorization", group: "user" },
+
+  { id: "ux-c1", label: "1. Claim a name", hint: "Reclaim the name you released in B3, or claim another available name. Set authorization to signature.", section: "Signature Authorization", group: "user" },
+  { id: "ux-c2", label: "2. List name for sale", hint: "Sell your name for any price.", section: "Signature Authorization", group: "user" },
+  { id: "ux-c3", label: "3. Delist name", hint: "Remove your name from the market.", section: "Signature Authorization", group: "user" },
+  { id: "ux-d1", label: "4. Buy a listed name", hint: "Buy one of the example names above. Set authorization to signature.", section: "Signature Authorization", group: "user" },
+  { id: "ux-d2", label: "5. Update address", hint: "Change the address associated with the name you bought.", section: "Signature Authorization", group: "user" },
+  { id: "ux-d3", label: "6. Release name", hint: "Let go of the name you bought and return it to the unowned state.", section: "Signature Authorization", group: "user" },
 
   // ── Developer experience ────────────────────────────────────────────────
   // Order: read the doc, then try the thing it documents.
@@ -39,7 +46,5 @@ export const BETA_CHECKLIST: ChecklistItem[] = [
 
   // ── Catch-all (per group, independent) ──────────────────────────────────
   // These are separate items on purpose — a comment about user flow and a
-  // comment about the SDK are unrelated, so each group gets its own.
-  { id: "other-user",      label: "General questions, comments, or anything else", group: "user" },
   { id: "other-developer", label: "General questions, comments, or anything else", group: "developer" },
 ];

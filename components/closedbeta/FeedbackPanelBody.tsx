@@ -53,12 +53,19 @@ export default function FeedbackPanelBody({
   const [expandedSubList, setExpandedSubList] = useState<SubListId | null>(() =>
     initialExpandedSubList(initialFocus),
   );
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    "I. Authorization: Passcode": true,
+  });
   // Tracks whether the focus-driven default has been applied; we only sync from
   // late-loading focus once, then leave the user's manual choice alone.
   const focusInitialized = useRef(initialFocus !== undefined);
 
   function handleToggleSubList(id: SubListId) {
     setExpandedSubList((prev) => (prev === id ? null : id));
+  }
+
+  function handleToggleSection(section: string) {
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   }
 
   const { hydrated: progressHydrated, completed, total } = useChecklistProgress(testerName, stage);
@@ -132,7 +139,7 @@ export default function FeedbackPanelBody({
             </button>
           </>
         )
-      : <>Submitting <strong style={{ color: "var(--fg-body)" }}>anonymously</strong> &mdash; enter your invite code via the network toggle to attribute reports.</>;
+      : <>Submitting <strong style={{ color: "var(--fg-body)" }}>anonymously</strong>.</>;
 
   const tabBaseStyle: React.CSSProperties = {
     flex: 1,
@@ -161,7 +168,8 @@ export default function FeedbackPanelBody({
   return (
     <div className="flex flex-col h-full w-full" style={{ background: "var(--feature-card-bg)" }}>
       {/* Header */}
-      <div className="flex items-start gap-3 px-5 pt-4 pb-3">
+      {false && (
+        <>
         {/* Collapse button — panel mode only */}
         {mode === "panel" && onClose && (
           <button
@@ -216,10 +224,11 @@ export default function FeedbackPanelBody({
             </svg>
           </button>
         )}
-      </div>
+        </>
+      )}
 
       {/* "Reporting on" banner */}
-      {tab === "report" && (
+      {false && tab === "report" && reportingItem && (
         <div className="px-5 pb-3">
           {reportingItem ? (
             <div
@@ -238,7 +247,7 @@ export default function FeedbackPanelBody({
                   Reporting on
                 </p>
                 <p className="text-sm font-semibold leading-snug" style={{ color: "var(--fg-heading)" }}>
-                  {reportingItem.label}
+                  {reportingItem!.section ? `${reportingItem!.section}, ${reportingItem!.label}` : reportingItem!.label}
                 </p>
               </div>
               <button
@@ -286,6 +295,46 @@ export default function FeedbackPanelBody({
         </div>
       )}
 
+      {/* Checklist progress */}
+      <div
+        className="px-5 py-3 shrink-0"
+        style={{
+          borderBottom: "1px solid var(--faq-border)",
+          background: "var(--feature-card-bg)",
+        }}
+      >
+        <div className="flex items-center gap-3">
+          {mode === "panel" && (
+            <button
+              type="button"
+              onClick={openInNewWindow}
+              title="Open in new window"
+              aria-label="Open in new window"
+              className="shrink-0 rounded-lg p-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70"
+              style={iconBtnStyle}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </button>
+          )}
+          <div className="h-1 flex-1 rounded-full overflow-hidden" style={{ background: "var(--color-raised)" }}>
+            <div
+              className="h-full transition-[width] duration-300"
+              style={{
+                width: progressHydrated && total > 0 ? `${(completed / total) * 100}%` : "0%",
+                background: "var(--color-accent-green)",
+              }}
+            />
+          </div>
+          <p className="text-xs shrink-0 tabular-nums" style={{ color: "var(--fg-body)" }}>
+            {progressHydrated ? `${completed} / ${total}` : `0 / ${total}`}
+          </p>
+        </div>
+      </div>
+
       {/* Tabs */}
       <div className="flex px-5" style={{ borderBottom: "1px solid var(--faq-border)" }}>
         <button
@@ -307,7 +356,12 @@ export default function FeedbackPanelBody({
       {/* Body */}
       <div className="overflow-y-auto px-5 py-5 flex-1">
         {tab === "report" && (
-          <FeedbackForm defaultNetwork={stage} checklistItem={reportingItem} />
+          <FeedbackForm
+            defaultNetwork={stage}
+            checklistItem={reportingItem}
+            onClearChecklistItem={() => setReportingItemId(null)}
+            onOpenChecklist={() => setTab("checklist")}
+          />
         )}
         {tab === "checklist" && (
           <FeedbackChecklist
@@ -316,6 +370,8 @@ export default function FeedbackPanelBody({
             focus={focus}
             expandedSubList={expandedSubList}
             onToggleSubList={handleToggleSubList}
+            expandedSections={expandedSections}
+            onToggleSection={handleToggleSection}
             hideProgressBar
             onReport={handleReportItem}
             reportingItemId={reportingItemId}
@@ -324,7 +380,7 @@ export default function FeedbackPanelBody({
         )}
       </div>
 
-      {/* Bottom progress bar */}
+      {/* Bottom controls */}
       <div
         className="px-5 py-3 shrink-0"
         style={{
@@ -332,22 +388,44 @@ export default function FeedbackPanelBody({
           background: "var(--feature-card-bg)",
         }}
       >
-        <div className="flex items-center justify-between mb-1.5">
-          <p className="text-[0.65rem] font-semibold uppercase tracking-wider" style={{ color: "var(--fg-muted)" }}>
-            Checklist Progress
-          </p>
-          <p className="text-xs" style={{ color: "var(--fg-body)" }}>
-            {progressHydrated ? `${completed} / ${total}` : `0 / ${total}`}
-          </p>
-        </div>
-        <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--color-raised)" }}>
-          <div
-            className="h-full transition-[width] duration-300"
-            style={{
-              width: progressHydrated && total > 0 ? `${(completed / total) * 100}%` : "0%",
-              background: "var(--color-accent-green)",
-            }}
-          />
+        <div className="flex items-start gap-3">
+          {mode === "panel" && onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Collapse feedback panel"
+              title="Collapse"
+              className="shrink-0 rounded-lg p-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70"
+              style={iconBtnStyle}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+                <polyline points="13 17 18 12 13 7" />
+                <polyline points="6 17 11 12 6 7" />
+              </svg>
+            </button>
+          )}
+
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-bold leading-tight capitalize" style={{ color: "var(--fg-heading)" }}>
+              {stage} Feedback
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: "var(--fg-muted)" }}>
+              {subline}
+            </p>
+          </div>
+
+          <a
+            href="/closedbeta"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open the beta instructions in a new tab"
+            aria-label="Read Me"
+            className="shrink-0 rounded-lg px-2.5 py-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70 inline-flex items-center text-xs font-semibold whitespace-nowrap"
+            style={{ ...iconBtnStyle, textDecoration: "none" }}
+          >
+            Read Me
+          </a>
+
         </div>
       </div>
     </div>

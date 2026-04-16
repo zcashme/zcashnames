@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import { BETA_CHECKLIST, type ChecklistItem } from "@/lib/beta/checklist";
 import { useChecklistProgress, type ChecklistStage } from "./useChecklistProgress";
 
@@ -17,6 +17,10 @@ interface Props {
   expandedSubList: SubListId | null;
   /** Called when the user clicks a sub-list header. Parent decides accordion behavior. */
   onToggleSubList: (id: SubListId) => void;
+  /** Expanded state for nested section headers. Owned by the parent so it survives tab switches. */
+  expandedSections: Record<string, boolean>;
+  /** Called when the user clicks a nested section header. */
+  onToggleSection: (section: string) => void;
   /** Hide the inline progress bar (e.g. when a parent renders one above the tabs). */
   hideProgressBar?: boolean;
   /** Called when the user clicks the per-item report arrow. */
@@ -48,6 +52,8 @@ export default function FeedbackChecklist({
   focus,
   expandedSubList,
   onToggleSubList,
+  expandedSections,
+  onToggleSection,
   hideProgressBar,
   onReport,
   reportingItemId,
@@ -86,6 +92,17 @@ export default function FeedbackChecklist({
     return counts;
   }, [state]);
 
+  const sectionCounts = useMemo(() => {
+    const counts: Record<string, { done: number; total: number }> = {};
+    for (const item of USER_ITEMS) {
+      if (!item.section) continue;
+      counts[item.section] ??= { done: 0, total: 0 };
+      counts[item.section].total += 1;
+      if (state[item.id]) counts[item.section].done += 1;
+    }
+    return counts;
+  }, [state]);
+
   return (
     <div className="flex flex-col gap-4">
       {!hideProgressBar && (
@@ -112,11 +129,19 @@ export default function FeedbackChecklist({
       )}
 
       <div className="flex flex-col gap-3">
-        {subLists.map((sub) => {
+        {subLists.map((sub, index) => {
           const isOpen = expandedSubList === sub.id;
           const counts = subListCounts[sub.id];
           return (
-            <section key={sub.id}>
+            <Fragment key={sub.id}>
+              {index > 0 && (
+                <div
+                  className="my-1"
+                  style={{ borderTop: "1px solid var(--faq-border)" }}
+                  aria-hidden="true"
+                />
+              )}
+              <section>
               <button
                 type="button"
                 onClick={() => onToggleSubList(sub.id)}
@@ -167,31 +192,66 @@ export default function FeedbackChecklist({
                       className="underline cursor-pointer font-semibold"
                       style={{ color: "var(--fg-heading)" }}
                     >
-                      pop the feedback panel out into its own window
+                      open the feedback panel in a new window
                     </button>
-                    {" "}so you can keep the docs and your code editor in view while filing reports.
+                    .
                   </span>
                 </div>
               )}
 
               {isOpen && (
                 <ul className="flex flex-col gap-1.5 mt-2">
-                  {sub.items.map((item) => {
+                  {sub.items.map((item, index) => {
                     const checked = !!state[item.id];
                     const isReporting = reportingItemId === item.id;
+                    const showSection = !!item.section && item.section !== sub.items[index - 1]?.section;
+                    const sectionExpanded = !item.section || !!expandedSections[item.section];
+                    const sectionCount = item.section ? sectionCounts[item.section] : undefined;
                     return (
-                      <li
-                        key={`${sub.id}-${item.id}`}
-                        className="flex items-stretch rounded-lg overflow-hidden transition-colors"
-                        style={{
-                          background: isReporting
-                            ? "var(--color-accent-green-light)"
-                            : checked
-                              ? "var(--color-raised)"
-                              : "transparent",
-                          border: `1px solid ${isReporting ? "var(--color-accent-green)" : "var(--border-muted)"}`,
-                        }}
-                      >
+                      <Fragment key={`${sub.id}-${item.id}`}>
+                        {showSection && (
+                          <li className="pt-3 first:pt-0 pb-1">
+                            <button
+                              type="button"
+                              onClick={() => onToggleSection(item.section!)}
+                              aria-expanded={!!expandedSections[item.section!]}
+                              className="flex w-full items-center gap-2 pl-4 pr-2 py-1 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                              style={{ color: "var(--fg-heading)" }}
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="w-3 h-3 transition-transform shrink-0"
+                                style={{ transform: expandedSections[item.section!] ? "rotate(0deg)" : "rotate(-90deg)" }}
+                                aria-hidden="true"
+                              >
+                                <polyline points="6 9 12 15 18 9" />
+                              </svg>
+                              <span>{item.section}</span>
+                              {sectionCount && (
+                                <span className="text-xs" style={{ color: "var(--fg-muted)" }}>
+                                  {sectionCount.done} / {sectionCount.total}
+                                </span>
+                              )}
+                            </button>
+                          </li>
+                        )}
+                        {sectionExpanded && (
+                        <li
+                          className={`flex items-stretch rounded-lg overflow-hidden transition-colors ${item.section ? "ml-4" : ""}`}
+                          style={{
+                            background: isReporting
+                              ? "var(--color-accent-green-light)"
+                              : checked
+                                ? "var(--color-raised)"
+                                : "transparent",
+                            border: `1px solid ${isReporting ? "var(--color-accent-green)" : "var(--border-muted)"}`,
+                          }}
+                        >
                         {/* Checkbox — own clickable area, only marks complete */}
                         <label
                           className="flex items-start shrink-0 pl-3 pr-2 py-2.5 cursor-pointer"
@@ -340,12 +400,15 @@ export default function FeedbackChecklist({
                             </svg>
                           </button>
                         )}
-                      </li>
+                        </li>
+                        )}
+                      </Fragment>
                     );
                   })}
                 </ul>
               )}
-            </section>
+              </section>
+            </Fragment>
           );
         })}
       </div>

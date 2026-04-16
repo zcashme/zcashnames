@@ -29,6 +29,7 @@ import { loadChecklistProgress, saveChecklistProgress } from "@/lib/beta/actions
 const SYNC_EVENT = "zns:beta-checklist-change";
 const SAVE_DEBOUNCE_MS = 300;
 const SAVED_INDICATOR_MS = 1500;
+const CHECKLIST_ITEM_IDS = new Set(BETA_CHECKLIST.map((item) => item.id));
 
 export type ChecklistStage = "testnet" | "mainnet";
 export type ItemSaveStatus = "saving" | "saved";
@@ -43,10 +44,16 @@ function loadState(testerName: string | null, stage: ChecklistStage): Record<str
     const raw = window.localStorage.getItem(storageKey(testerName, stage));
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? (parsed as Record<string, boolean>) : {};
+    return parsed && typeof parsed === "object" ? sanitizeState(parsed as Record<string, boolean>) : {};
   } catch {
     return {};
   }
+}
+
+function sanitizeState(state: Record<string, boolean>): Record<string, boolean> {
+  return Object.fromEntries(
+    Object.entries(state).filter(([itemId]) => CHECKLIST_ITEM_IDS.has(itemId)),
+  );
 }
 
 function persistState(
@@ -111,15 +118,16 @@ export function useChecklistProgress(
         if (cancelled) return;
         if (userTouchedRef.current) return; // user already clicked — don't stomp
         // Only update if the server snapshot actually differs.
+        const sanitizedServer = sanitizeState(server);
         const same =
-          Object.keys(server).length === Object.keys(local).length &&
-          Object.keys(server).every((k) => server[k] === local[k]);
+          Object.keys(sanitizedServer).length === Object.keys(local).length &&
+          Object.keys(sanitizedServer).every((k) => sanitizedServer[k] === local[k]);
         if (same) return;
-        setState(server);
-        persistState(testerName, stage, server);
+        setState(sanitizedServer);
+        persistState(testerName, stage, sanitizedServer);
         window.dispatchEvent(
           new CustomEvent<SyncEventDetail>(SYNC_EVENT, {
-            detail: { testerName, stage, state: server },
+            detail: { testerName, stage, state: sanitizedServer },
           }),
         );
       })
@@ -256,7 +264,7 @@ export function useChecklistProgress(
     };
   }, []);
 
-  const completed = Object.values(state).filter(Boolean).length;
+  const completed = BETA_CHECKLIST.filter((item) => state[item.id]).length;
   const total = BETA_CHECKLIST.length;
 
   return { state, hydrated, completed, total, toggle, saveStatus };

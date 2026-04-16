@@ -9,6 +9,10 @@ interface Props {
   defaultNetwork?: "testnet" | "mainnet";
   /** Optional checklist item this report is scoped to. Used only to tag the submission. */
   checklistItem?: ChecklistItem | null;
+  /** Clears the linked checklist item. */
+  onClearChecklistItem?: () => void;
+  /** Opens the checklist tab so the user can choose an item. */
+  onOpenChecklist?: () => void;
   /** Called once on successful submission. */
   onSuccess?: () => void;
 }
@@ -48,6 +52,8 @@ const labelStyle: React.CSSProperties = {
 export default function FeedbackForm({
   defaultNetwork = "testnet",
   checklistItem,
+  onClearChecklistItem,
+  onOpenChecklist,
   onSuccess,
 }: Props) {
   const [severity, setSeverity] = useState<Severity>("none");
@@ -201,6 +207,73 @@ export default function FeedbackForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {checklistItem ? (
+        <div
+          className="flex items-start gap-3 rounded-lg px-3 py-2.5"
+          style={{
+            background: "var(--color-accent-green-light)",
+            border: "1px solid var(--color-accent-green)",
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "var(--color-accent-green)" }} aria-hidden="true">
+            <path d="M9 11l3 3L22 4" />
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wider" style={{ color: "var(--color-accent-green)" }}>
+              Reporting on
+            </p>
+            <p className="text-sm font-semibold leading-snug" style={{ color: "var(--fg-heading)" }}>
+              {checklistItem.section ? `${checklistItem.section}, ${checklistItem.label}` : checklistItem.label}
+            </p>
+          </div>
+          {onClearChecklistItem && (
+            <button
+              type="button"
+              onClick={onClearChecklistItem}
+              aria-label="Clear linked checklist item"
+              title="Clear"
+              className="shrink-0 text-xl leading-none opacity-60 hover:opacity-100 cursor-pointer"
+              style={{ color: "var(--fg-body)" }}
+            >
+              &times;
+            </button>
+          )}
+        </div>
+      ) : (
+        <div
+          className="flex items-start gap-3 rounded-lg px-3 py-2.5"
+          style={{
+            background: "var(--home-error-bg, rgba(224,82,82,0.12))",
+            border: "1px solid var(--accent-red, #e05252)",
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "var(--accent-red, #e05252)" }} aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wider" style={{ color: "var(--accent-red, #e05252)" }}>
+              No item selected
+            </p>
+            <p className="text-sm leading-snug" style={{ color: "var(--fg-heading)" }}>
+              Pick a checklist item to report on.
+            </p>
+            {onOpenChecklist && (
+              <button
+                type="button"
+                onClick={onOpenChecklist}
+                className="text-xs mt-1 underline cursor-pointer"
+                style={{ color: "var(--fg-body)" }}
+              >
+                &larr; Open the Checklist tab
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Severity */}
       <div>
         <label style={labelStyle}>Severity</label>
