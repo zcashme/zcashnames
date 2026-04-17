@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import HeaderMenu from "@/components/HeaderMenu";
 import StatusToggle from "@/components/StatusToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -47,6 +48,7 @@ export default function Header() {
         <div className="flex items-center gap-3 sm:gap-4">
           <StatusToggle />
           <ThemeToggle />
+          <HeaderMenu />
         </div>
       </div>
     </header>
