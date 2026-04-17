@@ -7,10 +7,10 @@
 const UPSTREAM =
   "https://raw.githubusercontent.com/zcashme/ZNS/master/openrpc.json";
 
-export const revalidate = 3600; // refresh hourly
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const res = await fetch(UPSTREAM, { next: { revalidate: 3600 } });
+  const res = await fetch(UPSTREAM);
   if (!res.ok) {
     return new Response(`Upstream openrpc.json fetch failed: ${res.status}`, {
       status: 502,

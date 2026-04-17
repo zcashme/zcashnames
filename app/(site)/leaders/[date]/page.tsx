@@ -395,14 +395,13 @@ function SnapshotHeader({ title }: { title: string }) {
       style={{ borderColor: "var(--leaders-card-border)" }}
     >
       <div className="flex min-w-0 items-center gap-3">
-        <span className="relative block h-9 w-9 shrink-0 rotate-90">
+        <span className="relative block h-9 w-9 shrink-0">
           <img
-            src="/landing/z4.png"
+            src="/brandkit/zcashnames-primary-logo-white-black-square-background-403x403.png"
             alt="ZcashNames"
             width={36}
             height={36}
             className="h-9 w-9"
-            style={{ filter: "var(--logo-filter)" }}
           />
         </span>
         <div className="min-w-0">

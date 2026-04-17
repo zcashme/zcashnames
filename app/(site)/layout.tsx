@@ -24,6 +24,13 @@ const uiCursive = Dancing_Script({
   display: "swap",
 });
 
+const previewImage = {
+  url: BRAND.previewImage,
+  width: 1200,
+  height: 630,
+  alt: "ZcashNames - Personal names for shielded addresses.",
+};
+
 export const metadata: Metadata = {
   title: BRAND.title,
   description: BRAND.description,
@@ -43,12 +50,14 @@ export const metadata: Metadata = {
     url: BRAND.url,
     siteName: BRAND.name,
     type: "website",
+    images: [previewImage],
   },
   twitter: {
     card: "summary_large_image",
     site: BRAND.twitter,
     title: BRAND.title,
     description: BRAND.description,
+    images: [previewImage],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: BRAND.url },

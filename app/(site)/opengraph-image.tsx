@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { BRAND } from "@/lib/zns/brand";
 
 export const alt = "ZcashNames - Personal names for shielded addresses.";
 export const size = { width: 1200, height: 630 };
@@ -21,11 +22,10 @@ export default async function OGImage() {
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://www.zcashnames.com/landing/z4.png"
+          src={BRAND.logo}
           alt=""
           width={120}
           height={120}
-          style={{ filter: "invert(1)", transform: "rotate(90deg)" }}
         />
         <div
           style={{

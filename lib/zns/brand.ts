@@ -3,7 +3,9 @@ export const BRAND = {
   title: "ZcashNames",
   description: "Personal names for shielded addresses.",
   url: "https://www.zcashnames.com",
-  logo: "https://www.zcashnames.com/landing/z4.png",
+  logoPath: "/brandkit/zcashnames-primary-logo-white-black-square-background-403x403.png",
+  logo: "https://www.zcashnames.com/brandkit/zcashnames-primary-logo-white-black-square-background-403x403.png",
+  previewImage: "https://www.zcashnames.com/opengraph-image",
   twitter: "@zcashnames",
   socials: [
     { label: "X / Twitter", href: "https://x.com/zcashnames" },

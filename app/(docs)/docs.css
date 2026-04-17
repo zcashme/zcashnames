@@ -4,15 +4,98 @@
  * The (docs) route loads `nextra-theme-docs/style.css` (Nextra's own bundled
  * Tailwind v4 build) and does NOT load the site's globals.css. Without this
  * file, classes used by components rendered inside MDX pages - like
- * components/docs/WelcomeLanding.tsx - get stripped because Nextra's bundle
+ * components/docs/WhereToStart.tsx - get stripped because Nextra's bundle
  * was compiled against its own source set, not ours.
  *
  * This pulls in Tailwind utilities scoped to the components and MDX files we
- * actually use in the docs route. Imported BEFORE Nextra's stylesheet in
- * app/(docs)/docs/layout.tsx so Nextra wins on any class collisions.
+ * actually use in the docs route.
  */
 
 @import "tailwindcss";
 
 @source "../../components/docs/**/*.{ts,tsx}";
 @source "../../content/**/*.{md,mdx}";
+
+:root {
+  --docs-fg-heading: #f0f0f0;
+  --type-section-subtitle: clamp(1.04rem, 1.2vw, 1.2rem);
+}
+
+html.light {
+  --docs-fg-heading: #111318;
+}
+
+html.dark {
+  --docs-fg-heading: #f0f0f0;
+}
+
+.docs-navbar-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--docs-fg-heading) !important;
+  font-family: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+  white-space: nowrap;
+}
+
+.docs-navbar-logo-mark-wrap {
+  position: relative;
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+}
+
+.docs-navbar-logo-mark {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+}
+
+.docs-navbar-logo-mark-image {
+  display: block;
+}
+
+.docs-navbar-logo-mark-mono {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: var(--docs-fg-heading);
+  pointer-events: none;
+  -webkit-mask-image: url("/brandkit/zcashnames-primary-logo-white-black-square-background-403x403.png");
+  mask-image: url("/brandkit/zcashnames-primary-logo-white-black-square-background-403x403.png");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.docs-navbar-logo-text {
+  color: inherit !important;
+  font-family: inherit;
+  font-size: var(--type-section-subtitle);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  text-decoration: none;
+}
+
+.nextra-navbar a[href="https://github.com/zcashme/zcashnames"],
+.nextra-navbar a[href="https://github.com/zcashme/zcashnames"] svg,
+.nextra-navbar .nextra-hamburger,
+.nextra-navbar .nextra-hamburger svg {
+  color: var(--docs-fg-heading) !important;
+  opacity: 1 !important;
+}
+
+html.light .docs-navbar-logo,
+html.light .docs-navbar-logo-text,
+html.light .nextra-navbar a[href="https://github.com/zcashme/zcashnames"],
+html.light .nextra-navbar a[href="https://github.com/zcashme/zcashnames"] svg,
+html.light .nextra-navbar .nextra-hamburger,
+html.light .nextra-navbar .nextra-hamburger svg {
+  color: #111318 !important;
+}
