@@ -27,12 +27,6 @@ export default function Footer() {
         </div>
 
         <div className="flex items-center gap-5">
-          <Link
-            href="/brandkit"
-            className="type-chip font-semibold text-fg-muted hover:text-fg-heading transition-colors"
-          >
-            Brand Kit
-          </Link>
           {COMMUNITIES.map(({ label, href }) => {
             const path = SOCIAL_PATHS[label];
             if (!path) return null;
