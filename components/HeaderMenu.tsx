@@ -30,11 +30,18 @@ const communityLinks: MenuLink[] = [
 const menuLinks: MenuLink[] = [
   { label: "Home", href: "/" },
   { label: "Explorer", href: "/explorer" },
+  { label: "Brand Kit", href: "/brandkit" },
   {
-    label: "Leaderboard",
-    href: "/leaders",
-    displayPath: "/leaders",
-    children: [{ label: "Dashboard", href: "/leaders/ref", displayPath: ".../ref" }],
+    label: "Developers",
+    href: "/docs",
+    displayPath: "/docs",
+    children: [
+      { label: "Integrate", href: "/docs/integrate" },
+      { label: "SDKs", href: "/docs/sdk" },
+      { label: "Protocol", href: "/docs/protocol/overview" },
+      { label: "Indexer & RPC", href: "/docs/indexer/running" },
+      { label: "OpenRPC JSON", href: "/openrpc.json" },
+    ],
   },
   {
     label: "Learn",
@@ -48,24 +55,16 @@ const menuLinks: MenuLink[] = [
     ],
   },
   {
-    label: "Developers",
-    href: "/docs/integrate",
-    displayPath: "/docs",
-    children: [
-      { label: "Integrate", href: "/docs/integrate", displayPath: ".../integrate" },
-      { label: "SDKs", href: "/docs/sdk", displayPath: ".../sdk" },
-      { label: "Protocol", href: "/docs/protocol", displayPath: ".../protocol" },
-      { label: "Indexer & RPC", href: "/docs/indexer", displayPath: ".../indexer" },
-      { label: "OpenRPC JSON", href: "/openrpc.json" },
-    ],
-  },
-  { label: "Brand Kit", href: "/brandkit" },
-  {
     label: "Community",
-    href: communityLinks[0]?.href ?? "https://x.com/zcashnames",
-    displayPath: "community",
-    external: true,
+    href: "/community",
+    displayPath: "/community",
     children: communityLinks,
+  },
+  {
+    label: "Leaderboard",
+    href: "/leaders",
+    displayPath: "/leaders",
+    children: [{ label: "Dashboard", href: "/leaders/ref", displayPath: ".../ref" }],
   },
 ];
 
@@ -175,7 +174,12 @@ function MenuItem({
       {item.children && expanded && (
         <div className="pb-2">
           {item.children.map((child) => (
-            <MenuAnchor key={`${item.label}-${child.label}`} item={child} onNavigate={onNavigate} />
+            <MenuAnchor
+              key={`${item.label}-${child.label}`}
+              item={child}
+              onNavigate={onNavigate}
+              parentPath={item.displayPath ?? item.href}
+            />
           ))}
         </div>
       )}
@@ -189,17 +193,19 @@ function MenuAnchor({
   onToggle,
   onNavigate,
   primary = false,
+  parentPath,
 }: {
   item: MenuLink;
   expanded?: boolean;
   onToggle?: () => void;
   onNavigate: () => void;
   primary?: boolean;
+  parentPath?: string;
 }) {
   const className = primary
     ? "flex w-full items-center rounded-md px-3 py-2.5 text-left text-base font-bold text-fg-heading transition-colors hover:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)] focus-visible:outline-none"
     : "flex w-full items-center gap-3 rounded-md py-2 pl-16 pr-3 text-left text-[0.95rem] font-semibold text-fg-muted transition-colors hover:bg-[color-mix(in_srgb,var(--fg-heading)_12%,transparent)] hover:text-fg-heading focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_12%,transparent)] focus-visible:text-fg-heading focus-visible:outline-none";
-  const pathLabel = displayPath(item);
+  const pathLabel = displayPath(item, parentPath);
   const toggle = item.children ? (
     <button
       type="button"
@@ -276,10 +282,16 @@ function MenuAnchor({
   );
 }
 
-function displayPath(item: MenuLink): string {
+function displayPath(item: MenuLink, parentPath?: string): string {
   if (item.displayPath) return item.displayPath;
 
   const href = item.href;
+  if (parentPath && href.startsWith(`${parentPath}/`)) {
+    const segments = href.slice(parentPath.length + 1).split("/").filter(Boolean);
+    if (segments.length >= 2) return `.../${segments[0]}/...`;
+    if (segments.length === 1) return `.../${segments[0]}`;
+  }
+
   if (href.startsWith("/")) return href;
 
   try {
