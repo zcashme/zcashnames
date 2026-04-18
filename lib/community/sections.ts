@@ -10,6 +10,7 @@ export type CommunityCard = {
   detail: string;
   iconSrc?: string;
   initials?: string;
+  actionBadge?: string;
   announcingSoon?: boolean;
 };
 
@@ -238,9 +239,10 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         description:
           "Follow the core docs and product resources as ZcashNames moves toward release.",
         href: "/docs",
-        shareText: "Read ZcashNames product updates and resources.",
+        shareText: "@ZcashNames blog updates are announcing soon. Follow along for product notes and resources.",
         detail: "Product resources",
         initials: "ZU",
+        actionBadge: "Announcing soon",
       },
       {
         id: "launch-notes",
@@ -249,9 +251,10 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         description:
           "Read pricing, rollout, and beta context for the current ZcashNames release phase.",
         href: "/docs/learn/pricing",
-        shareText: "Read ZcashNames launch notes.",
+        shareText: "@ZcashNames launch notes are announcing soon. Follow along for rollout updates.",
         detail: "Pricing and rollout context",
         initials: "LN",
+        actionBadge: "Announcing soon",
       },
       {
         id: "builder-stories",
@@ -260,9 +263,10 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         description:
           "Explore integration paths for wallets, explorers, apps, and ecosystem builders.",
         href: "/docs/integrate",
-        shareText: "Explore ZcashNames builder resources.",
+        shareText: "@ZcashNames builder stories are announcing soon. Follow along for wallet, app, and integration updates.",
         detail: "Wallets, apps, and integrations",
         initials: "BS",
+        actionBadge: "Announcing soon",
       },
     ],
   },

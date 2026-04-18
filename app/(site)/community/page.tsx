@@ -122,12 +122,13 @@ function ComingSoonBadge() {
 
 function CommunityActionCard({ card }: { card: CommunityCard }) {
   const announcingSoon = card.announcingSoon === true;
+  const actionBadge = card.actionBadge ?? (announcingSoon ? "Announcing soon" : undefined);
   const shareUrl = `${BRAND.url}/community#${card.id}`;
 
   return (
     <article
       id={card.id}
-      aria-label={announcingSoon ? "Wallet partner announcing soon" : undefined}
+      aria-label={actionBadge ? `${card.name} ${actionBadge.toLowerCase()}` : undefined}
       className="scroll-mt-24 overflow-hidden rounded-lg border border-border-muted bg-[var(--color-card)]"
     >
       <div className="flex aspect-[16/9] items-center justify-center border-b border-border-muted bg-[var(--color-raised)] p-5">
@@ -167,10 +168,10 @@ function CommunityActionCard({ card }: { card: CommunityCard }) {
           <p className="mt-3 text-xs leading-5 text-fg-muted">{card.detail}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {announcingSoon ? (
+          {actionBadge ? (
             <>
               <span className="inline-flex w-fit items-center rounded-md border border-border-muted bg-[var(--color-raised)] px-3 py-2 text-sm font-semibold text-fg-muted">
-                Announcing soon
+                {actionBadge}
               </span>
               <a
                 href={shareHref(card.shareText, shareUrl)}
