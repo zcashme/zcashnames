@@ -85,7 +85,10 @@ const menuLinks: MenuLink[] = [
     label: "Leaderboard",
     href: "/leaders",
     displayPath: "/leaders",
-    children: [{ label: "Dashboard", href: "/leaders/ref", displayPath: ".../ref" }],
+    children: [
+      { label: "Dashboard", href: "/leaders/ref", displayPath: ".../ref" },
+      { label: "Terms", href: "/leaders/terms", displayPath: ".../terms" },
+    ],
   },
   { label: "Brand Kit", href: "/brandkit" },
 ];

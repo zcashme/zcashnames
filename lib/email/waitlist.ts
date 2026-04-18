@@ -46,7 +46,7 @@ export async function sendWaitlistWelcomeEmail({
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
-    subject: "You're on the waitlist!",
-    react: WaitlistEmail({ name, referralUrl }),
+    subject: "Early access to ZcashNames",
+    react: WaitlistEmail({ name, referralUrl, referralCode }),
   });
 }
