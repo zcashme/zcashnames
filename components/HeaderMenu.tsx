@@ -171,7 +171,7 @@ export default function HeaderMenu() {
         <nav
           id="site-header-menu"
           aria-label="Site menu"
-          className="absolute right-0 top-11 z-50 w-[min(calc(100vw-2rem),360px)] overflow-hidden rounded-lg border border-border-muted bg-[var(--color-raised)] shadow-2xl"
+          className="absolute left-0 top-11 z-50 w-[min(calc(100vw-2rem),360px)] overflow-hidden rounded-lg border border-border-muted bg-[var(--color-raised)] shadow-2xl"
         >
           <div className="site-header-menu-scroll max-h-[calc(100vh-7rem)] overflow-y-auto p-2">
             {menuLinks.map((item) => (

@@ -91,7 +91,7 @@ export function InlineSubmitFeedbackBtn() {
   return (
     <span
       {...decorativeProps}
-      className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold"
+      className="inline-flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold"
       style={{
         background: "var(--home-result-primary-bg)",
         color: "var(--home-result-primary-fg)",
@@ -103,13 +103,16 @@ export function InlineSubmitFeedbackBtn() {
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="1.9"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="w-4 h-4"
+        className="w-4 h-4 scale-x-[-1]"
         aria-hidden="true"
       >
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M15 4v16" />
+        <path d="M8 12h5" />
+        <path d="M11 9l3 3-3 3" />
       </svg>
       Submit Feedback
     </span>
