@@ -10,6 +10,7 @@ export type CommunityCard = {
   detail: string;
   iconSrc?: string;
   initials?: string;
+  announcingSoon?: boolean;
 };
 
 export type CommunitySection = {
@@ -94,48 +95,51 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       "Wallets, explorers, and ecosystem partners helping ZcashNames become useful across Zcash.",
     cards: [
       {
-        id: "edge-wallet",
-        name: "Edge Wallet",
-        label: "Wallet partner",
-        description:
-          "A self-custody wallet partner for bringing human-readable ZcashNames into everyday payments.",
-        href: "https://edge.app",
-        shareText: "Edge Wallet is part of the ZcashNames partner ecosystem.",
-        detail: "Wallet integration",
-        initials: "EW",
-      },
-      {
-        id: "cake-wallet",
-        name: "Cake Wallet",
-        label: "Wallet partner",
-        description:
-          "A privacy-first wallet partner helping Zcash users send, receive, and discover names.",
-        href: "https://cakewallet.com",
-        shareText: "Cake Wallet is part of the ZcashNames partner ecosystem.",
-        detail: "Wallet integration",
-        initials: "CW",
-      },
-      {
-        id: "cipherscan",
-        name: "CipherScan",
-        label: "Explorer partner",
-        description:
-          "Explorer support for registry events, name activity, and ZcashNames visibility.",
-        href: "https://cipherscan.app",
-        shareText: "CipherScan supports the ZcashNames ecosystem.",
-        detail: "Explorer and registry visibility",
-        initials: "CS",
-      },
-      {
         id: "zcashme",
         name: "Zcash.me",
         label: "Profile partner",
         description:
           "Profile infrastructure for connecting names, identity, and public Zcash presence.",
         href: "https://zcash.me",
-        shareText: "Zcash.me supports ZcashNames profiles and identity.",
+        shareText: "@ZcashMe supports ZcashNames profiles and identity.",
         detail: "Profiles and identity",
         initials: "ZM",
+      },
+      {
+        id: "wallet-partner-01",
+        name: "xxxxxxxx xxxxxx",
+        label: "Wallet partner",
+        description: "xxxxxxxx xxxxxxx xxxxxx xxxxxxxx xxxxxxxx xxxxx xxxxxxxxx xxxxx.",
+        href: "/community?section=partners",
+        shareText:
+          "@ZcashNames will be announcing wallets that resolve your personal name into your shielded address. Can't wait!",
+        detail: "Send privately with names",
+        initials: ";)",
+        announcingSoon: true,
+      },
+      {
+        id: "wallet-partner-02",
+        name: "xxxx xxxxxx",
+        label: "Wallet partner",
+        description: "xxxxxx xxxxx xxxxxxx xxxxxxxxx xxxxx xxxxx xxxxxxx xxxxxxxxx.",
+        href: "/community?section=partners",
+        shareText:
+          "@ZcashNames will be announcing wallets that resolve your personal name into your shielded address. Can't wait!",
+        detail: "Send privately with names",
+        initials: ";)",
+        announcingSoon: true,
+      },
+      {
+        id: "wallet-partner-03",
+        name: "xxxxxxxxxxx xxxxxx",
+        label: "Wallet partner",
+        description: "xxxxxxxx xxxxxxx xxxxx xxxxxxxx xxxxxxx xxxxxxxx xxxxxx xxxxx.",
+        href: "/community?section=partners",
+        shareText:
+          "@ZcashNames will be announcing wallets that resolve your personal name into your shielded address. Can't wait!",
+        detail: "Send privately with names",
+        initials: ";)",
+        announcingSoon: true,
       },
     ],
   },

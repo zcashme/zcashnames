@@ -25,7 +25,6 @@ export default async function CommunityPage({
     selectedSection === "all"
       ? COMMUNITY_SECTIONS
       : COMMUNITY_SECTIONS.filter((section) => section.slug === selectedSection);
-  const totalCards = COMMUNITY_SECTIONS.reduce((total, section) => total + section.cards.length, 0);
 
   return (
     <main className="w-full">
@@ -38,12 +37,6 @@ export default async function CommunityPage({
           <p className="type-section-subtitle text-fg-body">
             Find community pages, partner resources, and ways to help ZcashNames reach more Zcash users.
           </p>
-        </div>
-
-        <div className="grid gap-4 rounded-lg border border-border-muted bg-[var(--color-raised)] p-5 sm:grid-cols-3">
-          <CommunityNote label="Ways to join" value="Ambassadors, beta testers, newsletter" />
-          <CommunityNote label="Resources" value={`${totalCards} community links and tools`} separated />
-          <CommunityNote label="Actions" value="Open or share every card" separated />
         </div>
 
         <SectionPills selectedSection={selectedSection} />
@@ -128,11 +121,13 @@ function ComingSoonBadge() {
 }
 
 function CommunityActionCard({ card }: { card: CommunityCard }) {
+  const announcingSoon = card.announcingSoon === true;
   const shareUrl = `${BRAND.url}/community#${card.id}`;
 
   return (
     <article
       id={card.id}
+      aria-label={announcingSoon ? "Wallet partner announcing soon" : undefined}
       className="scroll-mt-24 overflow-hidden rounded-lg border border-border-muted bg-[var(--color-card)]"
     >
       <div className="flex aspect-[16/9] items-center justify-center border-b border-border-muted bg-[var(--color-raised)] p-5">
@@ -146,58 +141,69 @@ function CommunityActionCard({ card }: { card: CommunityCard }) {
               aria-hidden="true"
             />
           ) : (
-            <span className="text-3xl font-bold text-fg-heading">{card.initials}</span>
+            <span className="text-3xl font-bold text-fg-heading">
+              {card.initials}
+            </span>
           )}
         </div>
       </div>
       <div className="flex min-h-[220px] flex-col gap-4 p-4">
         <div className="flex-1">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">{card.label}</p>
-          <h3 className="mt-2 text-base font-bold text-fg-heading">{card.name}</h3>
-          <p className="mt-2 text-sm leading-6 text-fg-body">{card.description}</p>
+          <h3 className="mt-2 text-base font-bold text-fg-heading">
+            {announcingSoon ? <BlurredCopy text={card.name} /> : card.name}
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-fg-body">
+            {announcingSoon ? <BlurredCopy text={card.description} /> : card.description}
+          </p>
           <p className="mt-3 text-xs leading-5 text-fg-muted">{card.detail}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <a
-            href={card.href}
-            target={isExternalHref(card.href) ? "_blank" : undefined}
-            rel={isExternalHref(card.href) ? "noopener noreferrer" : undefined}
-            className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-          >
-            Open
-          </a>
-          <a
-            href={shareHref(card.shareText, shareUrl)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-          >
-            Share
-          </a>
+          {announcingSoon ? (
+            <>
+              <span className="inline-flex w-fit items-center rounded-md border border-border-muted bg-[var(--color-raised)] px-3 py-2 text-sm font-semibold text-fg-muted">
+                Announcing soon
+              </span>
+              <a
+                href={shareHref(card.shareText, shareUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+              >
+                Share
+              </a>
+            </>
+          ) : (
+            <>
+              <a
+                href={card.href}
+                target={isExternalHref(card.href) ? "_blank" : undefined}
+                rel={isExternalHref(card.href) ? "noopener noreferrer" : undefined}
+                className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+              >
+                Open
+              </a>
+              <a
+                href={shareHref(card.shareText, shareUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+              >
+                Share
+              </a>
+            </>
+          )}
         </div>
       </div>
     </article>
   );
 }
 
-function CommunityNote({
-  label,
-  value,
-  separated,
-}: {
-  label: string;
-  value: string;
-  separated?: boolean;
-}) {
+function BlurredCopy({ text }: { text: string }) {
   return (
-    <div
-      className={
-        separated ? "border-t border-border-muted pt-4 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0" : ""
-      }
-    >
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">{label}</p>
-      <p className="mt-1 text-sm font-semibold leading-6 text-fg-heading">{value}</p>
-    </div>
+    <span aria-hidden="true" className="inline-block select-none blur-[4px]">
+      {text}
+    </span>
   );
 }
 

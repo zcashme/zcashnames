@@ -3,7 +3,12 @@ import Link from "next/link";
 import HeaderMenu from "@/components/HeaderMenu";
 import StatusToggle from "@/components/StatusToggle";
 import ThemeToggle from "@/components/ThemeToggle";
-import { BRAND } from "@/lib/zns/brand";
+
+const headerLogos = {
+  light: "/brandkit/zcashnames-primary-logo-black-transparent-377x403.png",
+  dark: "/brandkit/zcashnames-primary-logo-white-transparent-377x403.png",
+  monochrome: "/brandkit/zcashnames-primary-logo-monochrome-green-transparent-377x403.png",
+};
 
 export default function Header() {
   return (
@@ -16,12 +21,35 @@ export default function Header() {
         >
           <span className="relative block w-10 h-10 shrink-0">
             <Image
-              src={BRAND.logoPath}
+              src={headerLogos.dark}
               alt="ZcashNames"
-              width={403}
+              width={377}
               height={403}
               priority
-              className="theme-chrome-media h-10 w-10"
+              className="theme-chrome-media block h-10 w-10 object-contain [[data-theme=light]_&]:hidden [[data-theme=monochrome]_&]:hidden"
+            />
+            <Image
+              src={headerLogos.light}
+              alt="ZcashNames"
+              width={377}
+              height={403}
+              priority
+              className="theme-chrome-media hidden h-10 w-10 object-contain [[data-theme=light]_&]:block"
+            />
+            <span
+              className="absolute inset-0 hidden [[data-theme=monochrome]_&]:block pointer-events-none"
+              style={{
+                background: "var(--fg-heading)",
+                WebkitMaskImage: `url('${headerLogos.monochrome}')`,
+                maskImage: `url('${headerLogos.monochrome}')`,
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+              }}
+              aria-hidden="true"
             />
           </span>
           <span className="hidden sm:inline">ZcashNames</span>
