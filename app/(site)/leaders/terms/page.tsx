@@ -13,7 +13,7 @@ const terms = [
   },
   {
     title: "Reward Basis",
-    body: "During early access, direct referral rewards may earn up to 0.05 ZEC for each referred signup that buys a name. Indirect referral rewards may also apply when those referred users refer others.",
+    body: "During early access, direct referral rewards may earn up to 0.05 ZEC for each referred signup that buys a name. Indirect referral rewards may also apply when those referred users refer others. 0.05 ZEC is based on the lowest name claim price at the time of purchase and may vary.",
   },
   {
     title: "Qualifying Purchases",

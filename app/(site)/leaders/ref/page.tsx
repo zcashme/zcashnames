@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -80,6 +81,13 @@ export default function ReferralCodeEntryPage() {
             </div>
             {error && <p className="mt-2 text-sm text-fg-muted">{error}</p>}
           </form>
+          <p className="mt-4 text-xs text-fg-muted">
+            Referral rewards are subject to{" "}
+            <Link href="/leaders/terms" className="underline underline-offset-2">
+              terms
+            </Link>
+            .
+          </p>
         </div>
       </section>
     </main>
