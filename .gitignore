@@ -45,3 +45,6 @@ npm-debug.log*
 _upstream_zcashname/
 spell-ui/
 brand-kit/
+
+# local-only internal tools
+app/(site)/internal/email-preview/

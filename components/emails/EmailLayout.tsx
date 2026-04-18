@@ -37,7 +37,7 @@ export function EmailLayout({
         <Container style={containerStyle}>
           <Section style={{ padding: "40px 40px 24px", textAlign: "center" as const }}>
             <Img
-              src="https://zcashnames.com/logo.svg"
+              src="https://zcashnames.com/brandkit/zcashnames-primary-logo-white-transparent-377x403.png"
               alt="ZcashNames"
               width="48"
               height="48"
@@ -80,7 +80,9 @@ export function EmailLayout({
 
           <Section style={{ textAlign: "center" as const, padding: "0 40px 32px" }}>
             <Text style={{ margin: 0, fontSize: 12, color: "#d4d4d8" }}>
-              zcashnames.com
+              <Link href="https://zcashnames.com" style={{ color: "#d4d4d8", textDecoration: "underline" }}>
+                zcashnames.com
+              </Link>
             </Text>
           </Section>
         </Container>

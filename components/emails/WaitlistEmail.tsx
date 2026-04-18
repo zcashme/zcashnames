@@ -1,17 +1,18 @@
-import { Button, Link, Section, Text } from "@react-email/components";
+import { Button, Hr, Link, Section, Text } from "@react-email/components";
 import { EmailLayout } from "./EmailLayout";
-import { content, paragraph, ctaButton } from "@/lib/email/styles";
+import { content, paragraph, ctaButton, divider } from "@/lib/email/styles";
 
 interface WaitlistEmailProps {
   name: string;
   referralUrl: string;
   referralCode: string;
+  accessPin?: string;
 }
 
 const tweetText = (referralUrl: string) =>
   `Sending and receiving $ZEC will be much easier with @ZcashNames.\n\nGet your @ZcashName before it's taken:\n${referralUrl}\n\nYou'll get your own referral link to earn rewards too.`;
 
-export default function WaitlistEmail({ name, referralUrl, referralCode }: WaitlistEmailProps) {
+export default function WaitlistEmail({ name, referralUrl, referralCode, accessPin = "######" }: WaitlistEmailProps) {
   const shareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweetText(referralUrl))}`;
   const leaderboardUrl = new URL("/leaders", referralUrl).toString();
   const dashboardUrl = new URL(`/leaders/ref/${encodeURIComponent(referralCode)}`, referralUrl).toString();
@@ -36,7 +37,14 @@ export default function WaitlistEmail({ name, referralUrl, referralCode }: Waitl
       </Section>
 
       <Section style={{ textAlign: "left" as const, padding: "16px 40px 0" }}>
-        <Text style={paragraph}>Earn up to <strong>0.05 ZEC</strong> for each signup that buys a name during early access. Earn from their referrals too.</Text>
+        <Text style={paragraph}>
+          Earn up to <strong>0.05 ZEC</strong> for each signup that buys a name during early access. Earn from their
+          referrals too! You can view your referral activity and earnings{" "}
+          <Link href={dashboardUrl} style={{ color: "#f4b728", textDecoration: "underline" }}>
+            here
+          </Link>
+          {" "}(passcode <strong>{accessPin}</strong>).
+        </Text>
       </Section>
 
       <Section style={{ textAlign: "left" as const, padding: "0 40px 32px" }}>
@@ -45,18 +53,13 @@ export default function WaitlistEmail({ name, referralUrl, referralCode }: Waitl
           <Link href={leaderboardUrl} style={{ color: "#f4b728", textDecoration: "underline" }}>
             leaderboard
           </Link>
-          .
-        </Text>
-        <Text style={paragraph}>
-          View your referral activity and earnings{" "}
-          <Link href={dashboardUrl} style={{ color: "#f4b728", textDecoration: "underline" }}>
-            here
-          </Link>
-          .
+          !
         </Text>
         <Text style={paragraph}>Have fun!</Text>
         <Text style={{ ...paragraph, margin: 0 }}>Zechariah</Text>
       </Section>
+
+      <Hr style={{ ...divider, margin: "0 40px 24px" }} />
 
       <Section style={{ textAlign: "left" as const, padding: "0 40px 32px" }}>
         <Text style={{ margin: 0, fontSize: 12, lineHeight: "18px", color: "#a1a1aa" }}>

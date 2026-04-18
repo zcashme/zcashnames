@@ -5,6 +5,7 @@ import ConfirmEmail from "@/components/emails/ConfirmEmail";
 import WaitlistEmail from "@/components/emails/WaitlistEmail";
 import { FROM_EMAIL } from "@/lib/email/constants";
 import { getResend } from "@/lib/email/client";
+import { getCommissionPin } from "@/lib/leaders/commission-access";
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
@@ -42,11 +43,12 @@ export async function sendWaitlistWelcomeEmail({
   const resend = getResend();
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
   const referralUrl = `${normalizedBaseUrl}/?ref=${referralCode}`;
+  const accessPin = getCommissionPin(referralCode);
 
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
     subject: "Early access to ZcashNames",
-    react: WaitlistEmail({ name, referralUrl, referralCode }),
+    react: WaitlistEmail({ name, referralUrl, referralCode, accessPin }),
   });
 }
