@@ -1,6 +1,6 @@
 "use server";
 
-import { resolve, registrationStatus, status, events, listForSale, type ResolveResult, type VerifiedListing } from "@/lib/zns/client";
+import { getZns, registrationStatus, type Registration, type Listing, type EventsFilter } from "@/lib/zns/client";
 import { normalizeUsername, isValidUsername, zatsToZec, type Network } from "@/lib/zns/name";
 import { getExchangeRate } from "@/lib/exchange-rate";
 import { getReservedName } from "@/lib/zns/reserved";
@@ -8,16 +8,14 @@ import { getListingMap, reconcileRegistrationListing } from "@/lib/zns/listing-r
 import type { Action, ResolveName } from "@/lib/types";
 
 const FIRST_BUCKET_SIZE = 100;
-const REGISTRATION_EVENT_PAGE_SIZE = 200;
-const REGISTRATION_RESOLVE_CONCURRENCY = 8;
 
 function toFirstBucket(ordinal: number): number {
   return Math.max(FIRST_BUCKET_SIZE, Math.ceil(ordinal / FIRST_BUCKET_SIZE) * FIRST_BUCKET_SIZE);
 }
 
-async function findActiveListing(name: string, network: Network): Promise<VerifiedListing | null> {
+async function findActiveListing(name: string, network: Network): Promise<Listing | null> {
   try {
-    const listings = await listForSale(network);
+    const { listings } = await getZns(network).listings();
     return listings.find((listing) => listing.name === name) ?? null;
   } catch {
     return null;
@@ -25,13 +23,14 @@ async function findActiveListing(name: string, network: Network): Promise<Verifi
 }
 
 async function getClaimOrdinal(name: string, network: Network): Promise<number | null> {
-  const byName = await events({ name, action: "CLAIM", limit: 1 }, network);
+  const zns = getZns(network);
+  const byName = await zns.events({ name, action: "CLAIM", limit: 1 });
   const claim = byName.events[0];
   if (!claim) return null;
 
   const [allClaims, claimsAfterBlock] = await Promise.all([
-    events({ action: "CLAIM", limit: 1 }, network),
-    events({ action: "CLAIM", since_height: claim.height, limit: 1 }, network),
+    zns.events({ action: "CLAIM", limit: 1 }),
+    zns.events({ action: "CLAIM", since_height: claim.height, limit: 1 }),
   ]);
 
   if (allClaims.total <= 0) return null;
@@ -42,7 +41,7 @@ async function getClaimOrdinal(name: string, network: Network): Promise<number |
   const pageSize = 200;
 
   while (offset < allClaims.total) {
-    const page = await events({ action: "CLAIM", limit: pageSize, offset }, network);
+    const page = await zns.events({ action: "CLAIM", limit: pageSize, offset });
     if (page.events.length === 0) break;
 
     let stop = false;
@@ -79,68 +78,16 @@ async function getFirstBucketForClaim(name: string, network: Network): Promise<n
   }
 }
 
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  fn: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let nextIndex = 0;
-  const workerCount = Math.min(Math.max(1, concurrency), items.length);
-
-  await Promise.all(
-    Array.from({ length: workerCount }, async () => {
-      while (nextIndex < items.length) {
-        const index = nextIndex;
-        nextIndex += 1;
-        results[index] = await fn(items[index]);
-      }
-    }),
-  );
-
-  return results;
-}
-
-async function getEventNames(network: Network): Promise<string[]> {
-  const names = new Set<string>();
-  let offset = 0;
-  let total = Number.POSITIVE_INFINITY;
-
-  while (offset < total) {
-    const page = await events({ limit: REGISTRATION_EVENT_PAGE_SIZE, offset }, network);
-    total = page.total;
-    for (const ev of page.events) {
-      if (ev.name) names.add(ev.name);
-    }
-    if (page.events.length === 0) break;
-    offset += page.events.length;
-  }
-
-  return [...names];
-}
-
-export async function getCurrentRegistrations(network: Network = "testnet"): Promise<ResolveResult[]> {
+export async function getCurrentRegistrations(network: Network = "testnet"): Promise<Registration[]> {
   try {
-    const [names, listings] = await Promise.all([
-      getEventNames(network),
-      listForSale(network).catch(() => [] as VerifiedListing[]),
+    const zns = getZns(network);
+    const [registrations, listingsMap] = await Promise.all([
+      zns.listAllRegistrations(),
+      zns.listings().then((r) => getListingMap(r.listings)).catch(() => new Map()),
     ]);
-    const listingsByName = getListingMap(listings);
-    const registrations = await mapWithConcurrency(
-      names,
-      REGISTRATION_RESOLVE_CONCURRENCY,
-      async (name) => {
-        try {
-          return await resolve(name, network);
-        } catch {
-          return null;
-        }
-      },
-    );
 
     return registrations
-      .filter((reg): reg is ResolveResult => reg != null)
-      .map((reg) => reconcileRegistrationListing(reg, listingsByName))
+      .map((reg) => reconcileRegistrationListing(reg, listingsMap))
       .sort((a, b) => b.height - a.height || a.name.localeCompare(b.name));
   } catch {
     return [];
@@ -157,7 +104,8 @@ export async function resolveName(
     throw new Error("Use 1-62 characters: lowercase letters and numbers only.");
   }
 
-  let registration = await resolve(normalized, network);
+  const zns = getZns(network);
+  let registration = await zns.resolveName(normalized);
   const nameStatus = registrationStatus(registration);
 
   if (nameStatus === "available") {
@@ -167,13 +115,14 @@ export async function resolveName(
       return { status: "blocked", query: normalized };
     }
 
-    const s = await status(network);
-    if (!s.pricing?.tiers?.length) {
+    const s = await zns.status();
+    if (!s.pricing) {
       throw new Error("Pricing unavailable - indexer may be down.");
     }
-    const tiers = s.pricing.tiers;
-    const idx = Math.min(normalized.length - 1, tiers.length - 1);
-    const claimCostZats = tiers[idx];
+    const claimCostZats = zns.claimCost(normalized.length, s.pricing);
+    if (claimCostZats == null) {
+      throw new Error("Pricing unavailable - indexer may be down.");
+    }
     const firstBucket = toFirstBucket(s.registered + 1);
 
     if (reserved && !reserved.redeemed) {
@@ -244,7 +193,7 @@ export async function checkScannerState(
   expected: { address?: string; priceZats?: number },
 ): Promise<"empty" | "success"> {
   try {
-    const reg = await resolve(name, network);
+    const reg = await getZns(network).resolveName(name);
 
     switch (action) {
       case "claim":
@@ -274,7 +223,7 @@ export async function checkScannerState(
 
 export async function getHomeStats(network: Network = "testnet"): Promise<{ claimed: number; forSale: number; verifiedOnZcashMe: number; syncedHeight: number; uivk: string }> {
   try {
-    const s = await status(network);
+    const s = await getZns(network).status();
     return {
       claimed: s.registered,
       forSale: s.listed,
@@ -297,20 +246,21 @@ export async function getUsdPerZec(): Promise<number | null> {
   return getExchangeRate();
 }
 
-export async function getListings(network: Network = "testnet"): Promise<VerifiedListing[]> {
+export async function getListings(network: Network = "testnet"): Promise<Listing[]> {
   try {
-    return await listForSale(network);
+    const { listings } = await getZns(network).listings();
+    return listings;
   } catch {
     return [];
   }
 }
 
 export async function getEvents(
-  params: { name?: string; action?: string; limit?: number; offset?: number } = {},
-  network: Network = "testnet"
+  params: EventsFilter = {},
+  network: Network = "testnet",
 ) {
   try {
-    return await events(params, network);
+    return await getZns(network).events(params);
   } catch {
     return { events: [], total: 0 };
   }

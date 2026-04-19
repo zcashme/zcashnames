@@ -8,7 +8,7 @@ In ZNS, resolution is a single `resolve` RPC call  to the indexer that returns e
 
 | Mode | Input | Returns |
 |------|-------|---------|
-| **Forward** | A name like `alice` | A single `ResolveResult`, or `null` |
+| **Forward** | A name like `alice` | A single `Registration`, or `null` |
 | **By-address** | A Zcash unified address | An **array** of every registration bound to that address (possibly empty) |
 
 The indexer decides which mode based on whether the query string parses as a Zcash address. No separate method, no flag.

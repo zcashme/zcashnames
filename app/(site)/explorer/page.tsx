@@ -1,6 +1,7 @@
 import { getCurrentRegistrations, getEvents, getListings, getHomeStats, resolveName } from "@/lib/zns/resolve";
 import type { Network } from "@/lib/zns/name";
 import type { ResolveName } from "@/lib/types";
+import type { Event } from "zcashname-sdk";
 import ExplorerShell from "./ExplorerShell";
 
 type Environment = "all" | "mainnet" | "testnet";
@@ -35,7 +36,7 @@ export default async function ExplorerPage({
     Promise.all(
       networks.map((n) =>
         getEvents({ limit: 100 }, n).then((r) => ({
-          events: r.events.map((ev) => ({ ...ev, network: n })),
+          events: r.events.map((ev: Event) => ({ ...ev, network: n })),
           total: r.total,
         }))
       )
@@ -73,7 +74,7 @@ export default async function ExplorerPage({
         getEvents({ name: nameQuery, limit: 20 }, effectiveNetwork),
       ]);
       nameResult = resolved;
-      nameEvents = evResult.events.map((ev) => ({ ...ev, network: effectiveNetwork }));
+      nameEvents = evResult.events.map((ev: Event) => ({ ...ev, network: effectiveNetwork }));
     } catch {
       // name resolution failed (invalid name, indexer down, etc.)
     }

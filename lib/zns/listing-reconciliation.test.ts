@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getListingMap, reconcileRegistrationListing } from "./listing-reconciliation.ts";
-import type { ResolveResult, VerifiedListing } from "./client.ts";
+import type { Registration, Listing } from "./client.ts";
 
-function registration(overrides: Partial<ResolveResult> = {}): ResolveResult {
+function registration(overrides: Partial<Registration> = {}): Registration {
   return {
     name: "listedname",
     address: "u1test",
@@ -14,13 +14,11 @@ function registration(overrides: Partial<ResolveResult> = {}): ResolveResult {
     last_action: "CLAIM",
     pubkey: null,
     listing: null,
-    verified: true,
-    sovereign: false,
     ...overrides,
   };
 }
 
-function listing(overrides: Partial<VerifiedListing> = {}): VerifiedListing {
+function listing(overrides: Partial<Listing> = {}): Listing {
   return {
     name: "listedname",
     price: 123,
@@ -28,7 +26,7 @@ function listing(overrides: Partial<VerifiedListing> = {}): VerifiedListing {
     txid: "listtx",
     height: 110,
     signature: "listsig",
-    verified: true,
+    pubkey: null,
     ...overrides,
   };
 }

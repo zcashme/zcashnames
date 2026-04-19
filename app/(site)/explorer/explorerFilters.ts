@@ -1,11 +1,11 @@
 import type { Network } from "@/lib/zns/name";
-import type { Event, ResolveResult, VerifiedListing } from "@/lib/zns/client";
+import type { Event, Registration, Listing } from "@/lib/zns/client";
 
 export type ExplorerTab = "all" | "registered" | "forsale" | "admin" | "CLAIM" | "BUY" | "LIST" | "DELIST" | "UPDATE" | "RELEASE";
 export type TabCounts = Record<string, { filtered: number; total: number }>;
 export type TaggedEvent = Event & { network: Network };
-export type TaggedListing = VerifiedListing & { network: Network };
-export type TaggedRegistration = ResolveResult & { network: Network };
+export type TaggedListing = Listing & { network: Network };
+export type TaggedRegistration = Registration & { network: Network };
 
 export const ACTION_TYPES = ["CLAIM", "BUY", "LIST", "DELIST", "UPDATE", "RELEASE"] as const;
 

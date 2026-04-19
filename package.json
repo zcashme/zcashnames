@@ -27,7 +27,7 @@
     "remark-gfm": "^4.0.1",
     "resend": "^6.9.4",
     "server-only": "^0.0.1",
-    "zcashname-sdk": "^0.5.1"
+    "zcashname-sdk": "^0.7.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

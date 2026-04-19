@@ -1,13 +1,13 @@
-import type { ResolveResult, VerifiedListing } from "./client";
+import type { Registration, Listing } from "./client";
 
-export function getListingMap(listings: VerifiedListing[]): Map<string, VerifiedListing> {
+export function getListingMap(listings: Listing[]): Map<string, Listing> {
   return new Map(listings.map((listing) => [listing.name, listing]));
 }
 
 export function reconcileRegistrationListing(
-  registration: ResolveResult,
-  listingsByName: Map<string, VerifiedListing>,
-): ResolveResult {
+  registration: Registration,
+  listingsByName: Map<string, Listing>,
+): Registration {
   if (registration.listing) return registration;
   const listing = listingsByName.get(registration.name);
   return listing ? { ...registration, listing } : registration;
