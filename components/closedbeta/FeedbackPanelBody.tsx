@@ -230,7 +230,7 @@ export default function FeedbackPanelBody({
   const readMeLinks = [
     { label: "Instructions", href: "/closedbeta" },
     { label: "User Guide", href: "/closedbeta#userguide" },
-    { label: "Dev Guide", href: "/closedbeta#devguide" },
+    { label: "Developer Guide", href: "/docs/zns-developer-guide" },
   ];
 
   const tooltipBoxStyle: React.CSSProperties = {
