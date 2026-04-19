@@ -101,12 +101,6 @@ export default function BetaBrief() {
         >
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-current" /> Closed Beta
         </span>
-        <h1
-          className="text-3xl md:text-4xl font-bold tracking-tight"
-          style={{ color: "var(--fg-heading)", marginBottom: "0.75rem" }}
-        >
-          ZcashNames Closed Beta
-        </h1>
         <p style={p}>
           Welcome. Zcash Name Service (ZNS) is a name registration protocol on Zcash. You
           register a short name (e.g. <code style={inlineCode}>pacu.zcash</code>,{" "}

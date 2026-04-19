@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import SiteRouteTitle from "@/components/SiteRouteTitle";
 import { BRAND } from "@/lib/zns/brand";
 import {
   COMMUNITY_SECTIONS,
@@ -28,9 +29,9 @@ export default async function CommunityPage({
 
   return (
     <main className="w-full">
+      <SiteRouteTitle title="Community" />
       <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
         <div className="flex max-w-3xl flex-col gap-4">
-          <p className="type-chip font-semibold uppercase tracking-[0.16em] text-fg-muted">Community</p>
           <h1 className="text-4xl font-bold leading-tight text-fg-heading sm:text-5xl">
             Join the movement
           </h1>

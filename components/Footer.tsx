@@ -19,7 +19,8 @@ export default function Footer() {
         <div className="flex flex-col gap-1 items-center sm:items-start">
           <Link
             href="/"
-            className="type-section-subtitle leading-tight font-bold tracking-tight text-fg-heading"
+            className="type-section-subtitle leading-tight font-normal tracking-normal text-fg-heading"
+            style={{ fontFamily: "var(--font-brand)" }}
           >
             ZcashNames
           </Link>

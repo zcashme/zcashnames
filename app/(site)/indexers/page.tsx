@@ -1,4 +1,5 @@
 import { getIndexers } from "@/lib/indexers";
+import SiteRouteTitle from "@/components/SiteRouteTitle";
 
 export const metadata = {
   title: "Indexers - ZcashNames",
@@ -10,22 +11,26 @@ export default async function IndexersPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-10 sm:px-6">
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-fg-heading">Indexers</h1>
-          <p className="mt-1 text-sm text-fg-muted">
-            Community-run ZNS indexers. Point your client at any of these to resolve .zcash names.
-          </p>
-        </div>
+      <SiteRouteTitle title="Indexers" />
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <p className="min-w-[220px] flex-1 text-sm text-fg-muted">
+          Community-run ZNS indexers. Point your client at any of these to resolve ZcashNames.
+        </p>
         <span
-          className="shrink-0 rounded-lg px-4 py-2 text-sm font-semibold opacity-50 cursor-not-allowed"
+          className="inline-flex shrink-0 cursor-not-allowed items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold opacity-50"
           style={{
             background: "var(--leaders-card-bg)",
             border: "1px solid var(--leaders-card-border)",
             color: "var(--fg)",
           }}
         >
-          Submit an Indexer (coming soon)
+          Submit Indexer
+          <span
+            className="rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
+            style={{ background: "rgba(234,179,8,0.15)", color: "#eab308" }}
+          >
+            SOON
+          </span>
         </span>
       </div>
 

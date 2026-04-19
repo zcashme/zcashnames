@@ -20,6 +20,7 @@ import {
 } from "./explorerFilters";
 import ExplorerNameDetail from "./ExplorerNameDetail";
 import Zip321Modal, { type ModalTarget } from "@/components/landing/Zip321Modal";
+import SiteRouteTitle from "@/components/SiteRouteTitle";
 import { useStatus } from "@/components/StatusToggle";
 import { useUsdPrice } from "@/components/landing/useUsdPrice";
 import type { ResolveName } from "@/lib/types";
@@ -235,60 +236,53 @@ export default function ExplorerShell({
 
   return (
     <div className="flex flex-col gap-6">
+      <SiteRouteTitle title="Explorer" />
       {/* Header */}
-      <div>
-        <div className="flex items-start justify-between gap-3">
-          <h1
-            className="shrink-0 whitespace-nowrap font-bold tracking-tight"
-            style={{ fontSize: "var(--type-section-title)", color: "var(--fg-heading)" }}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="min-w-[220px] flex-1 text-sm" style={{ color: "var(--fg-muted)" }}>
+          Browse registered ZcashNames, activity, and listings.
+        </p>
+        <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted tabular-nums transition-colors hover:text-fg-heading"
+            style={{ borderColor: "var(--leaders-card-border)" }}
+            title="Refresh"
           >
-            Name Explorer
-          </h1>
-          <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+            Block{" "}
+            {isPending ? (
+              <span className="inline-block h-[0.75em] w-14 animate-pulse rounded-md bg-fg-dim/20 align-middle" />
+            ) : (
+              stats.syncedHeight.toLocaleString()
+            )}
+            <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
+              <path
+                d="M13.5 8a5.5 5.5 0 1 1-1.3-3.56"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+              <path
+                d="M12.5 2v3h-3"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          {(uivks.mainnet || uivks.testnet) && (
             <button
               type="button"
-              onClick={handleRefresh}
-              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted tabular-nums transition-colors hover:text-fg-heading"
+              onClick={() => setUivkOpen(true)}
+              className="cursor-pointer whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
               style={{ borderColor: "var(--leaders-card-border)" }}
-              title="Refresh"
             >
-              Block{" "}
-              {isPending ? (
-                <span className="inline-block h-[0.75em] w-14 animate-pulse rounded-md bg-fg-dim/20 align-middle" />
-              ) : (
-                stats.syncedHeight.toLocaleString()
-              )}
-              <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
-                <path
-                  d="M13.5 8a5.5 5.5 0 1 1-1.3-3.56"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M12.5 2v3h-3"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              UIVK
             </button>
-            {(uivks.mainnet || uivks.testnet) && (
-              <button
-                type="button"
-                onClick={() => setUivkOpen(true)}
-                className="cursor-pointer whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
-                style={{ borderColor: "var(--leaders-card-border)" }}
-              >
-                UIVK
-              </button>
-            )}
-          </div>
+          )}
         </div>
-        <p className="mt-1.5 text-sm" style={{ color: "var(--fg-muted)" }}>
-          Browse registered .zcash names, activity, and listings.
-        </p>
       </div>
 
       {/* Toolbar */}

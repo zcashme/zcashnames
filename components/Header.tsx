@@ -25,7 +25,7 @@ export default function Header() {
               ZcashNames
             </span>
           </Link>
-          <span id="site-route-title" className="ml-3 min-w-0" />
+          <span id="site-route-title" className="min-w-0" />
         </div>
 
         <div className="flex-1" />

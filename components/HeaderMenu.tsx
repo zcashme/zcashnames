@@ -36,7 +36,7 @@ const blogLinks = sectionCardMenuLinks("blogs").map((item) => ({
 }));
 
 const menuLinks: MenuLink[] = [
-  { label: "Home", href: "/" },
+  { label: "Home", href: "/", displayPath: "zcashnames.com" },
   { label: "Explorer", href: "/explorer" },
   {
     label: "Learn",

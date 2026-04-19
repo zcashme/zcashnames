@@ -3,6 +3,7 @@
 import { getPublicKeyAsync, signAsync } from "@noble/ed25519";
 import { Suspense, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import SiteRouteTitle from "@/components/SiteRouteTitle";
 import { validatePayload, payloadBorderStyle, payloadMessageColor } from "@/lib/zns/payload";
 import type { PayloadValidation } from "@/lib/zns/payload";
 import { useCopy } from "@/lib/useCopy";
@@ -188,16 +189,14 @@ function KeypairPageInner() {
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-10">
+      <SiteRouteTitle title="Keypair" />
       <section
         className="rounded-2xl border p-6"
         style={{ background: "var(--feature-card-bg)", borderColor: "var(--faq-border)" }}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: "var(--fg-heading)" }}>
-              Keypair Tool
-            </h1>
-            <p className="mt-2 text-sm" style={{ color: "var(--fg-body)" }}>
+            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               Generate or import an Ed25519 keypair, then sign the payload.
             </p>
           </div>

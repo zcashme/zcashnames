@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
+import SiteRouteTitle from "@/components/SiteRouteTitle";
 
 export const metadata: Metadata = {
   title: "Brand Kit | ZcashNames",
@@ -152,12 +153,9 @@ export default async function BrandKitPage({
 
   return (
     <main className="w-full">
+      <SiteRouteTitle title="Brand Kit" />
       <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
         <div className="flex max-w-3xl flex-col gap-4">
-          <p className="type-chip font-semibold uppercase tracking-[0.16em] text-fg-muted">Brand Kit</p>
-          <h1 className="text-4xl font-bold leading-tight text-fg-heading sm:text-5xl">
-            ZcashNames assets
-          </h1>
           <p className="type-section-subtitle text-fg-body">
             Download logo marks, banners, and stacked brand lockups for ZcashNames.
           </p>
