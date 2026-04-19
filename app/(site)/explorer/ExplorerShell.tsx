@@ -196,18 +196,23 @@ export default function ExplorerShell({
 
   function handleDetailAction(action: Action) {
     if (!nameDataReady || !nameResult) return;
-    if (nameResult.status !== "registered" && nameResult.status !== "listed") return;
 
-    setModalTarget({
+    const target: ModalTarget = {
       name: nameResult.query,
       action,
       network: detailNetwork,
       networkPassword,
-      registrationAddress: nameResult.registration.address,
-      registrationNonce: nameResult.registration.nonce,
-      registrationPubkey: nameResult.registration.pubkey ?? null,
-      listingPriceZec: nameResult.status === "listed" ? nameResult.listingPrice.zec : undefined,
-    });
+      isReserved: nameResult.status === "reserved",
+    };
+
+    if (nameResult.status === "registered" || nameResult.status === "listed") {
+      target.registrationAddress = nameResult.registration.address;
+      target.registrationNonce = nameResult.registration.nonce;
+      target.registrationPubkey = nameResult.registration.pubkey ?? null;
+      target.listingPriceZec = nameResult.status === "listed" ? nameResult.listingPrice.zec : undefined;
+    }
+
+    setModalTarget(target);
   }
 
   function handleRefresh() {

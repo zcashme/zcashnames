@@ -87,6 +87,36 @@ test.describe("Explorer page", () => {
     await expect(detail.getByText(/^Block:/)).toBeVisible();
     await expect(detail.getByText(/^Txid:/)).toBeVisible();
     await expect(detail.getByText(/^LIST$/)).toBeVisible();
+
+    const historyTable = detail.getByRole("table");
+    await expect(historyTable.getByRole("columnheader", { name: /^Action$/ })).toBeVisible();
+    await expect(historyTable.getByRole("columnheader", { name: /^Block$/ })).toBeVisible();
+    await expect(historyTable.getByRole("columnheader", { name: /^Transaction ID$/ })).toBeVisible();
+
+    const firstHistoryRow = historyTable.locator("tbody tr").first();
+    const actionCell = firstHistoryRow.locator("td").nth(0);
+    const actionBadge = actionCell.locator("span").first();
+    await expect(actionBadge).toBeVisible();
+
+    const blockText = (await firstHistoryRow.locator("td").nth(1).innerText()).trim();
+    expect(blockText).toMatch(/^[\d,]+$/);
+    expect(blockText).not.toMatch(/^block\b/i);
+
+    const txidText = (await firstHistoryRow.locator("td").nth(2).locator("span").first().innerText()).trim();
+    expect(txidText.length).toBeGreaterThan(20);
+    await expect(firstHistoryRow.locator("td").nth(2).getByRole("button", { name: /Copy .* txid/i })).toBeVisible();
+
+    const [cellBox, badgeBox] = await Promise.all([
+      actionCell.boundingBox(),
+      actionBadge.boundingBox(),
+    ]);
+    expect(cellBox).not.toBeNull();
+    expect(badgeBox).not.toBeNull();
+    if (cellBox && badgeBox) {
+      const cellCenter = cellBox.x + cellBox.width / 2;
+      const badgeCenter = badgeBox.x + badgeBox.width / 2;
+      expect(Math.abs(cellCenter - badgeCenter)).toBeLessThan(2);
+    }
   });
 
   test("clicking a registered row from all environments preserves the row network", async ({ page }) => {
