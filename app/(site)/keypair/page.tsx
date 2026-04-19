@@ -27,7 +27,7 @@ function CopyBtn({ value, label, copied, onCopy }: { value: string; label: strin
       type="button"
       onClick={onCopy}
       disabled={!value}
-      className="self-start rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
+      className="self-start rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
       style={{
         background: copied ? "var(--color-accent-green-light)" : "transparent",
         border: `1.5px solid ${copied ? "var(--color-accent-green)" : "var(--border-muted)"}`,
@@ -46,11 +46,11 @@ function KeypairPageInner() {
 
   const pubkeyCopy = useCopy();
   const privkeyCopy = useCopy();
-  const memoCopy = useCopy();
   const signatureCopy = useCopy();
 
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"generate" | "import">("import");
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   const [seed, setSeed] = useState<Uint8Array | null>(null);
   const [pubkeyB64, setPubkeyB64] = useState("");
@@ -60,37 +60,59 @@ function KeypairPageInner() {
 
   const [importPrivB64, setImportPrivB64] = useState("");
   const [importPrivError, setImportPrivError] = useState("");
-  const [exportLabel, setExportLabel] = useState("");
+  const [generatedPrivateKeySaved, setGeneratedPrivateKeySaved] = useState(false);
 
   const privkeyB64 = seed ? bytesToBase64(seed) : "";
   const payloadValidation = useMemo(() => validatePayload(payload), [payload]);
-  const assembledMemo =
-    signatureB64 && pubkeyB64 && payload.trim()
-      ? `ZNS:${payload.trim()}:${signatureB64}:${pubkeyB64}`
-      : "";
-  const isGeneratedKey = tab === "generate" && !!seed;
+  const isGeneratedKey = tab === "generate" && !!seed && !!pubkeyB64;
+  const isImportedKey = tab === "import" && !!seed && !!pubkeyB64 && !!importPrivB64.trim() && !importPrivError;
+  const hasActiveKey = isGeneratedKey || isImportedKey;
+
+  function clearSignedPayload() {
+    setSignatureB64("");
+  }
+
+  function clearActiveKey() {
+    setSeed(null);
+    setPubkeyB64("");
+    setGeneratedPrivateKeySaved(false);
+    clearSignedPayload();
+  }
+
+  async function switchToImport() {
+    setTab("import");
+    clearSignedPayload();
+    if (!importPrivB64.trim()) {
+      setImportPrivError("");
+      clearActiveKey();
+      return;
+    }
+    await handleImportPrivChange(importPrivB64);
+  }
 
   async function generateKeypair() {
     setError("");
+    clearSignedPayload();
     try {
       const s = crypto.getRandomValues(new Uint8Array(32));
       const pub = await getPublicKeyAsync(s);
       setSeed(s);
       setPubkeyB64(bytesToBase64(pub));
-      setSignatureB64("");
+      setGeneratedPrivateKeySaved(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to generate keypair.");
     }
   }
 
   async function activateImportedSeed(seedBytes: Uint8Array) {
+    clearSignedPayload();
     const pub = await getPublicKeyAsync(seedBytes);
     setSeed(seedBytes);
     setPubkeyB64(bytesToBase64(pub));
-    setSignatureB64("");
   }
 
   async function handleImportPrivChange(value: string) {
+    clearSignedPayload();
     setImportPrivB64(value);
     const trimmed = value.trim();
     if (!trimmed) {
@@ -121,7 +143,7 @@ function KeypairPageInner() {
       setError("Payload is required.");
       return;
     }
-    if (!seed) {
+    if (!hasActiveKey || !seed) {
       setError("Load a keypair first.");
       return;
     }
@@ -151,6 +173,11 @@ function KeypairPageInner() {
     await activateImportedSeed(bytes);
   }
 
+  function handlePayloadChange(value: string) {
+    clearSignedPayload();
+    setPayload(value);
+  }
+
   function exportKeypair() {
     if (!pubkeyB64 || !privkeyB64) {
       setError("Generate a keypair before exporting.");
@@ -161,7 +188,6 @@ function KeypairPageInner() {
       pubkey: pubkeyB64,
       privkey: privkeyB64,
       timestamp: new Date().toISOString(),
-      label: exportLabel.trim() || null,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -170,18 +196,7 @@ function KeypairPageInner() {
     a.download = `zns-sovereign-keypair-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }
-
-  function resetAll() {
-    setSeed(null);
-    setPubkeyB64("");
-    setPayload("");
-    setSignatureB64("");
-    setImportPrivB64("");
-    setImportPrivError("");
-    setError("");
-    setExportLabel("");
-    setTab("import");
+    setGeneratedPrivateKeySaved(true);
   }
 
   const borderStyle = (v: PayloadValidation) => payloadBorderStyle(v.level);
@@ -194,23 +209,59 @@ function KeypairPageInner() {
         className="rounded-2xl border p-6"
         style={{ background: "var(--feature-card-bg)", borderColor: "var(--faq-border)" }}
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              Generate or import an Ed25519 keypair, then sign the payload.
+              Use this tool to sign a payload with a Ed25519 keypair.
             </p>
           </div>
-          {(seed || payload || signatureB64) && (
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              onClick={resetAll}
-              className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold"
+              onClick={() => setIsAboutOpen((open) => !open)}
+              aria-expanded={isAboutOpen}
+              aria-controls="keypair-about"
+              className="rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
               style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-muted)" }}
             >
-              Start over
+              About
             </button>
-          )}
+          </div>
         </div>
+
+        {isAboutOpen && (
+          <div
+            id="keypair-about"
+            className="mt-4 rounded-xl border p-4 text-xs"
+            style={{ background: "var(--color-raised)", borderColor: "var(--border-muted)", color: "var(--fg-body)" }}
+          >
+            <p style={{ color: "var(--fg-muted)" }}>
+              This tool runs in your browser. You can review the{" "}
+              <a
+                href="https://github.com/zcashme/zcashnames/blob/main/app/%28site%29/keypair/page.tsx"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                keypair tool code
+              </a>{" "}
+              and its{" "}
+              <a
+                href="https://github.com/zcashme/zcashnames/blob/main/tests/keypair.spec.ts"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                test coverage
+              </a>
+              .
+            </p>
+            <p className="mt-2" style={{ color: "var(--fg-muted)" }}>
+              It covers key generation with <span className="font-mono">crypto.getRandomValues</span>, public-key derivation with{" "}
+              <span className="font-mono">@noble/ed25519</span>, imports, signing, export, and copy actions.
+            </p>
+          </div>
+        )}
 
         {error && (
           <p className="mt-4 text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
@@ -220,24 +271,27 @@ function KeypairPageInner() {
 
         <div className="mt-6 rounded-xl border p-4" style={{ borderColor: "var(--border-muted)" }}>
           <h2 className="text-sm font-bold" style={{ color: "var(--fg-heading)" }}>
-            1. Source your key
+            Step 1. Source your key
           </h2>
           <p className="mt-1 text-xs" style={{ color: "var(--fg-muted)" }}>
-            Generate a new keypair or import your existing one.
+            Import your existing keypair or generate a new one.
           </p>
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div
+            className="mt-4 grid grid-cols-2 overflow-hidden rounded-lg border"
+            style={{ borderColor: "var(--border-muted)" }}
+          >
             <button
               type="button"
-              onClick={() => setTab("import")}
-              className="rounded-xl px-4 py-2.5 text-sm font-semibold"
+              onClick={() => { void switchToImport(); }}
+              className="px-4 py-2.5 text-sm font-semibold cursor-pointer transition-opacity hover:opacity-85"
               style={
                 tab === "import"
                   ? { background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }
-                  : { background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }
+                  : { background: "transparent", color: "var(--fg-body)" }
               }
             >
-              Use Existing Keypair
+              Use Existing
             </button>
             <button
               type="button"
@@ -245,36 +299,24 @@ function KeypairPageInner() {
                 setTab("generate");
                 if (tab !== "generate") {
                   void generateKeypair();
+                } else {
+                  clearSignedPayload();
                 }
               }}
-              className="rounded-xl px-4 py-2.5 text-sm font-semibold"
+              className="border-l px-4 py-2.5 text-sm font-semibold cursor-pointer transition-opacity hover:opacity-85"
               style={
                 tab === "generate"
-                  ? { background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }
-                  : { background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }
+                  ? { background: "var(--home-result-primary-bg)", borderColor: "var(--border-muted)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }
+                  : { background: "transparent", color: "var(--fg-body)", borderColor: "var(--border-muted)" }
               }
             >
-              Generate New Keypair
+              Generate New
             </button>
           </div>
           <div className="mt-4 border-t" style={{ borderColor: "var(--border-muted)" }} />
 
           {tab === "generate" && (
             <div className="mt-4 grid gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
-                  Public Key (base64)
-                </label>
-                <textarea
-                  readOnly
-                  rows={2}
-                  value={pubkeyB64}
-                  placeholder="Public key (base64)"
-                  className="w-full rounded-xl px-3 py-2 text-xs font-mono"
-                  style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
-                />
-                <CopyBtn value={pubkeyB64} label="Copy Public Key" copied={pubkeyCopy.copied} onCopy={() => pubkeyCopy.copy(pubkeyB64)} />
-              </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
                   Private Key (base64)
@@ -287,45 +329,44 @@ function KeypairPageInner() {
                   className="w-full rounded-xl px-3 py-2 text-xs font-mono"
                   style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
                 />
+                <div className="flex flex-wrap items-center gap-2">
+                  <CopyBtn
+                    value={privkeyB64}
+                    label="Copy Private Key"
+                    copied={privkeyCopy.copied}
+                    onCopy={() => {
+                      privkeyCopy.copy(privkeyB64);
+                      setGeneratedPrivateKeySaved(true);
+                    }}
+                  />
+                  {isGeneratedKey && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={exportKeypair}
+                        className="self-start rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                        style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                      >
+                        Export Keypair
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void generateKeypair()}
+                        className="self-start rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                        style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                      >
+                        Regenerate
+                      </button>
+                    </>
+                  )}
+                </div>
                 {seed && (
-                  <p className="text-xs" style={{ color: "var(--fg-muted)" }}>
-                    Save this private key before continuing.
+                  <p
+                    className="text-xs font-semibold"
+                    style={{ color: generatedPrivateKeySaved ? "var(--fg-muted)" : "var(--accent-red, #e05252)" }}
+                  >
+                    Securely store your private key. It is the only way to authorize changes to your name after you claim or buy it, and it cannot be recovered if lost. Your public key can be derived from your private key.
                   </p>
-                )}
-                <CopyBtn value={privkeyB64} label="Copy Private Key" copied={privkeyCopy.copied} onCopy={() => privkeyCopy.copy(privkeyB64)} />
-              </div>
-              <div className="flex flex-wrap items-center justify-start gap-2">
-                <button
-                  type="button"
-                  onClick={() => void generateKeypair()}
-                  className="rounded-lg px-4 py-2 text-sm font-semibold"
-                  style={{
-                    background: "var(--home-result-primary-bg)",
-                    color: "var(--home-result-primary-fg)",
-                    boxShadow: "var(--home-result-primary-shadow)",
-                  }}
-                >
-                  Generate Another
-                </button>
-                {isGeneratedKey && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={exportKeypair}
-                      className="rounded-lg px-3 py-2 text-xs font-semibold"
-                      style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
-                    >
-                      Export Keypair
-                    </button>
-                    <input
-                      type="text"
-                      value={exportLabel}
-                      onChange={(e) => setExportLabel(e.target.value)}
-                      placeholder="Optional export label"
-                      className="h-[34px] w-full max-w-xs rounded-xl px-3 py-2 text-xs outline-none"
-                      style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
-                    />
-                  </>
                 )}
               </div>
             </div>
@@ -365,28 +406,12 @@ function KeypairPageInner() {
                 )}
               </div>
 
-              {seed && pubkeyB64 && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
-                    Public Key (derived)
-                  </label>
-                  <textarea
-                    readOnly
-                    rows={2}
-                    value={pubkeyB64}
-                    className="w-full rounded-xl px-3 py-2 text-xs font-mono"
-                    style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
-                  />
-                  <CopyBtn value={pubkeyB64} label="Copy Public Key" copied={pubkeyCopy.copied} onCopy={() => pubkeyCopy.copy(pubkeyB64)} />
-                </div>
-              )}
-
               <div className="flex flex-wrap items-center justify-start gap-2">
                 {!importPrivB64.trim() && (
                 <button
                   type="button"
                   onClick={() => importFileInputRef.current?.click()}
-                  className="rounded-lg px-3 py-2 text-xs font-semibold"
+                  className="rounded-lg px-3 py-2 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
                   style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
                 >
                   Import Keypair JSON
@@ -402,6 +427,7 @@ function KeypairPageInner() {
                     event.target.value = "";
                     if (!file) return;
                     setError("");
+                    clearSignedPayload();
                     try {
                       await handleImportJsonFile(file);
                     } catch (e) {
@@ -414,10 +440,10 @@ function KeypairPageInner() {
           )}
         </div>
 
-        {seed && (
+        {hasActiveKey && (
           <div className="mt-4 rounded-xl border p-4" style={{ borderColor: "var(--border-muted)" }}>
             <h2 className="text-sm font-bold" style={{ color: "var(--fg-heading)" }}>
-              2. Sign a payload
+              Step 2. Sign a payload
             </h2>
             <p className="mt-1 text-xs" style={{ color: "var(--fg-muted)" }}>
               Paste the payload from the signing modal and sign it with your keypair.
@@ -425,7 +451,7 @@ function KeypairPageInner() {
             <textarea
               rows={5}
               value={payload}
-              onChange={(e) => setPayload(e.target.value)}
+              onChange={(e) => handlePayloadChange(e.target.value)}
               placeholder="Paste the sovereign payload from the modal"
               className="mt-3 w-full rounded-xl px-3 py-2 text-xs font-mono"
               style={{
@@ -441,14 +467,17 @@ function KeypairPageInner() {
               <button
                 type="button"
                 onClick={() => void signPayload()}
-                className="rounded-lg px-4 py-2 text-sm font-semibold"
+                disabled={!!signatureB64}
+                className="rounded-lg px-4 py-2 text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                 style={{
                   background: "var(--home-result-primary-bg)",
                   color: "var(--home-result-primary-fg)",
                   boxShadow: "var(--home-result-primary-shadow)",
+                  opacity: signatureB64 ? 0.65 : 1,
+                  cursor: signatureB64 ? "not-allowed" : "pointer",
                 }}
                >
-                 Sign Payload
+                 {signatureB64 ? "(Signed)" : "Sign Payload"}
                </button>
              </div>
           </div>
@@ -457,25 +486,11 @@ function KeypairPageInner() {
         {signatureB64 && (
           <div className="mt-4 rounded-xl border p-4" style={{ borderColor: "var(--border-muted)" }}>
             <h2 className="text-sm font-bold" style={{ color: "var(--fg-heading)" }}>
-              3. Your signed payload
+              Step 3. Your signed payload
             </h2>
             <p className="mt-1 text-xs" style={{ color: "var(--fg-muted)" }}>
-              Copy the assembled memo and paste it into the signing modal to complete your transaction.
+              Copy the public key and signature back into the signing modal to complete your transaction.
             </p>
-
-            <div className="mt-3 flex flex-col gap-1.5">
-              <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
-                Assembled memo
-              </label>
-              <textarea
-                readOnly
-                rows={3}
-                value={assembledMemo}
-                className="w-full rounded-xl px-3 py-2 text-xs font-mono"
-                style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
-              />
-              <CopyBtn value={assembledMemo} label="Copy Memo" copied={memoCopy.copied} onCopy={() => memoCopy.copy(assembledMemo)} />
-            </div>
 
             <div className="mt-3 flex flex-col gap-1.5">
               <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
