@@ -153,6 +153,9 @@ export default function HomePage() {
                   t.registrationNonce = item.registration.nonce;
                   t.registrationPubkey = item.registration.pubkey ?? null;
                 }
+                if (item.status === "listed") {
+                  t.listingPriceZec = item.listingPrice.zec;
+                }
                 setModalTarget(t);
               }}
               onDismiss={() => removeResult(item.query)}

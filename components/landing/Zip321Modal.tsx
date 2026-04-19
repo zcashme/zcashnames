@@ -14,6 +14,7 @@ import { getNetworkConstants, MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import type { Network } from "@/lib/zns/name";
 import { useCopy } from "@/lib/useCopy";
+import CopyIconButton from "@/components/CopyIconButton";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,6 +26,7 @@ export interface ModalTarget {
   registrationAddress?: string;
   registrationNonce?: number;
   registrationPubkey?: string | null;
+  listingPriceZec?: number;
   network: Network;
   networkPassword: string;
   isReserved?: boolean;
@@ -141,6 +143,23 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
+function prepareDescription(action: Action, name: string, amount: string): React.ReactNode {
+  switch (action) {
+    case "buy":
+      return <>Purchase for <strong>{amount}</strong>.</>;
+    case "delist":
+      return <>Remove from sale.</>;
+    case "release":
+      return <>Allowing others to claim it.</>;
+    case "update":
+      return <>Set a new address.</>;
+    case "list":
+      return <>Set a price for <strong>{name}</strong>.</>;
+    case "claim":
+      return <><strong>{name}</strong></>;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -152,6 +171,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
     registrationAddress,
     registrationNonce,
     registrationPubkey,
+    listingPriceZec,
     network,
     networkPassword,
     isReserved,
@@ -165,6 +185,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   const ownerAuthMode: AuthMode | null = ownerAction ? (registrationPubkey ? "sovereign" : "otp") : null;
   const needsUnlock = isReserved && action === "claim";
   const displayName = `${name}.zcash`;
+  const listingPriceLabel = listingPriceZec == null ? "the listed price" : `${listingPriceZec} ZEC`;
   const explorerHref =
     network === "testnet"
       ? `/explorer?env=testnet&name=${encodeURIComponent(name)}`
@@ -781,15 +802,6 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
     }
   }
 
-  function renderCopyIcon() {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
-        <rect x="9" y="9" width="13" height="13" rx="2" />
-        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-      </svg>
-    );
-  }
-
   function renderExpandIcon() {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
@@ -935,17 +947,14 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
         >
           {value || "Not set"}
         </code>
-        <button
-          type="button"
+        <CopyIconButton
+          copied={copied}
           onClick={onCopy}
           disabled={!value}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
           style={secondaryBtnStyle}
-          aria-label={`Copy ${label.toLowerCase()}`}
+          ariaLabel={`Copy ${label.toLowerCase()}`}
           title={copied ? "Copied!" : `Copy ${label.toLowerCase()}`}
-        >
-          {copied ? "OK" : renderCopyIcon()}
-        </button>
+        />
       </div>
     );
   }
@@ -1009,16 +1018,22 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
               style={{ background: "var(--color-raised)", color: "var(--fg-body)", border: "1px solid var(--border-muted)" }}
             >
               <code className="min-w-0 flex-1 break-all px-3 py-2 text-xs select-all">{uri}</code>
-              <button
-                type="button"
-                onClick={() => uriCopyState.copy(uri)}
-                className="inline-flex min-w-10 items-center justify-center px-3 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                style={{ borderLeft: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
-                aria-label={`Copy ${label}`}
-                title={uriCopyState.copied ? "Copied!" : `Copy ${label}`}
+              <div
+                className="flex items-center px-1.5"
+                style={{ borderLeft: "1px solid var(--border-muted)" }}
               >
-                {uriCopyState.copied ? "OK" : renderCopyIcon()}
-              </button>
+                <CopyIconButton
+                  copied={uriCopyState.copied}
+                  onClick={() => uriCopyState.copy(uri)}
+                  ariaLabel={`Copy ${label}`}
+                  title={uriCopyState.copied ? "Copied!" : `Copy ${label}`}
+                  style={{
+                    background: "transparent",
+                    border: "0",
+                    color: "var(--fg-body)",
+                  }}
+                />
+              </div>
             </div>
           )}
 
@@ -1244,18 +1259,10 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
             {renderProgressSegments()}
             <div className="text-center">
               <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
-                {PREPARE_ACTION_LABEL[action]} &quot;{name}&quot;
+                {PREPARE_ACTION_LABEL[action]} {name}
               </h2>
               <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
-                {action === "release"
-                  ? <>Permanently release <strong>{displayName}</strong>. This cannot be undone.</>
-                  : action === "delist"
-                    ? <>Remove <strong>{displayName}</strong> from sale.</>
-                    : action === "list"
-                      ? <>Set a price for <strong>{displayName}</strong>.</>
-                      : action === "update"
-                        ? <>Set a new address for <strong>{displayName}</strong>.</>
-                        : <><strong>{displayName}</strong></>}
+                {prepareDescription(action, name, listingPriceLabel)}
               </p>
             </div>
 

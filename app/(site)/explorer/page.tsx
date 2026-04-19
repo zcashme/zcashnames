@@ -1,4 +1,4 @@
-import { getEvents, getListings, getHomeStats, resolveName } from "@/lib/zns/resolve";
+import { getCurrentRegistrations, getEvents, getListings, getHomeStats, resolveName } from "@/lib/zns/resolve";
 import type { Network } from "@/lib/zns/name";
 import type { ResolveName } from "@/lib/types";
 import ExplorerShell from "./ExplorerShell";
@@ -31,7 +31,7 @@ export default async function ExplorerPage({
   const networks = getNetworks(env);
   const effectiveNetwork: Network = env === "all" ? "mainnet" : env;
 
-  const [eventsResults, listingsResults, mainnetStats, testnetStats] = await Promise.all([
+  const [eventsResults, listingsResults, registrationsResults, mainnetStats, testnetStats] = await Promise.all([
     Promise.all(
       networks.map((n) =>
         getEvents({ limit: 100 }, n).then((r) => ({
@@ -43,6 +43,11 @@ export default async function ExplorerPage({
     Promise.all(
       networks.map((n) =>
         getListings(n).then((items) => items.map((l) => ({ ...l, network: n })))
+      )
+    ),
+    Promise.all(
+      networks.map((n) =>
+        getCurrentRegistrations(n).then((items) => items.map((r) => ({ ...r, network: n })))
       )
     ),
     getHomeStats("mainnet"),
@@ -57,6 +62,7 @@ export default async function ExplorerPage({
   const initialEvents = eventsResults.flatMap((r) => r.events);
   const initialEventsTotal = eventsResults.reduce((sum, r) => sum + r.total, 0);
   const initialListings = listingsResults.flat();
+  const initialRegistrations = registrationsResults.flat();
 
   let nameResult: ResolveName | null = null;
   let nameEvents: typeof initialEvents = [];
@@ -79,6 +85,7 @@ export default async function ExplorerPage({
         initialEvents={initialEvents}
         initialEventsTotal={initialEventsTotal}
         initialListings={initialListings}
+        initialRegistrations={initialRegistrations}
         stats={stats}
         uivks={uivks}
         environment={env}

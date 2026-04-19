@@ -4,6 +4,7 @@ import type React from "react";
 import Image from "next/image";
 import type { Action } from "@/lib/types";
 import type { Network } from "@/lib/zns/name";
+import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
 
 type AvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
 
@@ -340,13 +341,7 @@ export default function HomeResultCard({
                 rel="noreferrer"
                 className="home-result-link inline-flex items-center gap-1.5 whitespace-nowrap leading-none"
               >
-                <Image
-                  src="/landing/z5.png"
-                  alt="Explorer logo"
-                  width={18}
-                  height={18}
-                  className="theme-media-home"
-                />
+                <ZcashNamesLogoMark alt="Explorer logo" size={18} className="theme-media-home" />
                 <span className="inline-flex items-center leading-none">View in Explorer</span>
               </a>
               <a

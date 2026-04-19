@@ -20,14 +20,96 @@ test.describe("Explorer page", () => {
     await expect(page.getByRole("button", { name: /^All/i })).toBeVisible();
   });
 
-  test("Registered tab shows events", async ({ page }) => {
+  test("toolbar appears before tabs", async ({ page }) => {
+    const searchInput = page.getByPlaceholder("Search...");
+    const allTab = page.getByRole("button", { name: /^All/i });
+    await expect(searchInput).toBeVisible();
+    await expect(allTab).toBeVisible();
+
+    const order = await page.evaluate(() => {
+      const input = document.querySelector("input[placeholder='Search...']");
+      const tab = Array.from(document.querySelectorAll("button")).find((button) =>
+        /^All\b/.test(button.textContent ?? "")
+      );
+      if (!input || !tab) return 0;
+      return input.compareDocumentPosition(tab);
+    });
+    expect(order & 4).toBeTruthy();
+  });
+
+  test("Registered tab shows current registrations", async ({ page }) => {
     await page.getByRole("button", { name: /^Registered/i }).click();
-    expect(await page.getByRole("table").getByRole("row").count()).toBeGreaterThanOrEqual(1);
+    const table = page.getByRole("table");
+    await expect(table.getByRole("columnheader", { name: /^Status$/i })).toBeVisible();
+    await expect(table.getByRole("columnheader", { name: /^Action$/i })).toHaveCount(0);
+    expect(await table.getByRole("row").count()).toBeGreaterThanOrEqual(1);
   });
 
   test("For Sale tab shows listings table", async ({ page }) => {
     await page.getByRole("button", { name: /^For Sale/i }).click();
     await expect(page.getByRole("table")).toBeVisible();
+  });
+
+  test("clicking a for-sale row opens detail on the row network with For Sale badge", async ({ page }) => {
+    await page.goto("/explorer?env=all");
+    await page.getByRole("button", { name: /^For Sale/i }).click();
+
+    const firstRow = page.getByRole("table").locator("tbody tr").first();
+    const nameButton = firstRow.getByRole("button").first();
+    test.skip((await nameButton.count()) === 0, "No listed names available in the live indexer.");
+
+    const rawName = (await nameButton.innerText()).replace(/\.zcash$/i, "");
+    const netLabel = (await firstRow.locator("td").last().innerText()).trim();
+    const expectedEnv = netLabel === "T" ? "testnet" : "mainnet";
+
+    await nameButton.click();
+
+    await expect(page).toHaveURL(new RegExp(`[?&]env=${expectedEnv}`));
+    await expect(page).toHaveURL(new RegExp(`[?&]name=${rawName}`));
+    const detail = page.getByTestId("explorer-name-detail");
+    await expect(detail.getByText(/^For Sale$/i)).toBeVisible({ timeout: 10000 });
+    await expect(detail.getByText(/^[0-9.]+ ZEC$/)).toBeVisible();
+    await expect(detail.getByText(/^\$[0-9]+\.[0-9]{2} USD$/)).toBeVisible({ timeout: 10000 });
+    await expect(detail.getByRole("button", { name: /^Buy Now$/ })).toBeVisible();
+    await expect(detail.getByRole("button", { name: /^Delist from Sale$/ })).toBeVisible();
+    await expect(detail.getByRole("button", { name: /^Release Name$/ })).toBeVisible();
+    await expect(detail.getByText(new RegExp(`^${rawName.length} characters$`))).toBeVisible();
+    const firstBucket = detail.getByText(/^First \d+$/);
+    if ((await firstBucket.count()) > 0) await expect(firstBucket).toBeVisible();
+
+    const zcashMeLink = detail.getByRole("link", { name: /View on ZcashMe/i });
+    await expect(detail.getByRole("link", { name: /View in Explorer/i })).toHaveCount(0);
+    await expect(detail.getByAltText("ZcashMe logo")).toBeVisible();
+    await expect(zcashMeLink).toHaveAttribute("href", `https://zcash.me/${encodeURIComponent(rawName)}`);
+
+    await expect(page.getByTestId("listed-detail-divider")).toBeVisible();
+    await expect(detail.getByText(/^Address:/)).toBeVisible();
+    await expect(detail.getByText(/^Block:/)).toBeVisible();
+    await expect(detail.getByText(/^Txid:/)).toBeVisible();
+    await expect(detail.getByText(/^LIST$/)).toBeVisible();
+  });
+
+  test("clicking a registered row from all environments preserves the row network", async ({ page }) => {
+    await page.goto("/explorer?env=all");
+    await page.getByRole("button", { name: /^Registered/i }).click();
+
+    const firstRow = page.getByRole("table").locator("tbody tr").first();
+    const nameButton = firstRow.getByRole("button").first();
+    test.skip((await nameButton.count()) === 0, "No registered names available in the live indexer.");
+
+    const rawName = (await nameButton.innerText()).replace(/\.zcash$/i, "");
+    const netLabel = (await firstRow.locator("td").last().innerText()).trim();
+    const expectedEnv = netLabel === "T" ? "testnet" : "mainnet";
+
+    await nameButton.click();
+
+    await expect(page).toHaveURL(new RegExp(`[?&]env=${expectedEnv}`));
+    await expect(page).toHaveURL(new RegExp(`[?&]name=${rawName}`));
+    const detail = page.getByTestId("explorer-name-detail");
+    await expect(detail.getByRole("link", { name: /View on ZcashMe/i })).toHaveAttribute(
+      "href",
+      `https://zcash.me/${encodeURIComponent(rawName)}`
+    );
   });
 
   test("More dropdown opens and shows action tabs", async ({ page }) => {
@@ -37,9 +119,41 @@ test.describe("Explorer page", () => {
     await expect(page.getByRole("button", { name: /^Delist/i })).toBeVisible();
   });
 
-  test("searching a name via URL shows name detail panel", async ({ page }) => {
-    await page.goto("/explorer?name=alice");
-    await expect(page.getByText(/alice\.zcash/i)).toBeVisible({ timeout: 10000 });
+  test("URL name query filters counts and can be cleared from the search field", async ({ page }) => {
+    await page.goto("/explorer?name=brycewilcox");
+
+    await expect(page.getByPlaceholder("Search...")).toHaveValue("brycewilcox");
+    await expect(page.getByRole("button", { name: /^All \(\d+\/\d+\)$/i })).toBeVisible({ timeout: 10000 });
+    const detail = page.getByTestId("explorer-name-detail");
+    await expect(detail.getByText(/^brycewilcox$/i)).toBeVisible({ timeout: 10000 });
+    await expect(detail.getByText(/brycewilcox\.zcash/i)).toHaveCount(0);
+
+    await page.getByRole("button", { name: /^Clear$/ }).click();
+    await expect(page.getByPlaceholder("Search...")).toHaveValue("");
+    await expect(page).not.toHaveURL(/name=brycewilcox/);
+  });
+
+  test("name detail card does not include its own clear button", async ({ page }) => {
+    await page.goto("/explorer?name=brycewilcox");
+    await expect(page.getByTestId("explorer-name-detail").getByText(/^brycewilcox$/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /^Clear$/ })).toHaveCount(1);
+  });
+
+  test("editing search while detail is open returns to filtered results", async ({ page }) => {
+    await page.goto("/explorer?name=brycewilcox");
+    const searchInput = page.getByPlaceholder("Search...");
+    const detail = page.getByTestId("explorer-name-detail");
+
+    await expect(detail).toBeVisible({ timeout: 10000 });
+    await searchInput.fill("brycewilcoxx");
+
+    await expect(detail).toHaveCount(0);
+    await expect(page.getByRole("table")).toBeVisible();
+    await expect(page.getByRole("button", { name: /^All \(\d+\/\d+\)$/i })).toBeVisible();
+
+    await searchInput.press("Enter");
+
+    await expect(page.getByTestId("explorer-name-detail")).toBeVisible({ timeout: 10000 });
   });
 
   test("testnet environment loads via URL param", async ({ page }) => {

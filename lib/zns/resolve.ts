@@ -1,15 +1,27 @@
 "use server";
 
-import { resolve, registrationStatus, status, events, listForSale, type VerifiedListing } from "@/lib/zns/client";
+import { resolve, registrationStatus, status, events, listForSale, type ResolveResult, type VerifiedListing } from "@/lib/zns/client";
 import { normalizeUsername, isValidUsername, zatsToZec, type Network } from "@/lib/zns/name";
 import { getExchangeRate } from "@/lib/exchange-rate";
 import { getReservedName } from "@/lib/zns/reserved";
+import { getListingMap, reconcileRegistrationListing } from "@/lib/zns/listing-reconciliation";
 import type { Action, ResolveName } from "@/lib/types";
 
 const FIRST_BUCKET_SIZE = 100;
+const REGISTRATION_EVENT_PAGE_SIZE = 200;
+const REGISTRATION_RESOLVE_CONCURRENCY = 8;
 
 function toFirstBucket(ordinal: number): number {
   return Math.max(FIRST_BUCKET_SIZE, Math.ceil(ordinal / FIRST_BUCKET_SIZE) * FIRST_BUCKET_SIZE);
+}
+
+async function findActiveListing(name: string, network: Network): Promise<VerifiedListing | null> {
+  try {
+    const listings = await listForSale(network);
+    return listings.find((listing) => listing.name === name) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function getClaimOrdinal(name: string, network: Network): Promise<number | null> {
@@ -67,6 +79,74 @@ async function getFirstBucketForClaim(name: string, network: Network): Promise<n
   }
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        results[index] = await fn(items[index]);
+      }
+    }),
+  );
+
+  return results;
+}
+
+async function getEventNames(network: Network): Promise<string[]> {
+  const names = new Set<string>();
+  let offset = 0;
+  let total = Number.POSITIVE_INFINITY;
+
+  while (offset < total) {
+    const page = await events({ limit: REGISTRATION_EVENT_PAGE_SIZE, offset }, network);
+    total = page.total;
+    for (const ev of page.events) {
+      if (ev.name) names.add(ev.name);
+    }
+    if (page.events.length === 0) break;
+    offset += page.events.length;
+  }
+
+  return [...names];
+}
+
+export async function getCurrentRegistrations(network: Network = "testnet"): Promise<ResolveResult[]> {
+  try {
+    const [names, listings] = await Promise.all([
+      getEventNames(network),
+      listForSale(network).catch(() => [] as VerifiedListing[]),
+    ]);
+    const listingsByName = getListingMap(listings);
+    const registrations = await mapWithConcurrency(
+      names,
+      REGISTRATION_RESOLVE_CONCURRENCY,
+      async (name) => {
+        try {
+          return await resolve(name, network);
+        } catch {
+          return null;
+        }
+      },
+    );
+
+    return registrations
+      .filter((reg): reg is ResolveResult => reg != null)
+      .map((reg) => reconcileRegistrationListing(reg, listingsByName))
+      .sort((a, b) => b.height - a.height || a.name.localeCompare(b.name));
+  } catch {
+    return [];
+  }
+}
+
 export async function resolveName(
   rawName: string,
   network: Network = "testnet"
@@ -77,7 +157,7 @@ export async function resolveName(
     throw new Error("Use 1-62 characters: lowercase letters and numbers only.");
   }
 
-  const registration = await resolve(normalized, network);
+  let registration = await resolve(normalized, network);
   const nameStatus = registrationStatus(registration);
 
   if (nameStatus === "available") {
@@ -113,6 +193,11 @@ export async function resolveName(
     };
   }
 
+  if (registration && !registration.listing) {
+    const listing = await findActiveListing(normalized, network);
+    if (listing) registration = { ...registration, listing };
+  }
+
   const reg = {
     name: registration!.name,
     address: registration!.address,
@@ -122,7 +207,7 @@ export async function resolveName(
     pubkey: registration!.pubkey ?? null,
   };
 
-  if (nameStatus === "forsale") {
+  if (registration!.listing) {
     const firstBucket = await getFirstBucketForClaim(normalized, network);
     return {
       status: "listed",
