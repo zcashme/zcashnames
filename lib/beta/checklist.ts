@@ -26,14 +26,14 @@ export const BETA_CHECKLIST: ChecklistItem[] = [
   { id: "ux-a1", label: "1. Claim a name", hint: "Get a name no one else has. Set authorization to passcode.", section: "Passcode Authorization", group: "user" },
   { id: "ux-a2", label: "2. List name for sale", hint: "Sell your name for any price.", section: "Passcode Authorization", group: "user" },
   { id: "ux-a3", label: "3. Delist name", hint: "Remove your name from the market.", section: "Passcode Authorization", group: "user" },
-  { id: "ux-b1", label: "4. Buy a listed name", hint: "Buy a name listed for sale. For example, esengulov, paulpuey, viksharma, jswihart. Set authorization to passcode.", section: "Passcode Authorization", group: "user" },
+  { id: "ux-b1", label: "4. Buy a listed name", hint: "Find names for sale in the Name Explorer. Buy one, setting authorization to passcode.", section: "Passcode Authorization", group: "user" },
   { id: "ux-b2", label: "5. Update address", hint: "Change the address associated with the name you bought.", section: "Passcode Authorization", group: "user" },
   { id: "ux-b3", label: "6. Release name", hint: "Let go of the name you bought. Someone else can claim it.", section: "Passcode Authorization", group: "user" },
 
   { id: "ux-c1", label: "1. Claim a name", hint: "Reclaim the name you released in B3, or claim another available name. Set authorization to signature.", section: "Signature Authorization", group: "user" },
   { id: "ux-c2", label: "2. List name for sale", hint: "Sell your name for any price.", section: "Signature Authorization", group: "user" },
   { id: "ux-c3", label: "3. Delist name", hint: "Remove your name from the market.", section: "Signature Authorization", group: "user" },
-  { id: "ux-d1", label: "4. Buy a listed name", hint: "Buy one of the example names above. Set authorization to signature.", section: "Signature Authorization", group: "user" },
+  { id: "ux-d1", label: "4. Buy a listed name", hint: "Buy a name listed for sale in the Name Explorer. Set authorization to signature.", section: "Signature Authorization", group: "user" },
   { id: "ux-d2", label: "5. Update address", hint: "Change the address associated with the name you bought.", section: "Signature Authorization", group: "user" },
   { id: "ux-d3", label: "6. Release name", hint: "Let go of the name you bought and return it to the unowned state.", section: "Signature Authorization", group: "user" },
 
