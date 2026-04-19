@@ -23,7 +23,7 @@ ZNS has three components:
 1. ZNS Indexer (Rust) - connects to lightwalletd via gRPC, streams blocks, trial-decrypts Orchard shielded notes, parses ZNS: memos, maintains a SQLite registry, and exposes a JSON-RPC API.
    GitHub: https://github.com/zcashme/ZNS
 
-2. ZVS (Zcash Verification Service) - watches the mempool for OTP verification requests and responds with 6-digit HMAC-SHA256 codes via shielded memos. Used to authorize admin actions (LIST, DELIST, UPDATE).
+2. ZVS (Zcash Verification Service) - watches the mempool for OTP verification requests and responds with 6-digit HMAC-SHA256 codes via shielded memos. Used to authorize admin-signed actions.
 
 3. Web App (Next.js) - queries the indexer via JSON-RPC, builds memos and ZIP-321 payment URIs, and signs admin action memos with Ed25519.
    GitHub: https://github.com/zcashme/zcashnames
@@ -46,23 +46,25 @@ Request:
 {"jsonrpc":"2.0","id":1,"method":"resolve","params":{"query":"alice"}}
 
 Response (found):
-{"jsonrpc":"2.0","id":1,"result":{"name":"alice","address":"u1...","txid":"abc123...","height":1234567,"nonce":0,"signature":"...","listing":null}}
+{"jsonrpc":"2.0","id":1,"result":{"name":"alice","address":"u1...","txid":"abc123...","height":1234567,"nonce":0,"signature":"...","last_action":"CLAIM","pubkey":null,"listing":null}}
 
 Response (not found):
 {"jsonrpc":"2.0","id":1,"result":null}
 
-The listing field is non-null when the name is listed for sale, containing price and related data.
+The last_action field (one of CLAIM, BUY, UPDATE, DELIST, RELEASE) selects the Ed25519 pre-image template for verifying signature. The pubkey field is null for admin-managed names and non-null (base64) for sovereign names; when non-null, verify signature against it instead of status.admin_pubkey. The listing field is non-null when the name is listed for sale and carries its own independent signature.
+
+If query is a Zcash unified address instead of a name, the result is an array of every registration bound to that address (possibly empty). If query is the empty string, the result is a paginated list of all registrations; limit (default 50, max 500) and offset parameters apply.
 
 
-## list_for_sale
+## listings
 
-Fetch all names currently listed for sale.
+Fetch names currently listed for sale. Supports pagination (default limit 50, max 500).
 
 Request:
-{"jsonrpc":"2.0","id":2,"method":"list_for_sale","params":{}}
+{"jsonrpc":"2.0","id":2,"method":"listings","params":{"limit":50,"offset":0}}
 
 Response:
-{"jsonrpc":"2.0","id":2,"result":{"listings":[{"name":"bob","price":100000000,"txid":"def456...","height":1234568,"signature":"..."}]}}
+{"jsonrpc":"2.0","id":2,"result":{"listings":[{"name":"bob","price":100000000,"nonce":2,"txid":"def456...","height":1234568,"signature":"...","pubkey":null}],"total":3}}
 
 
 ## status
@@ -73,9 +75,22 @@ Request:
 {"jsonrpc":"2.0","id":3,"method":"status","params":{}}
 
 Response:
-{"jsonrpc":"2.0","id":3,"result":{"synced_height":1234567,"admin_pubkey":"...","ufvk":"...","registered":42,"listed":3,"pricing":{"nonce":5,"height":1234567,"tiers":[600000000,425000000,300000000,150000000,75000000,50000000,25000000]}}}
+{"jsonrpc":"2.0","id":3,"result":{"synced_height":1234567,"admin_pubkey":"...","uivk":"...","address":"u1...","registered":42,"listed":3,"pricing":{"nonce":5,"height":1234567,"tiers":[600000000,425000000,300000000,150000000,75000000,50000000,25000000]}}}
 
-The pricing.tiers array is indexed by name length minus one: index 0 is the price for 1-character names, index 6 is the price for 7+ character names.
+The pricing.tiers array is indexed by name length minus one: index 0 is the price for 1-character names, index 6 is the price for 7+ character names. The uivk field is the indexer's unified incoming viewing key. Clients can use it to rescan Orchard outputs and independently verify pricing and SETPRICE history. The address field is the registry payment address where ZNS memos must be sent.
+
+
+## events
+
+Fetch the signed event log. Events are returned newest-first. Filter by name, action, or since_height.
+
+Request:
+{"jsonrpc":"2.0","id":4,"method":"events","params":{"action":"CLAIM","limit":50,"offset":0}}
+
+Response:
+{"jsonrpc":"2.0","id":4,"result":{"events":[{"id":101,"name":"alice","action":"CLAIM","txid":"...","height":1234570,"ua":"u1...","price":null,"nonce":null,"signature":"...","pubkey":null}],"total":142}}
+
+The action field is one of CLAIM, LIST, DELIST, RELEASE, UPDATE, BUY, SETPRICE. Fields that do not apply to a given action (price on CLAIM, nonce on CLAIM/BUY) are null.
 
 
 # Memo Format
@@ -83,41 +98,70 @@ The pricing.tiers array is indexed by name length minus one: index 0 is the pric
 All ZNS memos are UTF-8 strings in the 512-byte Orchard shielded memo field, prefixed with ZNS:.
 
 
+Every ZNS memo carries a base64-encoded Ed25519 signature over a canonical payload string. The 64-byte signature uses RFC 4648 base64. For actions with a nonce, the nonce must be strictly greater than the name's current nonce for replay protection.
+
+Signatures come from one of two keys:
+- The indexer's admin key, published in status.admin_pubkey. Used for names managed by the registry.
+- A user-owned sovereign key. When a sovereign key signs, the pubkey is appended as an extra base64 suffix on the memo so verifiers can check it without trusting the indexer.
+
+Sovereign-signed memos are optional and have the form `...:<signature>:<pubkey>`. If the trailing `:<pubkey>` is absent, the signature is verified against status.admin_pubkey.
+
+
 ## CLAIM - register a new name
 
-ZNS:CLAIM:<name>:<unified_address>:<signature>
+ZNS:CLAIM:<name>:<unified_address>:<signature>[:<pubkey>]
 
-The transaction must include payment >= the claim cost for the name's character length. The payment is sent to the indexer's address (derivable from the UFVK in the status response).
+Signature payload: CLAIM:<name>:<unified_address>
+
+The transaction must include payment >= the claim cost for the name's character length. The payment is sent to the registry address returned by the status RPC.
 
 
 ## BUY - purchase a listed name
 
-ZNS:BUY:<name>:<buyer_unified_address>:<signature>
+ZNS:BUY:<name>:<buyer_unified_address>:<signature>[:<pubkey>]
+
+Signature payload: BUY:<name>:<buyer_unified_address>
 
 The transaction must include payment >= the listing price.
 
 
-## LIST - list a name for sale (admin-signed)
+## LIST - list a name for sale
 
-ZNS:LIST:<name>:<price_in_zatoshis>:<nonce>:<base64_signature>
+ZNS:LIST:<name>:<price_in_zatoshis>:<nonce>:<signature>[:<pubkey>]
 
 Signature payload: LIST:<name>:<price>:<nonce>
 
 
-## DELIST - remove from marketplace (admin-signed)
+## DELIST - remove a listing
 
-ZNS:DELIST:<name>:<nonce>:<base64_signature>
+ZNS:DELIST:<name>:<nonce>:<signature>[:<pubkey>]
 
 Signature payload: DELIST:<name>:<nonce>
 
 
-## UPDATE - change the resolved address (admin-signed)
+## UPDATE - change the resolved address
 
-ZNS:UPDATE:<name>:<new_unified_address>:<nonce>:<base64_signature>
+ZNS:UPDATE:<name>:<new_unified_address>:<nonce>:<signature>[:<pubkey>]
 
 Signature payload: UPDATE:<name>:<new_unified_address>:<nonce>
 
-Admin-signed actions (LIST, DELIST, UPDATE) use Ed25519 signatures. The 64-byte signature is base64-encoded per RFC 4648. For replay protection, the nonce must be strictly greater than the name's current nonce.
+
+## RELEASE - give up a name
+
+ZNS:RELEASE:<name>:<nonce>:<signature>[:<pubkey>]
+
+Signature payload: RELEASE:<name>:<nonce>
+
+A released name is deleted from the registry and becomes available for a new CLAIM.
+
+
+## SETPRICE - update the claim pricing tiers (admin only)
+
+ZNS:SETPRICE:<count>:<price_1>:...:<price_N>:<nonce>:<signature>
+
+Signature payload: SETPRICE:<count>:<price_1>:...:<price_N>:<nonce>
+
+SETPRICE is always signed by the admin key; it has no sovereign form.
 
 
 # Pricing
@@ -149,87 +193,93 @@ zcash:u1indexer...?amount=0.25&memo=Wk5TOkNMQUlNOmFsaWNlOnUxYnV5ZXIuLi46c2ln
 
 # TypeScript SDK
 
-The SDK is available at sdk/typescript/ in the zcashnames repo.
-GitHub: https://github.com/zcashme/zcashnames/tree/main/sdk/typescript
+Published on npm as `zcashname-sdk`. The SDK wraps the JSON-RPC API, validates names and addresses, builds ZNS memos via a prepare/complete signing pattern, and verifies registration and listing signatures.
+
+npm: https://www.npmjs.com/package/zcashname-sdk
+GitHub: https://github.com/zcashme/ZNS/tree/main/sdk/typescript
 
 
 ## Client
 
-import { createClient } from "zns-sdk";
+import { ZNS } from "zcashname-sdk";
 
-const client = await createClient("https://light.zcash.me/zns-testnet");
-const result = await client.resolve("alice");
-const items = await client.listings();
-const s = await client.status();
+const zns = new ZNS({ network: "testnet" });
+// or point at a custom indexer:
+const custom = new ZNS({ network: "mainnet", url: "https://light.zcash.me/zns-mainnet-test" });
 
-createClient verifies the indexer's UFVK by default. Pass {skipVerify: true} as the second argument to skip verification.
-
-
-## Convenience Functions
-
-These use a default client pointed at the standard endpoint.
-
-import { resolve, isAvailable, getNonce, listings, status } from "zns-sdk";
-
-const result = await resolve("alice");       // ResolveResult | null
-const available = await isAvailable("alice"); // boolean
-const nonce = await getNonce("alice");        // number | null
-const items = await listings();               // Listing[]
-const s = await status();                     // StatusResult
+The constructor is synchronous. To confirm the indexer is a known ZNS instance (its uivk matches one of the two embedded constants), call `await zns.verify()` before issuing reads.
 
 
-## Memo Builders
+## Reads
 
-import { buildClaimMemo, buildBuyMemo, buildListMemo, buildDelistMemo, buildUpdateMemo } from "zns-sdk";
+await zns.status();                       // Status
+await zns.resolveName("alice");           // Registration | null
+await zns.resolveAddress("u1...", 50, 0); // Registration[]   (paginated)
+await zns.listAllRegistrations(50, 0);    // Registration[]   (paginated)
+await zns.listings(50, 0);                // { listings: Listing[]; total: number }
+await zns.events({ action: "CLAIM", limit: 50 });  // EventsResult
+await zns.isAvailable("alice");           // boolean
 
-buildClaimMemo("alice", "utest1...", signature);       // "ZNS:CLAIM:alice:utest1...:sig"
-buildBuyMemo("alice", "utest1...", signature);         // "ZNS:BUY:alice:utest1...:sig"
-buildListMemo("alice", 100000000, 1, signature);       // "ZNS:LIST:alice:100000000:1:sig"
-buildDelistMemo("alice", 2, signature);                // "ZNS:DELIST:alice:2:sig"
-buildUpdateMemo("alice", "utest1...", 3, signature);   // "ZNS:UPDATE:alice:utest1...:3:sig"
+
+## Actions (prepare / complete)
+
+Every mutating action is a two-step flow. `prepareX` returns an object with a canonical `payload` string you Ed25519-sign externally, plus a `complete(signature, pubkey?)` that returns the final `{ memo, uri }`. Pass a `pubkey` only for sovereign-signed names; omit it for admin-signed names.
+
+import { ZNS } from "zcashname-sdk";
+
+const zns = new ZNS({ network: "testnet" });
+const s = await zns.status();
+const cost = zns.claimCost("alice".length, s.pricing);  // Zats | null
+
+const prepared = zns.prepareClaim("alice", "utest1...", cost);
+const signature = await signEd25519(prepared.payload);  // your signer
+const { memo, uri } = prepared.complete(signature);     // admin-signed
+// or, for a sovereign key:
+const sovereign = prepared.complete(signature, userPubkeyBase64);
+
+Available preparers:
+
+zns.prepareClaim(name, address, cost);
+zns.prepareBuy(name, buyerAddress);
+zns.prepareList(name, price, nonce);
+zns.prepareDelist(name, nonce);
+zns.prepareUpdate(name, newAddress, nonce);
+zns.prepareRelease(name, nonce);
+zns.prepareSetPrice(prices, nonce);  // admin-only; no pubkey arg on complete
+
+The returned `uri` is a ZIP-321 URI pointing at `zns.registryAddress` with the memo base64url-encoded.
 
 
-## Signature Payload Builders
+## Signature Verification
 
-import { claimPayload, buyPayload, listPayload, delistPayload, updatePayload } from "zns-sdk";
+await zns.verifyRegistration(reg, s.admin_pubkey);  // boolean
+await zns.verifyListing(listing, s.admin_pubkey);   // boolean
 
-These return the string that should be Ed25519-signed before passing to the memo builders.
+If the registration or listing has its own `pubkey` (sovereign), it is used instead of `admin_pubkey`.
 
 
 ## Validation
 
-import { isValidName } from "zns-sdk";
-
-isValidName("alice");   // true
-isValidName("-alice");  // false (leading hyphen)
-isValidName("ALICE");   // false (uppercase)
-
-
-## Pricing
-
-import { claimCost } from "zns-sdk";
-
-claimCost(1);  // 600_000_000
-claimCost(7);  // 25_000_000
-
-The argument is the character length of the name.
+zns.isValidName("alice");                 // true
+zns.isValidName("ALICE");                 // false
+zns.isValidUnifiedAddress("u1...");       // true
+zns.isValidUnifiedAddress("utest1...");   // true
 
 
 ## URI Helpers
 
-import { buildZcashUri, parseZip321Uri, toBase64Url, decodeBase64Url } from "zns-sdk";
+zns.parseZip321Uri("zcash:u1...?amount=0.25&memo=...");
+// { address, amount, memoRaw, memoDecoded }
 
 
-## Error Handling
+## Exported Types
 
-import { ZNSError, ErrorType } from "zns-sdk";
-
-ErrorType values: ParseError, InvalidRequest, MethodNotFound, InvalidParams, InternalError, HttpError, UfvkMismatch
+Registration, Listing, Status, Pricing, Event, EventsFilter, EventsResult, Zats, CompletedAction, PreparedClaim, PreparedBuy, PreparedList, PreparedDelist, PreparedUpdate, PreparedRelease, PreparedSetPrice, LastAction, EventAction
 
 
 # OTP Verification (ZVS)
 
-Admin actions (LIST, DELIST, UPDATE) require OTP verification. The flow:
+Admin-signed actions require OTP verification so the registry only signs when a user has proven control of an address. The flow:
 
 1. The web app generates a 16-digit session ID.
 2. The user sends a 0.002 ZEC shielded transaction with the memo:
@@ -252,12 +302,12 @@ Viewing keys (uview1...): Rejected.
 To integrate with ZNS:
 
 1. Use the JSON-RPC API to resolve names and check availability.
-2. Use the status endpoint to get current pricing and the indexer's UFVK (from which you derive the payment address).
-3. Construct the appropriate ZNS: memo for the desired action.
+2. Use the status endpoint to fetch current pricing, the admin public key (for signature verification), and the registry payment address.
+3. Construct the appropriate ZNS: memo for the desired action and Ed25519-sign its canonical payload.
 4. Build a ZIP-321 URI or directly create a shielded transaction with the memo and required payment.
-5. For admin actions, complete OTP verification via ZVS first, then sign the memo payload with Ed25519 using the admin key.
+5. For admin-signed actions, complete OTP verification via ZVS first, then sign with the admin key.
 
-Alternatively, use the TypeScript SDK which wraps all of the above.
+Alternatively, use the zcashname-sdk TypeScript SDK which wraps all of the above.
 
 
 # Links
