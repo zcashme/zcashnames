@@ -46,5 +46,8 @@ _upstream_zcashname/
 spell-ui/
 brand-kit/
 
+# pagefind search index (generated at build time)
+public/_pagefind/
+
 # local-only internal tools
 app/(site)/internal/email-preview/
