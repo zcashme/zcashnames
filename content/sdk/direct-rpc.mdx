@@ -43,22 +43,73 @@ Response:
 }
 ```
 
-## Resolve by address
+## Resolve by address (paginated)
 
 ```sh
+# Get first 50 names registered to this address
 curl -sX POST https://light.zcash.me/zns-testnet \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"resolve","params":{"query":"utest1qqq…"}}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"resolve","params":{"query":"utest1qqq…","limit":50,"offset":0}}'
 ```
 
-For address queries the result is an **array** of registrations (possibly empty). The indexer decides which branch based on whether the query parses as a Zcash address.
+For address queries the result is a paginated object with a `registrations` array (possibly empty). The indexer decides which branch based on whether the query parses as a Zcash address.
 
-## List for sale
+Response format:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "registrations": [...],
+    "total": 5
+  }
+}
+```
+
+## All registrations (paginated)
+
+Pass an empty `query` to list every registration. Useful for explorers, offline snapshots, and parity-checking the SDK's `listAllRegistrations` helper.
 
 ```sh
+# First 50 registrations
 curl -sX POST https://light.zcash.me/zns-testnet \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"list_for_sale","params":{}}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"resolve","params":{"query":"","limit":50,"offset":0}}'
+
+# Next page
+curl -sX POST https://light.zcash.me/zns-testnet \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"resolve","params":{"query":"","limit":50,"offset":50}}'
+```
+
+Same `{ registrations, total }` shape as the by-address branch. `limit` defaults to 50 and is capped at 500 server-side. Compare `total` against `status.registered` — they should match.
+
+## Listings (paginated)
+
+```sh
+# Get first 50 active listings (default)
+curl -sX POST https://light.zcash.me/zns-testnet \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"listings","params":{"limit":50,"offset":0}}'
+
+# Get next page of listings
+curl -sX POST https://light.zcash.me/zns-testnet \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"listings","params":{"limit":50,"offset":50}}'
+```
+
+Response format:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "listings": [...],
+    "total": 123
+  }
+}
 ```
 
 ## Status

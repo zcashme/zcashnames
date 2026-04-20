@@ -46,15 +46,40 @@ The web UI is deliberately more conservative than the protocol.
 
 The easiest way to browse the marketplace is the [Explorer](/explorer) - switch to the **For Sale** tab to see every active listing across networks, with the seller and price in one view.
 
-Programmatically, call `list_for_sale` to get every active listing, ordered newest first:
+Programmatically, call `listings` to get active listings with pagination support. Results are ordered newest first:
 
 ```bash
+# Get the first 50 listings (default page)
 curl -sX POST https://light.zcash.me/zns-testnet \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"list_for_sale","params":{}}' | jq
+  -d '{"jsonrpc":"2.0","id":1,"method":"listings","params":{"limit":50,"offset":0}}' | jq
+```
+
+You can request up to 500 listings per page:
+
+```bash
+# Get listings 101-200 (second page with custom size)
+curl -sX POST https://light.zcash.me/zns-testnet \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"listings","params":{"limit":100,"offset":100}}' | jq
 ```
 
 The response includes each listing's signature so clients can verify independently. See [Resolution](/docs/learn/resolution) for the signature semantics.
+
+**Response format:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "listings": [...],
+    "total": 123
+  }
+}
+```
+
+The `total` field indicates the total number of active listings available.
 
 ## Gotchas
 

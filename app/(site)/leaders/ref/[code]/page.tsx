@@ -642,10 +642,9 @@ export default function ReferralDashboardPage() {
             (directMetricFace === "direct"
               ? "Direct referrals signed up with this referral code."
               : "Indirect referrals signed up through this code's referral tree.")}
-          {activeMetricKey === "payout" &&
-            (model === "commission"
-              ? "Projected rewards if all referrals purchase names during early access."
-              : "Projected rewards if all referrals purchase names during early access.")}
+          {activeMetricKey === "payout" && (
+            "Projected rewards if all referrals purchase names during early access."
+          )}
         </p>
       </div>
 
@@ -957,6 +956,14 @@ export default function ReferralDashboardPage() {
         </section>
       )}
 
+      <p className="mb-8 text-center text-xs text-fg-muted">
+        Referral rewards are subject to{" "}
+        <Link href="/leaders/terms" className="underline underline-offset-2">
+          terms
+        </Link>
+        .
+      </p>
+
     </main>
   );
 }
@@ -1261,17 +1268,18 @@ function RewardSchedule({
           <h2 className="text-xl font-semibold text-fg-heading">Summary</h2>
           <p className="mt-1 text-sm text-fg-muted">
             {model === "fixed"
-              ? "Fixed rewards start at 0.05 ZEC for level I and halve each level."
-              : `You are earning ${formatPercent(
-                  commissionRate,
-                )} commission on all referrals, both direct and indirect. ${
-                  nextCommissionTier
-                    ? `Get ${referralsToNextTier.toLocaleString()} more ${pluralize(
-                        referralsToNextTier,
-                        "referral",
-                      )} to claim their name and earn ${formatPercent(nextCommissionTier.rate)}.`
-                    : "You are at the top commission tier."
-                }`}
+              ? "Fixed rewards currently start at 0.05 ZEC for level I and halve each level."
+              : (
+                  <>
+                    You are earning {formatPercent(commissionRate)} commission on all referrals, both direct and indirect.{" "}
+                    {nextCommissionTier
+                      ? `Get ${referralsToNextTier.toLocaleString()} more ${pluralize(
+                          referralsToNextTier,
+                          "referral",
+                        )} to claim their name and earn ${formatPercent(nextCommissionTier.rate)}.`
+                      : "You are at the top commission tier."}
+                  </>
+                )}
           </p>
           {model === "commission" && (
             <details className="mt-1 text-xs text-fg-muted">

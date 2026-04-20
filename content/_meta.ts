@@ -8,6 +8,7 @@ const meta: MetaRecord = {
   protocol: 'Protocol',
   indexer: 'Indexer & RPC',
   sdk: 'SDKs',
+  'zns-developer-guide': 'Developer Guide',
   ecosystem: 'Ecosystem',
   terminology: 'Terminology',
   faq: 'FAQ',

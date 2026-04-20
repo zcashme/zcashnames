@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
+import SiteRouteTitle from "@/components/SiteRouteTitle";
 
 export const metadata: Metadata = {
   title: "Brand Kit | ZcashNames",
@@ -24,7 +25,6 @@ type AssetGroup = {
 
 type Filters = {
   type: string;
-  logo: string;
   variation: string;
   mode: string;
   background: string;
@@ -43,36 +43,21 @@ const groups: AssetGroup[] = [
     ],
   },
   {
-    title: "Secondary Logo",
-    description: "Transparent logo marks derived from the rotated Zcash mark.",
-    assets: [
-      logo("Secondary Logo Black", "zcashnames-secondary-logo-black-transparent-545x554.png", "545x554", "Black", "checker", true),
-      logo("Secondary Logo White", "zcashnames-secondary-logo-white-transparent-545x554.png", "545x554", "White", "checker", true),
-      logo("Secondary Logo Monochrome Green", "zcashnames-secondary-logo-monochrome-green-transparent-545x554.png", "545x554", "Monochrome", "checker", true),
-    ],
-  },
-  {
     title: "Logos With Square Backgrounds",
     description: "Logo marks on square color backgrounds for avatars and fixed-crop placements.",
     assets: [
       logo("Primary Black On White", "zcashnames-primary-logo-black-white-square-background-403x403.png", "403x403", "Light", "checker"),
       logo("Primary White On Black", "zcashnames-primary-logo-white-black-square-background-403x403.png", "403x403", "Dark", "checker"),
       logo("Primary Green On Dark Green", "zcashnames-primary-logo-monochrome-green-dark-green-square-background-403x403.png", "403x403", "Monochrome", "checker"),
-      logo("Secondary Black On White", "zcashnames-secondary-logo-black-white-square-background-554x554.png", "554x554", "Light", "checker"),
-      logo("Secondary White On Black", "zcashnames-secondary-logo-white-black-square-background-554x554.png", "554x554", "Dark", "checker"),
-      logo("Secondary Green On Dark Green", "zcashnames-secondary-logo-monochrome-green-dark-green-square-background-554x554.png", "554x554", "Monochrome", "checker"),
     ],
   },
   {
     title: "Ensquared Logos",
-    description: "Transparent primary and secondary marks with square enclosing borders.",
+    description: "Transparent primary marks with square enclosing borders.",
     assets: [
       logo("Primary Ensquared Black", "zcashnames-primary-logo-ensquared-black-transparent-377x403.png", "377x403", "Black", "checker", true),
       logo("Primary Ensquared White", "zcashnames-primary-logo-ensquared-white-transparent-377x403.png", "377x403", "White", "checker", true),
       logo("Primary Ensquared Monochrome Green", "zcashnames-primary-logo-ensquared-monochrome-green-transparent-377x403.png", "377x403", "Monochrome", "checker", true),
-      logo("Secondary Ensquared Black", "zcashnames-secondary-logo-ensquared-black-transparent-545x554.png", "545x554", "Black", "checker", true),
-      logo("Secondary Ensquared White", "zcashnames-secondary-logo-ensquared-white-transparent-545x554.png", "545x554", "White", "checker", true),
-      logo("Secondary Ensquared Monochrome Green", "zcashnames-secondary-logo-ensquared-monochrome-green-transparent-545x554.png", "545x554", "Monochrome", "checker", true),
     ],
   },
   {
@@ -82,9 +67,6 @@ const groups: AssetGroup[] = [
       logo("Primary Ensquared Black On White", "zcashnames-primary-logo-ensquared-black-white-square-background-403x403.png", "403x403", "Light", "checker"),
       logo("Primary Ensquared White On Black", "zcashnames-primary-logo-ensquared-white-black-square-background-403x403.png", "403x403", "Dark", "checker"),
       logo("Primary Ensquared Green On Dark Green", "zcashnames-primary-logo-ensquared-monochrome-green-dark-green-square-background-403x403.png", "403x403", "Monochrome", "checker"),
-      logo("Secondary Ensquared Black On White", "zcashnames-secondary-logo-ensquared-black-white-square-background-554x554.png", "554x554", "Light", "checker"),
-      logo("Secondary Ensquared White On Black", "zcashnames-secondary-logo-ensquared-white-black-square-background-554x554.png", "554x554", "Dark", "checker"),
-      logo("Secondary Ensquared Green On Dark Green", "zcashnames-secondary-logo-ensquared-monochrome-green-dark-green-square-background-554x554.png", "554x554", "Monochrome", "checker"),
     ],
   },
   {
@@ -94,9 +76,6 @@ const groups: AssetGroup[] = [
       banner("Primary Black Banner", "zcashnames-brand-banner-primary-logo-black-transparent-377x403.png", "2006x467", "Black", "checker", true),
       banner("Primary White Banner", "zcashnames-brand-banner-primary-logo-white-transparent-377x403.png", "2006x467", "White", "checker", true),
       banner("Primary Monochrome Banner", "zcashnames-brand-banner-primary-logo-monochrome-green-transparent-377x403.png", "2006x467", "Monochrome", "checker", true),
-      banner("Secondary Black Banner", "zcashnames-brand-banner-secondary-logo-black-transparent-545x554.png", "2780x642", "Black", "checker", true),
-      banner("Secondary White Banner", "zcashnames-brand-banner-secondary-logo-white-transparent-545x554.png", "2780x642", "White", "checker", true),
-      banner("Secondary Monochrome Banner", "zcashnames-brand-banner-secondary-logo-monochrome-green-transparent-545x554.png", "2780x642", "Monochrome", "checker", true),
     ],
   },
   {
@@ -106,9 +85,6 @@ const groups: AssetGroup[] = [
       banner("Primary Black On Light", "zcashnames-brand-banner-primary-logo-black-light-background-377x403.png", "2006x467", "Light", "checker"),
       banner("Primary White On Dark", "zcashnames-brand-banner-primary-logo-white-dark-background-377x403.png", "2006x467", "Dark", "checker"),
       banner("Primary Green On Monochrome", "zcashnames-brand-banner-primary-logo-monochrome-green-monochrome-green-background-377x403.png", "2006x467", "Monochrome", "checker"),
-      banner("Secondary Black On Light", "zcashnames-brand-banner-secondary-logo-black-light-background-545x554.png", "2780x642", "Light", "checker"),
-      banner("Secondary White On Dark", "zcashnames-brand-banner-secondary-logo-white-dark-background-545x554.png", "2780x642", "Dark", "checker"),
-      banner("Secondary Green On Monochrome", "zcashnames-brand-banner-secondary-logo-monochrome-green-monochrome-green-background-545x554.png", "2780x642", "Monochrome", "checker"),
     ],
   },
   {
@@ -162,7 +138,6 @@ export default async function BrandKitPage({
   const params = (await searchParams) ?? {};
   const filters: Filters = {
     type: firstParam(params.type) ?? "all",
-    logo: firstParam(params.logo) ?? "all",
     variation: firstParam(params.variation) ?? "all",
     mode: firstParam(params.mode) ?? "all",
     background: firstParam(params.background) ?? "all",
@@ -178,12 +153,9 @@ export default async function BrandKitPage({
 
   return (
     <main className="w-full">
+      <SiteRouteTitle title="Brand Kit" />
       <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
         <div className="flex max-w-3xl flex-col gap-4">
-          <p className="type-chip font-semibold uppercase tracking-[0.16em] text-fg-muted">Brand Kit</p>
-          <h1 className="text-4xl font-bold leading-tight text-fg-heading sm:text-5xl">
-            ZcashNames assets
-          </h1>
           <p className="type-section-subtitle text-fg-body">
             Download logo marks, banners, and stacked brand lockups for ZcashNames.
           </p>
@@ -233,11 +205,6 @@ function groupType(group: AssetGroup): string {
   return "logos";
 }
 
-function assetLogo(asset: Asset): string {
-  if (asset.file.includes("secondary-logo")) return "secondary";
-  return "primary";
-}
-
 function assetVariation(asset: Asset): string {
   return asset.file.includes("ensquared") ? "ensquared" : "encircled";
 }
@@ -248,7 +215,6 @@ function assetBackground(asset: Asset): string {
 
 function matchesFilters(group: AssetGroup, asset: Asset, filters: Filters): boolean {
   if (filters.type !== "all" && groupType(group) !== filters.type) return false;
-  if (filters.logo !== "all" && assetLogo(asset) !== filters.logo) return false;
   if (filters.variation !== "all" && assetVariation(asset) !== filters.variation) return false;
   if (filters.mode !== "all" && asset.mode.toLowerCase() !== filters.mode) return false;
   if (filters.background !== "all" && assetBackground(asset) !== filters.background) return false;
@@ -299,16 +265,6 @@ function FilterPanel({
           ["logos", "Logos"],
           ["banners", "Banners"],
           ["lockups", "Lockups"],
-        ]}
-      />
-      <FilterRow
-        label="Logo"
-        filterKey="logo"
-        filters={filters}
-        options={[
-          ["all", "All"],
-          ["primary", "Primary"],
-          ["secondary", "Secondary"],
         ]}
       />
       <FilterRow
@@ -452,7 +408,6 @@ function ColorLine({ label, colors }: { label: string; colors: string[] }) {
 function AssetCard({ asset }: { asset: Asset }) {
   const src = `${assetBase}${asset.file}`;
   const svgSrc = asset.svgFile ? `${assetBase}${asset.svgFile}` : undefined;
-  const discontinued = assetLogo(asset) === "secondary";
 
   return (
     <article className="overflow-hidden rounded-lg border border-border-muted bg-[var(--color-card)]">
@@ -477,20 +432,14 @@ function AssetCard({ asset }: { asset: Asset }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {discontinued ? (
-            <span className="inline-flex w-fit items-center rounded-md border border-border-muted bg-[var(--color-raised)] px-3 py-2 text-sm font-semibold text-fg-muted">
-              Discontinued
-            </span>
-          ) : (
-            <a
-              href={src}
-              download
-              className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-            >
-              Download PNG
-            </a>
-          )}
-          {!discontinued && svgSrc && (
+          <a
+            href={src}
+            download
+            className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+          >
+            Download PNG
+          </a>
+          {svgSrc && (
             <a
               href={svgSrc}
               download

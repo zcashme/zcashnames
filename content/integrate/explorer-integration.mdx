@@ -5,13 +5,13 @@
 The indexer's [`events`](/docs/indexer/rpc-reference) method returns the activity log newest-first, with each event carrying its txid, height, signature, and the relevant address. To poll for new events, track the highest `height` you have ingested and pass it as `since_height` on the next call.
 
 ```typescript
-import { createClient } from "zcashname-sdk";
+import { ZNS } from "zcashname-sdk";
 
-const client = await createClient("https://light.zcash.me/zns-mainnet-test");
+const zns = new ZNS({ network: "mainnet" });
 
 let lastSeen = 0;
 
-const { events, total } = await client.events({
+const { events, total } = await zns.events({
   since_height: lastSeen,
   limit: 100,
 });
@@ -47,12 +47,12 @@ function describe(e: Event): string {
 
 ## Showing names alongside addresses
 
-When rendering a Zcash address, call `resolve` with it as the query. By-address resolution returns an array.
+When rendering a Zcash address, call `resolveAddress` with it as the query. By-address resolution returns an array.
 
 ```typescript
-const names = await client.resolve("u1gphl7vrklduuv96kpw4eetx4vrs8nnk7…");
-const label = names.length > 0
-  ? names.sort((a, b) => a.name.localeCompare(b.name))[0].name
+const registrations = await zns.resolveAddress("u1gphl7vrklduuv96kpw4eetx4vrs8nnk7…");
+const label = registrations.length > 0
+  ? registrations.sort((a, b) => a.name.localeCompare(b.name))[0].name
   : null;
 ```
 

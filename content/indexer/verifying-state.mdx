@@ -9,14 +9,15 @@ For a no-code visual spot-check, the [Explorer](/explorer) renders the indexer's
 At minimum, a client should pin the expected `uivk` and `admin_pubkey` and refuse to proceed if the indexer reports different values.
 
 ```typescript
-import { createClient } from "zcashname-sdk";
+import { ZNS } from "zcashname-sdk";
 
-// createClient calls status() under the hood and throws if the returned
-// uivk isn't in KNOWN_UIVKS (testnet + mainnet pinned)
-const client = await createClient("https://light.zcash.me/zns-testnet");
+const zns = new ZNS();
+
+// Call verify() to check UIVK against KNOWN_UIVKS (testnet + mainnet pinned)
+await zns.verify();
 ```
 
-The SDK's `createClient` does this automatically. A custom client should replicate the check:
+The SDK's `verify()` method does this automatically. A custom client should replicate the check:
 
 ```typescript
 const s = await rpc("status");
@@ -32,14 +33,33 @@ if (s.admin_pubkey !== EXPECTED_ADMIN_PUBKEY) throw new Error("admin pubkey mism
 
 Every `Registration`, `Listing`, and `Event` carries an Ed25519 signature. A client that cares about correctness should verify each one against the pinned `admin_pubkey` before acting on the data.
 
-Pseudocode (the SDK does not yet expose this helper, but it's not hard):
+Use the SDK's built-in verification methods:
+
+```typescript
+import { ZNS } from "zcashname-sdk";
+
+const zns = new ZNS();
+await zns.verify(); // Verify we're talking to a known indexer
+
+const status = await zns.status();
+const reg = await zns.resolveName("alice");
+if (reg === null) { /* not found */ return; }
+
+// Verify the registration signature
+const isValid = await zns.verifyRegistration(reg, status.admin_pubkey);
+if (!isValid) throw new Error("Registration signature invalid");
+
+// If the registration is listed, verify the listing signature too.
+if (reg.listing) {
+  const listingValid = await zns.verifyListing(reg.listing, status.admin_pubkey);
+  if (!listingValid) throw new Error("Listing signature invalid");
+}
+```
+
+For manual verification with your own Ed25519 library:
 
 ```typescript
 import { verify } from "@noble/ed25519";
-import { resolve } from "zcashname-sdk";
-
-const reg = await resolve("alice");
-if (reg === null) { /* not found */ return; }
 
 const preimage = (() => {
   switch (reg.last_action) {
@@ -51,17 +71,9 @@ const preimage = (() => {
 })();
 
 const sig = Buffer.from(reg.signature!, "base64");
-const pub = Buffer.from(EXPECTED_ADMIN_PUBKEY, "base64");
+const pub = Buffer.from(status.admin_pubkey, "base64");
 const ok = await verify(sig, new TextEncoder().encode(preimage), pub);
 if (!ok) throw new Error("Registration signature invalid");
-
-// If the registration is listed, verify the listing signature too.
-if (reg.listing) {
-  const lp = `LIST:${reg.listing.name}:${reg.listing.price}:${reg.listing.nonce}`;
-  const ls = Buffer.from(reg.listing.signature, "base64");
-  const lok = await verify(ls, new TextEncoder().encode(lp), pub);
-  if (!lok) throw new Error("Listing signature invalid");
-}
 ```
 
 For the full template list see [Signature Scheme](/docs/protocol/signatures).

@@ -32,6 +32,12 @@ function sign(testerId: string, expiresAt: number): string {
   return hmac.digest("hex");
 }
 
+function signStage(stage: "testnet" | "mainnet", expiresAt: number): string {
+  const hmac = createHmac("sha256", getSecret());
+  hmac.update(`stage:${stage}:${expiresAt}`);
+  return hmac.digest("hex");
+}
+
 function safeEqual(a: string, b: string): boolean {
   const left = Buffer.from(a);
   const right = Buffer.from(b);
@@ -64,6 +70,28 @@ export function parseBetaCookieValue(value: string): { testerId: string; expires
   return { testerId, expiresAt };
 }
 
+export function buildStageCookieValue(stage: "testnet" | "mainnet"): { value: string; expiresAt: number } {
+  const expiresAt = Math.floor(Date.now() / 1000) + STAGE_TTL_SECONDS;
+  const signature = signStage(stage, expiresAt);
+  return { value: `${stage}.${expiresAt}.${signature}`, expiresAt };
+}
+
+export function parseStageCookieValue(value: string): { stage: "testnet" | "mainnet"; expiresAt: number } | null {
+  const [stageRaw, expiresRaw, signature, ...extra] = value.split(".");
+  if (extra.length > 0) return null;
+  if (stageRaw !== "testnet" && stageRaw !== "mainnet") return null;
+  if (!signature || !expiresRaw) return null;
+
+  const expiresAt = Number(expiresRaw);
+  if (!Number.isFinite(expiresAt) || expiresAt <= 0) return null;
+  if (expiresAt < Math.floor(Date.now() / 1000)) return null;
+
+  const expected = signStage(stageRaw, expiresAt);
+  if (!safeEqual(expected, signature)) return null;
+
+  return { stage: stageRaw, expiresAt };
+}
+
 /** Read the current beta tester from the request cookie, if any. */
 export async function readCurrentTester(): Promise<BetaTester | null> {
   const store = await cookies();
@@ -88,13 +116,14 @@ export function betaCookieOptions(maxAgeSeconds: number) {
 /** Read the current beta stage from the cookie, if any. */
 export async function readCurrentStage(): Promise<"testnet" | "mainnet" | null> {
   const store = await cookies();
-  const v = store.get(BETA_STAGE_COOKIE_NAME)?.value;
-  if (v === "testnet" || v === "mainnet") return v;
-  return null;
+  const value = store.get(BETA_STAGE_COOKIE_NAME)?.value;
+  if (!value) return null;
+  return parseStageCookieValue(value)?.stage ?? null;
 }
 
 /** Write the stage cookie. Called from verifyNetworkAccess on success. */
 export async function setStageCookie(stage: "testnet" | "mainnet") {
+  const { value } = buildStageCookieValue(stage);
   const store = await cookies();
-  store.set(BETA_STAGE_COOKIE_NAME, stage, betaCookieOptions(STAGE_TTL_SECONDS));
+  store.set(BETA_STAGE_COOKIE_NAME, value, betaCookieOptions(STAGE_TTL_SECONDS));
 }

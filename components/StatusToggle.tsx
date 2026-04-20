@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { verifyNetworkAccess } from "@/lib/beta/actions";
+import { getCurrentBetaStage, verifyNetworkAccess } from "@/lib/beta/actions";
 import { getWaitlistStats } from "@/lib/leaders/leaders";
 import { getHomeStats } from "@/lib/zns/resolve";
 import type { Network } from "@/lib/zns/name";
@@ -64,6 +64,7 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
   const [networkPassword, setNetworkPassword] = useState("");
   const [data, setData] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [stageHydrated, setStageHydrated] = useState(false);
   const [refreshCounter, setRefreshCounter] = useState(0);
 
   const isSearchMode = status === "testnet" || status === "mainnet";
@@ -79,6 +80,27 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    let cancelled = false;
+
+    getCurrentBetaStage()
+      .then((stage) => {
+        if (cancelled || !stage) return;
+        setStatusState(stage);
+        applyStatus(stage);
+      })
+      .catch(() => {
+        // Fall back to waitlist when the stage cookie cannot be read.
+      })
+      .finally(() => {
+        if (!cancelled) setStageHydrated(true);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!stageHydrated) return;
+
     let cancelled = false;
     setData(null);
     setLoading(true);
@@ -100,7 +122,7 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
     })();
 
     return () => { cancelled = true; };
-  }, [status, refreshCounter]);
+  }, [status, refreshCounter, stageHydrated, isSearchMode, network]);
 
   return (
     <StatusContext.Provider

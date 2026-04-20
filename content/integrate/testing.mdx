@@ -18,19 +18,19 @@ curl -sX POST https://light.zcash.me/zns-testnet \
 
 ## Wallet checklist
 
-- `resolve("alice")` returns a result with `address`, `txid`, `height`, `nonce`, `last_action`
-- `resolve("definitelynotregistered")` returns `null`, not an error
-- `resolve(unifiedAddress)` returns an array (possibly empty)
-- `isValidName("Alice")`, `isValidName("my-name")`, `isValidName("a".repeat(70))` all return `false`
-- Closed port throws `ZNSError` with `ErrorType.HttpError`
-- Wrong UIVK throws `ZNSError` with `ErrorType.UivkMismatch` before any resolve
+- `new ZNS().resolveName("alice")` returns a result with `address`, `txid`, `height`, `nonce`, `last_action`
+- `new ZNS().resolveName("definitelynotregistered")` returns `null`, not an error
+- `new ZNS().resolveAddress(unifiedAddress)` returns an array (possibly empty)
+- `zns.isValidName("Alice")`, `zns.isValidName("my-name")`, `zns.isValidName("a".repeat(70))` all return `false`
+- Wrong URL throws an Error (e.g., closed port, 404, etc.)
+- `await zns.verify()` throws if UIVK doesn't match expected (call after constructing ZNS)
 
 ## Explorer checklist
 
 - `events` with `since_height` streams correctly (filter is strict `>`, not `>=`)
 - All seven action verbs render: `CLAIM UPDATE LIST DELIST BUY RELEASE SETPRICE`
 - `SETPRICE` events have an empty `name` field
-- `resolve(address)` returns an array; empty array is the normal no-names case
+- `resolveAddress(address)` returns an array; empty array is the normal no-names case
 
 ## Local indexer
 

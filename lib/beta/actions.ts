@@ -10,6 +10,7 @@ import {
   BETA_STAGE_COOKIE_NAME,
   betaCookieOptions,
   buildBetaCookieValue,
+  readCurrentStage,
   readCurrentTester,
   setStageCookie,
 } from "./gate";
@@ -92,6 +93,11 @@ export async function getCurrentTesterName(): Promise<string | null> {
   return tester?.displayName ?? null;
 }
 
+/** Read the current beta stage from the 30-day stage cookie, or null. */
+export async function getCurrentBetaStage(): Promise<"testnet" | "mainnet" | null> {
+  return readCurrentStage();
+}
+
 /**
  * Read the current tester's stated focus areas from beta_testers.focus_areas.
  * Anonymous testers (no cookie) → empty array.
@@ -115,6 +121,7 @@ export async function getCurrentTesterFocus(): Promise<("user" | "sdk")[]> {
 
 export interface FeedbackPayload {
   severity: "high" | "low" | "none";
+  experienceRating?: number | null;
   wallet: string;
   network: "testnet" | "mainnet";
   steps: string;
@@ -153,8 +160,10 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
   const actual = String(formData.get("actual") ?? "").trim();
   const txid = String(formData.get("txid") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
+  const experienceRatingRaw = String(formData.get("experience_rating") ?? "").trim();
   const checklistItemId = String(formData.get("checklistItemId") ?? "").trim().slice(0, 64);
   const clientEnv = String(formData.get("client_env") ?? "").trim().slice(0, 200);
+  const experienceRating = experienceRatingRaw ? Number(experienceRatingRaw) : null;
 
   if (severity !== "high" && severity !== "low" && severity !== "none") {
     return { ok: false, error: "Pick a severity." };
@@ -162,12 +171,22 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
   if (network !== "testnet" && network !== "mainnet") {
     return { ok: false, error: "Pick a network." };
   }
-  if (!checklistItemId) {
-    return { ok: false, error: "Pick a checklist item before submitting a report." };
+  if (
+    experienceRating !== null &&
+    (!Number.isInteger(experienceRating) || experienceRating < 1 || experienceRating > 5)
+  ) {
+    return { ok: false, error: "Pick a rating from 1 to 5." };
   }
-
   for (const [k, v] of [["wallet", wallet], ["steps", steps], ["expected", expected], ["actual", actual], ["txid", txid], ["notes", notes]] as const) {
     if (v.length > MAX_FIELD_LEN) return { ok: false, error: `${k} is too long.` };
+  }
+
+  const hasMinimumContent = !!notes || experienceRating !== null || !!expected || !!actual;
+  if (!hasMinimumContent) {
+    return {
+      ok: false,
+      error: "Add notes, a rating, expected behavior, or actual behavior before submitting.",
+    };
   }
 
   const validFiles: File[] = [];
@@ -187,16 +206,10 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
     validFiles.push(f);
   }
 
-  // At least one substantive field must be provided.
-  const hasContent =
-    !!wallet || !!steps || !!expected || !!actual || !!txid || !!notes || validFiles.length > 0;
-  if (!hasContent) {
-    return { ok: false, error: "Add at least one detail or a screenshot before submitting." };
-  }
-
   // Allocate a UUID up front so screenshot paths can use it as a folder.
   const reportId = randomUUID();
   const screenshotPaths: string[] = [];
+  const screenshotUrls: string[] = [];
 
   for (const f of validFiles) {
     const path = `${testerId ?? "anonymous"}/${reportId}/${sanitizeFilename(f.name)}`;
@@ -212,6 +225,8 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
       return { ok: false, error: "Couldn't upload a screenshot. Try again." };
     }
     screenshotPaths.push(path);
+    const { data } = db.storage.from(FEEDBACK_BUCKET).getPublicUrl(path);
+    screenshotUrls.push(data.publicUrl);
   }
 
   const { error: insertError } = await db.from("beta_feedback").insert({
@@ -219,15 +234,16 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
     tester_id: testerId,
     tester_name_snapshot: testerName,
     stage: network,
-    item_id: checklistItemId,
+    item_id: checklistItemId || null,
     severity,
+    experience_rating: experienceRating,
     wallet: wallet || null,
     steps: steps || null,
     expected: expected || null,
     actual: actual || null,
     txid: txid || null,
     notes: notes || null,
-    screenshot_paths: screenshotPaths,
+    screenshot_paths: screenshotUrls,
     user_agent: userAgent,
     client_env: clientEnv || null,
   });

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope, Dancing_Script } from "next/font/google";
+import { Manrope, Dancing_Script, Inter } from "next/font/google";
 import { StatusProvider } from "@/components/StatusToggle";
 import { ThemeProvider } from "next-themes";
 import Header from "@/components/Header";
@@ -21,6 +21,13 @@ const uiCursive = Dancing_Script({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-cursive",
+  display: "swap",
+});
+
+const brandSans = Inter({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-brand",
   display: "swap",
 });
 
@@ -92,7 +99,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
       </head>
-      <body className={`${uiSans.variable} ${uiCursive.variable}`}>
+      <body className={`${uiSans.variable} ${uiCursive.variable} ${brandSans.variable}`}>
         <ThemeProvider
           attribute="data-theme"
           defaultTheme="dark"

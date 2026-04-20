@@ -13,7 +13,7 @@ export function middleware(request: NextRequest) {
     if (passthroughPrefixes.some((p) => pathname.startsWith(p))) {
       return NextResponse.next();
     }
-    if (pathname === "/logo.svg" || pathname === "/llms.txt") {
+    if (pathname.startsWith("/docs") || pathname.startsWith("/_next") || pathname.startsWith("/_pagefind") || pathname.startsWith("/favicon")) {
       return NextResponse.next();
     }
 

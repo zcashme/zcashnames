@@ -70,6 +70,7 @@ export default function ExplorerToolbar({
   searchQuery,
   onSearchChange,
   onSearchSubmit,
+  onClearSearch,
   environment,
   onEnvironmentChange,
   sortBy,
@@ -78,6 +79,7 @@ export default function ExplorerToolbar({
   searchQuery: string;
   onSearchChange: (q: string) => void;
   onSearchSubmit: () => void;
+  onClearSearch: () => void;
   environment: Environment;
   onEnvironmentChange: (env: Environment) => void;
   sortBy: SortBy;
@@ -101,13 +103,22 @@ export default function ExplorerToolbar({
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") onSearchSubmit(); }}
           placeholder="Search..."
-          className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm outline-none"
+          className="w-full rounded-lg border py-2 pl-9 pr-16 text-sm outline-none"
           style={{
             background: "var(--color-raised)",
             borderColor: "var(--leaders-card-border)",
             color: "var(--fg-heading)",
           }}
         />
+        {searchQuery.trim() && (
+          <button
+            type="button"
+            onClick={onClearSearch}
+            className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded px-2 py-1 text-[0.72rem] font-semibold text-fg-muted transition-colors hover:text-fg-heading"
+          >
+            Clear
+          </button>
+        )}
       </div>
       <Dropdown
         value={environment}

@@ -12,8 +12,9 @@ export default function CommissionPinEmail({ name, pin, dashboardUrl }: Commissi
   return (
     <EmailLayout preview="Your ZcashNames access code." headingText="Your access code">
       <Section style={content}>
-        <Text style={paragraph}>Hi {name},</Text>
-        <Text style={paragraph}>Your commission dashboard access code is:</Text>
+        <Text style={{ ...paragraph, margin: "16px 0 16px", textAlign: "center" as const }}>
+          Your referral dashboard access code is:
+        </Text>
         <Text
           style={{
             margin: "0 0 16px",
@@ -26,10 +27,9 @@ export default function CommissionPinEmail({ name, pin, dashboardUrl }: Commissi
         >
           {pin}
         </Text>
-        <Text style={paragraph}>
-          Open your referral dashboard, tap your waitlist badge 6 times, and enter this code.
+        <Text style={{ ...paragraph, margin: "0 0 16px", textAlign: "center" as const, wordBreak: "break-all" as const }}>
+          {dashboardUrl}
         </Text>
-        <Text style={{ ...paragraph, wordBreak: "break-all" as const }}>{dashboardUrl}</Text>
       </Section>
     </EmailLayout>
   );

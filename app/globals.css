@@ -678,6 +678,7 @@ body::after {
 
 .site-route-title {
   display: inline-flex;
+  align-items: center;
   max-width: min(38vw, 24rem);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -685,18 +686,27 @@ body::after {
   color: var(--fg-muted);
   font-size: var(--type-section-subtitle);
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 #site-route-title {
   display: inline-flex;
+  align-items: center;
   min-width: 0;
 }
 
 .site-route-title::before {
   content: "/";
+  display: inline-flex;
+  align-items: center;
   margin-right: 0.75rem;
   color: var(--fg-dim);
+}
+
+@media (min-width: 640px) {
+  .site-route-title::before {
+    margin-right: 1rem;
+  }
 }
 
 .phone-stage,

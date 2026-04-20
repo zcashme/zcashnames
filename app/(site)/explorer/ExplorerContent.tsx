@@ -4,18 +4,18 @@ import { useMemo, useState } from "react";
 import { getEvents } from "@/lib/zns/resolve";
 import { zatsToZec } from "@/lib/zns/name";
 import type { Network } from "@/lib/zns/name";
-import type { Event, VerifiedListing } from "@/lib/zns/client";
 import type { Environment, SortBy } from "./ExplorerToolbar";
+import {
+  filterEvents,
+  filterListings,
+  filterRegistrations,
+  getTabEvents,
+  type ExplorerTab,
+  type TaggedEvent,
+  type TaggedListing,
+  type TaggedRegistration,
+} from "./explorerFilters";
 import ActionBadge from "@/components/ActionBadge";
-
-export type ExplorerTab = "all" | "registered" | "forsale" | "admin" | "CLAIM" | "BUY" | "LIST" | "DELIST" | "UPDATE" | "RELEASE";
-
-export type TabCounts = Record<string, number>;
-
-export type TaggedEvent = Event & { network: Network };
-export type TaggedListing = VerifiedListing & { network: Network };
-
-const ACTION_TYPES = ["CLAIM", "BUY", "LIST", "DELIST", "UPDATE", "RELEASE"] as const;
 
 function getNetworks(env: Environment): Network[] {
   if (env === "all") return ["testnet", "mainnet"];
@@ -38,6 +38,16 @@ function sortListings(listings: TaggedListing[], sortBy: SortBy): TaggedListing[
   });
 }
 
+function sortRegistrations(registrations: TaggedRegistration[], sortBy: SortBy): TaggedRegistration[] {
+  return [...registrations].sort((a, b) => {
+    if (sortBy === "height") return b.height - a.height || a.name.localeCompare(b.name);
+    if (sortBy === "name") return a.name.localeCompare(b.name) || b.height - a.height;
+    const aStatus = a.listing ? "listed" : "registered";
+    const bStatus = b.listing ? "listed" : "registered";
+    return aStatus.localeCompare(bStatus) || b.height - a.height || a.name.localeCompare(b.name);
+  });
+}
+
 export default function ExplorerContent({
   tab,
   environment,
@@ -47,15 +57,17 @@ export default function ExplorerContent({
   initialEvents,
   initialEventsTotal,
   initialListings,
+  initialRegistrations,
 }: {
   tab: ExplorerTab;
   environment: Environment;
   sortBy: SortBy;
   searchQuery: string;
-  onNameClick: (name: string) => void;
+  onNameClick: (name: string, network?: Network) => void;
   initialEvents: TaggedEvent[];
   initialEventsTotal: number;
   initialListings: TaggedListing[];
+  initialRegistrations: TaggedRegistration[];
 }) {
   const [events, setEvents] = useState(initialEvents);
   const [eventsTotal, setEventsTotal] = useState(initialEventsTotal);
@@ -71,6 +83,7 @@ export default function ExplorerContent({
   }
 
   const listings = initialListings;
+  const registrations = initialRegistrations;
   const networks = useMemo(() => getNetworks(environment), [environment]);
 
 
@@ -97,27 +110,100 @@ export default function ExplorerContent({
 
   // Pick events for active tab
   const activeEvents = useMemo(() => {
-    if (tab === "all") return events;
-    if (tab === "registered") return events.filter((ev) => ev.action === "CLAIM");
-    if (tab === "admin") return events.filter((ev) => ev.name === "");
-    if (ACTION_TYPES.includes(tab as typeof ACTION_TYPES[number])) {
-      return events.filter((ev) => ev.action === tab);
-    }
-    return events;
+    return getTabEvents(tab, events);
   }, [tab, events]);
 
   // Filter + sort
   const filteredEvents = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    const filtered = q ? activeEvents.filter((ev) => ev.name.toLowerCase().includes(q) || ev.action.toLowerCase().includes(q)) : activeEvents;
-    return sortEvents(filtered, sortBy);
+    return sortEvents(filterEvents(activeEvents, searchQuery), sortBy);
   }, [activeEvents, searchQuery, sortBy]);
 
   const filteredListings = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    const filtered = q ? listings.filter((l) => l.name.toLowerCase().includes(q)) : listings;
-    return sortListings(filtered, sortBy);
+    return sortListings(filterListings(listings, searchQuery), sortBy);
   }, [listings, searchQuery, sortBy]);
+
+  const filteredRegistrations = useMemo(() => {
+    return sortRegistrations(filterRegistrations(registrations, searchQuery), sortBy);
+  }, [registrations, searchQuery, sortBy]);
+
+  // Registered tab - current state table
+  if (tab === "registered") {
+    return (
+      <div
+        className="overflow-hidden rounded-2xl border"
+        style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)" }}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr
+                className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
+                style={{ borderColor: "var(--leaders-card-border)" }}
+              >
+                <th className="px-4 py-3 sm:px-6">Name</th>
+                <th className="px-4 py-3 sm:px-6">Status</th>
+                <th className="hidden sm:table-cell px-4 py-3 sm:px-6">Address</th>
+                <th className="px-4 py-3 text-right sm:px-6">Block</th>
+                {environment === "all" && <th className="px-4 py-3 text-right sm:px-6">Net</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRegistrations.length === 0 ? (
+                <tr>
+                  <td colSpan={environment === "all" ? 5 : 4} className="px-4 py-12 text-center text-fg-muted">
+                    No registered names found.
+                  </td>
+                </tr>
+              ) : (
+                filteredRegistrations.map((r) => (
+                  <tr
+                    key={`${r.network}:${r.name}:${r.txid}`}
+                    className="border-b last:border-b-0 transition-colors"
+                    style={{ borderColor: "var(--leaders-card-border)" }}
+                  >
+                    <td className="px-4 py-3 sm:px-6">
+                      <button
+                        type="button"
+                        onClick={() => onNameClick(r.name, r.network)}
+                        className="font-semibold text-fg-heading hover:underline cursor-pointer"
+                      >
+                        {r.name}.zcash
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 sm:px-6">
+                      <span
+                        className="rounded px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
+                        style={{ background: "var(--market-stats-segment-active-bg)" }}
+                      >
+                        {r.listing ? "Listed" : "Registered"}
+                      </span>
+                    </td>
+                    <td className="hidden sm:table-cell px-4 py-3 sm:px-6">
+                      <span className="font-mono text-fg-muted text-xs truncate max-w-[14rem] inline-block align-middle">
+                        {r.address}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-fg-muted text-xs sm:px-6">
+                      {r.height.toLocaleString()}
+                    </td>
+                    {environment === "all" && (
+                      <td className="px-4 py-3 text-right sm:px-6">
+                        <span className="rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-fg-muted"
+                          style={{ background: "var(--market-stats-segment-active-bg)" }}
+                        >
+                          {r.network === "testnet" ? "T" : "M"}
+                        </span>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   // For Sale tab - table
   if (tab === "forsale") {
@@ -156,7 +242,7 @@ export default function ExplorerContent({
                     <td className="px-4 py-3 sm:px-6">
                       <button
                         type="button"
-                        onClick={() => onNameClick(l.name)}
+                        onClick={() => onNameClick(l.name, l.network)}
                         className="font-semibold text-fg-heading hover:underline cursor-pointer"
                       >
                         {l.name}.zcash
@@ -229,7 +315,7 @@ export default function ExplorerContent({
                       {ev.name ? (
                         <button
                           type="button"
-                          onClick={() => onNameClick(ev.name)}
+                          onClick={() => onNameClick(ev.name, ev.network)}
                           className="font-semibold text-fg-heading hover:underline cursor-pointer"
                         >
                           {ev.name}

@@ -26,25 +26,25 @@ export const BETA_CHECKLIST: ChecklistItem[] = [
   { id: "ux-a1", label: "1. Claim a name", hint: "Get a name no one else has. Set authorization to passcode.", section: "Passcode Authorization", group: "user" },
   { id: "ux-a2", label: "2. List name for sale", hint: "Sell your name for any price.", section: "Passcode Authorization", group: "user" },
   { id: "ux-a3", label: "3. Delist name", hint: "Remove your name from the market.", section: "Passcode Authorization", group: "user" },
-  { id: "ux-b1", label: "4. Buy a listed name", hint: "Buy a name listed for sale. For example, esengulov, paulpuey, viksharma, jswihart. Set authorization to passcode.", section: "Passcode Authorization", group: "user" },
+  { id: "ux-b1", label: "4. Buy a listed name", hint: "Find names for sale in the Name Explorer. Buy one, setting authorization to passcode.", section: "Passcode Authorization", group: "user" },
   { id: "ux-b2", label: "5. Update address", hint: "Change the address associated with the name you bought.", section: "Passcode Authorization", group: "user" },
   { id: "ux-b3", label: "6. Release name", hint: "Let go of the name you bought. Someone else can claim it.", section: "Passcode Authorization", group: "user" },
 
   { id: "ux-c1", label: "1. Claim a name", hint: "Reclaim the name you released in B3, or claim another available name. Set authorization to signature.", section: "Signature Authorization", group: "user" },
   { id: "ux-c2", label: "2. List name for sale", hint: "Sell your name for any price.", section: "Signature Authorization", group: "user" },
   { id: "ux-c3", label: "3. Delist name", hint: "Remove your name from the market.", section: "Signature Authorization", group: "user" },
-  { id: "ux-d1", label: "4. Buy a listed name", hint: "Buy one of the example names above. Set authorization to signature.", section: "Signature Authorization", group: "user" },
+  { id: "ux-d1", label: "4. Buy a listed name", hint: "Buy a name listed for sale in the Name Explorer. Set authorization to signature.", section: "Signature Authorization", group: "user" },
   { id: "ux-d2", label: "5. Update address", hint: "Change the address associated with the name you bought.", section: "Signature Authorization", group: "user" },
   { id: "ux-d3", label: "6. Release name", hint: "Let go of the name you bought and return it to the unowned state.", section: "Signature Authorization", group: "user" },
 
   // ── Developer experience ────────────────────────────────────────────────
-  // Order: read the doc, then try the thing it documents.
-  { id: "review-typescript-ref", label: "Review the TypeScript SDK reference", link: { href: "/docs/sdk/typescript" }, group: "developer" },
-  { id: "resolve-sdk",           label: "Resolve a name via the SDK", group: "developer" },
-  { id: "review-direct-rpc",     label: "Review the direct JSON-RPC reference", link: { href: "/docs/sdk/direct-rpc" }, group: "developer" },
-  { id: "resolve-rpc",           label: "Resolve a name via the raw JSON-RPC API", group: "developer" },
-
-  // ── Catch-all (per group, independent) ──────────────────────────────────
-  // These are separate items on purpose — a comment about user flow and a
-  { id: "other-developer", label: "General questions, comments, or anything else", group: "developer" },
+  // Order: read the guide first, then exercise each capability on both surfaces.
+  // Each checkbox is a parity tick: "SDK call and raw JSON-RPC return equivalent data."
+  { id: "review-dev-guide",   label: "Review the ZNS developer guide", link: { href: "/docs/zns-developer-guide" }, group: "developer" },
+  { id: "dev-status",         label: "Check indexer health",           hint: "Call zns.status() and the raw JSON-RPC status. Confirm synced_height, admin_pubkey, uivk, registered, listed, and pricing match for the active network.", group: "developer" },
+  { id: "dev-resolve-name",   label: "Resolve a claimed name",         hint: "Pick a name from Explorer. Confirm zns.resolveName(name) matches raw JSON-RPC resolve with { query: name }.", group: "developer" },
+  { id: "dev-listings",       label: "Page active listings",           hint: "Call zns.listings(limit, offset) and raw JSON-RPC listings with the same params. Confirm listings and total.", group: "developer" },
+  { id: "dev-registrations",  label: "Fetch all registrations",        hint: "Call zns.listAllRegistrations(limit, offset) and raw JSON-RPC resolve with { query: \"\", limit, offset }. Compare pagination and totals against Explorer's Registered tab.", group: "developer" },
+  { id: "dev-events-page",    label: "Page all events",                hint: "Call zns.events({ limit, offset }) and raw JSON-RPC events with the same params. Confirm page size, newest-first ordering, and total.", group: "developer" },
+  { id: "dev-events-history", label: "Fetch one name's event history", hint: "Call zns.events({ name, limit, offset }) for a claimed name and raw JSON-RPC events with the same params. Confirm the returned history matches Explorer.", group: "developer" },
 ];

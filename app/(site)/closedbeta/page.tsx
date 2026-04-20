@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import BetaBrief, { BETA_SECTIONS } from "@/components/closedbeta/BetaBrief";
 import BetaToc from "@/components/closedbeta/BetaToc";
+import SiteRouteTitle from "@/components/SiteRouteTitle";
 
 export const metadata: Metadata = {
   title: "Closed Beta — ZcashNames",
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 export default function ClosedBetaPage() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-10">
+      <SiteRouteTitle title="Closed Beta" />
       <div className="flex flex-col md:flex-row gap-10">
         {/* BetaToc handles its own responsive rendering: a sticky in-page list
             on md+ and a fixed hamburger trigger + slide-in drawer on mobile,

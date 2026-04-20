@@ -1,10 +1,6 @@
 "use server";
 
-import {
-  resolve,
-  fetchClaimCost,
-  getZns,
-} from "@/lib/zns/client";
+import { fetchClaimCost, getZns } from "@/lib/zns/client";
 import {
   buildSignedClaimMemo,
   buildSignedBuyMemo,
@@ -17,6 +13,7 @@ import { normalizeUsername, isValidUsername, validateAddress, zatsToZec, type Ne
 import { type Action, MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import { verifyOtp } from "@/lib/payment/otp";
 import { getReservedName, verifyUnlockCode } from "@/lib/zns/reserved";
+import { readCurrentStage } from "@/lib/beta/gate";
 
 const NETWORK_PASSWORDS: Record<Network, string | undefined> = {
   testnet: process.env.TESTNET_PASSWORD,
@@ -27,6 +24,12 @@ function verifyNetworkPassword(network: Network, password: string | undefined): 
   const expected = NETWORK_PASSWORDS[network];
   if (!expected) return false;
   return password === expected;
+}
+
+async function verifyNetworkAccess(network: Network, password: string | undefined): Promise<boolean> {
+  if (verifyNetworkPassword(network, password)) return true;
+  const cookieStage = await readCurrentStage();
+  return cookieStage === network;
 }
 
 export async function checkUnlockCode(
@@ -71,9 +74,11 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
 
   const network: Network = input.network === "mainnet" ? "mainnet" : "testnet";
 
-  if (!verifyNetworkPassword(network, input.password)) {
+  if (!(await verifyNetworkAccess(network, input.password))) {
     return { ok: false, error: "Invalid network password." };
   }
+
+  const zns = getZns(network);
 
   const ownerAction =
     input.action === "update" || input.action === "list" || input.action === "delist" || input.action === "release";
@@ -84,9 +89,15 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         ? "otp"
         : "default";
 
-  const reg = ownerAction ? await resolve(name, network) : null;
+  const reg = ownerAction ? await zns.resolveName(name) : null;
   if (ownerAction) {
     if (!reg) return { ok: false, error: "Name is not registered." };
+    if (authMode === "otp" && reg.pubkey) {
+      return { ok: false, error: "This name is controlled by a keypair. Use sovereign signing." };
+    }
+    if (authMode === "sovereign" && !reg.pubkey) {
+      return { ok: false, error: "This name is controlled by passcodes. Use passcode verification." };
+    }
     if (authMode === "otp") {
       if (!input.memo || !input.otp) return { ok: false, error: "Verification required." };
       const valid = await verifyOtp(input.memo, input.otp, reg.address);
@@ -100,6 +111,9 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
       }
     }
   }
+
+  const ownerNonce = (reg?.nonce ?? 0) + 1;
+  const ownerPubkey = reg?.pubkey ?? input.sovereignPubkey?.trim();
 
   try {
     switch (input.action) {
@@ -131,8 +145,7 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
           const pub = input.sovereignPubkey?.trim();
           if (!sig) throw new Error("Signature is required for sovereign claim.");
           if (!pub) throw new Error("Public key is required for sovereign claim.");
-          const zns = await getZns(network);
-          memo = zns.completeClaim(name, address, sig, pub).memo;
+          memo = zns.prepareClaim(name, address, costZats).complete(sig, pub).memo;
         } else {
           memo = await buildSignedClaimMemo(name, address, network);
         }
@@ -143,7 +156,7 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         if (!address) return { ok: false, error: "Address is required." };
         const addrCheck = validateAddress(address);
         if (!addrCheck.valid) return { ok: false, error: addrCheck.warning || "Invalid address format." };
-        const buyReg = await resolve(name, network);
+        const buyReg = await zns.resolveName(name);
         if (!buyReg?.listing) return { ok: false, error: "Name is not listed for sale." };
 
         let memo: string;
@@ -152,8 +165,7 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
           const pub = input.sovereignPubkey?.trim();
           if (!sig) throw new Error("Signature is required for sovereign buy.");
           if (!pub) throw new Error("Public key is required for sovereign buy.");
-          const zns = await getZns(network);
-          memo = zns.completeBuy(name, address, sig, pub).memo;
+          memo = zns.prepareBuy(name, address).complete(sig, pub).memo;
         } else {
           memo = await buildSignedBuyMemo(name, address, network);
         }
@@ -167,12 +179,8 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
 
         let memo: string;
         if (authMode === "sovereign") {
-          const sig = input.sovereignSignature?.trim();
-          if (!sig) throw new Error("Signature is required for sovereign update.");
-          const pub = reg?.pubkey ?? input.sovereignPubkey?.trim();
-          const nonce = (reg?.nonce ?? 0) + 1;
-          const zns = await getZns(network);
-          memo = zns.completeUpdate(name, address, nonce, sig, pub ?? undefined).memo;
+          const sig = input.sovereignSignature!.trim();
+          memo = zns.prepareUpdate(name, address, ownerNonce).complete(sig, ownerPubkey).memo;
         } else {
           memo = (await buildSignedUpdateMemo(name, address, network)).memo;
         }
@@ -180,18 +188,14 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
       }
       case "list": {
         const maxZats = MAX_LIST_FOR_SALE_AMOUNT * 100_000_000;
-        if (!input.priceZats || input.priceZats < 100_000 || input.priceZats > maxZats) {
-          return { ok: false, error: "Price must be between 0.001 and 21,000,000 ZEC." };
+        if (input.priceZats === undefined || input.priceZats < 0 || input.priceZats > maxZats) {
+          return { ok: false, error: "Price must be between 0 and 21,000,000 ZEC." };
         }
 
         let memo: string;
         if (authMode === "sovereign") {
-          const sig = input.sovereignSignature?.trim();
-          if (!sig) throw new Error("Signature is required for sovereign list.");
-          const pub = reg?.pubkey ?? input.sovereignPubkey?.trim();
-          const nonce = (reg?.nonce ?? 0) + 1;
-          const zns = await getZns(network);
-          memo = zns.completeList(name, input.priceZats, nonce, sig, pub ?? undefined).memo;
+          const sig = input.sovereignSignature!.trim();
+          memo = zns.prepareList(name, input.priceZats, ownerNonce).complete(sig, ownerPubkey).memo;
         } else {
           memo = (await buildSignedListMemo(name, input.priceZats, network)).memo;
         }
@@ -200,12 +204,8 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
       case "delist": {
         let memo: string;
         if (authMode === "sovereign") {
-          const sig = input.sovereignSignature?.trim();
-          if (!sig) throw new Error("Signature is required for sovereign delist.");
-          const pub = reg?.pubkey ?? input.sovereignPubkey?.trim();
-          const nonce = (reg?.nonce ?? 0) + 1;
-          const zns = await getZns(network);
-          memo = zns.completeDelist(name, nonce, sig, pub ?? undefined).memo;
+          const sig = input.sovereignSignature!.trim();
+          memo = zns.prepareDelist(name, ownerNonce).complete(sig, ownerPubkey).memo;
         } else {
           memo = (await buildSignedDelistMemo(name, network)).memo;
         }
@@ -214,12 +214,8 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
       case "release": {
         let memo: string;
         if (authMode === "sovereign") {
-          const sig = input.sovereignSignature?.trim();
-          if (!sig) throw new Error("Signature is required for sovereign release.");
-          const pub = reg?.pubkey ?? input.sovereignPubkey?.trim();
-          const nonce = (reg?.nonce ?? 0) + 1;
-          const zns = await getZns(network);
-          memo = zns.completeRelease(name, nonce, sig, pub ?? undefined).memo;
+          const sig = input.sovereignSignature!.trim();
+          memo = zns.prepareRelease(name, ownerNonce).complete(sig, ownerPubkey).memo;
         } else {
           memo = (await buildSignedReleaseMemo(name, network)).memo;
         }

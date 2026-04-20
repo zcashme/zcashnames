@@ -1,12 +1,32 @@
 "use client";
 
-import { useMemo, useOptimistic, useState, useTransition } from "react";
+import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import ExplorerToolbar, { type Environment, type SortBy } from "./ExplorerToolbar";
-import ExplorerContent, { type ExplorerTab, type TabCounts, type TaggedEvent, type TaggedListing } from "./ExplorerContent";
+import ExplorerContent from "./ExplorerContent";
+import {
+  ACTION_TYPES,
+  filterEvents,
+  filterListings,
+  filterRegistrations,
+  getTabCountLabel,
+  getTabEvents,
+  normalizeExplorerQuery,
+  type ExplorerTab,
+  type TabCounts,
+  type TaggedEvent,
+  type TaggedListing,
+  type TaggedRegistration,
+} from "./explorerFilters";
 import ExplorerNameDetail from "./ExplorerNameDetail";
+import Zip321Modal, { type ModalTarget } from "@/components/landing/Zip321Modal";
+import SiteRouteTitle from "@/components/SiteRouteTitle";
+import { useStatus } from "@/components/StatusToggle";
+import { useUsdPrice } from "@/components/landing/useUsdPrice";
 import type { ResolveName } from "@/lib/types";
+import type { Action } from "@/lib/types";
 import type { Event } from "@/lib/zns/client";
+import type { Network } from "@/lib/zns/name";
 
 const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "all", label: "All" },
@@ -28,6 +48,7 @@ interface ExplorerShellProps {
   initialEvents: TaggedEvent[];
   initialEventsTotal: number;
   initialListings: TaggedListing[];
+  initialRegistrations: TaggedRegistration[];
   stats: {
     claimed: number;
     forSale: number;
@@ -49,6 +70,7 @@ export default function ExplorerShell({
   initialEvents,
   initialEventsTotal,
   initialListings,
+  initialRegistrations,
   stats,
   uivks,
   environment,
@@ -57,33 +79,54 @@ export default function ExplorerShell({
   nameEvents,
 }: ExplorerShellProps) {
   const router = useRouter();
+  const { networkPassword } = useStatus();
+  const usdPerZec = useUsdPrice();
   const [isPending, startTransition] = useTransition();
   const [optimisticEnv, setOptimisticEnv] = useOptimistic(environment);
-  const [optimisticName, setOptimisticName] = useOptimistic(nameQuery);
 
   const [activeTab, setActiveTab] = useState<ExplorerTab>("all");
   const [sortBy, setSortBy] = useState<SortBy>("height");
   const [searchQuery, setSearchQuery] = useState(nameQuery || "");
+  const [selectedName, setSelectedName] = useState(nameQuery || "");
+  const [isClientMounted, setIsClientMounted] = useState(false);
+  const [modalTarget, setModalTarget] = useState<ModalTarget | null>(null);
 
-  const ACTION_TYPES = ["CLAIM", "BUY", "LIST", "DELIST", "UPDATE", "RELEASE"] as const;
+  const hasSearchFilter = normalizeExplorerQuery(searchQuery).length > 0;
   const tabCounts = useMemo(() => {
     const counts: TabCounts = {
-      all: initialEvents.length,
-      forsale: initialListings.length,
-      registered: initialEvents.filter((ev) => ev.action === "CLAIM").length,
-      admin: initialEvents.filter((ev) => ev.name === "").length,
+      all: {
+        filtered: filterEvents(getTabEvents("all", initialEvents), searchQuery).length,
+        total: getTabEvents("all", initialEvents).length,
+      },
+      forsale: {
+        filtered: filterListings(initialListings, searchQuery).length,
+        total: initialListings.length,
+      },
+      registered: {
+        filtered: filterRegistrations(initialRegistrations, searchQuery).length,
+        total: initialRegistrations.length,
+      },
+      admin: {
+        filtered: filterEvents(getTabEvents("admin", initialEvents), searchQuery).length,
+        total: getTabEvents("admin", initialEvents).length,
+      },
     };
     for (const action of ACTION_TYPES) {
-      counts[action] = initialEvents.filter((ev) => ev.action === action).length;
+      const tabEvents = getTabEvents(action, initialEvents);
+      counts[action] = {
+        filtered: filterEvents(tabEvents, searchQuery).length,
+        total: tabEvents.length,
+      };
     }
     return counts;
-  }, [initialEvents, initialListings]);
+  }, [initialEvents, initialListings, initialRegistrations, searchQuery]);
 
   // Sync search input with URL name param (back/forward navigation)
   const [prevNameQuery, setPrevNameQuery] = useState(nameQuery);
   if (prevNameQuery !== nameQuery) {
     setPrevNameQuery(nameQuery);
     setSearchQuery(nameQuery);
+    setSelectedName(nameQuery);
   }
 
   const [moreOpen, setMoreOpen] = useState(false);
@@ -93,11 +136,16 @@ export default function ExplorerShell({
 
   const isMoreTabActive = MORE_TABS.some((t) => t.key === activeTab);
   const activeMoreLabel = MORE_TABS.find((t) => t.key === activeTab)?.label;
+  const detailNetwork: Network = optimisticEnv === "all" ? "mainnet" : optimisticEnv;
 
-  function makeUrl(overrides: { env?: string; name?: string | null }) {
+  useEffect(() => {
+    setIsClientMounted(true);
+  }, []);
+
+  function makeUrl(overrides: { env?: string; name?: string | null; forceEnv?: boolean }) {
     const params = new URLSearchParams();
     const env = overrides.env ?? optimisticEnv;
-    if (env && env !== "mainnet") params.set("env", env);
+    if (env && (env !== "mainnet" || overrides.forceEnv)) params.set("env", env);
     const name = overrides.name === undefined ? nameQuery : overrides.name;
     if (name) params.set("name", name);
     const qs = params.toString();
@@ -116,28 +164,56 @@ export default function ExplorerShell({
     const q = searchQuery.trim();
     if (!q) return;
     const url = makeUrl({ name: q });
+    setSelectedName(q);
     startTransition(() => {
-      setOptimisticName(q);
       router.push(url);
     });
   }
 
-  function handleNameClick(name: string) {
+  function handleSearchChange(nextQuery: string) {
+    setSearchQuery(nextQuery);
+    if (selectedName) setSelectedName("");
+  }
+
+  function handleNameClick(name: string, rowNetwork?: Network) {
     setSearchQuery(name);
-    const url = makeUrl({ name });
+    setSelectedName(name);
+    const nextEnv = optimisticEnv === "all" && rowNetwork ? rowNetwork : undefined;
+    const url = makeUrl({ env: nextEnv, name, forceEnv: !!nextEnv });
     startTransition(() => {
-      setOptimisticName(name);
+      if (nextEnv) setOptimisticEnv(nextEnv);
       router.push(url);
     });
   }
 
   function clearNameDetail() {
     setSearchQuery("");
+    setSelectedName("");
     const url = makeUrl({ name: null });
     startTransition(() => {
-      setOptimisticName("");
       router.push(url);
     });
+  }
+
+  function handleDetailAction(action: Action) {
+    if (!nameDataReady || !nameResult) return;
+
+    const target: ModalTarget = {
+      name: nameResult.query,
+      action,
+      network: detailNetwork,
+      networkPassword,
+      isReserved: nameResult.status === "reserved",
+    };
+
+    if (nameResult.status === "registered" || nameResult.status === "listed") {
+      target.registrationAddress = nameResult.registration.address;
+      target.registrationNonce = nameResult.registration.nonce;
+      target.registrationPubkey = nameResult.registration.pubkey ?? null;
+      target.listingPriceZec = nameResult.status === "listed" ? nameResult.listingPrice.zec : undefined;
+    }
+
+    setModalTarget(target);
   }
 
   function handleRefresh() {
@@ -155,66 +231,71 @@ export default function ExplorerShell({
   }
 
 
-  const showNameDetail = !!optimisticName;
-  const nameDataReady = optimisticName === nameQuery;
+  const showNameDetail = !!selectedName;
+  const nameDataReady = selectedName === nameQuery;
 
   return (
     <div className="flex flex-col gap-6">
+      <SiteRouteTitle title="Explorer" />
       {/* Header */}
-      <div>
-        <div className="flex items-start justify-between gap-3">
-          <h1
-            className="shrink-0 whitespace-nowrap font-bold tracking-tight"
-            style={{ fontSize: "var(--type-section-title)", color: "var(--fg-heading)" }}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="min-w-[220px] flex-1 text-sm" style={{ color: "var(--fg-muted)" }}>
+          Browse registered ZcashNames, activity, and listings.
+        </p>
+        <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted tabular-nums transition-colors hover:text-fg-heading"
+            style={{ borderColor: "var(--leaders-card-border)" }}
+            title="Refresh"
           >
-            Name Explorer
-          </h1>
-          <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+            Block{" "}
+            {isPending ? (
+              <span className="inline-block h-[0.75em] w-14 animate-pulse rounded-md bg-fg-dim/20 align-middle" />
+            ) : (
+              stats.syncedHeight.toLocaleString()
+            )}
+            <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
+              <path
+                d="M13.5 8a5.5 5.5 0 1 1-1.3-3.56"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+              <path
+                d="M12.5 2v3h-3"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          {(uivks.mainnet || uivks.testnet) && (
             <button
               type="button"
-              onClick={handleRefresh}
-              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted tabular-nums transition-colors hover:text-fg-heading"
+              onClick={() => setUivkOpen(true)}
+              className="cursor-pointer whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
               style={{ borderColor: "var(--leaders-card-border)" }}
-              title="Refresh"
             >
-              Block{" "}
-              {isPending ? (
-                <span className="inline-block h-[0.75em] w-14 animate-pulse rounded-md bg-fg-dim/20 align-middle" />
-              ) : (
-                stats.syncedHeight.toLocaleString()
-              )}
-              <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
-                <path
-                  d="M13.5 8a5.5 5.5 0 1 1-1.3-3.56"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M12.5 2v3h-3"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              UIVK
             </button>
-            {(uivks.mainnet || uivks.testnet) && (
-              <button
-                type="button"
-                onClick={() => setUivkOpen(true)}
-                className="cursor-pointer whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
-                style={{ borderColor: "var(--leaders-card-border)" }}
-              >
-                UIVK
-              </button>
-            )}
-          </div>
+          )}
         </div>
-        <p className="mt-1.5 text-sm" style={{ color: "var(--fg-muted)" }}>
-          Browse registered .zcash names, activity, and listings.
-        </p>
       </div>
+
+      {/* Toolbar */}
+      <ExplorerToolbar
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        onSearchSubmit={handleSearchSubmit}
+        onClearSearch={clearNameDetail}
+        environment={optimisticEnv}
+        onEnvironmentChange={handleEnvironmentChange}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+      />
 
       {/* Tabs */}
       <div
@@ -233,7 +314,10 @@ export default function ExplorerShell({
             >
               {t.label}
               {count != null && (
-                <span className="ml-1 tabular-nums">({count})</span>
+                <>
+                  {" "}
+                  <span className="ml-1 tabular-nums">({getTabCountLabel(count, hasSearchFilter)})</span>
+                </>
               )}
               {activeTab === t.key && (
                 <span
@@ -290,7 +374,9 @@ export default function ExplorerShell({
                   >
                     <span>{t.label}</span>
                     {count != null && (
-                      <span className="ml-2 tabular-nums text-fg-dim">({count})</span>
+                      <span className="ml-2 tabular-nums text-fg-dim">
+                        ({getTabCountLabel(count, hasSearchFilter)})
+                      </span>
                     )}
                   </button>
                 );
@@ -301,25 +387,15 @@ export default function ExplorerShell({
         </div>
       </div>
 
-      {/* Toolbar */}
-      <ExplorerToolbar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onSearchSubmit={handleSearchSubmit}
-        environment={optimisticEnv}
-        onEnvironmentChange={handleEnvironmentChange}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-      />
-
       {/* Name detail (when a specific name is searched) */}
       {showNameDetail && (
         <ExplorerNameDetail
-          query={optimisticName}
+          query={selectedName}
           result={nameDataReady ? nameResult : null}
           events={nameDataReady ? nameEvents : []}
           isPending={isPending && !nameDataReady}
-          onClear={clearNameDetail}
+          usdPerZec={usdPerZec}
+          onAction={handleDetailAction}
         />
       )}
 
@@ -336,6 +412,7 @@ export default function ExplorerShell({
             initialEvents={initialEvents}
             initialEventsTotal={initialEventsTotal}
             initialListings={initialListings}
+            initialRegistrations={initialRegistrations}
           />
         </div>
       </div>
@@ -420,6 +497,14 @@ export default function ExplorerShell({
             </div>
           </div>
         </div>
+      )}
+
+      {isClientMounted && modalTarget && (
+        <Zip321Modal
+          target={modalTarget}
+          onClose={() => setModalTarget(null)}
+          onSuccess={() => router.refresh()}
+        />
       )}
     </div>
   );

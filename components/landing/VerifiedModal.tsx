@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import SurveyForm from "@/components/SurveyForm";
 
 type ViewState = "confirm" | "survey" | "thankyou";
@@ -82,8 +83,8 @@ function ConfirmView({
       </p>
       <div className="w-full rounded-xl px-4 py-3 flex flex-col gap-3 text-left" style={{ border: "1px solid var(--border-muted)" }}>
         <p className="text-xs" style={{ color: "var(--fg-muted)", lineHeight: 1.6 }}>
-          <strong style={{ color: "var(--fg-body)" }}>Earn 1/5 of the lowest name claim price </strong>
-          for each direct referral who joins the waitlist and buys their name during launch week.
+          Get up to <strong style={{ color: "var(--fg-body)" }}>0.05 ZEC</strong> per referral who signs up and buys a
+          name during early access, plus rewards from their referrals!
         </p>
         <div className="flex gap-2">
           <button
@@ -158,6 +159,11 @@ function ConfirmView({
           Done
         </button>
       </div>
+      <p className="m-0 text-center text-xs" style={{ color: "var(--fg-muted)", lineHeight: 1.6 }}>
+        <Link href="/leaders/terms" className="underline underline-offset-2">
+          View terms
+        </Link>
+      </p>
     </div>
   );
 }

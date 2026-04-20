@@ -1,10 +1,11 @@
 "use client";
 
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, type CSSProperties } from "react";
 import { BETA_CHECKLIST, type ChecklistItem } from "@/lib/beta/checklist";
 import { useChecklistProgress, type ChecklistStage } from "./useChecklistProgress";
 
 export type SubListId = "user" | "developer";
+type TooltipStep = "popout" | "report" | "checkbox" | "readme" | "contact" | "collapse";
 
 interface Props {
   /** Current tester's display name, or null if anonymous. */
@@ -13,8 +14,8 @@ interface Props {
   stage: ChecklistStage;
   /** Tester's stated focus areas from beta_testers.focus_areas. Drives ordering. */
   focus?: ("user" | "sdk")[];
-  /** Which sub-list (if any) is currently expanded. Owned by the parent so state survives tab switches. */
-  expandedSubList: SubListId | null;
+  /** Which sub-lists are currently expanded. Owned by the parent so state survives tab switches. */
+  expandedSubLists: Record<SubListId, boolean>;
   /** Called when the user clicks a sub-list header. Parent decides accordion behavior. */
   onToggleSubList: (id: SubListId) => void;
   /** Expanded state for nested section headers. Owned by the parent so it survives tab switches. */
@@ -29,6 +30,14 @@ interface Props {
   reportingItemId?: string | null;
   /** Open the standalone popout window. Hidden in popout mode (parent passes undefined). */
   onOpenPopout?: () => void;
+  /** Current panel onboarding tooltip step. */
+  tooltipStep?: TooltipStep | null;
+  /** Advances the panel onboarding tooltip sequence. */
+  onTooltipNext?: () => void;
+  /** Closes the panel onboarding tooltip sequence. */
+  onTooltipClose?: () => void;
+  /** Shared tooltip button style from the parent panel. */
+  tooltipActionStyle?: CSSProperties;
 }
 
 interface SubListDef {
@@ -40,17 +49,32 @@ interface SubListDef {
 const USER_ITEMS = BETA_CHECKLIST.filter((i) => i.group === "user" || i.group === "both");
 const DEV_ITEMS = BETA_CHECKLIST.filter((i) => i.group === "developer" || i.group === "both");
 
-/** Pure helper: which sub-list should start expanded given the tester's focus. */
-export function initialExpandedSubList(focus?: ("user" | "sdk")[]): SubListId {
+export interface ChecklistExpansionDefaults {
+  subLists: Record<SubListId, boolean>;
+  sections: Record<string, boolean>;
+}
+
+/** Pure helper: which checklist groups and nested sections should start expanded. */
+export function initialChecklistExpansion(focus?: ("user" | "sdk")[]): ChecklistExpansionDefaults {
   const sdkOnly = focus?.length === 1 && focus[0] === "sdk";
-  return sdkOnly ? "developer" : "user";
+  if (sdkOnly) {
+    return {
+      subLists: { user: false, developer: true },
+      sections: {},
+    };
+  }
+
+  return {
+    subLists: { user: true, developer: false },
+    sections: { "Passcode Authorization": true },
+  };
 }
 
 export default function FeedbackChecklist({
   testerName,
   stage,
   focus,
-  expandedSubList,
+  expandedSubLists,
   onToggleSubList,
   expandedSections,
   onToggleSection,
@@ -58,6 +82,10 @@ export default function FeedbackChecklist({
   onReport,
   reportingItemId,
   onOpenPopout,
+  tooltipStep,
+  onTooltipNext,
+  onTooltipClose,
+  tooltipActionStyle,
 }: Props) {
   const { state, hydrated, completed, total, toggle, saveStatus } = useChecklistProgress(testerName, stage);
 
@@ -103,6 +131,70 @@ export default function FeedbackChecklist({
     return counts;
   }, [state]);
 
+  const tooltipBoxStyle: CSSProperties = {
+    background: "var(--home-result-primary-bg)",
+    border: "1px solid var(--home-result-primary-fg)",
+    boxShadow: "var(--home-result-primary-shadow)",
+    color: "var(--home-result-primary-fg)",
+    lineHeight: 1.45,
+  };
+
+  const tooltipArrowStyle: CSSProperties = {
+    background: "var(--home-result-primary-bg)",
+    borderColor: "var(--home-result-primary-fg)",
+  };
+
+  const fallbackTooltipActionStyle: CSSProperties = {
+    background: "rgba(255,255,255,0.14)",
+    border: "1px solid currentColor",
+    color: "var(--home-result-primary-fg)",
+  };
+
+  function renderTooltip({
+    message,
+    positionClassName,
+    arrowClassName,
+  }: {
+    message: string;
+    positionClassName: string;
+    arrowClassName: string;
+  }) {
+    const actionStyle = tooltipActionStyle ?? fallbackTooltipActionStyle;
+    return (
+      <div
+        role="status"
+        data-feedback-tour
+        className={`absolute z-20 w-60 rounded-lg px-3 py-2 text-xs shadow-lg transition-opacity duration-200 ${positionClassName}`}
+        style={tooltipBoxStyle}
+      >
+        <span
+          aria-hidden="true"
+          className={`absolute h-3 w-3 rotate-45 ${arrowClassName}`}
+          style={tooltipArrowStyle}
+        />
+        <p className="pr-1">{message}</p>
+        <div className="mt-2 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onTooltipClose}
+            className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+            style={actionStyle}
+          >
+            Skip
+          </button>
+          <button
+            type="button"
+            onClick={onTooltipNext}
+            className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+            style={actionStyle}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {!hideProgressBar && (
@@ -130,7 +222,7 @@ export default function FeedbackChecklist({
 
       <div className="flex flex-col gap-3">
         {subLists.map((sub, index) => {
-          const isOpen = expandedSubList === sub.id;
+          const isOpen = !!expandedSubLists[sub.id];
           const counts = subListCounts[sub.id];
           return (
             <Fragment key={sub.id}>
@@ -170,35 +262,6 @@ export default function FeedbackChecklist({
                 </span>
               </button>
 
-              {isOpen && sub.id === "developer" && onOpenPopout && (
-                <div
-                  className="mt-2 mb-2 rounded-lg px-3 py-2.5 text-xs flex items-start gap-2"
-                  style={{
-                    background: "var(--color-raised)",
-                    border: "1px solid var(--border-muted)",
-                    color: "var(--fg-body)",
-                    lineHeight: 1.55,
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "var(--fg-muted)" }} aria-hidden="true">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                    <polyline points="15 3 21 3 21 9" />
-                    <line x1="10" y1="14" x2="21" y2="3" />
-                  </svg>
-                  <span>
-                    Tip: <button
-                      type="button"
-                      onClick={onOpenPopout}
-                      className="underline cursor-pointer font-semibold"
-                      style={{ color: "var(--fg-heading)" }}
-                    >
-                      open the feedback panel in a new window
-                    </button>
-                    .
-                  </span>
-                </div>
-              )}
-
               {isOpen && (
                 <ul className="flex flex-col gap-1.5 mt-2">
                   {sub.items.map((item, index) => {
@@ -207,6 +270,9 @@ export default function FeedbackChecklist({
                     const showSection = !!item.section && item.section !== sub.items[index - 1]?.section;
                     const sectionExpanded = !item.section || !!expandedSections[item.section];
                     const sectionCount = item.section ? sectionCounts[item.section] : undefined;
+                    const isGeneralFeedbackItem = sub.id === "user" && item.id === "ux-e1";
+                    const showReportTooltip = tooltipStep === "report" && isGeneralFeedbackItem;
+                    const showCheckboxTooltip = tooltipStep === "checkbox" && isGeneralFeedbackItem;
                     return (
                       <Fragment key={`${sub.id}-${item.id}`}>
                         {showSection && (
@@ -242,7 +308,7 @@ export default function FeedbackChecklist({
                         )}
                         {sectionExpanded && (
                         <li
-                          className={`flex items-stretch rounded-lg overflow-hidden transition-colors ${item.section ? "ml-4" : ""}`}
+                          className={`flex items-stretch rounded-lg overflow-visible transition-colors ${item.section ? "ml-4" : ""}`}
                           style={{
                             background: isReporting
                               ? "var(--color-accent-green-light)"
@@ -254,9 +320,10 @@ export default function FeedbackChecklist({
                         >
                         {/* Checkbox — own clickable area, only marks complete */}
                         <label
-                          className="flex items-start shrink-0 pl-3 pr-2 py-2.5 cursor-pointer"
+                          className="relative flex items-start shrink-0 pl-3 pr-2 py-2.5 cursor-pointer"
                           aria-label={`Mark complete: ${item.label}`}
                           onClick={(e) => e.stopPropagation()}
+                          data-feedback-tour={showCheckboxTooltip ? true : undefined}
                         >
                           <span
                             className="relative flex items-center justify-center shrink-0 rounded mt-0.5"
@@ -280,6 +347,12 @@ export default function FeedbackChecklist({
                               </svg>
                             )}
                           </span>
+                          {showCheckboxTooltip &&
+                            renderTooltip({
+                              message: "Tap the checkbox when you complete the step.",
+                              positionClassName: "left-0 top-full mt-2",
+                              arrowClassName: "left-4 top-0 -translate-y-1/2 border-l border-t",
+                            })}
                         </label>
 
                         {/* Label area — clicking activates "Reporting on" for this item. */}
@@ -371,34 +444,45 @@ export default function FeedbackChecklist({
                         </div>
 
                         {onReport && (
-                          <button
-                            type="button"
-                            onClick={() => onReport(item.id)}
-                            aria-label={`Report on: ${item.label}`}
-                            title="Report on this item"
-                            aria-pressed={isReporting}
-                            className="shrink-0 flex items-center justify-center px-3 cursor-pointer transition-colors"
-                            style={{
-                              color: isReporting ? "var(--color-accent-green)" : "var(--fg-muted)",
-                              borderLeft: `1px solid ${isReporting ? "var(--color-accent-green)" : "var(--border-muted)"}`,
-                              background: "transparent",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (isReporting) return;
-                              e.currentTarget.style.color = "var(--fg-heading)";
-                              e.currentTarget.style.background = "var(--color-raised)";
-                            }}
-                            onMouseLeave={(e) => {
-                              if (isReporting) return;
-                              e.currentTarget.style.color = "var(--fg-muted)";
-                              e.currentTarget.style.background = "transparent";
-                            }}
+                          <div
+                            className="relative shrink-0 flex"
+                            data-feedback-tour={showReportTooltip ? true : undefined}
                           >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
-                              <path d="M5 12h14" />
-                              <path d="M13 6l6 6-6 6" />
-                            </svg>
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => onReport(item.id)}
+                              aria-label={`Report on: ${item.label}`}
+                              title="Report on this item"
+                              aria-pressed={isReporting}
+                              className="shrink-0 flex items-center justify-center px-3 cursor-pointer transition-colors"
+                              style={{
+                                color: isReporting ? "var(--color-accent-green)" : "var(--fg-muted)",
+                                borderLeft: `1px solid ${isReporting ? "var(--color-accent-green)" : "var(--border-muted)"}`,
+                                background: "transparent",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (isReporting) return;
+                                e.currentTarget.style.color = "var(--fg-heading)";
+                                e.currentTarget.style.background = "var(--color-raised)";
+                              }}
+                              onMouseLeave={(e) => {
+                                if (isReporting) return;
+                                e.currentTarget.style.color = "var(--fg-muted)";
+                                e.currentTarget.style.background = "transparent";
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+                                <path d="M5 12h14" />
+                                <path d="M13 6l6 6-6 6" />
+                              </svg>
+                            </button>
+                            {showReportTooltip &&
+                              renderTooltip({
+                                message: "Select an item to report on.",
+                                positionClassName: "right-0 top-full mt-2",
+                                arrowClassName: "right-4 top-0 -translate-y-1/2 border-l border-t",
+                              })}
+                          </div>
                         )}
                         </li>
                         )}

@@ -599,7 +599,15 @@ export default function LeaderboardContent() {
           >
             {activeStatKey === "waitlist" && "Total number of people on the ZcashNames waitlist."}
             {activeStatKey === "referred" && "Number of waitlist members who were referred by someone."}
-            {activeStatKey === "rewards" && "Direct referral purchases earn 1/5 of the lowest name claim price at purchase time; each indirect level earns half the level before it."}
+            {activeStatKey === "rewards" && (
+              <>
+                Total estimated rewards from all referrals.{" "}
+                <Link href="/leaders/terms" className="underline underline-offset-2">
+                  View terms
+                </Link>
+                .
+              </>
+            )}
           </p>
         </div>
       </section>
@@ -978,11 +986,14 @@ const HOW_IT_WORKS: { title: string; body: ReactNode }[] = [
     title: "Rewards",
     body: (
       <>
-        Direct referral purchases earn <strong>1/5 of the lowest name claim price</strong> at the
-        time of purchase. Because claim prices can vary, the ZEC reward amount may change. The
-        current 0.05 ZEC figure is illustrative only. Indirect levels are attributed too, with
-        each level earning half the level before it. Until purchases complete during early access,
-        rewards shown are potential.
+        The 0.05 ZEC amount is an example based on the lowest name price (0.25 ZEC for 7+ characters).
+        You earn 20% of the lowest name price at the time of purchase for direct referrals. Since prices
+        can change, your reward may vary. You also earn from referrals of your referrals, with each level
+        earning half the previous one. Rewards are estimates until early access purchases are complete.{" "}
+        <Link href="/leaders/terms" className="underline underline-offset-2">
+          View terms
+        </Link>
+        .
       </>
     ),
   },

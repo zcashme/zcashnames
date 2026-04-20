@@ -60,8 +60,8 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1
       zcashname-sdk:
-        specifier: ^0.5.1
-        version: 0.5.1
+        specifier: ^0.7.0
+        version: 0.7.0
     devDependencies:
       '@playwright/test':
         specifier: ^1.59.1
@@ -81,6 +81,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.1.0
         version: 19.2.3(@types/react@19.2.14)
+      pagefind:
+        specifier: ^1.5.2
+        version: 1.5.2
       postcss:
         specifier: ^8.5.0
         version: 8.5.8
@@ -715,6 +718,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@noble/ed25519@2.3.0':
+    resolution: {integrity: sha512-M7dvXL2B92/M7dw9+gzuydL8qn/jiqNHaoR3Q+cb1q1GHV7uwE17WCyFMG+Y+TZb5izcaXk5TdJRrDUxHXL78A==}
+
   '@noble/ed25519@3.1.0':
     resolution: {integrity: sha512-pfcObRY3CtvwfaG9Mt5XqZdKmAQppl37tHUeuBhDUbiwJBCVY4/A4lbMvb1xKhMDx96AqAqZpMWuBX1HulhX4g==}
 
@@ -729,6 +735,41 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@pagefind/darwin-arm64@1.5.2':
+    resolution: {integrity: sha512-MXpI+7HsAdPkvJ0gk9xj9g541BCqBZOBbdwj9g6lB5LCj6kSV6nqDSjzcAJwvOsfu0fjwvC8hQU+ecfhp+MpiQ==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@pagefind/darwin-x64@1.5.2':
+    resolution: {integrity: sha512-IojxFWMEJe0RQ7PQ3KXQsPIImNsbpPYpoZ+QUDrL8fAl/O27IX+LVLs74/UzEZy5uA2LD8Nz1AiwKr72vrkZQw==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@pagefind/freebsd-x64@1.5.2':
+    resolution: {integrity: sha512-7EVzo9+0w+2cbe671BtMj10UlNo83I+HrLVLfRxO731svHRJKUfJ/mo05gU14pe9PCfpKNQT8FS3Xc/oDN6pOA==}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@pagefind/linux-arm64@1.5.2':
+    resolution: {integrity: sha512-Ovt9+K35sqzn8H3ZMXGwls4TD/wMJuvRtShHIsmUQREmaxjrDEX7gHckRCrwYJ4XE1H1p6HkLz3wukrAnsfXQw==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@pagefind/linux-x64@1.5.2':
+    resolution: {integrity: sha512-V+tFqHKXhQKq/WqPBD67AFy7scn1/aZID00ws4fSDd+1daSi5UHR9VVlRrOUYKxn3VuFQYRD7lYXdZK1WED1YA==}
+    cpu: [x64]
+    os: [linux]
+
+  '@pagefind/windows-arm64@1.5.2':
+    resolution: {integrity: sha512-hN9Nh90fNW61nNRCW9ZyQrAj/mD0eRvmJ8NlTUzkbuW8kIzGJUi3cxjFkEcMZ5h/8FsKWD/VcouZl4yo1F7B6g==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@pagefind/windows-x64@1.5.2':
+    resolution: {integrity: sha512-Fa2Iyw7kaDRzGMfNYNUXNW2zbL5FQVDgSOcbDHdzBrDEdpqOqg8TcZ68F22ol6NJ9IGzvUdmeyZypLW5dyhqsg==}
+    cpu: [x64]
+    os: [win32]
 
   '@playwright/test@1.59.1':
     resolution: {integrity: sha512-PG6q63nQg5c9rIi4/Z5lR5IVF7yU5MqmKaPOe0HSc0O2cX1fPi96sUQu5j7eo4gKCkB2AnNGoWt7y4/Xx3Kcqg==}
@@ -1352,6 +1393,9 @@ packages:
     resolution: {integrity: sha512-Lyf3aK28zpsD1yQMiiHD4RvVb6UdMoo8xzG2XzFIfR9luPzOpcBlAsT/qfB1XWS1bxWT+UtE4WmQgsp297FYOA==}
     engines: {node: '>=6.0.0'}
     hasBin: true
+
+  bech32@2.0.0:
+    resolution: {integrity: sha512-LcknSilhIGatDAsY1ak2I8VtGaHNhgMSYVxFrGLXv+xLHytaKZKcaUJJUE7qmBr7h33o5YQwP55pMI0xmkpJwg==}
 
   better-react-mathjax@2.3.0:
     resolution: {integrity: sha512-K0ceQC+jQmB+NLDogO5HCpqmYf18AU2FxDbLdduYgkHYWZApFggkHE4dIaXCV1NqeoscESYXXo1GSkY6fA295w==}
@@ -2339,6 +2383,10 @@ packages:
   package-manager-detector@1.6.0:
     resolution: {integrity: sha512-61A5ThoTiDG/C8s8UMZwSorAGwMJ0ERVGj2OjoW5pAalsNOg15+iQiPzrLJ4jhZ1HJzmC2PIHT2oEiH3R5fzNA==}
 
+  pagefind@1.5.2:
+    resolution: {integrity: sha512-XTUaK0hXMCu2jszWE584JGQT7y284TmMV9l/HX3rnG5uo3rHI/uHU56XTyyyPFjeWEBxECbAi0CaFDJOONtG0Q==}
+    hasBin: true
+
   parse-entities@4.0.2:
     resolution: {integrity: sha512-GG2AQYWoLgL877gQIKeRPGO1xF9+eG1ujIb5soS5gPvLQ1y2o8FL90w2QWNdf9I361Mpp7726c+lj3U0qK1uGw==}
 
@@ -2874,8 +2922,8 @@ packages:
     engines: {node: '>= 14.6'}
     hasBin: true
 
-  zcashname-sdk@0.5.1:
-    resolution: {integrity: sha512-KHatxcJsGeD2lztj445VF1hh1x/2X//VDutvp0i6CuVMKrAw1Ow41ufH44SoGEjlj7KTlcuRE28B7FONlAqKYA==}
+  zcashname-sdk@0.7.0:
+    resolution: {integrity: sha512-Hz/23BL18fFTqzHKu1Erac+TaM+Kwxcu8HfPFZauRQ6zQTKnzFbS99KIo8p4SQSJueGBV2P0uo/2LyVI8rxeag==}
 
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
@@ -3340,6 +3388,8 @@ snapshots:
   '@next/swc-win32-x64-msvc@16.1.7':
     optional: true
 
+  '@noble/ed25519@2.3.0': {}
+
   '@noble/ed25519@3.1.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
@@ -3353,6 +3403,27 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
+
+  '@pagefind/darwin-arm64@1.5.2':
+    optional: true
+
+  '@pagefind/darwin-x64@1.5.2':
+    optional: true
+
+  '@pagefind/freebsd-x64@1.5.2':
+    optional: true
+
+  '@pagefind/linux-arm64@1.5.2':
+    optional: true
+
+  '@pagefind/linux-x64@1.5.2':
+    optional: true
+
+  '@pagefind/windows-arm64@1.5.2':
+    optional: true
+
+  '@pagefind/windows-x64@1.5.2':
+    optional: true
 
   '@playwright/test@1.59.1':
     dependencies:
@@ -3962,6 +4033,8 @@ snapshots:
   balanced-match@4.0.4: {}
 
   baseline-browser-mapping@2.10.16: {}
+
+  bech32@2.0.0: {}
 
   better-react-mathjax@2.3.0(react@19.2.4):
     dependencies:
@@ -5414,6 +5487,16 @@ snapshots:
 
   package-manager-detector@1.6.0: {}
 
+  pagefind@1.5.2:
+    optionalDependencies:
+      '@pagefind/darwin-arm64': 1.5.2
+      '@pagefind/darwin-x64': 1.5.2
+      '@pagefind/freebsd-x64': 1.5.2
+      '@pagefind/linux-arm64': 1.5.2
+      '@pagefind/linux-x64': 1.5.2
+      '@pagefind/windows-arm64': 1.5.2
+      '@pagefind/windows-x64': 1.5.2
+
   parse-entities@4.0.2:
     dependencies:
       '@types/unist': 2.0.11
@@ -6086,7 +6169,10 @@ snapshots:
 
   yaml@2.8.3: {}
 
-  zcashname-sdk@0.5.1: {}
+  zcashname-sdk@0.7.0:
+    dependencies:
+      '@noble/ed25519': 2.3.0
+      bech32: 2.0.0
 
   zod@4.3.6: {}
 

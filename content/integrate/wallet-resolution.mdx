@@ -3,7 +3,7 @@
 The minimum viable ZcashNames integration is:
 
 1. detect a name in the recipient field
-2. call `resolve`
+2. call `resolveName`
 3. substitute the returned address
 4. proceed with the existing send flow
 
@@ -32,26 +32,26 @@ The indexer enforces the regex byte-for-byte and never normalizes. If you do not
 
 ## Resolve a name
 
-Use the [TypeScript SDK](/docs/sdk/typescript) for the call. It handles JSON-RPC framing, UIVK pinning, and error typing.
+Use the [TypeScript SDK](/docs/sdk/typescript) for the call. It handles JSON-RPC framing and UIVK verification.
 
 ```typescript
-import { createClient, isValidName, ZNSError, ErrorType } from "zcashname-sdk";
+import { ZNS } from "zcashname-sdk";
 
-const client = await createClient("https://names.zcash.me");
+const zns = new ZNS();
 
 async function resolveRecipient(input: string): Promise<string | null> {
   const name = input.trim().toLowerCase().replace(/\.(zcash|zec)$/, "");
-  if (!isValidName(name)) return null;
+  if (!zns.isValidName(name)) return null;
 
-  const reg = await client.resolve(name);
+  const reg = await zns.resolveName(name);
   // reg is { name, address, txid, height, nonce, signature, last_action, listing } | null
   return reg?.address ?? null;
 }
 ```
 
-`createClient` calls `status` once on startup and pins the indexer's UIVK against `KNOWN_UIVKS`. After that, `resolve` is a single HTTP round trip. Reuse the client across calls; do not construct one per recipient lookup.
+The `ZNS` constructor creates a client pointed at the default testnet endpoint. Call `await zns.verify()` once on startup to validate the indexer's UIVK against the pinned `KNOWN_UIVKS` list. After that, `resolveName` is a single HTTP round trip. Reuse the client across calls; do not construct one per recipient lookup.
 
-The SDK auto-detects whether the query string is a name or a Zcash address. For wallets you only need the name path, but the same call also serves reverse lookups if you ever want to label outgoing transactions with the recipient's name.
+The SDK also provides `resolveAddress` for reverse lookups if you ever want to label outgoing transactions with the recipient's name.
 
 For Rust, Swift, Kotlin, Dart, Go, Python, and React Native, see [SDKs](/docs/sdk). The shape of the call is identical across ports.
 
@@ -63,24 +63,24 @@ Show the original name in the confirmation screen alongside the underlying addre
 
 ## Handling errors
 
-There are three cases to handle around the `resolve` call.
+There are three cases to handle around the `resolveName` call.
 
 `isValidName` returns `false`. The input is not a syntactically valid name. Don't call the resolver - fall back to your address parser or show a validation error.
 
-`resolve` returns `null`. The name passed validation but is not currently registered. Show "name not found" in the recipient field. A released name returns `null` the same way a never-claimed name does.
+`resolveName` returns `null`. The name passed validation but is not currently registered. Show "name not found" in the recipient field. A released name returns `null` the same way a never-claimed name does.
 
-`resolve` throws `ZNSError`. The indexer is unreachable or returned an error. Surface a transient failure to the user and let them retry.
+`resolveName` throws. The indexer is unreachable or returned an error. Surface a transient failure to the user and let them retry.
 
 ```typescript
 try {
-  const reg = await client.resolve(name);
+  const reg = await zns.resolveName(name);
   if (reg === null) {
     showRecipientError("Name not found");
     return;
   }
   fillRecipient(reg.address);
 } catch (e) {
-  if (e instanceof ZNSError && e.type === ErrorType.HttpError) {
+  if (e instanceof Error) {
     showRecipientError("Cannot reach the name server. Try again.");
   } else {
     throw e;
@@ -88,13 +88,34 @@ try {
 }
 ```
 
-The other `ErrorType` values (`UivkMismatch`, `InvalidParams`, `InternalError`) signal a misconfigured client or a bug. Log them, but they should not fire on the happy path. `UivkMismatch` in particular means the indexer the client connected to is not the one it pinned against; treat it as fatal and refuse to substitute the address.
+To verify the indexer's UIVK on startup (strongly recommended):
+
+```typescript
+try {
+  await zns.verify();
+} catch (e) {
+  // UIVK mismatch - the indexer is not a known ZNS instance
+  console.error("UIVK verification failed:", e);
+  // Consider disabling name resolution or showing a warning
+}
+```
 
 ## Optional: verify the signature
 
 Most wallets do not need this. The resolver returns a `signature` field over the registration's pre-image, signed by the protocol's admin Ed25519 key. A wallet that wants trust-minimized resolution can verify it locally against the pinned `admin_pubkey` from `status` before substituting the address.
 
-The full procedure and threat model live at [Trust model](/docs/learn/trust-model). The SDK does not yet ship a `verifyRegistration` helper, so you bring your own Ed25519 library (`@noble/ed25519` works in browsers and Node).
+The full procedure and threat model live at [Trust model](/docs/learn/trust-model). Use the SDK's built-in `verifyRegistration` method:
+
+```typescript
+const status = await zns.status();
+const reg = await zns.resolveName("alice");
+if (reg) {
+  const isValid = await zns.verifyRegistration(reg, status.admin_pubkey);
+  if (!isValid) {
+    throw new Error("Registration signature invalid");
+  }
+}
+```
 
 Wallets that want to also support claiming names can deep-link the user to zcashnames.com. Claiming is out of scope for the resolution path.
 

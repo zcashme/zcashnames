@@ -3,17 +3,18 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { buildTransaction, checkUnlockCode } from "@/lib/zns/transaction";
 import { checkScannerState } from "@/lib/zns/resolve";
 import { checkMempool } from "@/lib/zns/mempool";
 import { validateAddress } from "@/lib/zns/name";
-import { buildZcashUri } from "@/lib/payment/zip321";
+import { buildZcashUri, parseZip321Uri } from "@/lib/payment/zip321";
 import { generateSessionId, buildZvsMemo } from "@/lib/payment/memo";
 import { getNetworkConstants, MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import type { Network } from "@/lib/zns/name";
 import { useCopy } from "@/lib/useCopy";
+import CopyIconButton from "@/components/CopyIconButton";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,6 +26,7 @@ export interface ModalTarget {
   registrationAddress?: string;
   registrationNonce?: number;
   registrationPubkey?: string | null;
+  listingPriceZec?: number;
   network: Network;
   networkPassword: string;
   isReserved?: boolean;
@@ -46,6 +48,8 @@ type AuthMode = "default" | "otp" | "sovereign";
 
 type ScanState = "loading" | "not_detected" | "in_mempool" | "being_mined" | "mined";
 
+type QrSectionKind = "otp" | "payment";
+
 const ACTION_LABEL: Record<Action, string> = {
   claim: "Claim",
   buy: "Buy",
@@ -53,6 +57,15 @@ const ACTION_LABEL: Record<Action, string> = {
   list: "List for Sale",
   delist: "Delist",
   release: "Release Name",
+};
+
+const PREPARE_ACTION_LABEL: Record<Action, string> = {
+  claim: "Claim",
+  buy: "Buy",
+  update: "Update",
+  list: "List",
+  delist: "Delist",
+  release: "Release",
 };
 
 // Used in scanner copy: "Your {noun} hasn't been detected yet."
@@ -86,7 +99,7 @@ function parsePrice(raw: string): number | null {
   const n = raw.replace(/,/g, "").trim();
   if (!n) return null;
   const num = Number(n);
-  return Number.isFinite(num) && num > 0 ? num : null;
+  return Number.isFinite(num) && num >= 0 ? num : null;
 }
 
 function buildSovereignPayload(
@@ -130,6 +143,23 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
+function prepareDescription(action: Action, name: string, amount: string): React.ReactNode {
+  switch (action) {
+    case "buy":
+      return <>Purchase for <strong>{amount}</strong>.</>;
+    case "delist":
+      return <>Remove from sale.</>;
+    case "release":
+      return <>Allowing others to claim it.</>;
+    case "update":
+      return <>Set a new address.</>;
+    case "list":
+      return <>Set a price for <strong>{name}</strong>.</>;
+    case "claim":
+      return <><strong>{name}</strong></>;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -141,6 +171,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
     registrationAddress,
     registrationNonce,
     registrationPubkey,
+    listingPriceZec,
     network,
     networkPassword,
     isReserved,
@@ -151,8 +182,10 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   const needsAddress = action === "claim" || action === "buy" || action === "update";
   const needsPrice = action === "list";
   const ownerAction = action === "update" || action === "list" || action === "delist" || action === "release";
+  const ownerAuthMode: AuthMode | null = ownerAction ? (registrationPubkey ? "sovereign" : "otp") : null;
   const needsUnlock = isReserved && action === "claim";
   const displayName = `${name}.zcash`;
+  const listingPriceLabel = listingPriceZec == null ? "the listed price" : `${listingPriceZec} ZEC`;
   const explorerHref =
     network === "testnet"
       ? `/explorer?env=testnet&name=${encodeURIComponent(name)}`
@@ -164,6 +197,12 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   const otpCopy = useCopy();
   const payloadCopy = useCopy();
   const uriCopy = useCopy();
+  const otpAddressCopy = useCopy();
+  const otpAmountCopy = useCopy();
+  const otpMemoCopy = useCopy();
+  const paymentAddressCopy = useCopy();
+  const paymentAmountCopy = useCopy();
+  const paymentMemoCopy = useCopy();
 
   // Unlock phase
   const [unlockInput, setUnlockInput] = useState("");
@@ -176,7 +215,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   const [priceInput, setPriceInput] = useState("");
   const [inputError, setInputError] = useState("");
   const [inputLoading, setInputLoading] = useState(false);
-  const [authMode, setAuthMode] = useState<AuthMode>(ownerAction ? "otp" : "default");
+  const [authMode, setAuthMode] = useState<AuthMode>(ownerAuthMode ?? "default");
   const [signError, setSignError] = useState("");
   const [signLoading, setSignLoading] = useState(false);
   const [sovereignPubkeyInput, setSovereignPubkeyInput] = useState("");
@@ -190,16 +229,21 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   const [otpAttempts, setOtpAttempts] = useState(0);
   const [otpError, setOtpError] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
-  const [otpCopied, setOtpCopied] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [showOtpUri, setShowOtpUri] = useState(false);
 
   // Payment phase
   const [paymentUri, setPaymentUri] = useState("");
   const [paymentAmountZec, setPaymentAmountZec] = useState(0);
-  const [uriCopied, setUriCopied] = useState(false);
-  const [sovereignPayloadCopied, setSovereignPayloadCopied] = useState(false);
+  const [showPaymentUri, setShowPaymentUri] = useState(false);
+  const [qrDownloadError, setQrDownloadError] = useState("");
+  const [showOtpHelp, setShowOtpHelp] = useState(false);
+  const [showPaymentHelp, setShowPaymentHelp] = useState(false);
+  const [expandedQr, setExpandedQr] = useState<QrSectionKind | null>(null);
 
   // Scanning phase
   const [scanState, setScanState] = useState<ScanState>("loading");
+  const [showNotDetectedDetail, setShowNotDetectedDetail] = useState(false);
   // Sticky flag: once we've seen the tx in the mempool during this scanning
   // session, treat any subsequent "empty mempool, empty resolver" as
   // "being_mined" rather than regressing to "not_detected".
@@ -207,18 +251,11 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   // One-shot guard so onSuccess fires at most once per scanning session.
   const firedSuccessRef = useRef(false);
 
-  // QR theming
   const containerRef = useRef<HTMLDivElement>(null);
-  const [qrFg, setQrFg] = useState("#f0f0f0");
-  const [qrBg, setQrBg] = useState("#1e1e1e");
-
-  // Read CSS variable colors for QR on mount
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const s = getComputedStyle(containerRef.current);
-    setQrFg(s.getPropertyValue("--fg-heading").trim() || "#f0f0f0");
-    setQrBg(s.getPropertyValue("--color-raised").trim() || "#1e1e1e");
-  }, []);
+  const otpQrRef = useRef<HTMLDivElement>(null);
+  const paymentQrRef = useRef<HTMLDivElement>(null);
+  const otpQrCanvasRef = useRef<HTMLCanvasElement>(null);
+  const paymentQrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Focus first input on mount
   const addressRef = useRef<HTMLInputElement>(null);
@@ -229,6 +266,12 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
     if (needsAddress) addressRef.current?.focus();
     else if (needsPrice) priceRef.current?.focus();
   }, [needsAddress, needsPrice]);
+
+  useEffect(() => {
+    setAuthMode(ownerAuthMode ?? "default");
+    setInputError("");
+    setSignError("");
+  }, [ownerAuthMode, name, action]);
 
   // ESC key
   useEffect(() => {
@@ -291,6 +334,22 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
     // captured once when the scanning phase begins and shouldn't restart polling.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, name, network, action]);
+
+  useEffect(() => {
+    if (phase !== "scanning") {
+      setShowNotDetectedDetail(false);
+      return;
+    }
+
+    setShowNotDetectedDetail(false);
+    const id = window.setTimeout(() => {
+      setShowNotDetectedDetail(true);
+    }, 15000);
+
+    return () => {
+      window.clearTimeout(id);
+    };
+  }, [phase]);
 
   // Ref mirror so the interval callback can read the latest scan state without
   // having to re-create the interval on every state change.
@@ -474,9 +533,9 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
     // Validate price
     if (needsPrice) {
       const zec = parsedPrice;
-      if (!zec) { setInputError("Enter a valid price."); return; }
-      if (zec < 0.001 || zec > MAX_LIST_FOR_SALE_AMOUNT) {
-        setInputError("Price must be between 0.001 and 21,000,000 ZEC.");
+      if (zec === null) { setInputError("Enter a valid price."); return; }
+      if (zec < 0 || zec > MAX_LIST_FOR_SALE_AMOUNT) {
+        setInputError("Price must be between 0 and 21,000,000 ZEC.");
         return;
       }
     }
@@ -503,6 +562,10 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
       setOtpInput("");
       setOtpAttempts(0);
       setOtpError("");
+      setOtpSent(false);
+      setShowOtpUri(false);
+      setShowOtpHelp(false);
+      setQrDownloadError("");
       setPhase("otp");
       return;
     }
@@ -532,6 +595,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
 
   async function handleVerifyOtp() {
     if (otpLoading) return;
+    if (!otpSent) { setOtpError("Send the verification transaction first, then enter the code from your wallet."); return; }
     const code = otpInput.trim();
     if (!/^\d{6}$/.test(code)) { setOtpError("Enter the 6-digit code from your wallet."); return; }
     if (otpAttempts >= OTP_MAX_ATTEMPTS) { setOtpError("Max attempts reached. Please start over."); return; }
@@ -649,6 +713,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
     }
   }
 
+  /*
   function handleStartOver() {
     if (!registrationAddress) {
       setOtpError("Registration address unavailable. Search the name again and retry.");
@@ -660,29 +725,432 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
     setOtpInput("");
     setOtpAttempts(0);
     setOtpError("");
+    setOtpSent(false);
+    setShowOtpUri(false);
+    setShowOtpHelp(false);
+    setQrDownloadError("");
+  }
+  */
+
+  function handleOtpBack() {
+    const confirmed = window.confirm("Are You Sure? You will have to request another passcode.");
+    if (!confirmed) return;
+
+    setOtpInput("");
+    setOtpAttempts(0);
+    setOtpError("");
+    setOtpSent(false);
+    setShowOtpUri(false);
+    setShowOtpHelp(false);
+    setQrDownloadError("");
+    setPhase("input");
   }
 
   function goToPayment(memo: string, amountZec: number) {
     const uri = buildZcashUri(ZIP321_RECIPIENT_ADDRESS, String(amountZec), memo);
     setPaymentUri(uri);
     setPaymentAmountZec(amountZec);
+    setShowPaymentUri(false);
+    setShowPaymentHelp(false);
+    setQrDownloadError("");
     setPhase("payment");
   }
 
-  async function handleCopyUri() {
-    try {
-      await navigator.clipboard.writeText(paymentUri);
-      setUriCopied(true);
-      setTimeout(() => setUriCopied(false), 2000);
-    } catch { /* clipboard API blocked - user can copy from the code block */ }
+  function qrFilename(kind: QrSectionKind) {
+    const cleanName = name.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "name";
+    if (kind === "otp") return `zcashname-verify-ownership-${cleanName}.png`;
+    return `zcashname-${action}-${cleanName}.png`;
   }
 
-  async function handleCopySovereignPayload() {
+  async function downloadQrPng(kind: QrSectionKind) {
+    const sourceCanvas = kind === "otp" ? otpQrCanvasRef.current : paymentQrCanvasRef.current;
+    if (!sourceCanvas) {
+      setQrDownloadError("QR download is unavailable. Try again or copy the URI.");
+      return;
+    }
+
     try {
-      await navigator.clipboard.writeText(sovereignPayload);
-      setSovereignPayloadCopied(true);
-      setTimeout(() => setSovereignPayloadCopied(false), 2000);
-    } catch { /* clipboard API blocked */ }
+      setQrDownloadError("");
+      const padding = 96;
+      const qrSize = 768;
+      const canvas = document.createElement("canvas");
+      canvas.width = qrSize + padding * 2;
+      canvas.height = qrSize + padding * 2;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas is unavailable.");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(sourceCanvas, padding, padding, qrSize, qrSize);
+
+      const pngBlob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("QR PNG export failed."));
+        }, "image/png");
+      });
+      const pngUrl = URL.createObjectURL(pngBlob);
+      const link = document.createElement("a");
+      link.href = pngUrl;
+      link.download = qrFilename(kind);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+    } catch {
+      setQrDownloadError("Could not save the QR. Try taking a screenshot or copying the URI.");
+    }
+  }
+
+  function renderExpandIcon() {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+        <path d="M8 3H3v5" />
+        <path d="M3 3l7 7" />
+        <path d="M16 3h5v5" />
+        <path d="M21 3l-7 7" />
+        <path d="M8 21H3v-5" />
+        <path d="M3 21l7-7" />
+        <path d="M16 21h5v-5" />
+        <path d="M21 21l-7-7" />
+      </svg>
+    );
+  }
+
+  function renderRetractIcon() {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+        <path d="M10 3v7H3" />
+        <path d="M3 10l7-7" />
+        <path d="M14 3v7h7" />
+        <path d="M21 10l-7-7" />
+        <path d="M10 21v-7H3" />
+        <path d="M3 14l7 7" />
+        <path d="M14 21v-7h7" />
+        <path d="M21 14l-7 7" />
+      </svg>
+    );
+  }
+
+  function renderScanIcon() {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+        <path d="M7 3H5a2 2 0 0 0-2 2v2" />
+        <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+        <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+        <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+        <path d="M8 8h8v8H8z" />
+        <path d="M11 11h2v2h-2z" />
+      </svg>
+    );
+  }
+
+  function renderPrepareIcon() {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+        <path d="M8 6h8" />
+        <path d="M8 10h5" />
+        <path d="M8 14h4" />
+        <path d="M16 3h1a2 2 0 0 1 2 2v6" />
+        <path d="M7 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5" />
+        <path d="M9 3h6" />
+        <path d="M15 18l4-4 2 2-4 4h-2v-2z" />
+      </svg>
+    );
+  }
+
+  function renderFloatingPhaseIcon() {
+    if (phase !== "input" && phase !== "otp" && phase !== "payment" && phase !== "scanning") return null;
+
+    const isMined = phase === "scanning" && scanState === "mined";
+    return (
+      <span
+        className="absolute left-1/2 top-0 z-10 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
+        style={{
+          background: isMined ? "var(--color-accent-green-light)" : "var(--color-raised)",
+          color: isMined ? "var(--color-accent-green)" : "var(--fg-heading)",
+          border: "1px solid var(--border-muted)",
+        }}
+        aria-hidden="true"
+      >
+        {phase === "scanning" && !isMined ? (
+          <span
+            className="inline-block h-6 w-6 rounded-full border-2 animate-spin"
+            style={{
+              borderColor: "var(--border-muted)",
+              borderTopColor: "var(--fg-heading)",
+            }}
+          />
+        ) : isMined ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        ) : phase === "input" ? (
+          renderPrepareIcon()
+        ) : (
+          renderScanIcon()
+        )}
+      </span>
+    );
+  }
+
+  function getFlowSteps(): Phase[] {
+    const steps: Phase[] = [];
+    if (needsUnlock) steps.push("unlock");
+    steps.push("input");
+    if (isSovereignMode) steps.push("sign");
+    else if (usesOtpFlow) steps.push("otp");
+    steps.push("payment", "scanning");
+    return steps;
+  }
+
+  function progressClipPath(index: number, count: number): string {
+    if (count <= 1) return "polygon(0 0, 100% 0, 100% 100%, 0 100%)";
+    if (index === 0) return "polygon(0 0, calc(100% - 6px) 0, 100% 100%, 0 100%)";
+    if (index === count - 1) return "polygon(0 0, 100% 0, 100% 100%, 6px 100%)";
+    return "polygon(0 0, calc(100% - 6px) 0, 100% 100%, 6px 100%)";
+  }
+
+  function renderProgressSegments() {
+    const steps = getFlowSteps();
+    const currentIndex = steps.indexOf(phase);
+    if (currentIndex < 0) return null;
+
+    return (
+      <div className="flex w-full justify-center" aria-hidden="true">
+        <div className="flex max-w-full items-center gap-[3px]">
+          {steps.map((step, index) => (
+            <span
+              key={`${step}-${index}`}
+              className="block h-1.5 w-8 sm:w-[34px]"
+              style={{
+                clipPath: progressClipPath(index, steps.length),
+                background: index <= currentIndex ? "var(--fg-heading)" : "var(--border-muted)",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function renderManualCopyRow(label: string, value: string, copied: boolean, onCopy: () => void) {
+    return (
+      <div className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-2 text-left">
+        <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+          {label}
+        </span>
+        <code
+          className="min-w-0 truncate rounded-md px-2 py-1 text-xs font-mono"
+          style={{ background: "var(--color-raised)", color: "var(--fg-body)", border: "1px solid var(--border-muted)" }}
+          title={value}
+        >
+          {value || "Not set"}
+        </code>
+        <CopyIconButton
+          copied={copied}
+          onClick={onCopy}
+          disabled={!value}
+          style={secondaryBtnStyle}
+          ariaLabel={`Copy ${label.toLowerCase()}`}
+          title={copied ? "Copied!" : `Copy ${label.toLowerCase()}`}
+        />
+      </div>
+    );
+  }
+
+  function renderQrPaymentBlock(kind: QrSectionKind, uri: string, size: number) {
+    const isOtp = kind === "otp";
+    const parsed = uri ? parseZip321Uri(uri) : { address: "", amount: "", memoRaw: "", memoDecoded: "" };
+    const showUri = isOtp ? showOtpUri : showPaymentUri;
+    const setShowUri = isOtp ? setShowOtpUri : setShowPaymentUri;
+    const showHelp = isOtp ? showOtpHelp : showPaymentHelp;
+    const setShowHelp = isOtp ? setShowOtpHelp : setShowPaymentHelp;
+    const uriCopyState = isOtp ? otpCopy : uriCopy;
+    const addressCopy = isOtp ? otpAddressCopy : paymentAddressCopy;
+    const amountCopy = isOtp ? otpAmountCopy : paymentAmountCopy;
+    const memoCopy = isOtp ? otpMemoCopy : paymentMemoCopy;
+    const qrRef = isOtp ? otpQrRef : paymentQrRef;
+    const qrCanvasRef = isOtp ? otpQrCanvasRef : paymentQrCanvasRef;
+    const label = isOtp ? "ownership verification URI" : "payment URI";
+
+    return (
+      <div className="w-full flex flex-col items-center gap-4">
+        <div className="grid w-full grid-cols-[2.25rem_auto_2.25rem] items-start justify-center gap-2">
+          <span aria-hidden="true" />
+          <a
+            href={uri}
+            className="block rounded-xl p-3 transition-transform duration-150 ease-out active:scale-95"
+            style={{ background: "#ffffff", WebkitTapHighlightColor: "transparent" }}
+            aria-label={`Open ${label} in wallet`}
+            title={`Open ${label} in wallet`}
+          >
+            <div ref={qrRef} className="block leading-none">
+              <QRCodeSVG value={uri} size={size} fgColor="#000000" bgColor="#ffffff" marginSize={4} />
+              <QRCodeCanvas
+                ref={qrCanvasRef}
+                value={uri}
+                size={768}
+                fgColor="#000000"
+                bgColor="#ffffff"
+                marginSize={4}
+                className="pointer-events-none absolute h-px w-px opacity-0"
+                aria-hidden="true"
+              />
+            </div>
+          </a>
+          <button
+            type="button"
+            onClick={() => setExpandedQr(kind)}
+            className="mt-2 inline-flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+            style={secondaryBtnStyle}
+            aria-label={`Expand ${label} QR`}
+            title={`Expand ${label} QR`}
+          >
+            {renderExpandIcon()}
+          </button>
+        </div>
+
+        <div className="w-full flex flex-col gap-3">
+          {showUri && (
+            <div
+              className="flex w-full items-stretch overflow-hidden rounded-lg text-left"
+              style={{ background: "var(--color-raised)", color: "var(--fg-body)", border: "1px solid var(--border-muted)" }}
+            >
+              <code className="min-w-0 flex-1 break-all px-3 py-2 text-xs select-all">{uri}</code>
+              <div
+                className="flex items-center px-1.5"
+                style={{ borderLeft: "1px solid var(--border-muted)" }}
+              >
+                <CopyIconButton
+                  copied={uriCopyState.copied}
+                  onClick={() => uriCopyState.copy(uri)}
+                  ariaLabel={`Copy ${label}`}
+                  title={uriCopyState.copied ? "Copied!" : `Copy ${label}`}
+                  style={{
+                    background: "transparent",
+                    border: "0",
+                    color: "var(--fg-body)",
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setShowHelp((current) => !current)}
+            className="self-center px-1 py-1 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+            style={{ color: "var(--fg-body)" }}
+          >
+            {showHelp ? "Hide Help" : "Trouble scanning?"}
+          </button>
+
+          <div
+            className="grid transition-[grid-template-rows,opacity] duration-300 ease-out"
+            style={{
+              gridTemplateRows: showHelp ? "1fr" : "0fr",
+              opacity: showHelp ? 1 : 0,
+            }}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <div
+                className="rounded-xl p-4 text-left"
+                style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)" }}
+              >
+                <div className="flex flex-col gap-2 text-xs leading-relaxed" style={{ color: "var(--fg-body)" }}>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowUri((current) => !current)}
+                      className="w-20 shrink-0 self-start rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                      style={secondaryBtnStyle}
+                    >
+                      {showUri ? "Hide URI" : "Show URI"}
+                    </button>
+                    <p className="m-0">Using Zingo! or Zkool? Tap the QR to open in wallet or paste URI in To: field.</p>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <button
+                      type="button"
+                      onClick={() => downloadQrPng(kind)}
+                      className="w-20 shrink-0 self-start rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                      style={secondaryBtnStyle}
+                    >
+                      Save QR
+                    </button>
+                    <p className="m-0">Using Zashi? Save the QR, then upload it from the wallet scanner.</p>
+                  </div>
+                  <p>Manual entry: copy the address, memo, and amount into your wallet.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {renderManualCopyRow("Address", parsed.address, addressCopy.copied, () => addressCopy.copy(parsed.address))}
+            {renderManualCopyRow("Amount", parsed.amount, amountCopy.copied, () => amountCopy.copy(parsed.amount))}
+            {renderManualCopyRow("Memo", parsed.memoDecoded, memoCopy.copied, () => memoCopy.copy(parsed.memoDecoded))}
+          </div>
+
+          {qrDownloadError && (
+            <p className="text-left text-xs font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
+              {qrDownloadError}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function renderExpandedQrLayer() {
+    if (!expandedQr) return null;
+    const uri = expandedQr === "otp" ? otpUri : paymentUri;
+    if (!uri) return null;
+    const label = expandedQr === "otp" ? "ownership verification URI" : "payment URI";
+
+    return (
+      <div
+        className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
+        style={{ backgroundColor: "rgba(0,0,0,0.72)", backdropFilter: "blur(8px)" }}
+        onClick={(e) => {
+          e.stopPropagation();
+          setExpandedQr(null);
+        }}
+      >
+        <div className="flex max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] items-start justify-center gap-2">
+          <a
+            href={uri}
+            className="block rounded-xl bg-white p-3 transition-transform duration-150 ease-out active:scale-95"
+            style={{ WebkitTapHighlightColor: "transparent" }}
+            aria-label={`Open expanded ${label} in wallet`}
+            title={`Open ${label} in wallet`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <QRCodeSVG
+              value={uri}
+              size={900}
+              fgColor="#000000"
+              bgColor="#ffffff"
+              marginSize={4}
+              className="h-auto w-[min(76vw,76vh,900px)] max-w-full"
+            />
+          </a>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpandedQr(null);
+            }}
+            className="mt-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-black cursor-pointer transition-opacity hover:opacity-85"
+            aria-label={`Retract ${label} QR`}
+            title={`Retract ${label} QR`}
+          >
+            {renderRetractIcon()}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // ---- Shared styles ----
@@ -715,18 +1183,23 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
     >
       <div
         ref={containerRef}
-        className="relative rounded-2xl w-full max-w-md overflow-hidden"
+        className="relative rounded-2xl w-full max-w-md overflow-visible"
         style={{
           background: "var(--feature-card-bg)",
           border: "1px solid var(--faq-border)",
           boxShadow: "0 24px 64px rgba(0,0,0,0.45)",
-          maxHeight: "calc(100vh - 2rem)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Phase 0: Unlock (reserved names only) ── */}
+        {renderFloatingPhaseIcon()}
+        <div
+          className="max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain rounded-2xl"
+          onWheel={(e) => e.stopPropagation()}
+        >
         {phase === "unlock" && (
             <div className="p-8 flex flex-col gap-5">
+              {renderProgressSegments()}
               <div>
                 <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
                   Reserved Name
@@ -782,21 +1255,14 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
 
         {/* ── Phase 1: Input ── */}
         {phase === "input" && (
-          <div className="p-8 flex flex-col gap-5">
-            <div>
+          <div className="px-8 pb-8 pt-12 flex flex-col gap-5">
+            {renderProgressSegments()}
+            <div className="text-center">
               <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
-                {ACTION_LABEL[action]}
+                {PREPARE_ACTION_LABEL[action]} {name}
               </h2>
               <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
-                {action === "release"
-                  ? <>Permanently release <strong>{displayName}</strong>. This cannot be undone.</>
-                  : action === "delist"
-                    ? <>Remove <strong>{displayName}</strong> from sale.</>
-                    : action === "list"
-                      ? <>Set a price for <strong>{displayName}</strong>.</>
-                      : action === "update"
-                        ? <>Set a new address for <strong>{displayName}</strong>.</>
-                        : <><strong>{displayName}</strong></>}
+                {prepareDescription(action, name, listingPriceLabel)}
               </p>
             </div>
 
@@ -840,64 +1306,44 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
               </div>
             )}
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
-                Changes to this name will be authorized by
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {ownerAction ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => { setAuthMode("otp"); setInputError(""); setSignError(""); }}
-                      className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
-                      style={{
-                        ...(authMode === "otp" ? primaryBtnStyle : secondaryBtnStyle),
-                        opacity: authMode === "otp" ? 1 : 0.85,
-                      }}
-                    >
-                      Passcodes
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setAuthMode("sovereign"); setInputError(""); setSignError(""); }}
-                      className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
-                      style={{
-                        ...(authMode === "sovereign" ? primaryBtnStyle : secondaryBtnStyle),
-                        opacity: authMode === "sovereign" ? 1 : 0.85,
-                      }}
-                    >
-                      Keypairs
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => { setAuthMode("default"); setInputError(""); setSignError(""); }}
-                      className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
-                      style={{
-                        ...(authMode === "default" ? primaryBtnStyle : secondaryBtnStyle),
-                        opacity: authMode === "default" ? 1 : 0.85,
-                      }}
-                    >
-                      Passcodes
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setAuthMode("sovereign"); setInputError(""); setSignError(""); }}
-                      className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
-                      style={{
-                        ...(authMode === "sovereign" ? primaryBtnStyle : secondaryBtnStyle),
-                        opacity: authMode === "sovereign" ? 1 : 0.85,
-                      }}
-                    >
-                      Keypairs
-                    </button>
-                  </>
-                )}
+            {ownerAction ? (
+              <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
+                Changes to this name are authorized by{" "}
+                <strong style={{ color: "var(--fg-heading)" }}>
+                  {ownerAuthMode === "sovereign" ? "keypairs" : "passcodes"}
+                </strong>
+              </p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                  Changes to this name will be authorized by
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode("default"); setInputError(""); setSignError(""); }}
+                    className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+                    style={{
+                      ...(authMode === "default" ? primaryBtnStyle : secondaryBtnStyle),
+                      opacity: authMode === "default" ? 1 : 0.85,
+                    }}
+                  >
+                    Passcodes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode("sovereign"); setInputError(""); setSignError(""); }}
+                    className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+                    style={{
+                      ...(authMode === "sovereign" ? primaryBtnStyle : secondaryBtnStyle),
+                      opacity: authMode === "sovereign" ? 1 : 0.85,
+                    }}
+                  >
+                    Keypairs
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {inputError && (
               <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
@@ -905,7 +1351,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
               </p>
             )}
 
-            <div className="flex gap-3 justify-end pt-1">
+            <div className="flex gap-3 justify-center pt-1">
               <button
                 type="button"
                 onClick={onClose}
@@ -935,60 +1381,43 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
 
         {/* ── Phase 2: OTP ── */}
         {phase === "otp" && (
-          <div className="p-8 flex flex-col items-center gap-5 text-center">
+          <div className="px-8 pb-8 pt-12 flex flex-col items-center gap-5 text-center">
+            {renderProgressSegments()}
             <div>
               <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
                 Verify Ownership
               </h2>
               <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
-                Scan the QR code with your Zcash wallet and send {OTP_AMOUNT} ZEC.
-                You&rsquo;ll receive a 6-digit code.
+                Send exact amount and memo to address to request code.
               </p>
             </div>
 
             {otpUri && (
-              <div className="rounded-xl p-3" style={{ background: qrBg }}>
-                <QRCodeSVG value={otpUri} size={180} fgColor={qrFg} bgColor={qrBg} />
-              </div>
+              renderQrPaymentBlock("otp", otpUri, 180)
             )}
 
-            <div className="w-full flex flex-col gap-2">
-              <code
-                className="w-full text-left break-all rounded-lg px-3 py-2 text-xs select-all"
-                style={{ background: "var(--color-raised)", color: "var(--fg-body)", border: "1px solid var(--border-muted)" }}
-              >
-                {otpUri}
-              </code>
-              <button
-                type="button"
-                onClick={() => otpCopy.copy(otpUri)}
-                className="self-end px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                style={secondaryBtnStyle}
-              >
-                {otpCopy.copied ? "Copied!" : "Copy URI"}
-              </button>
-            </div>
-
-            <div className="w-full flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-left" style={{ color: "var(--fg-muted)" }}>
-                6-Digit Code
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={otpInput}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/\D/g, "").slice(0, 6);
-                  setOtpInput(v);
-                  setOtpError("");
-                }}
-                onKeyDown={(e) => { if (e.key === "Enter") handleVerifyOtp(); }}
-                placeholder="000000"
-                className="w-full rounded-xl px-4 py-3 text-sm outline-none text-center tracking-[0.3em] font-mono"
-                style={inputStyle(otpError ? "var(--accent-red, #e05252)" : undefined)}
-              />
-            </div>
+            {otpSent ? (
+              <div className="w-full flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-center" style={{ color: "var(--fg-muted)" }}>
+                  Check your wallet&hellip; you will receive a six-digit code.
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={otpInput}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    setOtpInput(v);
+                    setOtpError("");
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleVerifyOtp(); }}
+                  placeholder="000000"
+                  className="w-full rounded-xl px-4 py-3 text-sm outline-none text-center tracking-[0.3em] font-mono"
+                  style={inputStyle(otpError ? "var(--accent-red, #e05252)" : undefined)}
+                />
+              </div>
+            ) : null}
 
             {otpError && (
               <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
@@ -1002,19 +1431,30 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
               </p>
             )}
 
-            <div className="flex gap-3 w-full justify-between pt-1">
+            <div className="flex flex-wrap gap-3 w-full justify-between pt-1">
               <button
                 type="button"
-                onClick={handleStartOver}
+                onClick={handleOtpBack}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
                 style={secondaryBtnStyle}
               >
-                Start Over
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOtpSent(true);
+                  setOtpError("");
+                }}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                style={secondaryBtnStyle}
+              >
+                I Sent It!
               </button>
               <button
                 type="button"
                 onClick={handleVerifyOtp}
-                disabled={otpLoading || otpAttempts >= OTP_MAX_ATTEMPTS}
+                disabled={!otpSent || !otpInput.trim() || otpLoading || otpAttempts >= OTP_MAX_ATTEMPTS}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50"
                 style={primaryBtnStyle}
               >
@@ -1026,8 +1466,9 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
 
         {/* ── Phase 3: Sovereign Sign ── */}
         {phase === "sign" && (
-          <div className="p-8 flex flex-col gap-5">
-            <div>
+          <div className="px-8 pb-8 pt-12 flex flex-col gap-5">
+            {renderProgressSegments()}
+            <div className="text-center">
               <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
                 Sovereign Signature
               </h2>
@@ -1151,48 +1592,32 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
 
         {/* ── Phase 4: Payment ── */}
         {phase === "payment" && (
-          <div className="p-8 flex flex-col items-center gap-5 text-center">
-            <span
-              className="flex items-center justify-center w-14 h-14 rounded-full"
-              style={{ background: "var(--color-accent-green-light)", color: "var(--color-accent-green)" }}
-              aria-hidden="true"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-            </span>
-
+          <div className="px-8 pb-8 pt-12 flex flex-col items-center gap-5 text-center">
+            {renderProgressSegments()}
             <div>
               <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
-                Scan to {ACTION_LABEL[action]}
+                Send to {ACTION_LABEL[action].toLowerCase()} &quot;{name}&quot;
               </h2>
               <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
-                Send <strong>{paymentAmountZec} ZEC</strong> to complete the transaction for <strong>{displayName}</strong>.
+                Send exact amount and memo to address to complete transaction.
               </p>
             </div>
 
             {paymentUri && (
-              <div className="rounded-xl p-3" style={{ background: qrBg }}>
-                <QRCodeSVG value={paymentUri} size={200} fgColor={qrFg} bgColor={qrBg} />
-              </div>
+              renderQrPaymentBlock("payment", paymentUri, 200)
             )}
 
-            <code
-              className="w-full text-left break-all rounded-lg px-3 py-2 text-xs select-all"
-              style={{ background: "var(--color-raised)", color: "var(--fg-body)", border: "1px solid var(--border-muted)" }}
-            >
-              {paymentUri}
-            </code>
-
             <div className="flex gap-3 w-full justify-center pt-1">
-              <button
-                type="button"
-                onClick={() => uriCopy.copy(paymentUri)}
-                className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                style={secondaryBtnStyle}
-              >
-                {uriCopy.copied ? "Copied!" : "Copy URI"}
-              </button>
+              {(action === "claim" || action === "buy") && (
+                <button
+                  type="button"
+                  onClick={() => setPhase("input")}
+                  className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                  style={secondaryBtnStyle}
+                >
+                  Back
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setPhase("scanning")}
@@ -1207,7 +1632,8 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
 
         {/* ── Phase 5: Scanning ── */}
         {phase === "scanning" && (
-          <div className="p-8 flex flex-col items-center gap-5 text-center">
+          <div className="px-8 pb-8 pt-12 flex flex-col items-center gap-5 text-center">
+            {renderProgressSegments()}
             <div>
               <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
                 Scanning
@@ -1230,31 +1656,13 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
                 }`,
               }}
             >
-              {scanState === "mined" ? (
-                <span
-                  className="flex items-center justify-center w-12 h-12 rounded-full"
-                  style={{ background: "var(--color-accent-green-light)", color: "var(--color-accent-green)" }}
-                  aria-hidden="true"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                </span>
-              ) : (
-                <span
-                  className="inline-block w-6 h-6 rounded-full border-2 animate-spin"
-                  style={{
-                    borderColor: "var(--border-muted)",
-                    borderTopColor: "var(--fg-heading)",
-                  }}
-                  aria-hidden="true"
-                />
-              )}
-
               <p className="text-sm" style={{ color: "var(--fg-body)" }}>
                 {scanState === "loading" && "Checking…"}
                 {scanState === "not_detected" && (
-                  <>Your {ACTION_NOUN[action]} hasn&rsquo;t been detected yet. It may not have propagated, or wasn&rsquo;t sent correctly.</>
+                  <>
+                    Your {ACTION_NOUN[action]} hasn&rsquo;t been detected yet.
+                    {showNotDetectedDetail && " It may not have propagated, or wasn't sent correctly."}
+                  </>
                 )}
                 {scanState === "in_mempool" && (
                   <>Your {ACTION_NOUN[action]} is in the mempool. Waiting to be mined.</>
@@ -1270,20 +1678,32 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
               <button
                 type="button"
                 onClick={() => setPhase("payment")}
-                className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                disabled={scanState === "mined"}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                 style={secondaryBtnStyle}
               >
                 Back
               </button>
-              <a
-                href={explorerHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                style={secondaryBtnStyle}
-              >
-                View on Explorer
-              </a>
+              {scanState === "mined" ? (
+                <a
+                  href={explorerHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                  style={secondaryBtnStyle}
+                >
+                  View on Explorer
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-not-allowed opacity-50"
+                  style={secondaryBtnStyle}
+                >
+                  View on Explorer
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onClose}
@@ -1296,6 +1716,8 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
           </div>
         )}
       </div>
+      </div>
+      {renderExpandedQrLayer()}
     </div>,
     document.body,
   );

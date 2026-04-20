@@ -36,7 +36,7 @@ const blogLinks = sectionCardMenuLinks("blogs").map((item) => ({
 }));
 
 const menuLinks: MenuLink[] = [
-  { label: "Home", href: "/" },
+  { label: "Home", href: "/", displayPath: "zcashnames.com" },
   { label: "Explorer", href: "/explorer" },
   {
     label: "Learn",
@@ -59,7 +59,7 @@ const menuLinks: MenuLink[] = [
       { label: "SDKs", href: "/docs/sdk" },
       { label: "Protocol", href: "/docs/protocol/overview" },
       { label: "Indexer & RPC", href: "/docs/indexer/running" },
-      { label: "OpenRPC JSON", href: "/openrpc.json" },
+      { label: "OpenRPC JSON", href: "https://github.com/zcashme/ZNS/blob/master/openrpc.json" },
     ],
   },
   {
@@ -85,7 +85,10 @@ const menuLinks: MenuLink[] = [
     label: "Leaderboard",
     href: "/leaders",
     displayPath: "/leaders",
-    children: [{ label: "Dashboard", href: "/leaders/ref", displayPath: ".../ref" }],
+    children: [
+      { label: "Dashboard", href: "/leaders/ref", displayPath: ".../ref" },
+      { label: "Terms", href: "/leaders/terms", displayPath: ".../terms" },
+    ],
   },
   { label: "Brand Kit", href: "/brandkit" },
 ];
@@ -168,7 +171,7 @@ export default function HeaderMenu() {
         <nav
           id="site-header-menu"
           aria-label="Site menu"
-          className="absolute right-0 top-11 z-50 w-[min(calc(100vw-2rem),360px)] overflow-hidden rounded-lg border border-border-muted bg-[var(--color-raised)] shadow-2xl"
+          className="absolute left-0 top-11 z-50 w-[min(calc(100vw-2rem),360px)] overflow-hidden rounded-lg border border-border-muted bg-[var(--color-raised)] shadow-2xl"
         >
           <div className="site-header-menu-scroll max-h-[calc(100vh-7rem)] overflow-y-auto p-2">
             {menuLinks.map((item) => (

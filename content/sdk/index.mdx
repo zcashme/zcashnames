@@ -1,8 +1,8 @@
 # Libraries
 
-There are several ways to interface with ZNS. The first-party SDKs below all wrap the same JSON-RPC API and memo protocol; they differ only in idiom. If your language isn't here, hit the indexer directly via [Direct RPC](/docs/sdk/direct-rpc), or generate a typed client from [`/openrpc.json`](/openrpc.json).
+The TypeScript SDK wraps the JSON-RPC API and memo protocol. If your language isn't TypeScript/JavaScript, hit the indexer directly via [Direct RPC](/docs/sdk/direct-rpc), or generate a typed client from [`openrpc.json`](https://github.com/zcashme/ZNS/blob/master/openrpc.json).
 
-All first-party ports live in [`zcashme/ZNS/sdk`](https://github.com/zcashme/ZNS/tree/master/sdk) and track the same version.
+The SDK lives in [`zcashme/ZNS/sdk/typescript`](https://github.com/zcashme/ZNS/tree/master/sdk/typescript).
 
 ## TypeScript / JavaScript
 
@@ -11,11 +11,13 @@ npm install zcashname-sdk
 ```
 
 ```typescript
-import { resolve } from "zcashname-sdk";
-const reg = await resolve("alice");
+import { ZNS } from "zcashname-sdk";
+
+const zns = new ZNS();
+const reg = await zns.resolveName("alice");
 ```
 
-Source: [`sdk/typescript`](https://github.com/zcashme/ZNS/tree/master/sdk/typescript). Reference: [TypeScript SDK](/docs/sdk/typescript).
+Reference: [TypeScript SDK](/docs/sdk/typescript).
 
 ## React Native
 
@@ -24,109 +26,21 @@ npm install zcashname-sdk-react-native zcashname-sdk
 ```
 
 ```tsx
-import { ZNSProvider, useResolve } from "zcashname-sdk-react-native";
-// wrap your app in <ZNSProvider />, then call hooks
-```
+import { ZNSProvider, useZNS } from "zcashname-sdk-react-native";
 
-Wraps `zcashname-sdk` with a context provider and data-fetching hooks. Source: [`sdk/react-native`](https://github.com/zcashme/ZNS/tree/master/sdk/react-native).
-
-## Rust
-
-```toml
-[dependencies]
-zns-client = { git = "https://github.com/zcashme/ZNS", branch = "master" }
-```
-
-```rust
-use zns_client::Client;
-let client = Client::new("https://light.zcash.me/zns-testnet")?;
-let reg = client.resolve("alice").await?;
-```
-
-Async client with optional `reqwest-transport` feature. Source: [`sdk/rust`](https://github.com/zcashme/ZNS/tree/master/sdk/rust).
-
-## Python
-
-```sh
-pip install zcashname-sdk
-```
-
-```python
-from zcashname import ZNSClient
-client = await ZNSClient.create()
-reg = await client.resolve("alice")
-```
-
-Async, requires Python 3.10+. Source: [`sdk/python`](https://github.com/zcashme/ZNS/tree/master/sdk/python).
-
-## Kotlin / JVM / Android
-
-```kotlin
-dependencies {
-    implementation("com.zcashme:zns-sdk:0.4.0")
+// Wrap your app in <ZNSProvider />, then use hooks
+function MyComponent() {
+  const { resolveName, isAvailable } = useZNS();
+  // ...
 }
 ```
 
-```kotlin
-import com.zcashme.zns.*
-val client = ZNSClient.create()
-val reg = client.resolve("alice")
-```
-
-Built with coroutines and `kotlinx.serialization`. Source: [`sdk/kotlin`](https://github.com/zcashme/ZNS/tree/master/sdk/kotlin).
-
-## Swift
-
-```swift
-.package(url: "https://github.com/zcashme/ZNS", branch: "master"),
-// then depend on "ZcashNameSDK"
-```
-
-```swift
-import ZcashNameSDK
-let client = try await ZNSClient()
-let reg = try await client.resolve("alice")
-```
-
-Zero external dependencies - Foundation + URLSession only. Swift 5.9+, macOS 12+/iOS 15+. Source: [`sdk/swift`](https://github.com/zcashme/ZNS/tree/master/sdk/swift).
-
-## Go
-
-```sh
-go get github.com/zcashme/zns-sdk-go
-```
-
-```go
-import zns "github.com/zcashme/zns-sdk-go"
-
-client := zns.NewClient("https://light.zcash.me/zns-testnet")
-reg, err := client.Resolve("alice")
-```
-
-Source: [`sdk/go`](https://github.com/zcashme/ZNS/tree/master/sdk/go).
-
-## Dart / Flutter
-
-```yaml
-dependencies:
-  zcashname_sdk:
-    git:
-      url: https://github.com/zcashme/ZNS
-      path: sdk/dart
-```
-
-```dart
-import 'package:zcashname_sdk/zcashname_sdk.dart';
-final client = await ZNSClient.create();
-final reg = await client.resolve('alice');
-```
-
-Source: [`sdk/dart`](https://github.com/zcashme/ZNS/tree/master/sdk/dart).
+Wraps `zcashname-sdk` with a context provider and data-fetching hooks.
 
 ## No SDK for your language?
 
 Hit the indexer directly. The API is JSON-RPC 2.0 over HTTP - any language with an HTTP client and a JSON parser can talk to it in under 20 lines. See [Direct RPC](/docs/sdk/direct-rpc) for `curl`, Rust, Python, and Go examples.
 
-The canonical machine-readable spec is at [`/openrpc.json`](/openrpc.json). Point any [OpenRPC code generator](https://github.com/open-rpc/generator) at it to scaffold a typed client.
+The canonical machine-readable spec is at [`openrpc.json`](https://github.com/zcashme/ZNS/blob/master/openrpc.json). Point any [OpenRPC code generator](https://github.com/open-rpc/generator) at it to scaffold a typed client.
 
 PRs adding ZNS helpers to existing Zcash libraries are welcome. Open an issue at [`zcashme/ZNS`](https://github.com/zcashme/ZNS/issues) and we'll help with review and test vectors.
