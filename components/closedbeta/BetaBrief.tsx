@@ -160,7 +160,7 @@ export default function BetaBrief() {
           </li>
           <li style={li}>
             Click <strong>Mainnet</strong> or <strong>Testnet</strong> in the header
-            bar (start with Testnet for Phase 1).
+            bar.
             <InlinePreview>
               <InlineNetworkToggle />
             </InlinePreview>
@@ -263,7 +263,7 @@ export default function BetaBrief() {
           floating <strong>Submit Feedback</strong> button stays pinned to the
           bottom-right corner. Clicking it slides a panel in from the right side;
           the rest of the page reflows to fit, so you can keep using the site
-          alongside it. The top-left chevron <InlineCollapseChevron /> collapses
+          alongside it. The bottom-left chevron <InlineCollapseChevron /> collapses
           the panel; the floating button reappears.
         </p>
 
@@ -319,7 +319,7 @@ export default function BetaBrief() {
 
         <h3 style={h3}>General questions and comments</h3>
         <p style={p}>
-          The last item on the checklist &mdash; <strong>&ldquo;General
+          The first item on the checklist &mdash; <strong>&ldquo;General
           questions, comments, or anything else&rdquo;</strong> &mdash; is a
           catch-all. Use it for feedback that doesn&rsquo;t fit a specific test:
           questions, suggestions, UX gripes, anything.
@@ -327,7 +327,7 @@ export default function BetaBrief() {
 
         <h3 style={h3}>Test in one window, write in another</h3>
         <p style={p}>
-          The popout icon <InlinePopoutIcon /> at the top-right of the panel
+          The popout icon <InlinePopoutIcon /> at the top-left of the panel
           opens the same form in a small standalone window. Keep that on one
           side of your screen while you run the test on the other. It syncs the
           same cookie, same attribution, same wallet, same checklist progress
@@ -336,16 +336,9 @@ export default function BetaBrief() {
 
         <h3 style={h3}>Re-reading the instructions</h3>
         <p style={p}>
-          The Read Me button <InlineReadMeBtn /> next to the popout (top-right
-          of the panel) opens this page in a new tab anytime you need to
+          The Read Me button <InlineReadMeBtn /> on the bottom-right
+          of the panel opens these instructions in a new tab anytime you need to
           re-read the brief.
-        </p>
-
-        <h3 style={h3}>Indexer lag is normal</h3>
-        <p style={p}>
-          Expect up to a few minutes between a transaction confirming on-chain
-          and the UI catching up. That gap is not a bug &mdash; only report it
-          if it persists past ~10 minutes.
         </p>
 
         <p style={p}>
@@ -403,10 +396,10 @@ export default function BetaBrief() {
 
       {/* What You Need */}
       <section id="what-you-need">
-        <h2 style={h2}>What You Need</h2>
+        <h2 style={h2}>What You Need for User Flow</h2>
         <ul className="list-disc pl-5">
-          <li style={li}>A Zcash wallet that supports custom memos and can display received memos (Zingo and Zodl both work)</li>
-          <li style={li}>Testnet funds for Phase 1 (I&rsquo;ll send passphrase)</li>
+          <li style={li}>A Zcash wallet that supports unified addresses, custom memos and can display received memos (Zingo and Zodl both work)</li>
+          <li style={li}>TAZ for testnet and ZEC for mainnet (I&rsquo;ll send passphrase to a pre-loaded wallet upon request)</li>
           <li style={li}>About one hour</li>
         </ul>
       </section>
