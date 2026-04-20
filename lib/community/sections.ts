@@ -87,6 +87,17 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         detail: "github.com/zcashme/zcashnames",
         iconSrc: "/icons/github.svg",
       },
+      {
+        id: "namepost",
+        name: "Address Me By My Name",
+        label: "Meme generator",
+        description:
+          "Create a custom 'Address Me By My Name' image with your name, share it on social media.",
+        href: "/namepost",
+        shareText: "Create and share your `Address Me By My Name` promo.",
+        detail: "Share memes",
+        initials: "AM",
+      },
     ],
   },
   {
