@@ -487,6 +487,18 @@ export default function BetaBrief() {
               className="underline"
               style={{ color: "var(--fg-heading)" }}
             >
+              ZNS Developer Guide
+            </a>{" "}
+            &mdash; A quick reference for the Zcash Name System TypeScript SDK and JSON-RPC API.
+          </li>
+          <li style={li}>
+            <a
+              href="/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+              style={{ color: "var(--fg-heading)" }}
+            >
               ZcashNames Docs
             </a>{" "}
             &mdash; protocol overview, wallet integration guide, indexer setup,
