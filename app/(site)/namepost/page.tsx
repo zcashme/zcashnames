@@ -5,6 +5,8 @@ import AddressMeComposer from "./AddressMeComposer";
 export const metadata: Metadata = {
   title: "Address Me By My Name | ZcashNames",
   description: "Create a square Address Me By My Name image with custom artwork and text color.",
+  openGraph: { title: "Address Me By My Name" },
+  twitter: { title: "Address Me By My Name" },
 };
 
 export default function AddressMeByMyNamePage() {
