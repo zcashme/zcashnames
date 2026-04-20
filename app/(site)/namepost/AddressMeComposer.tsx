@@ -282,7 +282,7 @@ export default function AddressMeComposer() {
       selectedAddressFont.weight,
     );
 
-    context.fillStyle = logoColor;
+    context.fillStyle = nameColor;
     fitSingleLineText(
       context,
       addressText,
