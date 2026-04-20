@@ -606,7 +606,7 @@ export function OpenRpcExplorer({ spec }: { spec: OpenRpcDoc }) {
             </div>
           </div>
           <a
-            href="/openrpc.json"
+            href="https://raw.githubusercontent.com/zcashme/ZNS/master/openrpc.json"
             download
             className="shrink-0 rounded border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-900"
           >

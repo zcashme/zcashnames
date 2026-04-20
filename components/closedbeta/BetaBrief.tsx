@@ -569,13 +569,13 @@ export default function BetaBrief() {
           <li style={li}>
             OpenRPC spec:{" "}
             <a
-              href="/openrpc.json"
+              href="https://github.com/zcashme/ZNS/blob/master/openrpc.json"
               target="_blank"
               rel="noopener noreferrer"
               className="underline"
               style={{ color: "var(--fg-heading)" }}
             >
-              /openrpc.json
+              openrpc.json
             </a>
           </li>
           <li style={li}>

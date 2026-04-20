@@ -59,7 +59,7 @@ const menuLinks: MenuLink[] = [
       { label: "SDKs", href: "/docs/sdk" },
       { label: "Protocol", href: "/docs/protocol/overview" },
       { label: "Indexer & RPC", href: "/docs/indexer/running" },
-      { label: "OpenRPC JSON", href: "/openrpc.json" },
+      { label: "OpenRPC JSON", href: "https://github.com/zcashme/ZNS/blob/master/openrpc.json" },
     ],
   },
   {

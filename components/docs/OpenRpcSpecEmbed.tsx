@@ -14,9 +14,13 @@ export default function OpenRpcSpecEmbed() {
 
     async function loadSpec() {
       try {
-        const res = await fetch("/openrpc.json");
+        const res = await fetch("https://raw.githubusercontent.com/zcashme/ZNS/master/openrpc.json");
         if (!res.ok) {
           throw new Error(`openrpc.json fetch failed: ${res.status}`);
+        }
+
+        if (!res.headers.get("content-type")?.includes("json")) {
+          throw new Error("openrpc.json response was not JSON");
         }
 
         const nextSpec = (await res.json()) as OpenRpcSpec;
@@ -47,8 +51,8 @@ export default function OpenRpcSpecEmbed() {
         <p className="font-semibold">OpenRPC explorer unavailable.</p>
         <p className="mt-2 text-neutral-400">
           The raw spec is still available at{" "}
-          <a className="font-semibold underline" href="/openrpc.json">
-            /openrpc.json
+          <a className="font-semibold underline" href="https://github.com/zcashme/ZNS/blob/master/openrpc.json">
+            openrpc.json
           </a>
           .
         </p>

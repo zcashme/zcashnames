@@ -1,6 +1,6 @@
 # Libraries
 
-The TypeScript SDK wraps the JSON-RPC API and memo protocol. If your language isn't TypeScript/JavaScript, hit the indexer directly via [Direct RPC](/docs/sdk/direct-rpc), or generate a typed client from [`/openrpc.json`](/openrpc.json).
+The TypeScript SDK wraps the JSON-RPC API and memo protocol. If your language isn't TypeScript/JavaScript, hit the indexer directly via [Direct RPC](/docs/sdk/direct-rpc), or generate a typed client from [`openrpc.json`](https://github.com/zcashme/ZNS/blob/master/openrpc.json).
 
 The SDK lives in [`zcashme/ZNS/sdk/typescript`](https://github.com/zcashme/ZNS/tree/master/sdk/typescript).
 
@@ -41,6 +41,6 @@ Wraps `zcashname-sdk` with a context provider and data-fetching hooks.
 
 Hit the indexer directly. The API is JSON-RPC 2.0 over HTTP - any language with an HTTP client and a JSON parser can talk to it in under 20 lines. See [Direct RPC](/docs/sdk/direct-rpc) for `curl`, Rust, Python, and Go examples.
 
-The canonical machine-readable spec is at [`/openrpc.json`](/openrpc.json). Point any [OpenRPC code generator](https://github.com/open-rpc/generator) at it to scaffold a typed client.
+The canonical machine-readable spec is at [`openrpc.json`](https://github.com/zcashme/ZNS/blob/master/openrpc.json). Point any [OpenRPC code generator](https://github.com/open-rpc/generator) at it to scaffold a typed client.
 
 PRs adding ZNS helpers to existing Zcash libraries are welcome. Open an issue at [`zcashme/ZNS`](https://github.com/zcashme/ZNS/issues) and we'll help with review and test vectors.
