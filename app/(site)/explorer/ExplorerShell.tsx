@@ -195,6 +195,11 @@ export default function ExplorerShell({
     });
   }
 
+  function handleTabChange(tab: ExplorerTab) {
+    setActiveTab(tab);
+    if (selectedName) setSelectedName("");
+  }
+
   function handleDetailAction(action: Action) {
     if (!nameDataReady || !nameResult) return;
 
@@ -308,7 +313,7 @@ export default function ExplorerShell({
             <button
               key={t.key}
               type="button"
-              onClick={() => setActiveTab(t.key)}
+              onClick={() => handleTabChange(t.key)}
               className="relative shrink-0 cursor-pointer px-4 py-2.5 text-[0.82rem] font-semibold transition-colors whitespace-nowrap"
               style={{ color: activeTab === t.key ? "var(--fg-heading)" : "var(--fg-muted)" }}
             >
@@ -365,7 +370,7 @@ export default function ExplorerShell({
                   <button
                     key={t.key}
                     type="button"
-                    onClick={() => { setActiveTab(t.key); setMoreOpen(false); }}
+                    onClick={() => { handleTabChange(t.key); setMoreOpen(false); }}
                     className="flex w-full cursor-pointer items-center justify-between px-4 py-2 text-[0.82rem] font-semibold transition-colors"
                     style={{
                       color: activeTab === t.key ? "var(--fg-heading)" : "var(--fg-muted)",
