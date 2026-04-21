@@ -3,11 +3,13 @@
 import HeroSearchFormCard from "@/components/gallery/cards/HeroSearchFormCard";
 import CheckEmailModalCard from "@/components/gallery/cards/CheckEmailModalCard";
 import WaitlistConfirmedModalCard from "@/components/gallery/cards/WaitlistConfirmedModalCard";
+import HomeLeaderboardLinkCard from "@/components/gallery/cards/HomeLeaderboardLinkCard";
 import HeaderClusterCard from "@/components/gallery/cards/HeaderClusterCard";
 import LeadersChartCard from "@/components/gallery/cards/LeadersChartCard";
 import StatsGridCard from "@/components/gallery/cards/StatsGridCard";
 import { WaitlistStatCardCard, ReferredStatCardCard } from "@/components/gallery/cards/StatCardsCards";
 import LeaderboardTableCard from "@/components/gallery/cards/LeaderboardTableCard";
+import ReferralDashboardHeroCard from "@/components/gallery/cards/ReferralDashboardHeroCard";
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -74,6 +76,7 @@ export default function GalleryPage() {
             <HeroSearchFormCard />
             <CheckEmailModalCard />
             <WaitlistConfirmedModalCard />
+            <HomeLeaderboardLinkCard />
             <HeaderClusterCard />
           </Group>
 
@@ -83,6 +86,7 @@ export default function GalleryPage() {
             <WaitlistStatCardCard />
             <ReferredStatCardCard />
             <LeaderboardTableCard />
+            <ReferralDashboardHeroCard />
           </Group>
         </div>
       </div>
