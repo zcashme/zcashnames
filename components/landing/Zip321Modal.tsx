@@ -11,7 +11,13 @@ import { validateAddress } from "@/lib/zns/name";
 import { buildZcashUri, parseZip321Uri } from "@/lib/payment/zip321";
 import { generateSessionId, buildZvsMemo } from "@/lib/payment/memo";
 import { getNetworkConstants, MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
-import type { Action } from "@/lib/types";
+import type {
+  Action,
+  ModalTarget,
+  PendingTransactionPhase,
+  PendingTransactionScanState,
+  PendingTransactionState,
+} from "@/lib/types";
 import type { Network } from "@/lib/zns/name";
 import { useCopy } from "@/lib/useCopy";
 import CopyIconButton from "@/components/CopyIconButton";
@@ -20,22 +26,15 @@ import CopyIconButton from "@/components/CopyIconButton";
 // Types
 // ---------------------------------------------------------------------------
 
-export interface ModalTarget {
-  name: string;
-  action: Action;
-  registrationAddress?: string;
-  registrationNonce?: number;
-  registrationPubkey?: string | null;
-  listingPriceZec?: number;
-  network: Network;
-  networkPassword: string;
-  isReserved?: boolean;
-}
+export type { ModalTarget } from "@/lib/types";
 
 interface Zip321ModalProps {
   target: ModalTarget;
   onClose: () => void;
   onSuccess?: (name: string) => void;
+  resumeState?: PendingTransactionState | null;
+  onPersistState?: (state: PendingTransactionState) => void;
+  onClearState?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -46,7 +45,7 @@ type Phase = "unlock" | "input" | "otp" | "sign" | "payment" | "scanning";
 
 type AuthMode = "default" | "otp" | "sovereign";
 
-type ScanState = "loading" | "not_detected" | "in_mempool" | "being_mined" | "mined";
+type ScanState = PendingTransactionScanState;
 
 type QrSectionKind = "otp" | "payment";
 
@@ -164,7 +163,14 @@ function prepareDescription(action: Action, name: string, amount: string): React
 // Component
 // ---------------------------------------------------------------------------
 
-export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalProps) {
+export default function Zip321Modal({
+  target,
+  onClose,
+  onSuccess,
+  resumeState,
+  onPersistState,
+  onClearState,
+}: Zip321ModalProps) {
   const {
     name,
     action,
@@ -191,8 +197,16 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
       ? `/explorer?env=testnet&name=${encodeURIComponent(name)}`
       : `/explorer?name=${encodeURIComponent(name)}`;
 
+  const initialResumeState =
+    resumeState &&
+    resumeState.target.name === name &&
+    resumeState.target.action === action &&
+    resumeState.target.network === network
+      ? resumeState
+      : null;
+
   // Phase
-  const [phase, setPhase] = useState<Phase>(needsUnlock ? "unlock" : "input");
+  const [phase, setPhase] = useState<Phase>(initialResumeState?.phase ?? (needsUnlock ? "unlock" : "input"));
 
   const otpCopy = useCopy();
   const payloadCopy = useCopy();
@@ -211,8 +225,8 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   const [verifiedUnlockCode, setVerifiedUnlockCode] = useState<string | undefined>();
 
   // Input phase
-  const [addressInput, setAddressInput] = useState("");
-  const [priceInput, setPriceInput] = useState("");
+  const [addressInput, setAddressInput] = useState(initialResumeState?.addressInput ?? "");
+  const [priceInput, setPriceInput] = useState(initialResumeState?.priceInput ?? "");
   const [inputError, setInputError] = useState("");
   const [inputLoading, setInputLoading] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>(ownerAuthMode ?? "default");
@@ -233,8 +247,8 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   const [showOtpUri, setShowOtpUri] = useState(false);
 
   // Payment phase
-  const [paymentUri, setPaymentUri] = useState("");
-  const [paymentAmountZec, setPaymentAmountZec] = useState(0);
+  const [paymentUri, setPaymentUri] = useState(initialResumeState?.paymentUri ?? "");
+  const [paymentAmountZec, setPaymentAmountZec] = useState(initialResumeState?.paymentAmountZec ?? 0);
   const [showPaymentUri, setShowPaymentUri] = useState(false);
   const [qrDownloadError, setQrDownloadError] = useState("");
   const [showOtpHelp, setShowOtpHelp] = useState(false);
@@ -242,7 +256,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   const [expandedQr, setExpandedQr] = useState<QrSectionKind | null>(null);
 
   // Scanning phase
-  const [scanState, setScanState] = useState<ScanState>("loading");
+  const [scanState, setScanState] = useState<ScanState>(initialResumeState?.scanState ?? "loading");
   const [showNotDetectedDetail, setShowNotDetectedDetail] = useState(false);
   // Sticky flag: once we've seen the tx in the mempool during this scanning
   // session, treat any subsequent "empty mempool, empty resolver" as
@@ -256,6 +270,35 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   const paymentQrRef = useRef<HTMLDivElement>(null);
   const otpQrCanvasRef = useRef<HTMLCanvasElement>(null);
   const paymentQrCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  function buildPendingState(nextPhase: PendingTransactionPhase, nextScanState: ScanState = scanState): PendingTransactionState {
+    return {
+      target: {
+        name,
+        action,
+        registrationAddress,
+        registrationNonce,
+        registrationPubkey,
+        listingPriceZec,
+        network,
+        isReserved,
+      },
+      phase: nextPhase,
+      addressInput,
+      priceInput,
+      paymentUri,
+      paymentAmountZec,
+      scanState: nextScanState,
+      updatedAt: Date.now(),
+    };
+  }
+
+  function handleCloseRequest() {
+    if ((phase === "payment" || phase === "scanning") && paymentUri && onPersistState) {
+      onPersistState(buildPendingState(phase, phase === "scanning" ? scanState : "loading"));
+    }
+    onClose();
+  }
 
   // Focus first input on mount
   const addressRef = useRef<HTMLInputElement>(null);
@@ -275,10 +318,10 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
 
   // ESC key
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") handleCloseRequest(); };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [handleCloseRequest]);
 
   // Scanner polling — fires every 2s while in the scanning phase, stops on mined.
   // Checks the mempool (mainnet only) and the resolver in parallel to handle the
@@ -355,6 +398,15 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
   // having to re-create the interval on every state change.
   const scanStateRef = useRef<ScanState>("loading");
   useEffect(() => { scanStateRef.current = scanState; }, [scanState]);
+
+  useEffect(() => {
+    if (!onPersistState) return;
+    if ((phase === "payment" || phase === "scanning") && paymentUri) {
+      onPersistState(buildPendingState(phase, phase === "scanning" ? scanState : "loading"));
+      return;
+    }
+    onClearState?.();
+  }, [addressInput, onClearState, onPersistState, paymentAmountZec, paymentUri, phase, priceInput, scanState]);
 
   // Address validation (live)
   const addrValidation = addressInput.trim()
@@ -753,6 +805,8 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
     setShowPaymentUri(false);
     setShowPaymentHelp(false);
     setQrDownloadError("");
+    setScanState("loading");
+    setShowNotDetectedDetail(false);
     setPhase("payment");
   }
 
@@ -1179,7 +1233,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
     <div
       className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
-      onClick={onClose}
+      onClick={handleCloseRequest}
     >
       <div
         ref={containerRef}
@@ -1620,7 +1674,11 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
               )}
               <button
                 type="button"
-                onClick={() => setPhase("scanning")}
+                onClick={() => {
+                  setScanState("loading");
+                  setShowNotDetectedDetail(false);
+                  setPhase("scanning");
+                }}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
                 style={{ background: "var(--fg-heading)", color: "var(--color-background)" }}
               >
@@ -1706,7 +1764,7 @@ export default function Zip321Modal({ target, onClose, onSuccess }: Zip321ModalP
               )}
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleCloseRequest}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
                 style={{ background: "var(--fg-heading)", color: "var(--color-background)" }}
               >

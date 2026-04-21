@@ -21,6 +21,8 @@ import { useSearchState } from "@/components/landing/useSearchState";
 import { useUsdPrice } from "@/components/landing/useUsdPrice";
 import { useWaitlistVerification } from "@/components/landing/useWaitlistVerification";
 import { VerifiedModal } from "@/components/landing/VerifiedModal";
+import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
+import { usePendingTransaction } from "@/components/landing/usePendingTransaction";
 
 const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
   ssr: false,
@@ -74,6 +76,13 @@ export default function HomePage() {
     removeResult,
     reset: resetSearch,
   } = useSearchState(network);
+  const {
+    hydrated: pendingHydrated,
+    pendingTransaction,
+    persistPendingTransaction,
+    clearPendingTransaction,
+    resumeTarget,
+  } = usePendingTransaction(refreshResult);
 
   const { status: verificationStatus, banner, clearBanner, closeSuccessModal } = useWaitlistVerification();
 
@@ -242,6 +251,16 @@ export default function HomePage() {
         />
       </section>
 
+      {isSearchMode && pendingHydrated && pendingTransaction && !modalTarget && (
+        <PendingTransactionBanner
+          pendingTransaction={pendingTransaction}
+          onResume={() => {
+            if (resumeTarget) setModalTarget({ ...resumeTarget, networkPassword });
+          }}
+          onDismiss={clearPendingTransaction}
+        />
+      )}
+
       <MarketStats />
 
       <div className="relative z-[2] -mt-4 mb-2 flex justify-center">
@@ -306,6 +325,9 @@ export default function HomePage() {
           target={modalTarget}
           onClose={() => setModalTarget(null)}
           onSuccess={refreshResult}
+          resumeState={pendingTransaction}
+          onPersistState={persistPendingTransaction}
+          onClearState={clearPendingTransaction}
         />
       )}
 

@@ -52,6 +52,32 @@ export const MAX_LIST_FOR_SALE_AMOUNT = 21_000_000;
 /** The five operations a user can perform on a Zcash name. */
 export type Action = "claim" | "buy" | "update" | "list" | "delist" | "release";
 
+export interface ModalTarget {
+  name: string;
+  action: Action;
+  registrationAddress?: string;
+  registrationNonce?: number;
+  registrationPubkey?: string | null;
+  listingPriceZec?: number;
+  network: Network;
+  networkPassword: string;
+  isReserved?: boolean;
+}
+
+export type PendingTransactionPhase = "payment" | "scanning";
+export type PendingTransactionScanState = "loading" | "not_detected" | "in_mempool" | "being_mined" | "mined";
+
+export interface PendingTransactionState {
+  target: Omit<ModalTarget, "networkPassword">;
+  phase: PendingTransactionPhase;
+  addressInput: string;
+  priceInput: string;
+  paymentUri: string;
+  paymentAmountZec: number;
+  scanState: PendingTransactionScanState;
+  updatedAt: number;
+}
+
 /**
  * Result of resolving a name query. Discriminated union representing the three possible states.
  */

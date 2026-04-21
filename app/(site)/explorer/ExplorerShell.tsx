@@ -20,9 +20,11 @@ import {
 } from "./explorerFilters";
 import ExplorerNameDetail from "./ExplorerNameDetail";
 import Zip321Modal, { type ModalTarget } from "@/components/landing/Zip321Modal";
+import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import { useStatus } from "@/components/StatusToggle";
 import { useUsdPrice } from "@/components/landing/useUsdPrice";
+import { usePendingTransaction } from "@/components/landing/usePendingTransaction";
 import type { ResolveName } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import type { Event } from "@/lib/zns/client";
@@ -83,6 +85,13 @@ export default function ExplorerShell({
   const usdPerZec = useUsdPrice();
   const [isPending, startTransition] = useTransition();
   const [optimisticEnv, setOptimisticEnv] = useOptimistic(environment);
+  const {
+    hydrated: pendingHydrated,
+    pendingTransaction,
+    persistPendingTransaction,
+    clearPendingTransaction,
+    resumeTarget,
+  } = usePendingTransaction(() => router.refresh());
 
   const [activeTab, setActiveTab] = useState<ExplorerTab>("all");
   const [sortBy, setSortBy] = useState<SortBy>("height");
@@ -302,6 +311,16 @@ export default function ExplorerShell({
         onSortChange={setSortBy}
       />
 
+      {pendingHydrated && pendingTransaction && !modalTarget && (
+        <PendingTransactionBanner
+          pendingTransaction={pendingTransaction}
+          onResume={() => {
+            if (resumeTarget) setModalTarget({ ...resumeTarget, networkPassword });
+          }}
+          onDismiss={clearPendingTransaction}
+        />
+      )}
+
       {/* Tabs */}
       <div
         className="flex items-end gap-0 border-b"
@@ -509,6 +528,9 @@ export default function ExplorerShell({
           target={modalTarget}
           onClose={() => setModalTarget(null)}
           onSuccess={() => router.refresh()}
+          resumeState={pendingTransaction}
+          onPersistState={persistPendingTransaction}
+          onClearState={clearPendingTransaction}
         />
       )}
     </div>
