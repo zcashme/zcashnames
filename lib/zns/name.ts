@@ -10,7 +10,7 @@ function stripKnownSuffix(name: string): string {
   return String(name).replace(/\.(zcash|zec)$/i, "");
 }
 
-export function applySuffix(name: string, suffix: string): string {
+function applySuffix(name: string, suffix: string): string {
   return `${stripKnownSuffix(name)}${suffix}`;
 }
 

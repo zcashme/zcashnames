@@ -5,21 +5,9 @@ import type { Registration } from "zcashname-sdk";
 export type {
   Registration,
   Listing,
-  Status,
-  Pricing,
   Event,
-  EventAction,
-  LastAction,
   EventsFilter,
-  EventsResult,
-  Zats,
   CompletedAction,
-  PreparedClaim,
-  PreparedBuy,
-  PreparedList,
-  PreparedDelist,
-  PreparedUpdate,
-  PreparedRelease,
 } from "zcashname-sdk";
 
 const ZNS_RPC_URLS: Record<Network, string> = {

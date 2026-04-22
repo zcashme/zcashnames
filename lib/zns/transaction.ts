@@ -44,11 +44,11 @@ export async function checkUnlockCode(
   return { ok: true };
 }
 
-export type TransactionResult =
+type TransactionResult =
   | { ok: true; memo: string; amount: number; amountZec: number }
   | { ok: false; error: string };
 
-export type AuthMode = "default" | "otp" | "sovereign";
+type AuthMode = "default" | "otp" | "sovereign";
 
 interface TransactionInput {
   name: string;
