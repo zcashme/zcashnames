@@ -33,7 +33,7 @@ export default function BetaPopoutLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" data-status="testnet" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body className={`${uiSans.variable} ${uiCursive.variable}`}>
         <ThemeProvider
           attribute="data-theme"

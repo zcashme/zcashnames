@@ -15,11 +15,10 @@ import { useStatus } from "@/components/hooks/useStatus";
  */
 export default function BetaApplyBar() {
   const pathname = usePathname();
-  const { isSearchMode } = useStatus();
+  const { status } = useStatus();
 
-  // Only the home page in waitlist mode.
   if (pathname !== "/") return null;
-  if (isSearchMode) return null;
+  if (status !== "waitlist") return null;
 
   return (
     <Link

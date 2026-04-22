@@ -28,7 +28,6 @@ export interface StatusContextValue {
   setStatus: (s: StatusState) => void;
   networkPassword: string;
   setNetworkPassword: (v: string) => void;
-  isSearchMode: boolean;
   network: Network;
   data: StatusData | null;
   loading: boolean;
@@ -40,7 +39,6 @@ export const StatusContext = createContext<StatusContextValue>({
   setStatus: () => {},
   networkPassword: "",
   setNetworkPassword: () => {},
-  isSearchMode: false,
   network: "testnet",
   data: null,
   loading: true,

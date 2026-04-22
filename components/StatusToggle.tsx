@@ -7,13 +7,7 @@ import { getWaitlistStats } from "@/lib/leaders/leaders";
 import { getHomeStats } from "@/lib/zns/resolve";
 import { StatusContext, useStatus } from "@/components/hooks/useStatus";
 import type { StatusState, StatusData } from "@/components/hooks/useStatus";
-export { useStatus } from "@/components/hooks/useStatus";
-export type { StatusData, WaitlistStatsData, HomeStatsData, StatusContextValue } from "@/components/hooks/useStatus";
 import type { Network } from "@/lib/zns/name";
-
-function applyStatus(s: StatusState) {
-  document.documentElement.setAttribute("data-status", s);
-}
 
 export function StatusProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatusState] = useState<StatusState>("waitlist");
@@ -23,12 +17,10 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
   const [stageHydrated, setStageHydrated] = useState(false);
   const [refreshCounter, setRefreshCounter] = useState(0);
 
-  const isSearchMode = status === "testnet" || status === "mainnet";
   const network: Network = status === "mainnet" ? "mainnet" : "testnet";
 
   function setStatus(s: StatusState) {
     setStatusState(s);
-    applyStatus(s);
   }
 
   function refresh() {
@@ -42,7 +34,6 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
       .then((stage) => {
         if (cancelled || !stage) return;
         setStatusState(stage);
-        applyStatus(stage);
       })
       .catch(() => {
         // Fall back to waitlist when the stage cookie cannot be read.
@@ -63,7 +54,7 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
 
     (async () => {
       try {
-        if (isSearchMode) {
+        if (status !== "waitlist") {
           const stats = await getHomeStats(network);
           if (!cancelled) setData({ mode: "search", network, stats });
         } else {
@@ -78,11 +69,11 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
     })();
 
     return () => { cancelled = true; };
-  }, [status, refreshCounter, stageHydrated, isSearchMode, network]);
+  }, [status, refreshCounter, stageHydrated, network]);
 
   return (
     <StatusContext.Provider
-      value={{ status, setStatus, networkPassword, setNetworkPassword, isSearchMode, network, data, loading, refresh }}
+      value={{ status, setStatus, networkPassword, setNetworkPassword, network, data, loading, refresh }}
     >
       {children}
     </StatusContext.Provider>

@@ -64,7 +64,8 @@ const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
 });
 
 export default function HomePage() {
-  const { status, isSearchMode, network, networkPassword, refresh } = useStatus();
+  const { status, network, networkPassword, refresh } = useStatus();
+  const isSearchMode = status !== "waitlist";
   const usdPerZec = useUsdPrice();
   const [waitlistConfirmed, setWaitlistConfirmed] = useState(false);
   const [isClientMounted, setIsClientMounted] = useState(false);
