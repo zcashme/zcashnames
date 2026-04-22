@@ -1,4 +1,4 @@
-import { getIndexers } from "@/lib/indexers";
+import { db } from "@/lib/db";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 
 export const metadata = {
@@ -7,7 +7,10 @@ export const metadata = {
 };
 
 export default async function IndexersPage() {
-  const indexers = await getIndexers();
+  const { data: indexers = [] } = await db
+    .from("indexer_registry")
+    .select("id, url, network, submitted_by, submitted_at")
+    .order("submitted_at", { ascending: false });
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-10 sm:px-6">
