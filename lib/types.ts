@@ -1,4 +1,4 @@
-import type { Network } from "@/lib/zns/name";
+import type { Network } from "@/lib/zns/client";
 
 /**
  * Per-network constants used by Zip321Modal.

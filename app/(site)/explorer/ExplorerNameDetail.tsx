@@ -5,7 +5,7 @@ import Image from "next/image";
 import type { ResolveName } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import type { Event } from "@/lib/zns/client";
-import { formatUsdEquivalent } from "@/lib/zns/name";
+import { formatUsdEquivalent } from "@/lib/zns/client";
 import ActionBadge from "@/components/ActionBadge";
 import CopyIconButton from "@/components/CopyIconButton";
 

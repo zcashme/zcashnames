@@ -3,7 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { createHash, randomBytes, randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import type { Network } from "@/lib/zns/name";
+import type { Network } from "@/lib/zns/client";
 import { findTesterByCode } from "./testers";
 import {
   BETA_COOKIE_NAME,

@@ -3,7 +3,7 @@
 import type React from "react";
 import Image from "next/image";
 import type { Action } from "@/lib/types";
-import type { Network } from "@/lib/zns/name";
+import type { Network } from "@/lib/zns/client";
 import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
 
 type AvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";

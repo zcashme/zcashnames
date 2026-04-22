@@ -1,4 +1,4 @@
-import { isValidUsername, validateAddress } from "./name";
+import { isValidUsername, validateAddress } from "./client";
 
 export type PayloadLevel = "empty" | "valid" | "warning" | "error";
 

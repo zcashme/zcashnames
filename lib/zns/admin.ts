@@ -7,9 +7,8 @@
  */
 
 import crypto from "node:crypto";
-import type { Network } from "./name";
+import type { Network, CompletedAction } from "./client";
 import { getZns, fetchClaimCost } from "./client";
-import type { CompletedAction } from "./client";
 
 interface Signable {
   readonly payload: string;

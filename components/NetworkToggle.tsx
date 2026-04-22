@@ -7,7 +7,7 @@ import { getWaitlistStats } from "@/lib/leaders/leaders";
 import { getHomeStats } from "@/lib/zns/resolve";
 import { NetworkContext, useNetwork } from "@/components/hooks/useNetwork";
 import type { NetworkData } from "@/components/hooks/useNetwork";
-import type { Network } from "@/lib/zns/name";
+import type { Network } from "@/lib/zns/client";
 
 const TABS: { key: Network | null; label: string }[] = [
   { key: "mainnet", label: "Mainnet" },

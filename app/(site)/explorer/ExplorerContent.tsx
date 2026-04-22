@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { getEvents } from "@/lib/zns/resolve";
-import { zatsToZec } from "@/lib/zns/name";
-import type { Network } from "@/lib/zns/name";
+import { zatsToZec } from "@/lib/zns/client";
+import type { Network } from "@/lib/zns/client";
 import type { Environment, SortBy } from "./ExplorerToolbar";
 import {
   filterEvents,

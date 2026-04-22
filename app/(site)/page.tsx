@@ -12,7 +12,7 @@ import FAQ from "@/components/landing/FAQ";
 import HowItWorks from "@/components/landing/HowItWorks";
 import Link from "next/link";
 import { useNetwork } from "@/components/hooks/useNetwork";
-import { formatUsdEquivalent } from "@/lib/zns/name";
+import { formatUsdEquivalent } from "@/lib/zns/client";
 
 const POPULAR_NAMES = new Set([
   "adam", "alex", "alice", "anna", "bob", "chris", "david", "emma", "ethan",

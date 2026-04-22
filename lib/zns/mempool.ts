@@ -1,6 +1,6 @@
 "use server";
 
-import type { Network } from "@/lib/zns/name";
+import type { Network } from "@/lib/zns/client";
 
 /**
  * Check whether a name is currently sitting in the indexer's mempool view.

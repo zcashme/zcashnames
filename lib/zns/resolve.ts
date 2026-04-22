@@ -1,7 +1,6 @@
 "use server";
 
-import { getZns, registrationStatus, type Registration, type Listing, type EventsFilter } from "@/lib/zns/client";
-import { normalizeUsername, isValidUsername, zatsToZec, type Network } from "@/lib/zns/name";
+import { getZns, registrationStatus, normalizeUsername, isValidUsername, zatsToZec, type Network, type Registration, type Listing, type EventsFilter } from "@/lib/zns/client";
 
 import { getReservedName } from "@/lib/zns/reserved";
 import { getListingMap, reconcileRegistrationListing } from "@/lib/zns/listing-reconciliation";

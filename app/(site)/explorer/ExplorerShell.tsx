@@ -27,8 +27,7 @@ import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 import type { ResolveName } from "@/lib/types";
 import type { Action } from "@/lib/types";
-import type { Event } from "@/lib/zns/client";
-import type { Network } from "@/lib/zns/name";
+import type { Event, Network } from "@/lib/zns/client";
 
 const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "all", label: "All" },

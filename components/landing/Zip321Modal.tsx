@@ -4,10 +4,10 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
-import { buildTransaction, checkUnlockCode } from "@/lib/zns/transaction";
+import { verifyOtp, buildClaim, buildBuy, buildUpdate, buildList, buildDelist, buildRelease, checkUnlockCode } from "@/lib/zns/transaction";
 import { checkScannerState } from "@/lib/zns/resolve";
 import { checkMempool } from "@/lib/zns/mempool";
-import { validateAddress, getSigningPayload } from "@/lib/zns/name";
+import { validateAddress, getSigningPayload } from "@/lib/zns/client";
 import { buildZcashUri, parseZip321Uri } from "@/lib/payment/zip321";
 import { generateSessionId, buildZvsMemo } from "@/lib/payment/memo";
 import { getNetworkConstants, MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
@@ -385,7 +385,7 @@ export default function Zip321Modal({
 
   // Address validation (live)
   const addrValidation = addressInput.trim()
-    ? validateAddress(addressInput.trim())
+    ? validateAddress(addressInput.trim(), network)
     : { status: "invalid" as const, warning: "" };
 
   const addrBorderColor = !addressInput.trim()
@@ -408,7 +408,7 @@ export default function Zip321Modal({
     address: needsAddress ? addressInput.trim() : undefined,
     priceZats,
     nonce: nextOwnerNonce,
-  });
+  }, network);
 
   useEffect(() => {
     if (phase !== "sign") return;
@@ -534,7 +534,7 @@ export default function Zip321Modal({
       const result = await checkUnlockCode(name, code);
 
       if (!result.ok) { setUnlockError(result.error || "Invalid unlock code."); return; }
-      setVerifiedUnlockCode(code);
+      setVerifiedUnlockCode(result.proof);
       setPhase("input");
     } catch {
       setUnlockError("Something went wrong. Try again.");
@@ -551,7 +551,7 @@ export default function Zip321Modal({
     if (needsAddress) {
       const addr = addressInput.trim();
       if (!addr) { setInputError("Address is required."); return; }
-      const v = validateAddress(addr);
+      const v = validateAddress(addr, network);
       if (v.status === "viewkey" || v.status === "tex" || v.status === "invalid") {
         setInputError(v.warning || "Invalid address format."); return;
       }
@@ -597,19 +597,14 @@ export default function Zip321Modal({
       return;
     }
 
-    // claim / buy → call buildTransaction directly
+    // claim / buy → call builder directly
     setInputLoading(true);
     try {
-      const result = await buildTransaction({
-        name,
-        action,
-        address: addressInput.trim() || undefined,
-        priceZats,
-        network,
-        password: networkPassword,
-        unlockCode: verifiedUnlockCode,
-        authMode: "default",
-      });
+      const base = { name, network, networkPassword };
+      const address = addressInput.trim();
+      const result = action === "buy"
+        ? await buildBuy({ ...base, address })
+        : await buildClaim({ ...base, address, unlockProof: verifiedUnlockCode });
 
       if (!result.ok) { setInputError(result.error); return; }
       goToPayment(result.uri);
@@ -630,22 +625,41 @@ export default function Zip321Modal({
     setOtpError("");
     setOtpLoading(true);
     try {
-      const result = await buildTransaction({
-        name,
-        action,
-        address: needsAddress ? addressInput.trim() : undefined,
-        priceZats,
-        network,
-        password: networkPassword,
-        unlockCode: verifiedUnlockCode,
-        memo: zvsMemo,
-        otp: code,
-        authMode: "otp",
-      });
-      if (!result.ok) {
+      const otpResult = await verifyOtp(zvsMemo, code, registrationAddress!);
+      if (!otpResult.ok) {
         setOtpAttempts((a) => a + 1);
-        setOtpError(result.error);
+        setOtpError(otpResult.error);
         setOtpInput("");
+        return;
+      }
+
+      const base = {
+        name,
+        network,
+        networkPassword,
+        otpProof: otpResult.proof,
+      };
+
+      let result;
+      switch (action) {
+        case "update":
+          result = await buildUpdate({ ...base, address: addressInput.trim() });
+          break;
+        case "list":
+          result = await buildList({ ...base, priceZats: priceZats! });
+          break;
+        case "delist":
+          result = await buildDelist(base);
+          break;
+        case "release":
+          result = await buildRelease(base);
+          break;
+        default:
+          result = { ok: false as const, error: "Unsupported action." };
+      }
+
+      if (!result.ok) {
+        setOtpError(result.error);
         return;
       }
       goToPayment(result.uri);
@@ -715,19 +729,38 @@ export default function Zip321Modal({
         return;
       }
 
-      const result = await buildTransaction({
+      const base = {
         name,
-        action,
-        address: needsAddress ? addressInput.trim() : undefined,
-        priceZats,
         network,
-        password: networkPassword,
-        unlockCode: verifiedUnlockCode,
-        authMode: "sovereign",
-        sovereignSignature: sig,
-        sovereignPubkey: pub || undefined,
-        sovereignPayload,
-      });
+        networkPassword,
+        sovereignSig: sig,
+        sovereignPub: pub || undefined,
+      };
+
+      let result;
+      switch (action) {
+        case "claim":
+          result = await buildClaim({ ...base, address: addressInput.trim(), unlockProof: verifiedUnlockCode });
+          break;
+        case "buy":
+          result = await buildBuy({ ...base, address: addressInput.trim() });
+          break;
+        case "update":
+          result = await buildUpdate({ ...base, address: addressInput.trim() });
+          break;
+        case "list":
+          result = await buildList({ ...base, priceZats: priceZats! });
+          break;
+        case "delist":
+          result = await buildDelist(base);
+          break;
+        case "release":
+          result = await buildRelease(base);
+          break;
+        default:
+          result = { ok: false as const, error: "Unsupported action." };
+      }
+
       if (!result.ok) {
         setSignError(result.error);
         return;
