@@ -46,10 +46,3 @@ export function registrationStatus(
   if (reg.listing) return "forsale";
   return "registered";
 }
-
-export {
-  toBase64Url,
-  buildZcashUri,
-  decodeBase64UrlToUtf8,
-  parseZip321Uri,
-} from "../payment/zip321";

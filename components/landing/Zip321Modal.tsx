@@ -182,7 +182,7 @@ export default function Zip321Modal({
     networkPassword,
     isReserved,
   } = target;
-  const { ZIP321_RECIPIENT_ADDRESS, OTP_SIGNIN_ADDR, OTP_AMOUNT, OTP_MAX_ATTEMPTS } =
+  const { OTP_SIGNIN_ADDR, OTP_AMOUNT, OTP_MAX_ATTEMPTS } =
     getNetworkConstants(network);
 
   const needsAddress = action === "claim" || action === "buy" || action === "update";
@@ -248,7 +248,6 @@ export default function Zip321Modal({
 
   // Payment phase
   const [paymentUri, setPaymentUri] = useState(initialResumeState?.paymentUri ?? "");
-  const [paymentAmountZec, setPaymentAmountZec] = useState(initialResumeState?.paymentAmountZec ?? 0);
   const [showPaymentUri, setShowPaymentUri] = useState(false);
   const [qrDownloadError, setQrDownloadError] = useState("");
   const [showOtpHelp, setShowOtpHelp] = useState(false);
@@ -287,7 +286,6 @@ export default function Zip321Modal({
       addressInput,
       priceInput,
       paymentUri,
-      paymentAmountZec,
       scanState: nextScanState,
       updatedAt: Date.now(),
     };
@@ -406,7 +404,7 @@ export default function Zip321Modal({
       return;
     }
     onClearState?.();
-  }, [addressInput, onClearState, onPersistState, paymentAmountZec, paymentUri, phase, priceInput, scanState]);
+  }, [addressInput, onClearState, onPersistState, paymentUri, phase, priceInput, scanState]);
 
   // Address validation (live)
   const addrValidation = addressInput.trim()
@@ -637,7 +635,7 @@ export default function Zip321Modal({
       });
 
       if (!result.ok) { setInputError(result.error); return; }
-      goToPayment(result.memo, result.amountZec);
+      goToPayment(result.uri);
     } catch {
       setInputError("Something went wrong. Try again.");
     } finally {
@@ -673,7 +671,7 @@ export default function Zip321Modal({
         setOtpInput("");
         return;
       }
-      goToPayment(result.memo, result.amountZec);
+      goToPayment(result.uri);
     } catch {
       setOtpError("Something went wrong. Try again.");
     } finally {
@@ -757,7 +755,7 @@ export default function Zip321Modal({
         setSignError(result.error);
         return;
       }
-      goToPayment(result.memo, result.amountZec);
+      goToPayment(result.uri);
     } catch {
       setSignError("Something went wrong. Try again.");
     } finally {
@@ -798,10 +796,8 @@ export default function Zip321Modal({
     setPhase("input");
   }
 
-  function goToPayment(memo: string, amountZec: number) {
-    const uri = buildZcashUri(ZIP321_RECIPIENT_ADDRESS, String(amountZec), memo);
+  function goToPayment(uri: string) {
     setPaymentUri(uri);
-    setPaymentAmountZec(amountZec);
     setShowPaymentUri(false);
     setShowPaymentHelp(false);
     setQrDownloadError("");

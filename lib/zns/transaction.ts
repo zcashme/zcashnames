@@ -2,14 +2,14 @@
 
 import { fetchClaimCost, getZns } from "@/lib/zns/client";
 import {
-  buildSignedClaimMemo,
-  buildSignedBuyMemo,
-  buildSignedListMemo,
-  buildSignedDelistMemo,
-  buildSignedReleaseMemo,
-  buildSignedUpdateMemo,
+  buildSignedClaimAction,
+  buildSignedBuyAction,
+  buildSignedListAction,
+  buildSignedDelistAction,
+  buildSignedReleaseAction,
+  buildSignedUpdateAction,
 } from "@/lib/zns/admin";
-import { normalizeUsername, isValidUsername, validateAddress, zatsToZec, type Network } from "@/lib/zns/name";
+import { normalizeUsername, isValidUsername, validateAddress, type Network } from "@/lib/zns/name";
 import { type Action, MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import { verifyOtp } from "@/lib/payment/otp";
 import { getReservedName, verifyUnlockCode } from "@/lib/zns/reserved";
@@ -45,7 +45,7 @@ export async function checkUnlockCode(
 }
 
 type TransactionResult =
-  | { ok: true; memo: string; amount: number; amountZec: number }
+  | { ok: true; uri: string }
   | { ok: false; error: string };
 
 type AuthMode = "default" | "otp" | "sovereign";
@@ -139,17 +139,15 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         const costZats = await fetchClaimCost(name, network);
         if (costZats == null) return { ok: false, error: "Pricing unavailable - indexer may be down." };
 
-        let memo: string;
         if (authMode === "sovereign") {
           const sig = input.sovereignSignature?.trim();
           const pub = input.sovereignPubkey?.trim();
           if (!sig) throw new Error("Signature is required for sovereign claim.");
           if (!pub) throw new Error("Public key is required for sovereign claim.");
-          memo = zns.prepareClaim(name, address, costZats).complete(sig, pub).memo;
+          return { ok: true, uri: zns.prepareClaim(name, address, costZats).complete(sig, pub).uri };
         } else {
-          memo = await buildSignedClaimMemo(name, address, network);
+          return { ok: true, uri: (await buildSignedClaimAction(name, address, network)).uri };
         }
-        return { ok: true, memo, amount: costZats, amountZec: zatsToZec(costZats) };
       }
       case "buy": {
         const address = input.address?.trim();
@@ -159,17 +157,15 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         const buyReg = await zns.resolveName(name);
         if (!buyReg?.listing) return { ok: false, error: "Name is not listed for sale." };
 
-        let memo: string;
         if (authMode === "sovereign") {
           const sig = input.sovereignSignature?.trim();
           const pub = input.sovereignPubkey?.trim();
           if (!sig) throw new Error("Signature is required for sovereign buy.");
           if (!pub) throw new Error("Public key is required for sovereign buy.");
-          memo = zns.prepareBuy(name, address).complete(sig, pub).memo;
+          return { ok: true, uri: zns.prepareBuy(name, address).complete(sig, pub).uri };
         } else {
-          memo = await buildSignedBuyMemo(name, address, network);
+          return { ok: true, uri: (await buildSignedBuyAction(name, address, network)).uri };
         }
-        return { ok: true, memo, amount: buyReg.listing.price, amountZec: zatsToZec(buyReg.listing.price) };
       }
       case "update": {
         const address = input.address?.trim();
@@ -177,14 +173,12 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         const addrCheck = validateAddress(address);
         if (!addrCheck.valid) return { ok: false, error: addrCheck.warning || "Invalid address format." };
 
-        let memo: string;
         if (authMode === "sovereign") {
           const sig = input.sovereignSignature!.trim();
-          memo = zns.prepareUpdate(name, address, ownerNonce).complete(sig, ownerPubkey).memo;
+          return { ok: true, uri: zns.prepareUpdate(name, address, ownerNonce).complete(sig, ownerPubkey).uri };
         } else {
-          memo = (await buildSignedUpdateMemo(name, address, network)).memo;
+          return { ok: true, uri: (await buildSignedUpdateAction(name, address, network)).action.uri };
         }
-        return { ok: true, memo, amount: 100_000, amountZec: 0.001 };
       }
       case "list": {
         const maxZats = MAX_LIST_FOR_SALE_AMOUNT * 100_000_000;
@@ -192,34 +186,28 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
           return { ok: false, error: "Price must be between 0 and 21,000,000 ZEC." };
         }
 
-        let memo: string;
         if (authMode === "sovereign") {
           const sig = input.sovereignSignature!.trim();
-          memo = zns.prepareList(name, input.priceZats, ownerNonce).complete(sig, ownerPubkey).memo;
+          return { ok: true, uri: zns.prepareList(name, input.priceZats, ownerNonce).complete(sig, ownerPubkey).uri };
         } else {
-          memo = (await buildSignedListMemo(name, input.priceZats, network)).memo;
+          return { ok: true, uri: (await buildSignedListAction(name, input.priceZats, network)).action.uri };
         }
-        return { ok: true, memo, amount: 100_000, amountZec: 0.001 };
       }
       case "delist": {
-        let memo: string;
         if (authMode === "sovereign") {
           const sig = input.sovereignSignature!.trim();
-          memo = zns.prepareDelist(name, ownerNonce).complete(sig, ownerPubkey).memo;
+          return { ok: true, uri: zns.prepareDelist(name, ownerNonce).complete(sig, ownerPubkey).uri };
         } else {
-          memo = (await buildSignedDelistMemo(name, network)).memo;
+          return { ok: true, uri: (await buildSignedDelistAction(name, network)).action.uri };
         }
-        return { ok: true, memo, amount: 100_000, amountZec: 0.001 };
       }
       case "release": {
-        let memo: string;
         if (authMode === "sovereign") {
           const sig = input.sovereignSignature!.trim();
-          memo = zns.prepareRelease(name, ownerNonce).complete(sig, ownerPubkey).memo;
+          return { ok: true, uri: zns.prepareRelease(name, ownerNonce).complete(sig, ownerPubkey).uri };
         } else {
-          memo = (await buildSignedReleaseMemo(name, network)).memo;
+          return { ok: true, uri: (await buildSignedReleaseAction(name, network)).action.uri };
         }
-        return { ok: true, memo, amount: 100_000, amountZec: 0.001 };
       }
     }
   } catch (err) {
