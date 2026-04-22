@@ -35,29 +35,11 @@ async function generateOtp(memo: string): Promise<string> {
   return (code % 1_000_000).toString().padStart(6, "0");
 }
 
-const MAX_ATTEMPTS = 5;
-const attemptMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(memo: string): boolean {
-  const now = Date.now();
-  const entry = attemptMap.get(memo);
-  if (!entry || now > entry.resetAt) {
-    attemptMap.set(memo, { count: 1, resetAt: now + 5 * 60 * 1000 });
-    return true;
-  }
-  entry.count++;
-  return entry.count <= MAX_ATTEMPTS;
-}
-
 export async function verifyOtp(
   memo: string,
   providedOtp: string,
   expectedAddress: string
 ): Promise<{ ok: true; proof: string } | { ok: false; error: string }> {
-  if (!checkRateLimit(memo)) {
-    return { ok: false, error: "Max attempts reached. Please start over." };
-  }
-
   const parsed = parseZvsMemo(memo);
   if (!parsed) return { ok: false, error: "Invalid memo format." };
   if (parsed.userAddress !== expectedAddress) return { ok: false, error: "Invalid code." };

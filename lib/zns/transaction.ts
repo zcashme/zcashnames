@@ -50,10 +50,10 @@ async function requireNetworkAccess(network: Network, password: string | undefin
   return { ok: false, error: "Invalid network password." };
 }
 
-function requireUnifiedAddress(address: string | undefined, network: Network): ActionResult | { address: string } {
+function requireUnifiedAddress(address: string | undefined): ActionResult | { address: string } {
   const addr = address?.trim();
   if (!addr) return { ok: false, error: "Address is required." };
-  const check = validateAddress(addr, network);
+  const check = validateAddress(addr);
   if (check.status !== "unified") return { ok: false, error: check.warning || "A unified address is required." };
   return { address: addr };
 }
@@ -61,15 +61,15 @@ function requireUnifiedAddress(address: string | undefined, network: Network): A
 function requireOtpProof(otpProof: string | undefined, expectedAddress: string): ActionResult | undefined {
   if (!otpProof) return { ok: false, error: "Verification required." };
   if (!verifyProofKind(otpProof, "otp")) {
-    return { ok: false, error: "Verification expired. Please start over." };
+    return { ok: false, error: "Verification invalid. Please start over." };
   }
   const parsed = parseProofSubject(otpProof);
   if (!parsed || parsed.kind !== "otp") {
-    return { ok: false, error: "Verification expired. Please start over." };
+    return { ok: false, error: "Verification invalid. Please start over." };
   }
   const [_sessionId, proofAddress] = parsed.subject.split(":");
   if (proofAddress !== expectedAddress) {
-    return { ok: false, error: "Verification expired. Please start over." };
+    return { ok: false, error: "Verification invalid. Please start over." };
   }
   return undefined;
 }
@@ -107,7 +107,7 @@ export async function buildClaim(input: ClaimInput): Promise<ActionResult> {
   const denied = await requireNetworkAccess(input.network, input.networkPassword);
   if (denied) return denied;
 
-  const addrResult = requireUnifiedAddress(input.address, input.network);
+  const addrResult = requireUnifiedAddress(input.address);
   if (!("address" in addrResult)) return addrResult;
 
   const reserved = await getReservedName(name);
@@ -152,7 +152,7 @@ export async function buildBuy(input: BuyInput): Promise<ActionResult> {
   const denied = await requireNetworkAccess(input.network, input.networkPassword);
   if (denied) return denied;
 
-  const addrResult = requireUnifiedAddress(input.address, input.network);
+  const addrResult = requireUnifiedAddress(input.address);
   if (!("address" in addrResult)) return addrResult;
 
   try {
@@ -195,7 +195,7 @@ export async function buildUpdate(input: UpdateInput): Promise<ActionResult> {
     if (!input.sovereignSig) return { ok: false, error: "This name is controlled by a keypair. Use sovereign signing." };
     const sig = input.sovereignSig.trim();
     const pub = input.sovereignPub?.trim() || reg.pubkey;
-    const addrResult = requireUnifiedAddress(input.address, input.network);
+    const addrResult = requireUnifiedAddress(input.address);
     if (!("address" in addrResult)) return addrResult;
 
     try {
@@ -208,7 +208,7 @@ export async function buildUpdate(input: UpdateInput): Promise<ActionResult> {
   const otpDenied = requireOtpProof(input.otpProof, reg.address);
   if (otpDenied) return otpDenied;
 
-  const addrResult = requireUnifiedAddress(input.address, input.network);
+  const addrResult = requireUnifiedAddress(input.address);
   if (!("address" in addrResult)) return addrResult;
 
   try {
