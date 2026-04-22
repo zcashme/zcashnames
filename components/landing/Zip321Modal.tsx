@@ -7,7 +7,7 @@ import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { buildTransaction, checkUnlockCode } from "@/lib/zns/transaction";
 import { checkScannerState } from "@/lib/zns/resolve";
 import { checkMempool } from "@/lib/zns/mempool";
-import { validateAddress } from "@/lib/zns/name";
+import { validateAddress, getSigningPayload } from "@/lib/zns/name";
 import { buildZcashUri, parseZip321Uri } from "@/lib/payment/zip321";
 import { generateSessionId, buildZvsMemo } from "@/lib/payment/memo";
 import { getNetworkConstants, MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
@@ -18,7 +18,6 @@ import type {
   PendingTransactionScanState,
   PendingTransactionState,
 } from "@/lib/types";
-import type { Network } from "@/lib/zns/name";
 import { useCopy } from "@/components/hooks/useCopy";
 import CopyIconButton from "@/components/CopyIconButton";
 
@@ -99,28 +98,6 @@ function parsePrice(raw: string): number | null {
   if (!n) return null;
   const num = Number(n);
   return Number.isFinite(num) && num >= 0 ? num : null;
-}
-
-function buildSovereignPayload(
-  action: Action,
-  name: string,
-  _network: Network,
-  params: { address?: string; priceZats?: number; nonce?: number },
-): string {
-  switch (action) {
-    case "claim":
-      return `CLAIM:${name}:${params.address ?? ""}`;
-    case "buy":
-      return `BUY:${name}:${params.address ?? ""}`;
-    case "update":
-      return `UPDATE:${name}:${params.address ?? ""}:${params.nonce ?? ""}`;
-    case "list":
-      return `LIST:${name}:${params.priceZats ?? ""}:${params.nonce ?? ""}`;
-    case "delist":
-      return `DELIST:${name}:${params.nonce ?? ""}`;
-    case "release":
-      return `RELEASE:${name}:${params.nonce ?? ""}`;
-  }
 }
 
 function decodeBase64ToBytes(value: string): Uint8Array | null {
@@ -427,7 +404,7 @@ export default function Zip321Modal({
   const nextOwnerNonce = ownerAction ? (registrationNonce ?? 0) + 1 : undefined;
   const parsedPrice = parsePrice(priceInput);
   const priceZats = needsPrice && parsedPrice ? Math.round(parsedPrice * 1e8) : undefined;
-  const sovereignPayload = buildSovereignPayload(action, name, network, {
+  const sovereignPayload = getSigningPayload(action, name, {
     address: needsAddress ? addressInput.trim() : undefined,
     priceZats,
     nonce: nextOwnerNonce,

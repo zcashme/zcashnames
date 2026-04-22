@@ -10,6 +10,52 @@ export function isValidUsername(name: string): boolean {
   return validationZns.isValidName(name);
 }
 
+export function getSigningPayload(
+  action: "claim" | "buy" | "update" | "list" | "delist" | "release",
+  name: string,
+  params: { address?: string; priceZats?: number; nonce?: number },
+): string {
+  try {
+    switch (action) {
+      case "claim":
+        return validationZns.prepareClaim(name, params.address ?? "", 0).payload;
+      case "buy":
+        return validationZns.prepareBuy(name, params.address ?? "").payload;
+      case "update":
+        return validationZns.prepareUpdate(name, params.address ?? "", params.nonce ?? 0).payload;
+      case "list":
+        return validationZns.prepareList(name, params.priceZats ?? 0, params.nonce ?? 0).payload;
+      case "delist":
+        return validationZns.prepareDelist(name, params.nonce ?? 0).payload;
+      case "release":
+        return validationZns.prepareRelease(name, params.nonce ?? 0).payload;
+    }
+  } catch {
+    return buildRawPayload(action, name, params);
+  }
+}
+
+function buildRawPayload(
+  action: "claim" | "buy" | "update" | "list" | "delist" | "release",
+  name: string,
+  params: { address?: string; priceZats?: number; nonce?: number },
+): string {
+  switch (action) {
+    case "claim":
+      return `CLAIM:${name}:${params.address ?? ""}`;
+    case "buy":
+      return `BUY:${name}:${params.address ?? ""}`;
+    case "update":
+      return `UPDATE:${name}:${params.address ?? ""}:${params.nonce ?? ""}`;
+    case "list":
+      return `LIST:${name}:${params.priceZats ?? ""}:${params.nonce ?? ""}`;
+    case "delist":
+      return `DELIST:${name}:${params.nonce ?? ""}`;
+    case "release":
+      return `RELEASE:${name}:${params.nonce ?? ""}`;
+  }
+}
+
 /* ── Address validation ─────────────────────────────────────────────── */
 
 export type AddressStatus = "unified" | "sapling" | "transparent" | "viewkey" | "tex" | "invalid";
