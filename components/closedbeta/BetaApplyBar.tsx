@@ -2,23 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useStatus } from "@/components/hooks/useStatus";
+import { useNetwork } from "@/components/hooks/useNetwork";
 
-/**
- * Site-wide announcement bar pointing to /indexerbb.
- *
- * Shown only on the home page in waitlist mode (i.e. visitors who haven't
- * unlocked Mainnet/Testnet).
- *
- * Colors come from --announce-bar-* CSS variables in globals.css and adapt to
- * the active theme (dark / light / monochrome).
- */
 export default function BetaApplyBar() {
   const pathname = usePathname();
-  const { status } = useStatus();
+  const { network } = useNetwork();
 
   if (pathname !== "/") return null;
-  if (status !== "waitlist") return null;
+  if (network !== null) return null;
 
   return (
     <Link

@@ -22,7 +22,7 @@ import ExplorerNameDetail from "./ExplorerNameDetail";
 import Zip321Modal, { type ModalTarget } from "@/components/landing/Zip321Modal";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import { useStatus } from "@/components/hooks/useStatus";
+import { useNetwork } from "@/components/hooks/useNetwork";
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 import type { ResolveName } from "@/lib/types";
@@ -81,7 +81,7 @@ export default function ExplorerShell({
   nameEvents,
 }: ExplorerShellProps) {
   const router = useRouter();
-  const { networkPassword } = useStatus();
+  const { networkPassword } = useNetwork();
   const usdPerZec = useUsdPrice();
   const [isPending, startTransition] = useTransition();
   const [optimisticEnv, setOptimisticEnv] = useOptimistic(environment);

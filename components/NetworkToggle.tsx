@@ -5,22 +5,26 @@ import { usePathname } from "next/navigation";
 import { getCurrentBetaStage, verifyNetworkAccess } from "@/lib/beta/actions";
 import { getWaitlistStats } from "@/lib/leaders/leaders";
 import { getHomeStats } from "@/lib/zns/resolve";
-import { StatusContext, useStatus } from "@/components/hooks/useStatus";
-import type { StatusState, StatusData } from "@/components/hooks/useStatus";
+import { NetworkContext, useNetwork } from "@/components/hooks/useNetwork";
+import type { NetworkData } from "@/components/hooks/useNetwork";
 import type { Network } from "@/lib/zns/name";
 
-export function StatusProvider({ children }: { children: React.ReactNode }) {
-  const [status, setStatusState] = useState<StatusState>("waitlist");
+const TABS: { key: Network | null; label: string }[] = [
+  { key: "mainnet", label: "Mainnet" },
+  { key: "testnet", label: "Testnet" },
+  { key: null, label: "Waitlist" },
+];
+
+export function NetworkProvider({ children }: { children: React.ReactNode }) {
+  const [network, setNetworkState] = useState<Network | null>(null);
   const [networkPassword, setNetworkPassword] = useState("");
-  const [data, setData] = useState<StatusData | null>(null);
+  const [data, setData] = useState<NetworkData | null>(null);
   const [loading, setLoading] = useState(true);
   const [stageHydrated, setStageHydrated] = useState(false);
   const [refreshCounter, setRefreshCounter] = useState(0);
 
-  const network: Network = status === "mainnet" ? "mainnet" : "testnet";
-
-  function setStatus(s: StatusState) {
-    setStatusState(s);
+  function setNetwork(n: Network | null) {
+    setNetworkState(n);
   }
 
   function refresh() {
@@ -33,7 +37,7 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
     getCurrentBetaStage()
       .then((stage) => {
         if (cancelled || !stage) return;
-        setStatusState(stage);
+        setNetworkState(stage);
       })
       .catch(() => {
         // Fall back to waitlist when the stage cookie cannot be read.
@@ -54,12 +58,12 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
 
     (async () => {
       try {
-        if (status !== "waitlist") {
+        if (network) {
           const stats = await getHomeStats(network);
-          if (!cancelled) setData({ mode: "search", network, stats });
+          if (!cancelled) setData({ network, stats });
         } else {
           const stats = await getWaitlistStats();
-          if (!cancelled) setData({ mode: "waitlist", stats });
+          if (!cancelled) setData({ network: null, stats });
         }
       } catch {
         // keep data as null on error
@@ -69,36 +73,30 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
     })();
 
     return () => { cancelled = true; };
-  }, [status, refreshCounter, stageHydrated, network]);
+  }, [network, refreshCounter, stageHydrated]);
 
   return (
-    <StatusContext.Provider
-      value={{ status, setStatus, networkPassword, setNetworkPassword, network, data, loading, refresh }}
+    <NetworkContext.Provider
+      value={{ network, setNetwork, networkPassword, setNetworkPassword, data, loading, refresh }}
     >
       {children}
-    </StatusContext.Provider>
+    </NetworkContext.Provider>
   );
 }
 
-const TABS: { key: StatusState; label: string }[] = [
-  { key: "mainnet", label: "Mainnet" },
-  { key: "testnet", label: "Testnet" },
-  { key: "waitlist", label: "Waitlist" },
-];
-
-export default function StatusToggle() {
+export default function NetworkToggle() {
   const pathname = usePathname();
-  const { status, setStatus, setNetworkPassword } = useStatus();
+  const { network, setNetwork, setNetworkPassword } = useNetwork();
 
   const [showModal, setShowModal] = useState(false);
-  const [pendingTarget, setPendingTarget] = useState<"testnet" | "mainnet">("testnet");
+  const [pendingTarget, setPendingTarget] = useState<Network>("testnet");
   const [input, setInput] = useState("");
   const [error, setError] = useState(false);
   const [checking, setChecking] = useState(false);
   const [welcomeName, setWelcomeName] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const activeIndex = Math.max(0, TABS.findIndex((tab) => tab.key === status));
+  const activeIndex = Math.max(0, TABS.findIndex((tab) => tab.key === network));
 
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [tabMetrics, setTabMetrics] = useState<Array<{ left: number; width: number }>>([]);
@@ -133,11 +131,11 @@ export default function StatusToggle() {
 
   const activeMetrics = tabMetrics[activeIndex];
 
-  function handleTabClick(key: StatusState) {
-    if (key === status) return;
+  function handleTabClick(key: Network | null) {
+    if (key === network) return;
 
-    if (key === "waitlist") {
-      setStatus("waitlist");
+    if (key === null) {
+      setNetwork(null);
       return;
     }
 
@@ -154,7 +152,7 @@ export default function StatusToggle() {
       const result = await verifyNetworkAccess(pendingTarget, input);
       if (result.ok) {
         setNetworkPassword(input);
-        setStatus(pendingTarget);
+        setNetwork(pendingTarget);
         setShowModal(false);
         setInput("");
         setError(false);
@@ -218,12 +216,12 @@ export default function StatusToggle() {
 
         {TABS.map((tab, i) => (
           <button
-            key={tab.key}
+            key={tab.label}
             ref={(el) => { tabRefs.current[i] = el; }}
             type="button"
             className="relative z-10 flex items-center justify-center h-full px-2.5 rounded-full whitespace-nowrap transition-opacity duration-200 cursor-pointer"
-            style={{ opacity: status === tab.key ? 1 : 0.4 }}
-            aria-pressed={status === tab.key}
+            style={{ opacity: network === tab.key ? 1 : 0.4 }}
+            aria-pressed={network === tab.key}
             onClick={() => handleTabClick(tab.key)}
           >
             <span>{tab.label}</span>

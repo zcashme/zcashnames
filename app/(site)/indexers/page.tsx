@@ -7,10 +7,10 @@ export const metadata = {
 };
 
 export default async function IndexersPage() {
-  const { data: indexers = [] } = await db
+  const indexers = (await db
     .from("indexer_registry")
     .select("id, url, network, submitted_by, submitted_at")
-    .order("submitted_at", { ascending: false });
+    .order("submitted_at", { ascending: false })).data ?? [];
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-10 sm:px-6">

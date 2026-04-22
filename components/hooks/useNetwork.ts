@@ -3,8 +3,6 @@
 import { createContext, useContext } from "react";
 import type { Network } from "@/lib/zns/name";
 
-export type StatusState = "mainnet" | "testnet" | "waitlist";
-
 export type WaitlistStatsData = {
   waitlist: number;
   referred: number;
@@ -19,32 +17,30 @@ export type HomeStatsData = {
   uivk: string;
 };
 
-export type StatusData =
-  | { mode: "waitlist"; stats: WaitlistStatsData }
-  | { mode: "search"; network: Network; stats: HomeStatsData };
+export type NetworkData =
+  | { network: null; stats: WaitlistStatsData }
+  | { network: Network; stats: HomeStatsData };
 
-export interface StatusContextValue {
-  status: StatusState;
-  setStatus: (s: StatusState) => void;
+export interface NetworkContextValue {
+  network: Network | null;
+  setNetwork: (n: Network | null) => void;
   networkPassword: string;
   setNetworkPassword: (v: string) => void;
-  network: Network;
-  data: StatusData | null;
+  data: NetworkData | null;
   loading: boolean;
   refresh: () => void;
 }
 
-export const StatusContext = createContext<StatusContextValue>({
-  status: "waitlist",
-  setStatus: () => {},
+export const NetworkContext = createContext<NetworkContextValue>({
+  network: null,
+  setNetwork: () => {},
   networkPassword: "",
   setNetworkPassword: () => {},
-  network: "testnet",
   data: null,
   loading: true,
   refresh: () => {},
 });
 
-export function useStatus() {
-  return useContext(StatusContext);
+export function useNetwork() {
+  return useContext(NetworkContext);
 }
