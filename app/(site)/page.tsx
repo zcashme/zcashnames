@@ -13,7 +13,13 @@ import HowItWorks from "@/components/landing/HowItWorks";
 import Link from "next/link";
 import { useStatus } from "@/components/hooks/useStatus";
 import { formatUsdEquivalent } from "@/lib/zns/name";
-import { isPopularName } from "@/lib/name-frequency";
+
+const POPULAR_NAMES = new Set([
+  "adam", "alex", "alice", "anna", "bob", "chris", "david", "emma", "ethan",
+  "jack", "james", "john", "leo", "lucas", "maria", "max", "mike", "noah",
+  "olivia", "satoshi",
+]);
+
 import type { ResolveName, Action } from "@/lib/types";
 import Zip321Modal from "@/components/landing/Zip321Modal";
 import type { ModalTarget } from "@/components/landing/Zip321Modal";
@@ -119,7 +125,7 @@ export default function HomePage() {
               displayName={`${item.query}.zcash`}
               network={network}
               firstBucket={"firstBucket" in item ? item.firstBucket : undefined}
-              isPopularName={isPopularName(item.query)}
+              isPopularName={POPULAR_NAMES.has(item.query.toLowerCase())}
               availabilityState={
                 item.status === "available"
                   ? "available"
