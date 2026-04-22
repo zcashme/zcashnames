@@ -19,7 +19,7 @@ import type {
   PendingTransactionState,
 } from "@/lib/types";
 import type { Network } from "@/lib/zns/name";
-import { useCopy } from "@/lib/useCopy";
+import { useCopy } from "@/components/hooks/useCopy";
 import CopyIconButton from "@/components/CopyIconButton";
 
 // ---------------------------------------------------------------------------

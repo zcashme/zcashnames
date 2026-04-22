@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useStatus } from "@/components/StatusToggle";
+import { useStatus } from "@/components/hooks/useStatus";
 
 /**
  * Site-wide announcement bar pointing to /indexerbb.

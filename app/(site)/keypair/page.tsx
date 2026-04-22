@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import { validatePayload, payloadBorderStyle, payloadMessageColor } from "@/lib/zns/payload";
 import type { PayloadValidation } from "@/lib/zns/payload";
-import { useCopy } from "@/lib/useCopy";
+import { useCopy } from "@/components/hooks/useCopy";
 
 function bytesToBase64(bytes: ArrayBuffer | Uint8Array): string {
   return btoa(String.fromCharCode(...new Uint8Array(bytes)));

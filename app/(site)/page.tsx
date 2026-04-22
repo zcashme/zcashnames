@@ -11,18 +11,18 @@ import MarketStats from "@/components/landing/MarketStats";
 import FAQ from "@/components/landing/FAQ";
 import HowItWorks from "@/components/landing/HowItWorks";
 import Link from "next/link";
-import { useStatus } from "@/components/StatusToggle";
+import { useStatus } from "@/components/hooks/useStatus";
 import { formatUsdEquivalent } from "@/lib/zns/name";
 import { isPopularName } from "@/lib/name-frequency";
 import type { ResolveName, Action } from "@/lib/types";
 import Zip321Modal from "@/components/landing/Zip321Modal";
 import type { ModalTarget } from "@/components/landing/Zip321Modal";
-import { useSearchState } from "@/components/landing/useSearchState";
-import { useUsdPrice } from "@/components/landing/useUsdPrice";
-import { useWaitlistVerification } from "@/components/landing/useWaitlistVerification";
+import { useSearchState } from "@/components/hooks/useSearchState";
+import { useUsdPrice } from "@/components/hooks/useUsdPrice";
+import { useWaitlistVerification } from "@/components/hooks/useWaitlistVerification";
 import { VerifiedModal } from "@/components/landing/VerifiedModal";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
-import { usePendingTransaction } from "@/components/landing/usePendingTransaction";
+import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 
 const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
   ssr: false,

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import FeedbackForm from "./FeedbackForm";
 import FeedbackChecklist, { initialChecklistExpansion, type SubListId } from "./FeedbackChecklist";
-import { useChecklistProgress } from "./useChecklistProgress";
+import { useChecklistProgress } from "@/components/hooks/useChecklistProgress";
 import {
   getCurrentTesterFocus,
   getCurrentTesterName,

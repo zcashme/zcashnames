@@ -1,59 +1,15 @@
 "use client";
 
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { getCurrentBetaStage, verifyNetworkAccess } from "@/lib/beta/actions";
 import { getWaitlistStats } from "@/lib/leaders/leaders";
 import { getHomeStats } from "@/lib/zns/resolve";
+import { StatusContext, useStatus } from "@/components/hooks/useStatus";
+import type { StatusState, StatusData } from "@/components/hooks/useStatus";
+export { useStatus } from "@/components/hooks/useStatus";
+export type { StatusData, WaitlistStatsData, HomeStatsData, StatusContextValue } from "@/components/hooks/useStatus";
 import type { Network } from "@/lib/zns/name";
-
-type StatusState = "mainnet" | "testnet" | "waitlist";
-
-export type WaitlistStatsData = {
-  waitlist: number;
-  referred: number;
-  rewardsPot: number;
-};
-
-export type HomeStatsData = {
-  claimed: number;
-  forSale: number;
-  verifiedOnZcashMe: number;
-  syncedHeight: number;
-  uivk: string;
-};
-
-export type StatusData =
-  | { mode: "waitlist"; stats: WaitlistStatsData }
-  | { mode: "search"; network: Network; stats: HomeStatsData };
-
-interface StatusContextValue {
-  status: StatusState;
-  setStatus: (s: StatusState) => void;
-  networkPassword: string;
-  setNetworkPassword: (v: string) => void;
-  isSearchMode: boolean;
-  network: Network;
-  data: StatusData | null;
-  loading: boolean;
-  refresh: () => void;
-}
-
-const StatusContext = createContext<StatusContextValue>({
-  status: "waitlist",
-  setStatus: () => {},
-  networkPassword: "",
-  setNetworkPassword: () => {},
-  isSearchMode: false,
-  network: "testnet",
-  data: null,
-  loading: true,
-  refresh: () => {},
-});
-
-export function useStatus() {
-  return useContext(StatusContext);
-}
 
 function applyStatus(s: StatusState) {
   document.documentElement.setAttribute("data-status", s);

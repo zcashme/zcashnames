@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useStatus } from "@/components/StatusToggle";
+import { useStatus } from "@/components/hooks/useStatus";
 
 type StatKey = "claimed" | "forSale" | "authenticated" | "waitlist" | "referred" | "rewardsPot";
 
