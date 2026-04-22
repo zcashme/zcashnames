@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { getUsdPerZec as fetchUsdPerZec } from "@/lib/zns/resolve";
+import { useEffect, useState } from "react";
+import { getExchangeRate } from "@/lib/exchange-rate";
 
 export function useUsdPrice(): number | null {
   const [usdPerZec, setUsdPerZec] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchUsdPerZec().then(setUsdPerZec).catch(() => {
-      // Silently fail - USD price is non-critical
-    });
+    getExchangeRate().then(setUsdPerZec).catch(() => {});
   }, []);
 
   return usdPerZec;

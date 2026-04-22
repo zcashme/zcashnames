@@ -2,7 +2,7 @@
 
 import { getZns, registrationStatus, type Registration, type Listing, type EventsFilter } from "@/lib/zns/client";
 import { normalizeUsername, isValidUsername, zatsToZec, type Network } from "@/lib/zns/name";
-import { getExchangeRate } from "@/lib/exchange-rate";
+
 import { getReservedName } from "@/lib/zns/reserved";
 import { getListingMap, reconcileRegistrationListing } from "@/lib/zns/listing-reconciliation";
 import type { Action, ResolveName } from "@/lib/types";
@@ -240,10 +240,6 @@ export async function getHomeStats(network: Network = "testnet"): Promise<{ clai
       uivk: "",
     };
   }
-}
-
-export async function getUsdPerZec(): Promise<number | null> {
-  return getExchangeRate();
 }
 
 export async function getListings(network: Network = "testnet"): Promise<Listing[]> {
