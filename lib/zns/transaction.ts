@@ -121,7 +121,7 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         const address = input.address?.trim();
         if (!address) return { ok: false, error: "Address is required." };
         const addrCheck = validateAddress(address);
-        if (!addrCheck.valid) return { ok: false, error: addrCheck.warning || "Invalid address format." };
+        if (addrCheck.status !== "unified") return { ok: false, error: addrCheck.warning || "A unified address is required." };
 
         const reserved = await getReservedName(name);
         if (reserved && !reserved.redeemed) {
@@ -153,7 +153,7 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         const address = input.address?.trim();
         if (!address) return { ok: false, error: "Address is required." };
         const addrCheck = validateAddress(address);
-        if (!addrCheck.valid) return { ok: false, error: addrCheck.warning || "Invalid address format." };
+        if (addrCheck.status !== "unified") return { ok: false, error: addrCheck.warning || "A unified address is required." };
         const buyReg = await zns.resolveName(name);
         if (!buyReg?.listing) return { ok: false, error: "Name is not listed for sale." };
 
@@ -171,7 +171,7 @@ export async function buildTransaction(input: TransactionInput): Promise<Transac
         const address = input.address?.trim();
         if (!address) return { ok: false, error: "Address is required for update." };
         const addrCheck = validateAddress(address);
-        if (!addrCheck.valid) return { ok: false, error: addrCheck.warning || "Invalid address format." };
+        if (addrCheck.status !== "unified") return { ok: false, error: addrCheck.warning || "A unified address is required." };
 
         if (authMode === "sovereign") {
           const sig = input.sovereignSignature!.trim();

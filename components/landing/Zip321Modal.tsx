@@ -409,17 +409,15 @@ export default function Zip321Modal({
   // Address validation (live)
   const addrValidation = addressInput.trim()
     ? validateAddress(addressInput.trim())
-    : { valid: false, warning: "", rejected: false };
+    : { status: "invalid" as const, warning: "" };
 
   const addrBorderColor = !addressInput.trim()
     ? "var(--faq-border)"
-    : addrValidation.rejected
+    : addrValidation.status === "viewkey" || addrValidation.status === "tex" || addrValidation.status === "invalid"
       ? "var(--accent-red, #e05252)"
-      : addrValidation.valid && addrValidation.warning
-        ? "#ca8a04"
-        : addrValidation.valid
-          ? "#22c55e"
-          : "var(--faq-border)";
+      : addrValidation.status === "unified"
+        ? "#22c55e"
+        : "#ca8a04";
 
   // OTP URI
   const otpUri = zvsMemo ? buildZcashUri(OTP_SIGNIN_ADDR, OTP_AMOUNT, zvsMemo) : "";
@@ -577,7 +575,9 @@ export default function Zip321Modal({
       const addr = addressInput.trim();
       if (!addr) { setInputError("Address is required."); return; }
       const v = validateAddress(addr);
-      if (v.rejected || !v.valid) { setInputError(v.warning || "Invalid address format."); return; }
+      if (v.status === "viewkey" || v.status === "tex" || v.status === "invalid") {
+        setInputError(v.warning || "Invalid address format."); return;
+      }
     }
 
     // Validate price
@@ -1331,7 +1331,7 @@ export default function Zip321Modal({
                   className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                   style={inputStyle(addrBorderColor)}
                 />
-                {addressInput.trim() && addrValidation.warning && !addrValidation.rejected && (
+                {addressInput.trim() && addrValidation.warning && addrValidation.status !== "viewkey" && addrValidation.status !== "tex" && addrValidation.status !== "invalid" && (
                   <p className="text-xs" style={{ color: "#ca8a04" }}>{addrValidation.warning}</p>
                 )}
               </div>
