@@ -970,19 +970,47 @@ export default function Zip321Modal({
     const currentIndex = steps.indexOf(phase);
     if (currentIndex < 0) return null;
 
+    function getScanningFillPercent(state: ScanState): number {
+      switch (state) {
+        case "loading":
+          return 25;
+        case "not_detected":
+          return 25;
+        case "in_mempool":
+          return 50;
+        case "being_mined":
+          return 75;
+        case "mined":
+          return 100;
+      }
+    }
+
     return (
       <div className="flex w-full justify-center" aria-hidden="true">
         <div className="flex max-w-full items-center gap-[3px]">
-          {steps.map((step, index) => (
-            <span
-              key={`${step}-${index}`}
-              className="block h-1.5 w-8 sm:w-[34px]"
-              style={{
-                clipPath: progressClipPath(index, steps.length),
-                background: index <= currentIndex ? "var(--fg-heading)" : "var(--border-muted)",
-              }}
-            />
-          ))}
+          {steps.map((step, index) => {
+            const isAfterCurrent = index > currentIndex;
+            const isCurrentScanning = index === currentIndex && phase === "scanning";
+            let background = "var(--fg-heading)";
+
+            if (isAfterCurrent) {
+              background = "var(--border-muted)";
+            } else if (isCurrentScanning) {
+              const fillPercent = getScanningFillPercent(scanState);
+              background = `linear-gradient(to right, var(--fg-heading) ${fillPercent}%, var(--border-muted) ${fillPercent}%)`;
+            }
+
+            return (
+              <span
+                key={`${step}-${index}`}
+                className="block h-1.5 w-8 sm:w-[34px]"
+                style={{
+                  clipPath: progressClipPath(index, steps.length),
+                  background,
+                }}
+              />
+            );
+          })}
         </div>
       </div>
     );
