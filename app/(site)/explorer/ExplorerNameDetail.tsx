@@ -5,15 +5,15 @@ import Image from "next/image";
 import type { ResolveName } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import type { Event } from "@/lib/zns/client";
-import { formatUsdEquivalent } from "@/lib/zns/name";
+import { formatUsdEquivalent } from "@/lib/zns/client";
 import ActionBadge from "@/components/ActionBadge";
 import CopyIconButton from "@/components/CopyIconButton";
 import {
-  NameStatusActionButtons,
   NameStatusBadge,
+  NameStatusButtons,
   type NameAvailabilityState,
   statusSupportsPrice,
-} from "@/components/NameStatusActions";
+} from "@/components/NameStatus";
 
 function toAvailabilityState(result: ResolveName): NameAvailabilityState {
   if (result.status === "available") return "available";
@@ -120,7 +120,7 @@ export default function ExplorerNameDetail({
           {showCenteredActionLayout && (
             <div className="flex flex-col gap-4">
               {availabilityState && (
-                <NameStatusActionButtons
+                <NameStatusButtons
                   status={availabilityState}
                   onAction={onAction}
                   align="center"

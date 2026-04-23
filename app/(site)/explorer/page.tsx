@@ -1,7 +1,6 @@
 import { getCurrentRegistrations, getEvents, getListings, getHomeStats, resolveName } from "@/lib/zns/resolve";
-import type { Network } from "@/lib/zns/name";
+import type { Network, Event } from "@/lib/zns/client";
 import type { ResolveName } from "@/lib/types";
-import type { Event } from "zcashname-sdk";
 import ExplorerShell from "./ExplorerShell";
 import {
   ACTION_TYPES,

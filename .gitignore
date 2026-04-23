@@ -36,6 +36,8 @@ CLAUDE.md
 test-results/
 playwright-report/
 .playwright-mcp/
+tests/
+scripts/
 
 # debug logs
 npm-debug.log*

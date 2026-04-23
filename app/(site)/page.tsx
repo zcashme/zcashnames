@@ -11,18 +11,24 @@ import MarketStats from "@/components/landing/MarketStats";
 import FAQ from "@/components/landing/FAQ";
 import HowItWorks from "@/components/landing/HowItWorks";
 import Link from "next/link";
-import { useStatus } from "@/components/StatusToggle";
-import { formatUsdEquivalent } from "@/lib/zns/name";
-import { isPopularName } from "@/lib/name-frequency";
+import { useNetwork } from "@/components/hooks/useNetwork";
+import { formatUsdEquivalent } from "@/lib/zns/client";
+
+const POPULAR_NAMES = new Set([
+  "adam", "alex", "alice", "anna", "bob", "chris", "david", "emma", "ethan",
+  "jack", "james", "john", "leo", "lucas", "maria", "max", "mike", "noah",
+  "olivia", "satoshi",
+]);
+
 import type { ResolveName, Action } from "@/lib/types";
 import Zip321Modal from "@/components/landing/Zip321Modal";
 import type { ModalTarget } from "@/components/landing/Zip321Modal";
-import { useSearchState } from "@/components/landing/useSearchState";
-import { useUsdPrice } from "@/components/landing/useUsdPrice";
-import { useWaitlistVerification } from "@/components/landing/useWaitlistVerification";
+import { useSearchState } from "@/components/hooks/useSearchState";
+import { useUsdPrice } from "@/components/hooks/useUsdPrice";
+import { useWaitlistVerification } from "@/components/hooks/useWaitlistVerification";
 import { VerifiedModal } from "@/components/landing/VerifiedModal";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
-import { usePendingTransaction } from "@/components/landing/usePendingTransaction";
+import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 
 const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
   ssr: false,
@@ -58,7 +64,7 @@ const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
 });
 
 export default function HomePage() {
-  const { status, isSearchMode, network, networkPassword, refresh } = useStatus();
+  const { network, networkPassword, refresh } = useNetwork();
   const usdPerZec = useUsdPrice();
   const [waitlistConfirmed, setWaitlistConfirmed] = useState(false);
   const [isClientMounted, setIsClientMounted] = useState(false);
@@ -75,7 +81,7 @@ export default function HomePage() {
     refreshResult,
     removeResult,
     reset: resetSearch,
-  } = useSearchState(network);
+  } = useSearchState(network ?? "testnet");
   const {
     hydrated: pendingHydrated,
     pendingTransaction,
@@ -86,24 +92,22 @@ export default function HomePage() {
 
   const { status: verificationStatus, banner, clearBanner, closeSuccessModal } = useWaitlistVerification();
 
-  // Reset search when status changes
   useEffect(() => {
     resetSearch();
-  }, [status, resetSearch]);
+  }, [network, resetSearch]);
 
-  // Track client mount for portals
   useEffect(() => {
     setIsClientMounted(true);
   }, []);
 
-  const shouldAutoOpenFeedback = isSearchMode && !hasAutoOpenedFeedback.current;
+  const shouldAutoOpenFeedback = network !== null && !hasAutoOpenedFeedback.current;
 
   useEffect(() => {
-    if (!isSearchMode || hasAutoOpenedFeedback.current) return;
+    if (network === null || hasAutoOpenedFeedback.current) return;
     hasAutoOpenedFeedback.current = true;
-  }, [isSearchMode]);
+  }, [network]);
 
-  const form = isSearchMode ? (
+  const form = network !== null ? (
     <>
       <SearchForm
         value={input}
@@ -119,7 +123,7 @@ export default function HomePage() {
               displayName={`${item.query}.zcash`}
               network={network}
               firstBucket={"firstBucket" in item ? item.firstBucket : undefined}
-              isPopularName={isPopularName(item.query)}
+              isPopularName={POPULAR_NAMES.has(item.query.toLowerCase())}
               availabilityState={
                 item.status === "available"
                   ? "available"
@@ -240,9 +244,9 @@ export default function HomePage() {
         <Hero
           searchForm={form}
           rightPanel={<PhoneStage embedded />}
-          formExpanded={status === "waitlist" && waitlistConfirmed}
+          formExpanded={network === null && waitlistConfirmed}
           subtitle={
-            isSearchMode ? (
+            network !== null ? (
               <>Powered by Zcash. Claim your name</>
             ) : (
               <>Be first to claim a name you can use, hold, or sell.</>
@@ -251,7 +255,7 @@ export default function HomePage() {
         />
       </section>
 
-      {isSearchMode && pendingHydrated && pendingTransaction && !modalTarget && (
+      {network !== null && pendingHydrated && pendingTransaction && !modalTarget && (
         <PendingTransactionBanner
           pendingTransaction={pendingTransaction}
           onResume={() => {
@@ -264,7 +268,7 @@ export default function HomePage() {
       <MarketStats />
 
       <div className="relative z-[2] -mt-4 mb-2 flex justify-center">
-        {isSearchMode ? (
+        {network !== null ? (
           <Link
             href={network === "testnet" ? "/explorer?env=testnet" : "/explorer"}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--home-result-link-border)] bg-[var(--home-result-link-bg)] px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform,background-color] duration-[140ms] hover:-translate-y-px hover:bg-[var(--home-result-link-hover-bg)]"
@@ -331,7 +335,7 @@ export default function HomePage() {
         />
       )}
 
-      {isClientMounted && isSearchMode && (
+      {isClientMounted && network !== null && (
         <FeedbackModal defaultNetwork={network} openOnMount={shouldAutoOpenFeedback} />
       )}
     </div>

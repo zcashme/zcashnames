@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { zatsToZec } from "@/lib/zns/name";
-import type { Network } from "@/lib/zns/name";
+import { zatsToZec } from "@/lib/zns/client";
+import type { Network } from "@/lib/zns/client";
 import type { Environment, SortBy } from "./ExplorerToolbar";
 import {
   clampPage,

@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useStatus } from "@/components/StatusToggle";
+import { useNetwork } from "@/components/hooks/useNetwork";
 
 type StatKey = "claimed" | "forSale" | "authenticated" | "waitlist" | "referred" | "rewardsPot";
 
 export default function MarketStats() {
-  const { data, loading } = useStatus();
+  const { data, loading } = useNetwork();
   const [activeKey, setActiveKey] = useState<StatKey | null>(null);
   const [hoverKey, setHoverKey] = useState<StatKey | null>(null);
 
   const items =
-    data?.mode === "waitlist"
+    data?.network === null
       ? [
           {
             key: "waitlist" as const,
@@ -47,7 +47,7 @@ export default function MarketStats() {
             helpText: "Estimated total rewards to be issued when names are purchased during early access period.",
           },
         ]
-      : data?.mode === "search"
+      : data?.network != null
         ? [
             {
               key: "claimed" as const,

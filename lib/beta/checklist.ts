@@ -6,7 +6,7 @@
 // Items tagged `group: "both"` appear in BOTH sub-lists in the UI but are still
 // a single canonical item (one row in state, one tick).
 
-export type ChecklistGroup = "user" | "developer" | "both";
+type ChecklistGroup = "user" | "developer" | "both";
 
 export interface ChecklistItem {
   id: string;

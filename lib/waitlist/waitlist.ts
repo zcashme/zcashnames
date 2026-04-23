@@ -12,7 +12,7 @@ import {
   parseWaitlistConfirmToken,
 } from "@/lib/waitlist/confirm-token";
 import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
-import { normalizeUsername } from "@/lib/zns/name";
+import { normalizeUsername } from "@/lib/zns/client";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 const MAX_REFERRAL_CODE_RETRIES = 6;

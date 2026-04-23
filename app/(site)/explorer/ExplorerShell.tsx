@@ -7,12 +7,15 @@ import ExplorerContent from "./ExplorerContent";
 import {
   ACTION_TYPES,
   EXPLORER_PAGE_SIZE,
+  clampPage,
   filterEvents,
   filterListings,
   filterRegistrations,
   getTabCountLabel,
   getTabEvents,
+  getTotalPages,
   normalizeExplorerQuery,
+  paginateRows,
   type ExplorerTab,
   type TabCounts,
   type TaggedEvent,
@@ -23,13 +26,12 @@ import ExplorerNameDetail from "./ExplorerNameDetail";
 import Zip321Modal, { type ModalTarget } from "@/components/landing/Zip321Modal";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import { useStatus } from "@/components/StatusToggle";
-import { useUsdPrice } from "@/components/landing/useUsdPrice";
-import { usePendingTransaction } from "@/components/landing/usePendingTransaction";
+import { useNetwork } from "@/components/hooks/useNetwork";
+import { useUsdPrice } from "@/components/hooks/useUsdPrice";
+import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 import type { ResolveName } from "@/lib/types";
 import type { Action } from "@/lib/types";
-import type { Event } from "@/lib/zns/client";
-import type { Network } from "@/lib/zns/name";
+import type { Event, Network } from "@/lib/zns/client";
 
 const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "all", label: "All" },
@@ -86,7 +88,7 @@ export default function ExplorerShell({
   nameEvents,
 }: ExplorerShellProps) {
   const router = useRouter();
-  const { networkPassword } = useStatus();
+  const { networkPassword } = useNetwork();
   const usdPerZec = useUsdPrice();
   const [isPending, startTransition] = useTransition();
   const [optimisticEnv, setOptimisticEnv] = useOptimistic(environment);
@@ -383,7 +385,10 @@ export default function ExplorerShell({
       )}
 
       {/* Tabs */}
-      <div className="flex items-end gap-0 border-b" style={{ borderColor: "var(--leaders-card-border)" }}>
+      <div
+        className="flex items-end gap-0 border-b"
+        style={{ borderColor: "var(--leaders-card-border)" }}
+      >
         {PRIMARY_TABS.map((t) => {
           const count = tabCounts?.[t.key];
           return (
@@ -402,7 +407,10 @@ export default function ExplorerShell({
                 </>
               )}
               {activeTab === t.key && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: "var(--fg-heading)" }} />
+                <span
+                  className="absolute bottom-0 left-0 right-0 h-[2px]"
+                  style={{ background: "var(--fg-heading)" }}
+                />
               )}
             </button>
           );
@@ -421,7 +429,10 @@ export default function ExplorerShell({
               <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             {isMoreTabActive && (
-              <span className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: "var(--fg-heading)" }} />
+              <span
+                className="absolute bottom-0 left-0 right-0 h-[2px]"
+                style={{ background: "var(--fg-heading)" }}
+              />
             )}
           </button>
           {moreOpen && (
@@ -488,6 +499,7 @@ export default function ExplorerShell({
             pageSize={EXPLORER_PAGE_SIZE}
             onPageChange={handlePageChange}
             onNameClick={handleNameClick}
+
             initialEvents={initialEvents}
             initialEventsTotal={initialEventsTotal}
             initialListings={initialListings}
@@ -501,9 +513,7 @@ export default function ExplorerShell({
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setUivkOpen(false);
-          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setUivkOpen(false); }}
         >
           <div
             className="w-full max-w-md rounded-2xl border px-8 py-7 flex flex-col gap-5"

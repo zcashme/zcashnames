@@ -1,10 +1,8 @@
 import "server-only";
 
-/**
- * ZVS OTP - HMAC-SHA256 generation and verification.
- */
-
+import crypto from "node:crypto";
 import { parseZvsMemo } from "./memo";
+import { issueProof } from "@/lib/zns/proof";
 
 function getSecretSeedBytes(): Uint8Array {
   const seed = process.env.ZVS_SECRET_SEED;
@@ -14,14 +12,6 @@ function getSecretSeedBytes(): Uint8Array {
   return new Uint8Array(Buffer.from(seed, "hex"));
 }
 
-/* ── OTP ─────────────────────────────────────────────────────────────── */
-
-/**
- * Generate a 6-digit OTP from a memo using HMAC-SHA256.
- * HMAC-SHA256(secret, sessionId + userAddress) → u32 → mod 1_000_000.
- * The address is included in the hash so the OTP is bound to both the
- * session and the address - prevents replay with a swapped address.
- */
 async function generateOtp(memo: string): Promise<string> {
   const parsed = parseZvsMemo(memo);
   if (!parsed) throw new Error("Invalid memo format");
@@ -45,22 +35,23 @@ async function generateOtp(memo: string): Promise<string> {
   return (code % 1_000_000).toString().padStart(6, "0");
 }
 
-/**
- * Verify a user-provided OTP against a memo (stateless HMAC check).
- * Requires the expected address so the OTP can't be replayed with a
- * swapped address - the sessionId alone determines the OTP, so without
- * this check an attacker who sees the sessionId could build a memo with
- * their own address, receive the same OTP, and pass verification.
- */
 export async function verifyOtp(
   memo: string,
   providedOtp: string,
   expectedAddress: string
-): Promise<boolean> {
+): Promise<{ ok: true; proof: string } | { ok: false; error: string }> {
   const parsed = parseZvsMemo(memo);
-  if (!parsed) return false;
-  if (parsed.userAddress !== expectedAddress) return false;
+  if (!parsed) return { ok: false, error: "Invalid memo format." };
+  if (parsed.userAddress !== expectedAddress) return { ok: false, error: "Invalid code." };
 
   const expected = await generateOtp(memo);
-  return expected === providedOtp.trim();
+  const provided = providedOtp.trim();
+
+  if (expected.length !== provided.length) return { ok: false, error: "Invalid code." };
+  if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided))) {
+    return { ok: false, error: "Invalid code." };
+  }
+
+  const subject = `${parsed.sessionId}:${parsed.userAddress}`;
+  return { ok: true, proof: issueProof("otp", subject) };
 }

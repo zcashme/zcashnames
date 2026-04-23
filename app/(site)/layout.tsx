@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Dancing_Script, Inter } from "next/font/google";
-import { StatusProvider } from "@/components/StatusToggle";
 import { ThemeProvider } from "next-themes";
+import { NetworkProvider } from "@/components/NetworkToggle";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BetaApplyBar from "@/components/closedbeta/BetaApplyBar";
@@ -74,7 +74,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-status="waitlist" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="me" href="https://zcash.me/zcashnames" />
         <script
@@ -105,7 +105,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           defaultTheme="dark"
           themes={["dark", "light", "monochrome"]}
         >
-        <StatusProvider>
+        <NetworkProvider>
 
         <BetaApplyBar />
         <CabalLaunchBar />
@@ -113,7 +113,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {children}
         <Footer />
 
-        </StatusProvider>
+        </NetworkProvider>
         </ThemeProvider>
         <Analytics />
       </body>

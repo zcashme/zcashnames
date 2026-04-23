@@ -4,7 +4,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 
-export type CabalInvite = {
+type CabalInvite = {
   id: string;
   displayName: string;
 };

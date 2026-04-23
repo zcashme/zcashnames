@@ -675,8 +675,8 @@ export default function AddressMeComposer() {
               <button
                 type="button"
                 onClick={() => void sharePng()}
-                className="cursor-pointer rounded-md border border-fg-heading bg-[var(--fg-heading)] px-4 py-3 text-sm font-bold text-[var(--color-background)] transition-opacity hover:opacity-90"
-              >
+className="cursor-pointer rounded-md border border-fg-heading bg-[var(--fg-heading)] px-4 py-3 text-sm font-bold text-[var(--color-background)] transition-opacity hover:opacity-90"
+               >
                 Share PNG
               </button>
             )}

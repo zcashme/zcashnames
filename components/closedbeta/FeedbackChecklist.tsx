@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, type CSSProperties } from "react";
 import { BETA_CHECKLIST, type ChecklistItem } from "@/lib/beta/checklist";
-import { useChecklistProgress, type ChecklistStage } from "./useChecklistProgress";
+import { useChecklistProgress, type ChecklistStage } from "@/components/hooks/useChecklistProgress";
 
 export type SubListId = "user" | "developer";
 type TooltipStep = "popout" | "report" | "checkbox" | "readme" | "contact" | "collapse";

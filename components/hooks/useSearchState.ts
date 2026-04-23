@@ -2,9 +2,9 @@
 
 import { useState, useRef, useCallback } from "react";
 import { resolveName } from "@/lib/zns/resolve";
-import { normalizeUsername, isValidUsername } from "@/lib/zns/name";
+import { normalizeUsername, isValidUsername } from "@/lib/zns/client";
 import type { ResolveName } from "@/lib/types";
-import type { Network } from "@/lib/zns/name";
+import type { Network } from "@/lib/zns/client";
 
 interface SearchState {
   input: string;

@@ -4,10 +4,10 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
-import { buildTransaction, checkUnlockCode } from "@/lib/zns/transaction";
+import { verifyOtp, buildClaim, buildBuy, buildUpdate, buildList, buildDelist, buildRelease, checkUnlockCode } from "@/lib/zns/transaction";
 import { checkScannerState } from "@/lib/zns/resolve";
 import { checkMempool } from "@/lib/zns/mempool";
-import { validateAddress } from "@/lib/zns/name";
+import { validateAddress, getSigningPayload } from "@/lib/zns/client";
 import { buildZcashUri, parseZip321Uri } from "@/lib/payment/zip321";
 import { generateSessionId, buildZvsMemo } from "@/lib/payment/memo";
 import { getNetworkConstants, MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
@@ -18,8 +18,7 @@ import type {
   PendingTransactionScanState,
   PendingTransactionState,
 } from "@/lib/types";
-import type { Network } from "@/lib/zns/name";
-import { useCopy } from "@/lib/useCopy";
+import { useCopy } from "@/components/hooks/useCopy";
 import CopyIconButton from "@/components/CopyIconButton";
 
 // ---------------------------------------------------------------------------
@@ -101,28 +100,6 @@ function parsePrice(raw: string): number | null {
   return Number.isFinite(num) && num >= 0 ? num : null;
 }
 
-function buildSovereignPayload(
-  action: Action,
-  name: string,
-  _network: Network,
-  params: { address?: string; priceZats?: number; nonce?: number },
-): string {
-  switch (action) {
-    case "claim":
-      return `CLAIM:${name}:${params.address ?? ""}`;
-    case "buy":
-      return `BUY:${name}:${params.address ?? ""}`;
-    case "update":
-      return `UPDATE:${name}:${params.address ?? ""}:${params.nonce ?? ""}`;
-    case "list":
-      return `LIST:${name}:${params.priceZats ?? ""}:${params.nonce ?? ""}`;
-    case "delist":
-      return `DELIST:${name}:${params.nonce ?? ""}`;
-    case "release":
-      return `RELEASE:${name}:${params.nonce ?? ""}`;
-  }
-}
-
 function decodeBase64ToBytes(value: string): Uint8Array | null {
   const normalized = value.trim().replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
   if (!normalized) return null;
@@ -182,7 +159,7 @@ export default function Zip321Modal({
     networkPassword,
     isReserved,
   } = target;
-  const { ZIP321_RECIPIENT_ADDRESS, OTP_SIGNIN_ADDR, OTP_AMOUNT, OTP_MAX_ATTEMPTS } =
+  const { OTP_SIGNIN_ADDR, OTP_AMOUNT, OTP_MAX_ATTEMPTS } =
     getNetworkConstants(network);
 
   const needsAddress = action === "claim" || action === "buy" || action === "update";
@@ -248,7 +225,6 @@ export default function Zip321Modal({
 
   // Payment phase
   const [paymentUri, setPaymentUri] = useState(initialResumeState?.paymentUri ?? "");
-  const [paymentAmountZec, setPaymentAmountZec] = useState(initialResumeState?.paymentAmountZec ?? 0);
   const [showPaymentUri, setShowPaymentUri] = useState(false);
   const [qrDownloadError, setQrDownloadError] = useState("");
   const [showOtpHelp, setShowOtpHelp] = useState(false);
@@ -287,7 +263,6 @@ export default function Zip321Modal({
       addressInput,
       priceInput,
       paymentUri,
-      paymentAmountZec,
       scanState: nextScanState,
       updatedAt: Date.now(),
     };
@@ -406,22 +381,20 @@ export default function Zip321Modal({
       return;
     }
     onClearState?.();
-  }, [addressInput, onClearState, onPersistState, paymentAmountZec, paymentUri, phase, priceInput, scanState]);
+  }, [addressInput, onClearState, onPersistState, paymentUri, phase, priceInput, scanState]);
 
   // Address validation (live)
   const addrValidation = addressInput.trim()
-    ? validateAddress(addressInput.trim())
-    : { valid: false, warning: "", rejected: false };
+    ? validateAddress(addressInput.trim(), network)
+    : { status: "invalid" as const, warning: "" };
 
   const addrBorderColor = !addressInput.trim()
     ? "var(--faq-border)"
-    : addrValidation.rejected
+    : addrValidation.status === "viewkey" || addrValidation.status === "tex" || addrValidation.status === "invalid"
       ? "var(--accent-red, #e05252)"
-      : addrValidation.valid && addrValidation.warning
-        ? "#ca8a04"
-        : addrValidation.valid
-          ? "#22c55e"
-          : "var(--faq-border)";
+      : addrValidation.status === "unified"
+        ? "#22c55e"
+        : "#ca8a04";
 
   // OTP URI
   const otpUri = zvsMemo ? buildZcashUri(OTP_SIGNIN_ADDR, OTP_AMOUNT, zvsMemo) : "";
@@ -431,11 +404,11 @@ export default function Zip321Modal({
   const nextOwnerNonce = ownerAction ? (registrationNonce ?? 0) + 1 : undefined;
   const parsedPrice = parsePrice(priceInput);
   const priceZats = needsPrice && parsedPrice ? Math.round(parsedPrice * 1e8) : undefined;
-  const sovereignPayload = buildSovereignPayload(action, name, network, {
+  const sovereignPayload = getSigningPayload(action, name, {
     address: needsAddress ? addressInput.trim() : undefined,
     priceZats,
     nonce: nextOwnerNonce,
-  });
+  }, network);
 
   useEffect(() => {
     if (phase !== "sign") return;
@@ -561,7 +534,7 @@ export default function Zip321Modal({
       const result = await checkUnlockCode(name, code);
 
       if (!result.ok) { setUnlockError(result.error || "Invalid unlock code."); return; }
-      setVerifiedUnlockCode(code);
+      setVerifiedUnlockCode(result.proof);
       setPhase("input");
     } catch {
       setUnlockError("Something went wrong. Try again.");
@@ -578,8 +551,10 @@ export default function Zip321Modal({
     if (needsAddress) {
       const addr = addressInput.trim();
       if (!addr) { setInputError("Address is required."); return; }
-      const v = validateAddress(addr);
-      if (v.rejected || !v.valid) { setInputError(v.warning || "Invalid address format."); return; }
+      const v = validateAddress(addr, network);
+      if (v.status === "viewkey" || v.status === "tex" || v.status === "invalid") {
+        setInputError(v.warning || "Invalid address format."); return;
+      }
     }
 
     // Validate price
@@ -622,22 +597,17 @@ export default function Zip321Modal({
       return;
     }
 
-    // claim / buy → call buildTransaction directly
+    // claim / buy → call builder directly
     setInputLoading(true);
     try {
-      const result = await buildTransaction({
-        name,
-        action,
-        address: addressInput.trim() || undefined,
-        priceZats,
-        network,
-        password: networkPassword,
-        unlockCode: verifiedUnlockCode,
-        authMode: "default",
-      });
+      const base = { name, network, networkPassword };
+      const address = addressInput.trim();
+      const result = action === "buy"
+        ? await buildBuy({ ...base, address })
+        : await buildClaim({ ...base, address, unlockProof: verifiedUnlockCode });
 
       if (!result.ok) { setInputError(result.error); return; }
-      goToPayment(result.memo, result.amountZec);
+      goToPayment(result.uri);
     } catch {
       setInputError("Something went wrong. Try again.");
     } finally {
@@ -655,25 +625,44 @@ export default function Zip321Modal({
     setOtpError("");
     setOtpLoading(true);
     try {
-      const result = await buildTransaction({
-        name,
-        action,
-        address: needsAddress ? addressInput.trim() : undefined,
-        priceZats,
-        network,
-        password: networkPassword,
-        unlockCode: verifiedUnlockCode,
-        memo: zvsMemo,
-        otp: code,
-        authMode: "otp",
-      });
-      if (!result.ok) {
+      const otpResult = await verifyOtp(zvsMemo, code, registrationAddress!);
+      if (!otpResult.ok) {
         setOtpAttempts((a) => a + 1);
-        setOtpError(result.error);
+        setOtpError(otpResult.error);
         setOtpInput("");
         return;
       }
-      goToPayment(result.memo, result.amountZec);
+
+      const base = {
+        name,
+        network,
+        networkPassword,
+        otpProof: otpResult.proof,
+      };
+
+      let result;
+      switch (action) {
+        case "update":
+          result = await buildUpdate({ ...base, address: addressInput.trim() });
+          break;
+        case "list":
+          result = await buildList({ ...base, priceZats: priceZats! });
+          break;
+        case "delist":
+          result = await buildDelist(base);
+          break;
+        case "release":
+          result = await buildRelease(base);
+          break;
+        default:
+          result = { ok: false as const, error: "Unsupported action." };
+      }
+
+      if (!result.ok) {
+        setOtpError(result.error);
+        return;
+      }
+      goToPayment(result.uri);
     } catch {
       setOtpError("Something went wrong. Try again.");
     } finally {
@@ -740,24 +729,43 @@ export default function Zip321Modal({
         return;
       }
 
-      const result = await buildTransaction({
+      const base = {
         name,
-        action,
-        address: needsAddress ? addressInput.trim() : undefined,
-        priceZats,
         network,
-        password: networkPassword,
-        unlockCode: verifiedUnlockCode,
-        authMode: "sovereign",
-        sovereignSignature: sig,
-        sovereignPubkey: pub || undefined,
-        sovereignPayload,
-      });
+        networkPassword,
+        sovereignSig: sig,
+        sovereignPub: pub || undefined,
+      };
+
+      let result;
+      switch (action) {
+        case "claim":
+          result = await buildClaim({ ...base, address: addressInput.trim(), unlockProof: verifiedUnlockCode });
+          break;
+        case "buy":
+          result = await buildBuy({ ...base, address: addressInput.trim() });
+          break;
+        case "update":
+          result = await buildUpdate({ ...base, address: addressInput.trim() });
+          break;
+        case "list":
+          result = await buildList({ ...base, priceZats: priceZats! });
+          break;
+        case "delist":
+          result = await buildDelist(base);
+          break;
+        case "release":
+          result = await buildRelease(base);
+          break;
+        default:
+          result = { ok: false as const, error: "Unsupported action." };
+      }
+
       if (!result.ok) {
         setSignError(result.error);
         return;
       }
-      goToPayment(result.memo, result.amountZec);
+      goToPayment(result.uri);
     } catch {
       setSignError("Something went wrong. Try again.");
     } finally {
@@ -798,10 +806,8 @@ export default function Zip321Modal({
     setPhase("input");
   }
 
-  function goToPayment(memo: string, amountZec: number) {
-    const uri = buildZcashUri(ZIP321_RECIPIENT_ADDRESS, String(amountZec), memo);
+  function goToPayment(uri: string) {
     setPaymentUri(uri);
-    setPaymentAmountZec(amountZec);
     setShowPaymentUri(false);
     setShowPaymentHelp(false);
     setQrDownloadError("");
@@ -970,21 +976,6 @@ export default function Zip321Modal({
     const currentIndex = steps.indexOf(phase);
     if (currentIndex < 0) return null;
 
-    function getScanningFillPercent(state: ScanState): number {
-      switch (state) {
-        case "loading":
-          return 25;
-        case "not_detected":
-          return 25;
-        case "in_mempool":
-          return 50;
-        case "being_mined":
-          return 75;
-        case "mined":
-          return 100;
-      }
-    }
-
     return (
       <div className="flex w-full justify-center" aria-hidden="true">
         <div className="flex max-w-full items-center gap-[3px]">
@@ -996,7 +987,14 @@ export default function Zip321Modal({
             if (isAfterCurrent) {
               background = "var(--border-muted)";
             } else if (isCurrentScanning) {
-              const fillPercent = getScanningFillPercent(scanState);
+              const pct: Record<ScanState, number> = {
+                loading: 25,
+                not_detected: 25,
+                in_mempool: 50,
+                being_mined: 75,
+                mined: 100,
+              };
+              const fillPercent = pct[scanState];
               background = `linear-gradient(to right, var(--fg-heading) ${fillPercent}%, var(--border-muted) ${fillPercent}%)`;
             }
 
@@ -1363,7 +1361,7 @@ export default function Zip321Modal({
                   className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                   style={inputStyle(addrBorderColor)}
                 />
-                {addressInput.trim() && addrValidation.warning && !addrValidation.rejected && (
+                {addressInput.trim() && addrValidation.warning && addrValidation.status !== "viewkey" && addrValidation.status !== "tex" && addrValidation.status !== "invalid" && (
                   <p className="text-xs" style={{ color: "#ca8a04" }}>{addrValidation.warning}</p>
                 )}
               </div>

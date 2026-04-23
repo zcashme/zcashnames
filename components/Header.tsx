@@ -1,6 +1,6 @@
 import Link from "next/link";
 import HeaderMenu from "@/components/HeaderMenu";
-import StatusToggle from "@/components/StatusToggle";
+import NetworkToggle from "@/components/NetworkToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
 
@@ -31,7 +31,7 @@ export default function Header() {
         <div className="flex-1" />
 
         <div className="flex items-center gap-3 sm:gap-4">
-          <StatusToggle />
+          <NetworkToggle />
           <ThemeToggle />
         </div>
       </div>

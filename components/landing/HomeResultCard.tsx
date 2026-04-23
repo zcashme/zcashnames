@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import type { Action } from "@/lib/types";
-import type { Network } from "@/lib/zns/name";
+import type { Network } from "@/lib/zns/client";
 import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
 import {
-  NameStatusActionButtons,
   NameStatusBadge,
+  NameStatusButtons,
   type NameAvailabilityState,
   statusSupportsPrice,
-} from "@/components/NameStatusActions";
+} from "@/components/NameStatus";
 
 interface HomeResultCardProps {
   displayName: string;
@@ -107,7 +107,7 @@ export default function HomeResultCard({
         </div>
       </div>
 
-      <NameStatusActionButtons status={availabilityState} onAction={onAction} />
+      <NameStatusButtons status={availabilityState} onAction={onAction} />
 
       {(showFeatureChips || showFooterLinks) && (
         <div className={`home-result-trust${showFeatureChips && showFooterLinks ? " has-inline-links" : ""}`}>

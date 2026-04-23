@@ -1,5 +1,4 @@
-import type { Network } from "@/lib/zns/name";
-import type { Event, Registration, Listing } from "@/lib/zns/client";
+import type { Network, Event, Registration, Listing } from "@/lib/zns/client";
 
 export type ExplorerTab = "all" | "registered" | "forsale" | "admin" | "CLAIM" | "BUY" | "LIST" | "DELIST" | "UPDATE" | "RELEASE";
 export type TabCounts = Record<string, { filtered: number; total: number }>;
@@ -7,8 +6,9 @@ export type TaggedEvent = Event & { network: Network };
 export type TaggedListing = Listing & { network: Network };
 export type TaggedRegistration = Registration & { network: Network };
 
-export const EXPLORER_PAGE_SIZE = 25;
 export const ACTION_TYPES = ["CLAIM", "BUY", "LIST", "DELIST", "UPDATE", "RELEASE"] as const;
+export const EXPLORER_PAGE_SIZE = 25;
+
 const ALL_TABS: ExplorerTab[] = ["all", "registered", "forsale", "admin", ...ACTION_TYPES];
 
 export function parseExplorerTab(tab: string | undefined): ExplorerTab {

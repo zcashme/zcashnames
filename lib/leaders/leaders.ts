@@ -76,19 +76,19 @@ export interface DailyNewNameEntry {
 
 export type ReferralScope = "all" | "confirmed";
 
-export type ReferralCommissionUnlockResult =
+type ReferralCommissionUnlockResult =
   | { ok: true }
   | { ok: false; error: string };
 
-export type ReferralCommissionModeResult =
+type ReferralCommissionModeResult =
   | { ok: true }
   | { ok: false; error: string };
 
-export type ReferralTableUnlockResult =
+type ReferralTableUnlockResult =
   | { ok: true }
   | { ok: false; error: string };
 
-export type ReferralCommissionPinRequestResult =
+type ReferralCommissionPinRequestResult =
   | { ok: true; message: string }
   | { ok: false; error: string };
 

@@ -144,7 +144,7 @@ export function statusSupportsPrice(status: NameAvailabilityState): boolean {
   return status === "available" || status === "forsale" || status === "reserved";
 }
 
-export function NameStatusActionButtons({
+export function NameStatusButtons({
   status,
   onAction,
   align = "start",

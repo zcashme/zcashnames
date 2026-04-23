@@ -1,4 +1,4 @@
-import { isValidUsername, validateAddress } from "./name";
+import { isValidUsername, validateAddress } from "./client";
 
 export type PayloadLevel = "empty" | "valid" | "warning" | "error";
 
@@ -36,10 +36,10 @@ function validatePart(type: "name" | "address" | "nonce" | "price", value: strin
       return null;
     case "address": {
       const v = validateAddress(value);
-      if (!v.valid || v.rejected) {
+      if (v.status === "viewkey" || v.status === "tex" || v.status === "invalid") {
         return { level: "error", message: v.warning || "Address is invalid for this payload." };
       }
-      if (v.warning) return { level: "warning", message: `Address warning: ${v.warning}` };
+      if (v.status !== "unified") return { level: "warning", message: `Address warning: ${v.warning}` };
       return null;
     }
     case "nonce":

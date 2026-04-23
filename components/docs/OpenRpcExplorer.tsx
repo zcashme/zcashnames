@@ -527,16 +527,16 @@ function MethodView({ method, doc }: { method: OpenRpcMethod; doc: OpenRpcDoc })
           <button
             type="button"
             onClick={() => setShowExamples((v) => !v)}
-            className="cursor-pointer rounded border border-gray-300 dark:border-gray-700 px-2 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-900"
-          >
+className="cursor-pointer rounded border border-gray-300 dark:border-gray-700 px-2 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-900"
+           >
             {showExamples ? "Hide" : "Show"} examples ({method.examples.length})
           </button>
         )}
         <button
           type="button"
           onClick={() => setShowTryIt((v) => !v)}
-          className="cursor-pointer rounded border border-gray-300 dark:border-gray-700 px-2 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-900"
-        >
+className="cursor-pointer rounded border border-gray-300 dark:border-gray-700 px-2 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-900"
+         >
           {showTryIt ? "Hide" : "Try it"}
         </button>
       </div>
