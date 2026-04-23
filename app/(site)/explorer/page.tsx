@@ -2,6 +2,15 @@ import { getCurrentRegistrations, getEvents, getListings, getHomeStats, resolveN
 import type { Network, Event } from "@/lib/zns/client";
 import type { ResolveName } from "@/lib/types";
 import ExplorerShell from "./ExplorerShell";
+import {
+  ACTION_TYPES,
+  EXPLORER_PAGE_SIZE,
+  getPaginationOffset,
+  paginateRows,
+  parseExplorerPage,
+  parseExplorerTab,
+  type ExplorerTab,
+} from "./explorerFilters";
 
 type Environment = "all" | "mainnet" | "testnet";
 
@@ -20,21 +29,33 @@ function getNetworks(env: Environment): Network[] {
   return [env];
 }
 
+function getEventActionFilter(tab: ExplorerTab): Event["action"] | undefined {
+  return ACTION_TYPES.includes(tab as typeof ACTION_TYPES[number])
+    ? (tab as Event["action"])
+    : undefined;
+}
+
 export default async function ExplorerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ env?: string; name?: string }>;
+  searchParams: Promise<{ env?: string; name?: string; tab?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const env = parseEnvironment(params.env);
+  const tab = parseExplorerTab(params.tab);
+  const page = parseExplorerPage(params.page);
   const nameQuery = params.name ?? "";
   const networks = getNetworks(env);
   const effectiveNetwork: Network = env === "all" ? "mainnet" : env;
+  const action = getEventActionFilter(tab);
+  const shouldClientPaginateEvents = env === "all" || tab === "admin";
+  const eventLimit = shouldClientPaginateEvents ? EXPLORER_PAGE_SIZE * page : EXPLORER_PAGE_SIZE;
+  const eventOffset = shouldClientPaginateEvents ? 0 : getPaginationOffset(page, EXPLORER_PAGE_SIZE);
 
   const [eventsResults, listingsResults, registrationsResults, mainnetStats, testnetStats] = await Promise.all([
     Promise.all(
       networks.map((n) =>
-        getEvents({ limit: 100 }, n).then((r) => ({
+        getEvents({ action, limit: eventLimit, offset: eventOffset }, n).then((r) => ({
           events: r.events.map((ev: Event) => ({ ...ev, network: n })),
           total: r.total,
         }))
@@ -59,8 +80,14 @@ export default async function ExplorerPage({
     testnet: testnetStats.uivk,
   };
 
-  const initialEvents = eventsResults.flatMap((r) => r.events);
-  const initialEventsTotal = eventsResults.reduce((sum, r) => sum + r.total, 0);
+  const eventRows = eventsResults.flatMap((r) => r.events);
+  const scopedEvents = tab === "admin" ? eventRows.filter((ev) => ev.name === "") : eventRows;
+  const initialEvents = shouldClientPaginateEvents
+    ? paginateRows(scopedEvents, page, EXPLORER_PAGE_SIZE)
+    : scopedEvents;
+  const initialEventsTotal = tab === "admin"
+    ? scopedEvents.length
+    : eventsResults.reduce((sum, r) => sum + r.total, 0);
   const initialListings = listingsResults.flat();
   const initialRegistrations = registrationsResults.flat();
 
@@ -89,6 +116,8 @@ export default async function ExplorerPage({
         stats={stats}
         uivks={uivks}
         environment={env}
+        initialTab={tab}
+        initialPage={page}
         nameQuery={nameQuery}
         nameResult={nameResult}
         nameEvents={nameEvents}

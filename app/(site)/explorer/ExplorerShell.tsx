@@ -6,12 +6,16 @@ import ExplorerToolbar, { type Environment, type SortBy } from "./ExplorerToolba
 import ExplorerContent from "./ExplorerContent";
 import {
   ACTION_TYPES,
+  EXPLORER_PAGE_SIZE,
+  clampPage,
   filterEvents,
   filterListings,
   filterRegistrations,
   getTabCountLabel,
   getTabEvents,
+  getTotalPages,
   normalizeExplorerQuery,
+  paginateRows,
   type ExplorerTab,
   type TabCounts,
   type TaggedEvent,
@@ -62,6 +66,8 @@ interface ExplorerShellProps {
     testnet: string;
   };
   environment: Environment;
+  initialTab: ExplorerTab;
+  initialPage: number;
   nameQuery: string;
   nameResult: ResolveName | null;
   nameEvents: (Event & { network: string })[];
@@ -75,6 +81,8 @@ export default function ExplorerShell({
   stats,
   uivks,
   environment,
+  initialTab,
+  initialPage,
   nameQuery,
   nameResult,
   nameEvents,
@@ -92,12 +100,37 @@ export default function ExplorerShell({
     resumeTarget,
   } = usePendingTransaction(() => router.refresh());
 
-  const [activeTab, setActiveTab] = useState<ExplorerTab>("all");
+  const [activeTab, setActiveTab] = useState<ExplorerTab>(initialTab);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [sortBy, setSortBy] = useState<SortBy>("height");
   const [searchQuery, setSearchQuery] = useState(nameQuery || "");
   const [selectedName, setSelectedName] = useState(nameQuery || "");
   const [isClientMounted, setIsClientMounted] = useState(false);
   const [modalTarget, setModalTarget] = useState<ModalTarget | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [uivkOpen, setUivkOpen] = useState(false);
+  const [copied, setCopied] = useState<"mainnet" | "testnet" | null>(null);
+
+  useEffect(() => {
+    setIsClientMounted(true);
+  }, []);
+
+  useEffect(() => {
+    setOptimisticEnv(environment);
+  }, [environment, setOptimisticEnv]);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
+  useEffect(() => {
+    setCurrentPage(initialPage);
+  }, [initialPage]);
+
+  useEffect(() => {
+    setSearchQuery(nameQuery);
+    setSelectedName(nameQuery);
+  }, [nameQuery]);
 
   const hasSearchFilter = normalizeExplorerQuery(searchQuery).length > 0;
   const tabCounts = useMemo(() => {
@@ -129,31 +162,26 @@ export default function ExplorerShell({
     return counts;
   }, [initialEvents, initialListings, initialRegistrations, searchQuery]);
 
-  // Sync search input with URL name param (back/forward navigation)
-  const [prevNameQuery, setPrevNameQuery] = useState(nameQuery);
-  if (prevNameQuery !== nameQuery) {
-    setPrevNameQuery(nameQuery);
-    setSearchQuery(nameQuery);
-    setSelectedName(nameQuery);
-  }
-
-  const [moreOpen, setMoreOpen] = useState(false);
-
-  const [uivkOpen, setUivkOpen] = useState(false);
-  const [copied, setCopied] = useState<"mainnet" | "testnet" | null>(null);
-
   const isMoreTabActive = MORE_TABS.some((t) => t.key === activeTab);
   const activeMoreLabel = MORE_TABS.find((t) => t.key === activeTab)?.label;
   const detailNetwork: Network = optimisticEnv === "all" ? "mainnet" : optimisticEnv;
+  const showNameDetail = !!selectedName;
+  const nameDataReady = selectedName === nameQuery;
 
-  useEffect(() => {
-    setIsClientMounted(true);
-  }, []);
-
-  function makeUrl(overrides: { env?: string; name?: string | null; forceEnv?: boolean }) {
+  function makeUrl(overrides: {
+    env?: Environment;
+    name?: string | null;
+    tab?: ExplorerTab;
+    page?: number;
+    forceEnv?: boolean;
+  }) {
     const params = new URLSearchParams();
     const env = overrides.env ?? optimisticEnv;
+    const tab = overrides.tab ?? activeTab;
+    const page = overrides.page ?? currentPage;
     if (env && (env !== "mainnet" || overrides.forceEnv)) params.set("env", env);
+    if (tab !== "all") params.set("tab", tab);
+    if (page > 1) params.set("page", String(page));
     const name = overrides.name === undefined ? nameQuery : overrides.name;
     if (name) params.set("name", name);
     const qs = params.toString();
@@ -161,7 +189,8 @@ export default function ExplorerShell({
   }
 
   function handleEnvironmentChange(env: Environment) {
-    const url = makeUrl({ env });
+    const url = makeUrl({ env, page: 1 });
+    setCurrentPage(1);
     startTransition(() => {
       setOptimisticEnv(env);
       router.push(url);
@@ -171,8 +200,9 @@ export default function ExplorerShell({
   function handleSearchSubmit() {
     const q = searchQuery.trim();
     if (!q) return;
-    const url = makeUrl({ name: q });
+    const url = makeUrl({ name: q, page: 1 });
     setSelectedName(q);
+    setCurrentPage(1);
     startTransition(() => {
       router.push(url);
     });
@@ -181,13 +211,21 @@ export default function ExplorerShell({
   function handleSearchChange(nextQuery: string) {
     setSearchQuery(nextQuery);
     if (selectedName) setSelectedName("");
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      const url = makeUrl({ page: 1 });
+      startTransition(() => {
+        router.push(url);
+      });
+    }
   }
 
   function handleNameClick(name: string, rowNetwork?: Network) {
     setSearchQuery(name);
     setSelectedName(name);
+    setCurrentPage(1);
     const nextEnv = optimisticEnv === "all" && rowNetwork ? rowNetwork : undefined;
-    const url = makeUrl({ env: nextEnv, name, forceEnv: !!nextEnv });
+    const url = makeUrl({ env: nextEnv, name, page: 1, forceEnv: !!nextEnv });
     startTransition(() => {
       if (nextEnv) setOptimisticEnv(nextEnv);
       router.push(url);
@@ -197,7 +235,8 @@ export default function ExplorerShell({
   function clearNameDetail() {
     setSearchQuery("");
     setSelectedName("");
-    const url = makeUrl({ name: null });
+    setCurrentPage(1);
+    const url = makeUrl({ name: null, page: 1 });
     startTransition(() => {
       router.push(url);
     });
@@ -205,7 +244,36 @@ export default function ExplorerShell({
 
   function handleTabChange(tab: ExplorerTab) {
     setActiveTab(tab);
-    if (selectedName) setSelectedName("");
+    setCurrentPage(1);
+    if (selectedName) {
+      setSelectedName("");
+      setSearchQuery("");
+    }
+    const url = makeUrl({ tab, page: 1, name: selectedName ? null : undefined });
+    startTransition(() => {
+      router.push(url);
+    });
+  }
+
+  function handleSortChange(nextSortBy: SortBy) {
+    setSortBy(nextSortBy);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      const url = makeUrl({ page: 1 });
+      startTransition(() => {
+        router.push(url);
+      });
+    }
+  }
+
+  function handlePageChange(page: number) {
+    const nextPage = Math.max(1, page);
+    if (nextPage === currentPage) return;
+    setCurrentPage(nextPage);
+    const url = makeUrl({ page: nextPage });
+    startTransition(() => {
+      router.push(url);
+    });
   }
 
   function handleDetailAction(action: Action) {
@@ -242,10 +310,6 @@ export default function ExplorerShell({
     setCopied(network);
     setTimeout(() => setCopied(null), 2000);
   }
-
-
-  const showNameDetail = !!selectedName;
-  const nameDataReady = selectedName === nameQuery;
 
   return (
     <div className="flex flex-col gap-6">
@@ -307,7 +371,7 @@ export default function ExplorerShell({
         environment={optimisticEnv}
         onEnvironmentChange={handleEnvironmentChange}
         sortBy={sortBy}
-        onSortChange={setSortBy}
+        onSortChange={handleSortChange}
       />
 
       {pendingHydrated && pendingTransaction && !modalTarget && (
@@ -373,38 +437,39 @@ export default function ExplorerShell({
           </button>
           {moreOpen && (
             <>
-            <div className="fixed inset-0 z-20" onClick={() => setMoreOpen(false)} />
-            <div
-              className="absolute left-0 top-full z-30 mt-1 min-w-[160px] rounded-xl border py-1"
-              style={{
-                background: "var(--leaders-card-bg-solid, var(--leaders-card-bg))",
-                borderColor: "var(--leaders-card-border)",
-                boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
-              }}
-            >
-              {MORE_TABS.map((t) => {
-                const count = tabCounts?.[t.key];
-                return (
-                  <button
-                    key={t.key}
-                    type="button"
-                    onClick={() => { handleTabChange(t.key); setMoreOpen(false); }}
-                    className="flex w-full cursor-pointer items-center justify-between px-4 py-2 text-[0.82rem] font-semibold transition-colors"
-                    style={{
-                      color: activeTab === t.key ? "var(--fg-heading)" : "var(--fg-muted)",
-                      background: activeTab === t.key ? "var(--market-stats-segment-active-bg)" : "transparent",
-                    }}
-                  >
-                    <span>{t.label}</span>
-                    {count != null && (
-                      <span className="ml-2 tabular-nums text-fg-dim">
-                        ({getTabCountLabel(count, hasSearchFilter)})
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+              <div className="fixed inset-0 z-20" onClick={() => setMoreOpen(false)} />
+              <div
+                className="absolute left-0 top-full z-30 mt-1 min-w-[160px] rounded-xl border py-1"
+                style={{
+                  background: "var(--leaders-card-bg-solid, var(--leaders-card-bg))",
+                  borderColor: "var(--leaders-card-border)",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+                }}
+              >
+                {MORE_TABS.map((t) => {
+                  const count = tabCounts?.[t.key];
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => {
+                        handleTabChange(t.key);
+                        setMoreOpen(false);
+                      }}
+                      className="flex w-full cursor-pointer items-center justify-between px-4 py-2 text-[0.82rem] font-semibold transition-colors"
+                      style={{
+                        color: activeTab === t.key ? "var(--fg-heading)" : "var(--fg-muted)",
+                        background: activeTab === t.key ? "var(--market-stats-segment-active-bg)" : "transparent",
+                      }}
+                    >
+                      <span>{t.label}</span>
+                      {count != null && (
+                        <span className="ml-2 tabular-nums text-fg-dim">({getTabCountLabel(count, hasSearchFilter)})</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </>
           )}
         </div>
@@ -422,14 +487,17 @@ export default function ExplorerShell({
         />
       )}
 
-      {/* Content (hidden while name detail is showing, kept mounted to preserve load-more state) */}
+      {/* Content (hidden while name detail is showing) */}
       <div className={showNameDetail ? "hidden" : ""}>
         <div className={isPending && !showNameDetail ? "opacity-60 pointer-events-none transition-opacity" : "transition-opacity"}>
           <ExplorerContent
             tab={activeTab}
-            environment={environment}
+            environment={optimisticEnv}
             sortBy={sortBy}
             searchQuery={searchQuery}
+            currentPage={currentPage}
+            pageSize={EXPLORER_PAGE_SIZE}
+            onPageChange={handlePageChange}
             onNameClick={handleNameClick}
 
             initialEvents={initialEvents}
@@ -456,10 +524,7 @@ export default function ExplorerShell({
             }}
           >
             <div className="flex items-center justify-between">
-              <h2
-                className="font-bold tracking-tight"
-                style={{ fontSize: "var(--type-section-subtitle)", color: "var(--fg-heading)" }}
-              >
+              <h2 className="font-bold tracking-tight" style={{ fontSize: "var(--type-section-subtitle)", color: "var(--fg-heading)" }}>
                 UIVK
               </h2>
               <button
@@ -475,12 +540,8 @@ export default function ExplorerShell({
 
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-                  Mainnet
-                </div>
-                <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">
-                  {uivks.mainnet || "Unavailable"}
-                </p>
+                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Mainnet</div>
+                <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{uivks.mainnet || "Unavailable"}</p>
                 <button
                   type="button"
                   onClick={() => copyUivk("mainnet")}
@@ -498,12 +559,8 @@ export default function ExplorerShell({
               <div className="h-px w-full bg-[var(--leaders-card-border)]" />
 
               <div className="flex flex-col gap-2">
-                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-                  Testnet
-                </div>
-                <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">
-                  {uivks.testnet || "Unavailable"}
-                </p>
+                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Testnet</div>
+                <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{uivks.testnet || "Unavailable"}</p>
                 <button
                   type="button"
                   onClick={() => copyUivk("testnet")}
