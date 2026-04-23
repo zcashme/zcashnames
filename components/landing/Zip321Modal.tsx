@@ -979,16 +979,36 @@ export default function Zip321Modal({
     return (
       <div className="flex w-full justify-center" aria-hidden="true">
         <div className="flex max-w-full items-center gap-[3px]">
-          {steps.map((step, index) => (
-            <span
-              key={`${step}-${index}`}
-              className="block h-1.5 w-8 sm:w-[34px]"
-              style={{
-                clipPath: progressClipPath(index, steps.length),
-                background: index <= currentIndex ? "var(--fg-heading)" : "var(--border-muted)",
-              }}
-            />
-          ))}
+          {steps.map((step, index) => {
+            const isAfterCurrent = index > currentIndex;
+            const isCurrentScanning = index === currentIndex && phase === "scanning";
+            let background = "var(--fg-heading)";
+
+            if (isAfterCurrent) {
+              background = "var(--border-muted)";
+            } else if (isCurrentScanning) {
+              const pct: Record<ScanState, number> = {
+                loading: 25,
+                not_detected: 25,
+                in_mempool: 50,
+                being_mined: 75,
+                mined: 100,
+              };
+              const fillPercent = pct[scanState];
+              background = `linear-gradient(to right, var(--fg-heading) ${fillPercent}%, var(--border-muted) ${fillPercent}%)`;
+            }
+
+            return (
+              <span
+                key={`${step}-${index}`}
+                className="block h-1.5 w-8 sm:w-[34px]"
+                style={{
+                  clipPath: progressClipPath(index, steps.length),
+                  background,
+                }}
+              />
+            );
+          })}
         </div>
       </div>
     );
