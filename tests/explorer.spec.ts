@@ -37,6 +37,56 @@ test.describe("Explorer page", () => {
     expect(order & 4).toBeTruthy();
   });
 
+  test("URL page param shows pagination controls and preserves page when available", async ({ page }) => {
+    await page.goto("/explorer?tab=registered&page=2");
+    const hasPageTwo = /[?&]page=2(?:&|$)/.test(page.url());
+    test.skip(!hasPageTwo, "Not enough rows for page 2 in current live data.");
+
+    const pagination = page.getByTestId("explorer-pagination");
+    await expect(pagination).toBeVisible();
+    await expect(pagination).toContainText(/Page 2 of/i);
+  });
+
+  test("changing tabs resets to page 1 and writes tab query param", async ({ page }) => {
+    await page.goto("/explorer?page=2");
+    await page.getByRole("button", { name: /^Registered/i }).click();
+
+    await expect(page).toHaveURL(/tab=registered/);
+    await expect(page).not.toHaveURL(/[?&]page=2(?:&|$)/);
+  });
+
+  test("pagination previous is disabled on page 1 and next is disabled at last page", async ({ page }) => {
+    await page.goto("/explorer?tab=registered");
+    const pagination = page.getByTestId("explorer-pagination");
+    await expect(pagination).toBeVisible();
+    await expect(pagination.getByRole("button", { name: /^Previous$/i })).toBeDisabled();
+
+    await page.goto("/explorer?tab=registered&page=9999");
+    const lastPagination = page.getByTestId("explorer-pagination");
+    await expect(lastPagination).toBeVisible();
+    await expect(lastPagination.getByRole("button", { name: /^Next$/i })).toBeDisabled();
+  });
+
+  test("Registered and For Sale tabs render one page of rows", async ({ page }) => {
+    await page.goto("/explorer?tab=registered");
+    const registeredRows = page.getByRole("table").locator("tbody tr");
+    expect(await registeredRows.count()).toBeLessThanOrEqual(25);
+
+    await page.goto("/explorer?tab=forsale");
+    const listingRows = page.getByRole("table").locator("tbody tr");
+    expect(await listingRows.count()).toBeLessThanOrEqual(25);
+  });
+
+  test("changing environment resets page to 1", async ({ page }) => {
+    await page.goto("/explorer?tab=registered&env=mainnet&page=2");
+
+    await page.getByRole("button", { name: /^Mainnet$/i }).click();
+    await page.getByRole("button", { name: /^Testnet$/i }).click();
+
+    await expect(page).toHaveURL(/env=testnet/);
+    await expect(page).not.toHaveURL(/[?&]page=2(?:&|$)/);
+  });
+
   test("Registered tab shows current registrations", async ({ page }) => {
     await page.getByRole("button", { name: /^Registered/i }).click();
     const table = page.getByRole("table");
@@ -136,10 +186,37 @@ test.describe("Explorer page", () => {
     await expect(page).toHaveURL(new RegExp(`[?&]env=${expectedEnv}`));
     await expect(page).toHaveURL(new RegExp(`[?&]name=${rawName}`));
     const detail = page.getByTestId("explorer-name-detail");
+    await expect(detail.getByRole("button", { name: /^Update Address$/ })).toBeVisible();
+    await expect(detail.getByRole("button", { name: /^List for Sale$/ })).toBeVisible();
+    await expect(detail.getByRole("button", { name: /^Release Name$/ })).toBeVisible();
     await expect(detail.getByRole("link", { name: /View on ZcashMe/i })).toHaveAttribute(
       "href",
       `https://zcash.me/${encodeURIComponent(rawName)}`
     );
+  });
+
+  test("mainnet available-name detail shows claim action", async ({ page }) => {
+    const rawName = `autotest${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    await page.goto(`/explorer?name=${rawName}`);
+
+    const detail = page.getByTestId("explorer-name-detail");
+    await expect(detail.getByText(new RegExp(`^${rawName}$`, "i"))).toBeVisible({ timeout: 10000 });
+    await expect(detail.getByText(/^Available$/i)).toBeVisible();
+    await expect(detail.getByRole("button", { name: /^Claim Name$/ })).toBeVisible();
+    await expect(detail.getByRole("button", { name: /^Buy Now$/ })).toHaveCount(0);
+    await expect(detail.getByRole("button", { name: /^Update Address$/ })).toHaveCount(0);
+  });
+
+  test("testnet available-name detail shows claim action", async ({ page }) => {
+    const rawName = `autotest${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    await page.goto(`/explorer?env=testnet&name=${rawName}`);
+
+    const detail = page.getByTestId("explorer-name-detail");
+    await expect(detail.getByText(new RegExp(`^${rawName}$`, "i"))).toBeVisible({ timeout: 10000 });
+    await expect(detail.getByText(/^Available$/i)).toBeVisible();
+    await expect(detail.getByRole("button", { name: /^Claim Name$/ })).toBeVisible();
+    await expect(detail.getByRole("button", { name: /^Buy Now$/ })).toHaveCount(0);
+    await expect(detail.getByRole("button", { name: /^Update Address$/ })).toHaveCount(0);
   });
 
   test("More dropdown opens and shows action tabs", async ({ page }) => {
