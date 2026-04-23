@@ -153,7 +153,7 @@ export default function HeaderMenu() {
           setOpen((value) => !value);
           if (!open) setExpandedSection(null);
         }}
-        className="relative flex h-8 w-8 items-center justify-center text-fg-heading transition-opacity hover:opacity-75"
+        className="relative flex cursor-pointer h-8 w-8 items-center justify-center text-fg-heading transition-opacity hover:opacity-75"
       >
         <span
           className={`absolute h-0.5 w-4 rounded-full bg-current transition-transform duration-200 ${
@@ -256,7 +256,7 @@ function MenuAnchor({
         event.stopPropagation();
         onToggle?.();
       }}
-      className="mx-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-[color-mix(in_srgb,var(--fg-heading)_16%,transparent)] hover:text-fg-heading focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_16%,transparent)] focus-visible:text-fg-heading focus-visible:outline-none"
+      className="mx-3 flex cursor-pointer h-7 w-7 shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-[color-mix(in_srgb,var(--fg-heading)_16%,transparent)] hover:text-fg-heading focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_16%,transparent)] focus-visible:text-fg-heading focus-visible:outline-none"
     >
       <span className="text-lg font-bold leading-none" aria-hidden="true">
         {expanded ? "-" : "+"}

@@ -561,14 +561,14 @@ export default function AddressMeComposer() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded-md border border-border-muted px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+                className="cursor-pointer rounded-md border border-border-muted px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
               >
                 Upload image
               </button>
               <button
                 type="button"
                 onClick={useSampleImage}
-                className="rounded-md border border-border-muted px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+                className="cursor-pointer rounded-md border border-border-muted px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
               >
                 See sample
               </button>
@@ -576,7 +576,7 @@ export default function AddressMeComposer() {
                 <button
                   type="button"
                   onClick={removeImage}
-                  className="rounded-md border border-border-muted px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+                  className="cursor-pointer rounded-md border border-border-muted px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
                 >
                   Remove image
                 </button>
@@ -667,7 +667,7 @@ export default function AddressMeComposer() {
             <button
               type="button"
               onClick={downloadPng}
-              className="rounded-md border border-fg-heading bg-[var(--fg-heading)] px-4 py-3 text-sm font-bold text-[var(--color-background)] transition-opacity hover:opacity-90"
+              className="cursor-pointer rounded-md border border-fg-heading bg-[var(--fg-heading)] px-4 py-3 text-sm font-bold text-[var(--color-background)] transition-opacity hover:opacity-90"
             >
               Download PNG
             </button>
@@ -675,8 +675,8 @@ export default function AddressMeComposer() {
               <button
                 type="button"
                 onClick={() => void sharePng()}
-                className="rounded-md border border-fg-heading bg-[var(--fg-heading)] px-4 py-3 text-sm font-bold text-[var(--color-background)] transition-opacity hover:opacity-90"
-              >
+className="cursor-pointer rounded-md border border-fg-heading bg-[var(--fg-heading)] px-4 py-3 text-sm font-bold text-[var(--color-background)] transition-opacity hover:opacity-90"
+               >
                 Share PNG
               </button>
             )}
@@ -695,14 +695,14 @@ export default function AddressMeComposer() {
                     <button
                       type="button"
                       onClick={() => void copySamplePost(post)}
-                      className="rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+                      className="cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
                     >
                       Copy
                     </button>
                     <button
                       type="button"
                       onClick={() => sharePostOnX(post)}
-                      className="inline-flex items-center justify-center gap-2 rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+                      className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
                     >
                       <span>Share on</span>
                       <svg
