@@ -1404,7 +1404,7 @@ export default function Zip321Modal({
                   <button
                     type="button"
                     onClick={() => { setAuthMode("default"); setInputError(""); setSignError(""); }}
-                    className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+                    className="cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
                     style={{
                       ...(authMode === "default" ? primaryBtnStyle : secondaryBtnStyle),
                       opacity: authMode === "default" ? 1 : 0.85,
@@ -1415,7 +1415,7 @@ export default function Zip321Modal({
                   <button
                     type="button"
                     onClick={() => { setAuthMode("sovereign"); setInputError(""); setSignError(""); }}
-                    className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+                    className="cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
                     style={{
                       ...(authMode === "sovereign" ? primaryBtnStyle : secondaryBtnStyle),
                       opacity: authMode === "sovereign" ? 1 : 0.85,
