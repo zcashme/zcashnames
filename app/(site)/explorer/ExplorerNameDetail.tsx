@@ -8,6 +8,20 @@ import type { Event } from "@/lib/zns/client";
 import { formatUsdEquivalent } from "@/lib/zns/client";
 import ActionBadge from "@/components/ActionBadge";
 import CopyIconButton from "@/components/CopyIconButton";
+import {
+  NameStatusBadge,
+  NameStatusButtons,
+  type NameAvailabilityState,
+  statusSupportsPrice,
+} from "@/components/NameStatus";
+
+function toAvailabilityState(result: ResolveName): NameAvailabilityState {
+  if (result.status === "available") return "available";
+  if (result.status === "listed") return "forsale";
+  if (result.status === "registered") return "unavailable";
+  if (result.status === "reserved") return "reserved";
+  return "blocked";
+}
 
 export default function ExplorerNameDetail({
   query,
@@ -42,11 +56,13 @@ export default function ExplorerNameDetail({
   const available = result?.status === "available" ? result : null;
   const resultWithChips = result && "firstBucket" in result ? result : null;
   const isRegisteredName = result?.status === "registered" || result?.status === "listed";
+  const availabilityState = result ? toAvailabilityState(result) : null;
   const encodedName = encodeURIComponent(result?.query ?? query);
   const zcashMeUrl = `https://zcash.me/${encodedName}`;
-  const priceZec = listed?.listingPrice.zec ?? available?.claimCost.zec;
+  const reserved = result?.status === "reserved" ? result : null;
+  const priceZec = listed?.listingPrice.zec ?? available?.claimCost.zec ?? reserved?.claimCost.zec;
   const usdLabel = priceZec != null ? formatUsdEquivalent(priceZec, usdPerZec) : "";
-  const showCenteredActionLayout = !!listed || !!available;
+  const showCenteredActionLayout = !!availabilityState;
 
   return (
     <div
@@ -65,28 +81,13 @@ export default function ExplorerNameDetail({
             <div className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-3">
-                  <span
-                    className="rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide"
-                    style={{
-                      background: listed
-                        ? "var(--home-result-status-forsale-bg)"
-                        : "var(--color-accent-green)",
-                      color: listed
-                        ? "var(--home-result-status-forsale-fg)"
-                        : "var(--leaders-rank-text)",
-                      border: listed
-                        ? "1px solid var(--home-result-status-forsale-border)"
-                        : "1px solid transparent",
-                    }}
-                  >
-                    {listed ? "For Sale" : "Available"}
-                  </span>
-                  {priceZec != null && (
+                  {availabilityState && <NameStatusBadge status={availabilityState} />}
+                  {availabilityState && statusSupportsPrice(availabilityState) && priceZec != null && (
                     <p className="m-0 text-[var(--home-result-price-color)] text-[clamp(1.02rem,1.85vw,1.3rem)] font-extrabold tracking-[-0.012em]">
                       {priceZec} ZEC
                     </p>
                   )}
-                  {usdLabel && (
+                  {availabilityState && statusSupportsPrice(availabilityState) && usdLabel && (
                     <span className="text-[0.82rem] font-medium text-[var(--fg-muted)]">
                       {usdLabel}
                     </span>
@@ -113,61 +114,18 @@ export default function ExplorerNameDetail({
           <div className={showCenteredActionLayout ? "flex items-center justify-center text-center" : "flex items-center justify-between"}>
             <div className={showCenteredActionLayout ? "flex flex-wrap items-center justify-center gap-3" : "flex flex-wrap items-center gap-3"}>
               <span className="text-lg font-semibold text-fg-heading">{result.query}</span>
-              {!showCenteredActionLayout && (
-                <span
-                  className="rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide"
-                  style={{
-                    background:
-                      result.status === "available"
-                        ? "var(--color-accent-green)"
-                        : "var(--fg-dim)",
-                    color: "var(--leaders-rank-text)",
-                    border: "1px solid transparent",
-                  }}
-                >
-                  {result.status}
-                </span>
-              )}
             </div>
           </div>
 
           {showCenteredActionLayout && (
             <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {listed ? (
-                  <>
-                    <button
-                      type="button"
-                      className="home-result-action is-primary"
-                      onClick={() => onAction("buy")}
-                    >
-                      Buy Now
-                    </button>
-                    <button
-                      type="button"
-                      className="home-result-action is-secondary"
-                      onClick={() => onAction("delist")}
-                    >
-                      Delist from Sale
-                    </button>
-                    <button
-                      type="button"
-                      className="home-result-action is-secondary"
-                      onClick={() => onAction("release")}
-                    >
-                      Release Name
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    className="home-result-action is-primary"
-                    onClick={() => onAction("claim")}
-                  >
-                    Claim Name
-                  </button>
-                )}
-              </div>
+              {availabilityState && (
+                <NameStatusButtons
+                  status={availabilityState}
+                  onAction={onAction}
+                  align="center"
+                />
+              )}
               <div
                 className="h-px w-full"
                 style={{ background: "var(--leaders-card-border)" }}
