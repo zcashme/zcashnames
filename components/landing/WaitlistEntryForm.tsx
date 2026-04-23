@@ -453,7 +453,7 @@ export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Pro
             {/* Fine print */}
             <div className="home-result-trust">
               <p className="text-xs w-full" style={{ color: "var(--fg-muted)", lineHeight: 1.5, textAlign: "center" }}>
-                Waitlist is notification only and does not reserve or guarantee names.
+                The waitlist only gives early notice and access. It does not reserve or guarantee names.
               </p>
             </div>
           </section>
