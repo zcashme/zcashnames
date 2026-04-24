@@ -33,7 +33,8 @@ ZNS has three components:
 
 Default endpoints:
 - Testnet: https://light.zcash.me/zns-testnet
-- Mainnet: https://light.zcash.me/zns-mainnet-test
+- Mainnet (beta): https://main.zcashnames.com
+- Mainnet test (beta only): https://light.zcash.me/zns-mainnet-test
 
 All requests use standard JSON-RPC 2.0 format with POST method.
 
