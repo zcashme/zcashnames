@@ -111,6 +111,7 @@ function cardMenuDisplayPath(card: CommunityCard): string {
 
 export default function HeaderMenu() {
   const [open, setOpen] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -141,6 +142,16 @@ export default function HeaderMenu() {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (open) {
+      setMenuVisible(true);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setMenuVisible(false), 220);
+    return () => window.clearTimeout(timeout);
+  }, [open]);
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -167,11 +178,16 @@ export default function HeaderMenu() {
         />
       </button>
 
-      {open && (
+      {menuVisible && (
         <nav
           id="site-header-menu"
           aria-label="Site menu"
-          className="absolute left-0 top-11 z-50 w-[min(calc(100vw-2rem),360px)] overflow-hidden rounded-lg border border-border-muted bg-[var(--color-raised)] shadow-2xl"
+          aria-hidden={!open}
+          className={`absolute left-0 top-11 z-50 w-[min(calc(100vw-2rem),360px)] overflow-hidden rounded-lg border border-border-muted bg-[var(--color-raised)] shadow-2xl transition-all duration-200 ease-out ${
+            open
+              ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
+              : "pointer-events-none -translate-y-1 scale-[0.985] opacity-0"
+          }`}
         >
           <div className="site-header-menu-scroll max-h-[calc(100vh-7rem)] overflow-y-auto p-2">
             {menuLinks.map((item) => (
@@ -207,16 +223,24 @@ function MenuItem({
   return (
     <div className="border-b border-border-muted last:border-b-0">
       <MenuAnchor item={item} expanded={expanded} onToggle={onToggle} onNavigate={onNavigate} primary />
-      {item.children && expanded && (
-        <div className="pb-2">
-          {item.children.map((child) => (
-            <MenuAnchor
-              key={`${item.label}-${child.label}`}
-              item={child}
-              onNavigate={onNavigate}
-              parentPath={item.displayPath ?? item.href}
-            />
-          ))}
+      {item.children && (
+        <div
+          className={`grid transition-all duration-200 ease-out ${expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+          aria-hidden={!expanded}
+        >
+          <div className="overflow-hidden">
+            <div className={`pb-2 transition-transform duration-200 ease-out ${expanded ? "translate-y-0" : "-translate-y-1"}`}>
+              {item.children.map((child) => (
+                <MenuAnchor
+                  key={`${item.label}-${child.label}`}
+                  item={child}
+                  onNavigate={onNavigate}
+                  parentPath={item.displayPath ?? item.href}
+                  hidden={!expanded}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -230,6 +254,7 @@ function MenuAnchor({
   onNavigate,
   primary = false,
   parentPath,
+  hidden = false,
 }: {
   item: MenuLink;
   expanded?: boolean;
@@ -237,6 +262,7 @@ function MenuAnchor({
   onNavigate: () => void;
   primary?: boolean;
   parentPath?: string;
+  hidden?: boolean;
 }) {
   const className = primary
     ? "flex w-full items-center rounded-md px-3 py-2.5 text-left text-base font-bold text-fg-heading transition-colors hover:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)] focus-visible:outline-none"
@@ -292,11 +318,12 @@ function MenuAnchor({
             rel="noopener noreferrer"
             className={linkClassName}
             onClick={onNavigate}
+            tabIndex={hidden ? -1 : undefined}
           >
             {sectionLinkContent}
           </a>
         ) : (
-          <Link href={item.href} className={linkClassName} onClick={onNavigate}>
+          <Link href={item.href} className={linkClassName} onClick={onNavigate} tabIndex={hidden ? -1 : undefined}>
             {sectionLinkContent}
           </Link>
         )}
@@ -314,7 +341,14 @@ function MenuAnchor({
 
   if (item.external) {
     return (
-      <a href={item.href} target="_blank" rel="noopener noreferrer" className={className} onClick={onNavigate}>
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+        onClick={onNavigate}
+        tabIndex={hidden ? -1 : undefined}
+      >
         {content}
       </a>
     );
@@ -329,7 +363,7 @@ function MenuAnchor({
   }
 
   return (
-    <Link href={item.href} className={className} onClick={onNavigate}>
+    <Link href={item.href} className={className} onClick={onNavigate} tabIndex={hidden ? -1 : undefined}>
       {content}
     </Link>
   );

@@ -29,6 +29,7 @@ import SiteRouteTitle from "@/components/SiteRouteTitle";
 import { useNetwork } from "@/components/hooks/useNetwork";
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
+import CopyIconButton from "@/components/CopyIconButton";
 import type { ResolveName } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import type { Event, Network } from "@/lib/zns/client";
@@ -525,7 +526,7 @@ export default function ExplorerShell({
           >
             <div className="flex items-center justify-between">
               <h2 className="font-bold tracking-tight" style={{ fontSize: "var(--type-section-subtitle)", color: "var(--fg-heading)" }}>
-                UIVK
+                Unified incoming view key
               </h2>
               <button
                 type="button"
@@ -540,39 +541,33 @@ export default function ExplorerShell({
 
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Mainnet</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Mainnet</div>
+                  <CopyIconButton
+                    onClick={() => copyUivk("mainnet")}
+                    ariaLabel="Copy mainnet UIVK"
+                    title={copied === "mainnet" ? "Copied!" : "Copy mainnet UIVK"}
+                    copied={copied === "mainnet"}
+                    disabled={!uivks.mainnet}
+                  />
+                </div>
                 <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{uivks.mainnet || "Unavailable"}</p>
-                <button
-                  type="button"
-                  onClick={() => copyUivk("mainnet")}
-                  disabled={!uivks.mainnet}
-                  className="self-start rounded-full px-5 py-2 text-sm font-bold cursor-pointer transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{
-                    background: "var(--leaders-rank-gold)",
-                    color: "var(--leaders-rank-text)",
-                  }}
-                >
-                  {copied === "mainnet" ? "Copied!" : "Copy Mainnet"}
-                </button>
               </div>
 
               <div className="h-px w-full bg-[var(--leaders-card-border)]" />
 
               <div className="flex flex-col gap-2">
-                <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Testnet</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Testnet</div>
+                  <CopyIconButton
+                    onClick={() => copyUivk("testnet")}
+                    ariaLabel="Copy testnet UIVK"
+                    title={copied === "testnet" ? "Copied!" : "Copy testnet UIVK"}
+                    copied={copied === "testnet"}
+                    disabled={!uivks.testnet}
+                  />
+                </div>
                 <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{uivks.testnet || "Unavailable"}</p>
-                <button
-                  type="button"
-                  onClick={() => copyUivk("testnet")}
-                  disabled={!uivks.testnet}
-                  className="self-start rounded-full px-5 py-2 text-sm font-bold cursor-pointer transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{
-                    background: "var(--leaders-rank-gold)",
-                    color: "var(--leaders-rank-text)",
-                  }}
-                >
-                  {copied === "testnet" ? "Copied!" : "Copy Testnet"}
-                </button>
               </div>
             </div>
           </div>

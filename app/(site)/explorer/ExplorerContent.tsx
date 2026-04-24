@@ -192,7 +192,7 @@ export default function ExplorerContent({
                         onClick={() => onNameClick(r.name, r.network)}
                         className="font-semibold text-fg-heading hover:underline cursor-pointer"
                       >
-                        {r.name}.zcash
+                        {r.name}
                       </button>
                     </td>
                     <td className="px-4 py-3 sm:px-6">
@@ -264,7 +264,7 @@ export default function ExplorerContent({
                         onClick={() => onNameClick(l.name, l.network)}
                         className="font-semibold text-fg-heading hover:underline cursor-pointer"
                       >
-                        {l.name}.zcash
+                        {l.name}
                       </button>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-fg-muted sm:px-6">{zatsToZec(l.price)} ZEC</td>

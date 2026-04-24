@@ -1479,7 +1479,7 @@ export default function Zip321Modal({
             {otpSent ? (
               <div className="w-full flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-center" style={{ color: "var(--fg-muted)" }}>
-                  Check your wallet&hellip; you will receive a six-digit code.
+                  A code will be sent to the current address for {name}.
                 </label>
                 <input
                   type="text"

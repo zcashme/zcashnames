@@ -52,7 +52,7 @@ const benefitGroups: BenefitGroup[] = [
       },
       {
         title: "Portable identity",
-        description: "Use your name across app, like Zcash.me",
+        description: "Use your name across apps like Zcash.me",
         soon: true,
       },
     ],

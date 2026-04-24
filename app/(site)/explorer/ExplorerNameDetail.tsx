@@ -55,7 +55,6 @@ export default function ExplorerNameDetail({
   const listed = result?.status === "listed" ? result : null;
   const available = result?.status === "available" ? result : null;
   const resultWithChips = result && "firstBucket" in result ? result : null;
-  const isRegisteredName = result?.status === "registered" || result?.status === "listed";
   const availabilityState = result ? toAvailabilityState(result) : null;
   const encodedName = encodeURIComponent(result?.query ?? query);
   const zcashMeUrl = `https://zcash.me/${encodedName}`;
@@ -169,6 +168,26 @@ export default function ExplorerNameDetail({
                   copied={copiedValue === result.registration.txid}
                 />
               </div>
+              <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-center gap-2">
+                <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                  Identity
+                </span>
+                <a
+                  href={zcashMeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="home-result-link inline-flex w-max items-center gap-1.5 whitespace-nowrap leading-none"
+                >
+                  <Image
+                    src="/assets/icons/zcashme-favicon-64.png"
+                    alt="ZcashMe logo"
+                    width={18}
+                    height={18}
+                    className="theme-media-home scale-[1.35]"
+                  />
+                  <span className="inline-flex items-center leading-none">View on ZcashMe</span>
+                </a>
+              </div>
             </div>
           )}
 
@@ -226,32 +245,6 @@ export default function ExplorerNameDetail({
             </div>
           )}
 
-          {isRegisteredName && (
-            <div className="flex flex-col gap-3 pt-1">
-              <div
-                data-testid="listed-detail-divider"
-                className="h-px w-full"
-                style={{ background: "var(--leaders-card-border)" }}
-              />
-              <div className="home-result-links">
-                <a
-                  href={zcashMeUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="home-result-link inline-flex items-center gap-1.5 whitespace-nowrap leading-none"
-                >
-                  <Image
-                    src="/assets/icons/zcashme-favicon-64.png"
-                    alt="ZcashMe logo"
-                    width={18}
-                    height={18}
-                    className="theme-media-home scale-[1.35]"
-                  />
-                  <span className="inline-flex items-center leading-none">View on ZcashMe</span>
-                </a>
-              </div>
-            </div>
-          )}
         </div>
       ) : (
         <div>
