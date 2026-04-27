@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Dancing_Script } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { BRAND } from "@/lib/zns/brand";
 import "../globals.css";
 
 const uiSans = Manrope({
@@ -20,6 +21,8 @@ const uiCursive = Dancing_Script({
 export const metadata: Metadata = {
   title: "Beta Feedback — ZcashNames",
   robots: { index: false, follow: false, nocache: true },
+  icons: { icon: "/landing/z5.png" },
+  metadataBase: new URL(BRAND.url),
 };
 
 /**
