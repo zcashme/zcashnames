@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Leaders Terms | ZcashNames",
+  title: "Leaderboard Terms | ZcashNames",
   description: "Terms for referral rewards and early access waitlist participation.",
   alternates: {
     canonical: "https://www.zcashnames.com/leaders/terms",
   },
   openGraph: {
-    title: "Leaders Terms | ZcashNames",
+    title: "Leaderboard Terms | ZcashNames",
     description: "Referral rewards and early access terms.",
     url: "https://www.zcashnames.com/leaders/terms",
     images: [
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Leaders Terms | ZcashNames",
+    title: "Leaderboard Terms | ZcashNames",
     description: "Referral rewards and early access terms.",
     images: ["https://www.zcashnames.com/og/leaders-terms.png"],
   },
@@ -94,3 +94,4 @@ export default function ReferralTermsPage() {
     </main>
   );
 }
+

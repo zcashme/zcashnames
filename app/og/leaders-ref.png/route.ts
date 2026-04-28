@@ -4,12 +4,7 @@ export const runtime = "edge";
 
 export async function GET() {
   return renderOgImage({
-    eyebrow: "REFERRAL DASH",
-    title: "Referral Dashboard | ZcashNames",
-    subtitle: "Your referral dashboard for rewards progress.",
-    theme: {
-      background: "#111827",
-      accent: "#10b981",
-    },
+    backgroundImage: "https://www.zcashnames.com/brandkit/zcashnames-brand-lockups-stacked-primary-logo-dark-landscape-16x9-1920x1080.png",
+    overlay: "linear-gradient(115deg, rgba(8, 13, 20, 0.8), rgba(8, 34, 30, 0.68))",
   });
 }

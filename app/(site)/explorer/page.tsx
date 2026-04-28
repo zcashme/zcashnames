@@ -16,9 +16,30 @@ type Environment = "all" | "mainnet" | "testnet";
 
 export const metadata = {
   title: "Explorer - ZcashNames",
-  description: "Browse registered .zcash names, event history, and marketplace listings.",
+  description: "Browse registered names, event history, and marketplace listings.",
+  alternates: {
+    canonical: "https://www.zcashnames.com/explorer",
+  },
+  openGraph: {
+    title: "Name Explorer | ZcashNames",
+    description: "Browse registered names, event history, and marketplace listings.",
+    url: "https://www.zcashnames.com/explorer",
+    images: [
+      {
+        url: "https://www.zcashnames.com/og/explorer.png",
+        width: 1200,
+        height: 630,
+        alt: "ZcashNames explorer preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Name Explorer | ZcashNames",
+    description: "Browse registered names, event history, and marketplace listings.",
+    images: ["https://www.zcashnames.com/og/explorer.png"],
+  },
 };
-
 function parseEnvironment(env: string | undefined): Environment {
   if (env === "all" || env === "mainnet" || env === "testnet") return env;
   return "mainnet";
@@ -125,3 +146,5 @@ export default async function ExplorerPage({
     </main>
   );
 }
+
+

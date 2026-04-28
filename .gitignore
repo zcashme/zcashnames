@@ -51,19 +51,17 @@ brand-kit/
 # pagefind search index (generated at build time)
 public/_pagefind/
 
-# local-only internal tools
-app/(site)/internal/email-preview/
-app/(site)/quotepost/
-app/admin/beta/
-components/admin/beta/
 
 # local/admin files that must stay untracked
 .claude/settings.local.json
 .vscode/
-app/admin/
 backup-latest-commit.patch
 beta-testers.json
 components/emails/BetaInviteEmail.tsx
 lib/beta/
 lib/email/beta-invite.ts
 sql/
+
+
+# temporary internal preview QA page
+app/(site)/internal/link-previews/

@@ -4,12 +4,7 @@ export const runtime = "edge";
 
 export async function GET() {
   return renderOgImage({
-    eyebrow: "TERMS",
-    title: "Leaders Terms | ZcashNames",
-    subtitle: "Referral rewards and early access terms.",
-    theme: {
-      background: "#1f2937",
-      accent: "#3b82f6",
-    },
+    backgroundImage: "https://www.zcashnames.com/brandkit/zcashnames-brand-lockups-stacked-primary-logo-monochrome-green-landscape-16x9-1920x1080.png",
+    overlay: "linear-gradient(115deg, rgba(9, 19, 15, 0.8), rgba(16, 30, 23, 0.72))",
   });
 }

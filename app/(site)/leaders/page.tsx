@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import LeaderboardContent from "./LeaderboardContent";
 
 export const metadata: Metadata = {
-  title: "Leaders | ZcashNames Referrals & Rewards",
+  title: "Leaderboard | ZcashNames",
   description: "Global referral rankings, growth, and rewards progress.",
   alternates: {
     canonical: "https://www.zcashnames.com/leaders",
   },
   openGraph: {
-    title: "Leaders | ZcashNames",
+    title: "Leaderboard | ZcashNames",
     description: "Global referral rankings, growth, and rewards progress.",
     url: "https://www.zcashnames.com/leaders",
     images: [
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Leaders | ZcashNames",
+    title: "Leaderboard | ZcashNames",
     description: "Global referral rankings, growth, and rewards progress.",
     images: ["https://www.zcashnames.com/og/leaders.png"],
   },
@@ -35,3 +35,5 @@ export default function LeadersPage() {
     </main>
   );
 }
+
+

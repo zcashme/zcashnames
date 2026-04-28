@@ -4,12 +4,7 @@ export const runtime = "edge";
 
 export async function GET() {
   return renderOgImage({
-    eyebrow: "LEADERS",
-    title: "Leaders | ZcashNames",
-    subtitle: "Global referral rankings, growth, and rewards progress.",
-    theme: {
-      background: "#111827",
-      accent: "#f59e0b",
-    },
+    backgroundImage: "https://www.zcashnames.com/brandkit/zcashnames-brand-lockups-stacked-primary-logo-dark-landscape-16x9-1920x1080.png",
+    overlay: "linear-gradient(115deg, rgba(8, 12, 20, 0.78), rgba(34, 22, 5, 0.6))",
   });
 }
