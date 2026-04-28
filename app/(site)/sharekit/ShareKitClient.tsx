@@ -35,21 +35,25 @@ function replaceResolvedShareUrl(post: string, previousShareUrl: string, nextSha
 export default function ShareKitClient({
   sections,
   initialReferralCode,
+  initialReferralName,
 }: {
   sections: ShareKitSection[];
   initialReferralCode: string;
+  initialReferralName: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const [referralCode, setReferralCode] = useState(initialReferralCode);
   const [input, setInput] = useState(initialReferralCode);
   const [error, setError] = useState("");
+  const [referralName, setReferralName] = useState(initialReferralName);
   const previousShareUrlRef = useRef(buildReferralUrl(initialReferralCode));
 
   useEffect(() => {
     setReferralCode(initialReferralCode);
     setInput(initialReferralCode);
-  }, [initialReferralCode]);
+    setReferralName(initialReferralName);
+  }, [initialReferralCode, initialReferralName]);
 
   const shareUrl = useMemo(() => buildReferralUrl(referralCode), [referralCode]);
   const initialDraftValues = useMemo(
@@ -101,6 +105,7 @@ export default function ShareKitClient({
 
     setReferralCode(nextCode);
     setInput(nextCode);
+    setReferralName(null);
     setError("");
     updateUrl(nextCode);
   }
@@ -108,6 +113,7 @@ export default function ShareKitClient({
   function clearReferralCode() {
     setReferralCode("");
     setInput("");
+    setReferralName(null);
     setError("");
     updateUrl("");
   }
@@ -129,10 +135,12 @@ export default function ShareKitClient({
       </div>
 
       <section className="flex flex-col gap-5 rounded-lg border border-border-muted bg-[var(--color-raised)] p-5">
-        <div className="flex justify-end">
-          <form onSubmit={applyReferralCode} className="flex w-full max-w-xl flex-col gap-3">
+        <div className="flex justify-start">
+          <form onSubmit={applyReferralCode} className="flex w-full max-w-[36rem] flex-col gap-3">
             <label htmlFor="sharekit-referral-input" className="text-sm font-semibold text-fg-heading">
-              Referral code or link to populate posts.
+              {referralCode && referralName
+                ? `Posts will be populated with ${referralName}'s referral link`
+                : "Referral code or link to populate posts."}
             </label>
             <input
               id="sharekit-referral-input"

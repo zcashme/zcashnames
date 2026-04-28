@@ -5,13 +5,13 @@ Explains IP vs domain names and why names improve usability.
 ## Post 1
 
 Try memorizing 188.114.96.0.
-That's bitcoin.org.
+That's bitcoin dot org.
 
 Nobody uses the internet like that anymore. We use names.
 
 Crypto still hasn't caught up. You're stuck copying long strings and hoping nothing breaks.
 
-Zcash Names lets you send to a name instead (without exposing your activity).
+@ZcashNames lets you send to a name instead (without exposing your activity).
 
 Waitlist: [your link]
 
@@ -29,7 +29,7 @@ Same with payments on Zelle, Venmo or Cash App.
 
 Crypto still feels stuck in the past.
 
-Zcash Names fixes that.
+@ZcashNames fixes that.
 
 Get early access: [your link]
 
@@ -47,7 +47,7 @@ Or hesitated before scanning a random QR code?
 
 That's normal.
 
-Zcash Names gets rid of that. You just use a name.
+@ZcashNames gets rid of that. You just use a name.
 
 Get early access: [your link]
 
@@ -65,7 +65,7 @@ Look one up on and you can see everything transaction tied to it.
 
 That's a disaster waiting to happen.
 
-Zcash Names points to shielded addresses, so the name is simple but activity stays hidden.
+@ZcashNames points to shielded addresses, so the name is simple but activity stays hidden.
 
 If that matters to you: [your link]
 
@@ -81,20 +81,19 @@ On most blockchains, transactions are public by default.
 
 That works for transparency, not so much for privacy.
 
-Zcash takes a different approach with shielded transactions. Zcash Names just makes it easier to actually use.
+Zcash takes a different approach with shielded transactions. And @ZcashNames makes it easier to use.
 
 Get early access: [your link]
 
 ## Post 2
 
-On most blockchains, transactions are public by default.
+Using crypto shouldn’t mean pasting long addresses or revealing your past.
 
-That works for transparency, not so much for privacy.
+Zcash keeps transactions shielded. @ZcashNames makes them simple to send.
 
-Zcash takes a different approach with shielded transactions. Zcash Names just makes it easier to actually use.
+Share your name, not your history.
 
 Get early access: [your link]
-
 
 ---
 
@@ -122,7 +121,7 @@ Emphasizes timing advantage, referrals, and securing names early.
 
 If you've ever wanted a clean, simple handle for making private payments online, this is probably the time to grab one.
 
-Names won't stay available forever. They are first come, first serve, and only people on the waitlist will get early access.
+Names won't stay unclaimed forever. People on the waitlist will get early access where @ZcashNames are first come, first serve, and only 
 
 Actually, inviting friends helps you skip the line. 
 
