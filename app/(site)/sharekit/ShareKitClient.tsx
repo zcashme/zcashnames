@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCopy } from "@/components/hooks/useCopy";
 import { buildReferralUrl, extractReferralCode } from "@/lib/referral-code";
 import type { ShareKitDraft, ShareKitSection } from "@/lib/sharekit";
+import { lookupShareKitReferral } from "./actions";
 
 function replaceYourLink(post: string, shareUrl: string): string {
   return post.replaceAll("[your link]", shareUrl);
@@ -36,24 +37,28 @@ export default function ShareKitClient({
   sections,
   initialReferralCode,
   initialReferralName,
+  initialWarning,
 }: {
   sections: ShareKitSection[];
   initialReferralCode: string;
   initialReferralName: string | null;
+  initialWarning: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const [referralCode, setReferralCode] = useState(initialReferralCode);
   const [input, setInput] = useState(initialReferralCode);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialWarning);
   const [referralName, setReferralName] = useState(initialReferralName);
+  const [submitting, setSubmitting] = useState(false);
   const previousShareUrlRef = useRef(buildReferralUrl(initialReferralCode));
 
   useEffect(() => {
     setReferralCode(initialReferralCode);
     setInput(initialReferralCode);
     setReferralName(initialReferralName);
-  }, [initialReferralCode, initialReferralName]);
+    setError(initialWarning);
+  }, [initialReferralCode, initialReferralName, initialWarning]);
 
   const shareUrl = useMemo(() => buildReferralUrl(referralCode), [referralCode]);
   const initialDraftValues = useMemo(
@@ -94,7 +99,7 @@ export default function ShareKitClient({
     router.replace(href, { scroll: false });
   }
 
-  function applyReferralCode(event: FormEvent<HTMLFormElement>) {
+  async function applyReferralCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const nextCode = extractReferralCode(input);
@@ -103,11 +108,23 @@ export default function ShareKitClient({
       return;
     }
 
-    setReferralCode(nextCode);
-    setInput(nextCode);
-    setReferralName(null);
+    setSubmitting(true);
+    const result = await lookupShareKitReferral(nextCode);
+    setSubmitting(false);
+
+    if (!result.ok) {
+      setReferralCode("");
+      setReferralName(null);
+      setError("Referral code not found. Posts are using the default link.");
+      updateUrl("");
+      return;
+    }
+
+    setReferralCode(result.referralCode);
+    setInput(result.referralCode);
+    setReferralName(result.referralName);
     setError("");
-    updateUrl(nextCode);
+    updateUrl(result.referralCode);
   }
 
   function clearReferralCode() {
@@ -134,43 +151,42 @@ export default function ShareKitClient({
         </p>
       </div>
 
-      <section className="flex flex-col gap-5 rounded-lg border border-border-muted bg-[var(--color-raised)] p-5">
-        <div className="flex justify-start">
-          <form onSubmit={applyReferralCode} className="flex w-full max-w-[36rem] flex-col gap-3">
-            <label htmlFor="sharekit-referral-input" className="text-sm font-semibold text-fg-heading">
-              {referralCode && referralName
-                ? `Posts will be populated with ${referralName}'s referral link`
-                : "Referral code or link to populate posts."}
-            </label>
-            <input
-              id="sharekit-referral-input"
-              type="text"
-              value={input}
-              onChange={(event) => {
-                setInput(event.target.value);
-                setError("");
-              }}
-              placeholder="zcashnames.com/?ref=your-code"
-              className="min-w-0 rounded-lg border border-border-muted bg-transparent px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
-            />
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="submit"
-                className="cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-              >
-                {referralCode ? "Update code" : "Apply code"}
-              </button>
-              <button
-                type="button"
-                onClick={clearReferralCode}
-                className="cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-              >
-                Clear
-              </button>
-            </div>
-            {error && <p className="text-sm text-fg-muted">{error}</p>}
-          </form>
-        </div>
+      <section className="w-full max-w-[36rem] rounded-lg border border-border-muted bg-transparent p-5">
+        <form onSubmit={applyReferralCode} className="flex flex-col gap-3">
+          <label htmlFor="sharekit-referral-input" className="text-sm font-semibold text-fg-heading">
+            {referralCode && referralName
+              ? `Posts will be populated with ${referralName}'s referral link`
+              : "Referral code or link to populate posts."}
+          </label>
+          <input
+            id="sharekit-referral-input"
+            type="text"
+            value={input}
+            onChange={(event) => {
+              setInput(event.target.value);
+              setError("");
+            }}
+            placeholder="zcashnames.com/?ref=your-code"
+            className="min-w-0 rounded-lg border border-border-muted bg-transparent px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
+          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? "Checking..." : referralCode ? "Update code" : "Apply code"}
+            </button>
+            <button
+              type="button"
+              onClick={clearReferralCode}
+              className="cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+            >
+              Clear
+            </button>
+          </div>
+          {error && <p className="text-sm text-fg-muted">{error}</p>}
+        </form>
       </section>
 
       <section className="flex flex-col gap-5">

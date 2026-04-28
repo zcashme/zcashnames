@@ -55,8 +55,13 @@ export default async function ShareKitPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = (await searchParams) ?? {};
-  const initialReferralCode = extractReferralCode(firstParam(params.ref) ?? "");
-  const initialReferralName = await lookupInviterName(initialReferralCode);
+  const requestedReferralCode = extractReferralCode(firstParam(params.ref) ?? "");
+  const initialReferralName = await lookupInviterName(requestedReferralCode);
+  const initialReferralCode = initialReferralName ? requestedReferralCode : "";
+  const initialWarning =
+    requestedReferralCode && !initialReferralName
+      ? "Referral code not found. Posts are using the default link."
+      : "";
   const markdown = await fs.readFile(SHAREKIT_PATH, "utf8");
   const sections = parseShareKitMarkdown(markdown);
 
@@ -68,6 +73,7 @@ export default async function ShareKitPage({
           sections={sections}
           initialReferralCode={initialReferralCode}
           initialReferralName={initialReferralName}
+          initialWarning={initialWarning}
         />
       </section>
     </main>
