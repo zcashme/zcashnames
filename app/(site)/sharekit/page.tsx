@@ -17,10 +17,20 @@ export const metadata: Metadata = {
     title: "Share Kit | ZcashNames",
     description: "Copy and share prepared draft posts with your waitlist referral link.",
     url: "https://www.zcashnames.com/sharekit",
+    images: [
+      {
+        url: "https://www.zcashnames.com/og/sharekit.png",
+        width: 1200,
+        height: 630,
+        alt: "Share Kit | ZcashNames",
+      },
+    ],
   },
   twitter: {
+    card: "summary_large_image",
     title: "Share Kit | ZcashNames",
     description: "Copy and share prepared draft posts with your waitlist referral link.",
+    images: ["https://www.zcashnames.com/og/sharekit.png"],
   },
 };
 const SHAREKIT_PATH = path.join(process.cwd(), "content", "sharekit.md");
