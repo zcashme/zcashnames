@@ -146,10 +146,11 @@ export default function ShareKitClient({
   return (
     <>
       <div id="top" className="flex max-w-3xl flex-col gap-4">
-        <p className="type-section-subtitle text-fg-body">
-          Copy or share ready-made posts for Zcash Names.
+        <p className="type-section-title text-fg-body">
+          Ready-made posts
         </p>
       </div>
+
 
       <section className="w-full max-w-[36rem] rounded-lg border border-border-muted bg-transparent p-5">
         <form onSubmit={applyReferralCode} className="flex flex-col gap-3">
