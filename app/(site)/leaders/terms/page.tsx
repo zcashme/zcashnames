@@ -3,7 +3,29 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Leaders Terms | ZcashNames",
-  description: "Terms for ZcashNames referral rewards and early access waitlist.",
+  description: "Terms for referral rewards and early access waitlist participation.",
+  alternates: {
+    canonical: "https://www.zcashnames.com/leaders/terms",
+  },
+  openGraph: {
+    title: "Leaders Terms | ZcashNames",
+    description: "Referral rewards and early access terms.",
+    url: "https://www.zcashnames.com/leaders/terms",
+    images: [
+      {
+        url: "https://www.zcashnames.com/og/leaders-terms.png",
+        width: 1200,
+        height: 630,
+        alt: "ZcashNames leaders terms preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Leaders Terms | ZcashNames",
+    description: "Referral rewards and early access terms.",
+    images: ["https://www.zcashnames.com/og/leaders-terms.png"],
+  },
 };
 
 const terms = [

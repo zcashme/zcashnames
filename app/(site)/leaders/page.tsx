@@ -1,4 +1,32 @@
+import type { Metadata } from "next";
 import LeaderboardContent from "./LeaderboardContent";
+
+export const metadata: Metadata = {
+  title: "Leaders | ZcashNames Referrals & Rewards",
+  description: "Global referral rankings, growth, and rewards progress.",
+  alternates: {
+    canonical: "https://www.zcashnames.com/leaders",
+  },
+  openGraph: {
+    title: "Leaders | ZcashNames",
+    description: "Global referral rankings, growth, and rewards progress.",
+    url: "https://www.zcashnames.com/leaders",
+    images: [
+      {
+        url: "https://www.zcashnames.com/og/leaders.png",
+        width: 1200,
+        height: 630,
+        alt: "ZcashNames leaders leaderboard preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Leaders | ZcashNames",
+    description: "Global referral rankings, growth, and rewards progress.",
+    images: ["https://www.zcashnames.com/og/leaders.png"],
+  },
+};
 
 export default function LeadersPage() {
   return (

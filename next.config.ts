@@ -42,6 +42,30 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: "/:path*",
+        has: [{ type: "host", value: "zcashna.me" }],
+        destination: "https://www.zcashnames.com/:path*",
+        permanent: true,
+      },
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.zcashna.me" }],
+        destination: "https://www.zcashnames.com/:path*",
+        permanent: true,
+      },
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "zcashname.com" }],
+        destination: "https://www.zcashnames.com/:path*",
+        permanent: true,
+      },
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.zcashname.com" }],
+        destination: "https://www.zcashnames.com/:path*",
+        permanent: true,
+      },
+      {
         source: "/api/confirm",
         has: [{ type: "query", key: "token", value: "(?<token>.+)" }],
         destination: "/?token=:token",
@@ -58,14 +82,17 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
-          { key: "Content-Security-Policy", value: [
-            "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
-            "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: https://www.zcashnames.com https://hackmd.io",
-            "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
-            "connect-src 'self' https://vitals.vercel-insights.com",
-          ].join("; ") },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https://www.zcashnames.com https://hackmd.io",
+              "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
+              "connect-src 'self' https://vitals.vercel-insights.com",
+            ].join("; "),
+          },
         ],
       },
     ];
