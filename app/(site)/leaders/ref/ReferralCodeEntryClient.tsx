@@ -3,25 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-
-function extractReferralCode(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-
-  try {
-    const url = new URL(trimmed);
-    const code = url.searchParams.get("ref")?.trim();
-    if (code) return code;
-  } catch {
-    const query = trimmed.startsWith("?") ? trimmed.slice(1) : trimmed.split("?")[1];
-    if (query) {
-      const code = new URLSearchParams(query).get("ref")?.trim();
-      if (code) return code;
-    }
-  }
-
-  return trimmed;
-}
+import { extractReferralCode } from "@/lib/referral-code";
 
 export default function ReferralCodeEntryPage() {
   const router = useRouter();

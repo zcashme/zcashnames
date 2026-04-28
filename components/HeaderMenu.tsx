@@ -87,6 +87,7 @@ const menuLinks: MenuLink[] = [
     displayPath: "/leaders",
     children: [
       { label: "Dashboard", href: "/leaders/ref", displayPath: ".../ref" },
+      { label: "Share Kit", href: "/sharekit", displayPath: ".../sharekit" },
       { label: "Terms", href: "/leaders/terms", displayPath: ".../terms" },
     ],
   },
