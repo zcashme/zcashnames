@@ -161,7 +161,7 @@ function EmailConfirmedIcon({ className }: { className?: string }) {
 export default function ReferralDashboardPage() {
   const params = useParams<{ code: string }>();
   const referralCode = decodeURIComponent(typeof params?.code === "string" ? params.code : "");
-  const [scope, setScope] = useState<ReferralScope>("all");
+  const scope: ReferralScope = "all";
   const [data, setData] = useState<ReferralDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [projectionOpen, setProjectionOpen] = useState(false);
@@ -406,35 +406,13 @@ export default function ReferralDashboardPage() {
     <main className="mx-auto w-full max-w-5xl px-4 pb-20 pt-4 sm:px-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <BackLink />
-        <div className="relative inline-grid grid-cols-2 items-center overflow-hidden rounded-full border p-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em]" style={{ borderColor: "var(--leaders-card-border)" }}>
-          <span
-            className="absolute bottom-1 top-1 w-[calc(50%-0.25rem)] rounded-full transition-transform duration-300 ease-out"
-            style={{
-              left: "0.25rem",
-              background: "var(--leaders-rank-gold)",
-              transform: `translateX(${scope === "confirmed" ? "100%" : "0"})`,
-            }}
-            aria-hidden="true"
-          />
-          <button
-            type="button"
-            className="relative z-10 cursor-pointer rounded-full px-3 py-1 transition-colors duration-300"
-            style={scope === "all" ? { color: "var(--leaders-rank-text)" } : { color: "var(--fg-muted)" }}
-            onClick={() => setScope("all")}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            className="relative z-10 inline-flex cursor-pointer items-center justify-center rounded-full px-3 py-1 transition-colors duration-300"
-            style={scope === "confirmed" ? { color: "var(--leaders-rank-text)" } : { color: "var(--fg-muted)" }}
-            onClick={() => setScope("confirmed")}
-            title="Confirmed email referrals"
-            aria-label="Confirmed email referrals"
-          >
-            <EmailConfirmedIcon className="h-4 w-4" />
-          </button>
-        </div>
+        <Link
+          href={`/sharekit?ref=${encodeURIComponent(referralCode)}`}
+          className="inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:border-fg-heading hover:text-fg-heading hover:underline"
+          style={{ borderColor: "var(--leaders-card-border)" }}
+        >
+          Share your link
+        </Link>
       </div>
 
       <section

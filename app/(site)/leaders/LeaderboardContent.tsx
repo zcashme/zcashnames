@@ -288,7 +288,7 @@ export default function LeaderboardContent() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [dailyRows, setDailyRows] = useState<DailyRow[]>([]);
   const [rankingsMode, setRankingsMode] = useState<"daily" | "allTime">("daily");
-  const [referralScope, setReferralScope] = useState<ReferralScope>("all");
+  const referralScope: ReferralScope = "all";
   const [visibleLeaderboardRows, setVisibleLeaderboardRows] = useState(10);
   const [visibleDailyRows, setVisibleDailyRows] = useState(7);
   const [stats, setStats] = useState({ waitlist: 0, referred: 0, rewardsPot: 0 });
@@ -400,37 +400,13 @@ export default function LeaderboardContent() {
         <Link href="/" className="text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline">
           Back to Home
         </Link>
-        <div
-          className="inline-flex items-center rounded-full border p-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em]"
+        <Link
+          href="/sharekit"
+          className="inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:border-fg-heading hover:text-fg-heading hover:underline"
           style={{ borderColor: "var(--leaders-card-border)" }}
         >
-          <button
-            type="button"
-            className="cursor-pointer rounded-full px-3 py-1 transition-colors"
-            style={
-              referralScope === "all"
-                ? { background: "var(--leaders-rank-gold)", color: "var(--leaders-rank-text)" }
-                : { color: "var(--fg-muted)" }
-            }
-            onClick={() => setReferralScope("all")}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            className="inline-flex cursor-pointer items-center justify-center rounded-full px-3 py-1 transition-colors"
-            style={
-              referralScope === "confirmed"
-                ? { background: "var(--leaders-rank-gold)", color: "var(--leaders-rank-text)" }
-                : { color: "var(--fg-muted)" }
-            }
-            onClick={() => setReferralScope("confirmed")}
-            title="Confirmed email referrals"
-            aria-label="Confirmed email referrals"
-          >
-            <EmailConfirmedIcon className="h-4 w-4" />
-          </button>
-        </div>
+          Share your link
+        </Link>
       </div>
 
       <section
@@ -1013,11 +989,6 @@ const HOW_IT_WORKS: { title: string; body: ReactNode }[] = [
       <>
         Only valid signups and real purchases count. Spam, duplicate entries, or abuse may be
         filtered to keep rankings accurate.
-        <span className="mt-2 block text-fg-muted">
-          <span className="inline-flex items-center gap-1.5">
-            <EmailConfirmedIcon className="h-4 w-4" /> Confirmed email
-          </span>
-        </span>
       </>
     ),
   },
