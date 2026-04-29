@@ -1,6 +1,6 @@
-# Internet analogy / naming systems
+# Why names matter
 
-Explains IP vs domain names and why names improve usability.
+Explains why names are easier than raw addresses, using familiar internet, messaging, and payment behavior.
 
 ## Post 1
 
@@ -15,13 +15,7 @@ Crypto still hasn't caught up. You're stuck copying long strings and hoping noth
 
 Waitlist: [your link]
 
----
-
-# Social and payment app comparison
-
-Uses familiar apps to show how names simplify interactions.
-
-## Post 1
+## Post 2
 
 You don't send a message by typing a phone number anymore. You search a name in your contacts.
 
@@ -33,13 +27,7 @@ Crypto still feels stuck in the past.
 
 Get early access: [your link]
 
----
-
-# Friction and user experience problems
-
-Focuses on long addresses, copy/paste issues, and QR risks.
-
-## Post 1
+## Post 3
 
 Ever copied a crypto address, switched apps, pasted it, then double-checked every character?
 
@@ -53,9 +41,9 @@ Get early access: [your link]
 
 ---
 
-# Privacy limitations in existing crypto
+# Why Zcash Names is different
 
-Highlights how most name services expose transaction history.
+Shows how Zcash Names combines simpler usability with shielded-address privacy.
 
 ## Post 1
 
@@ -69,13 +57,7 @@ That's a disaster waiting to happen.
 
 If that matters to you: [your link]
 
----
-
-# Product value proposition
-
-Combines usability and privacy as the core benefit.
-
-## Post 1
+## Post 2
 
 On most blockchains, transactions are public by default.
 
@@ -85,9 +67,9 @@ Zcash takes a different approach with shielded transactions. And @ZcashNames mak
 
 Get early access: [your link]
 
-## Post 2
+## Post 3
 
-Using crypto shouldn’t mean pasting long addresses or revealing your past.
+Using crypto shouldnâ€™t mean pasting long addresses or revealing your past.
 
 Zcash keeps transactions shielded. @ZcashNames makes them simple to send.
 
@@ -97,9 +79,9 @@ Get early access: [your link]
 
 ---
 
-# Vision and positioning
+# What this unlocks
 
-Frames privacy as something that should be simple and widely used.
+Frames the broader product vision: sending money should feel closer to sending a message.
 
 ## Post 1
 
@@ -113,9 +95,9 @@ Get early access: [your link]
 
 ---
 
-# Early access and incentives
+# Why act now
 
-Emphasizes timing advantage, referrals, and securing names early.
+Creates urgency around early access, referral upside, and securing strong names before they are gone.
 
 ## Post 1
 
