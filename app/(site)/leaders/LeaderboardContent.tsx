@@ -447,7 +447,7 @@ export default function LeaderboardContent() {
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
         >
           <ShareIcon className="h-4 w-4 shrink-0" />
-          Share your link
+          Share reflink
         </Link>
       </div>
 
