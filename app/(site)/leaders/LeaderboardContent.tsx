@@ -168,6 +168,17 @@ function EmailConfirmedIcon({ className }: { className?: string }) {
   );
 }
 
+function ShareIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <circle cx="18" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="6" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="18" cy="19" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8.4 10.8l7.2-4.2M8.4 13.2l7.2 4.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function ChartTooltip({
   active,
   payload,
@@ -433,9 +444,9 @@ export default function LeaderboardContent() {
         </Link>
         <Link
           href="/sharekit"
-          className="inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:border-fg-heading hover:text-fg-heading hover:underline"
-          style={{ borderColor: "var(--leaders-card-border)" }}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
         >
+          <ShareIcon className="h-4 w-4 shrink-0" />
           Share your link
         </Link>
       </div>
