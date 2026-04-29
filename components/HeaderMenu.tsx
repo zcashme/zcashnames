@@ -91,6 +91,7 @@ const menuLinks: MenuLink[] = [
       { label: "Terms", href: "/leaders/terms", displayPath: ".../terms" },
     ],
   },
+  { label: "Roadmap", href: "/roadmap" },
   { label: "Brand Kit", href: "/brandkit" },
 ];
 
