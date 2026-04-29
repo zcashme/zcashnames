@@ -16,7 +16,7 @@ function shareToX(post: string): string {
 }
 
 function shareToTelegram(post: string): string {
-  return `https://t.me/share/url?text=${encodeURIComponent(post)}`;
+  return `https://t.me/share/url?url=${encodeURIComponent(post)}`;
 }
 
 function shareByEmail(post: string): string {
@@ -357,13 +357,13 @@ function DraftCard({
                 >
                   X
                 </a>
-                <a
-                  href={shareToTelegram(value)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-md px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:bg-[var(--color-raised)]"
-                  role="menuitem"
-                >
+          <a
+            href={shareToTelegram(value)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:bg-[var(--color-raised)]"
+            role="menuitem"
+          >
                   Telegram
                 </a>
                 <a
