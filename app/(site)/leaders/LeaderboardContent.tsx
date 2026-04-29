@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Area,
@@ -27,6 +27,7 @@ import {
   type ReferralScope,
   type TimeSeriesPoint,
 } from "@/lib/leaders/leaders";
+import CopyIconButton from "@/components/CopyIconButton";
 
 const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
 type AxisSide = "left" | "right";
@@ -295,6 +296,8 @@ export default function LeaderboardContent() {
   const [loading, setLoading] = useState(true);
   const [activeStatKey, setActiveStatKey] = useState<"waitlist" | "referred" | "rewards" | null>(null);
   const [activeChartPoint, setActiveChartPoint] = useState<TimeSeriesPoint | null>(null);
+  const [copiedReferralCode, setCopiedReferralCode] = useState<string | null>(null);
+  const copiedResetTimeoutRef = useRef<number | null>(null);
 
   const filteredDailyRows = useMemo(
     () => dailyRows.filter((row) => row.date >= "2026-03-30"),
@@ -386,6 +389,34 @@ export default function LeaderboardContent() {
   useEffect(() => {
     setVisibleLeaderboardRows(10);
   }, [leaderboard.length, referralScope]);
+
+  useEffect(() => {
+    return () => {
+      if (copiedResetTimeoutRef.current !== null) {
+        window.clearTimeout(copiedResetTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  async function copyReferralLink(referralCode: string) {
+    try {
+      await navigator.clipboard.writeText(`https://zcashnames.com/?ref=${referralCode}`);
+      setCopiedReferralCode(referralCode);
+      if (copiedResetTimeoutRef.current !== null) {
+        window.clearTimeout(copiedResetTimeoutRef.current);
+      }
+      copiedResetTimeoutRef.current = window.setTimeout(() => {
+        setCopiedReferralCode((current) => (current === referralCode ? null : current));
+        copiedResetTimeoutRef.current = null;
+      }, 2000);
+    } catch {
+      if (copiedResetTimeoutRef.current !== null) {
+        window.clearTimeout(copiedResetTimeoutRef.current);
+        copiedResetTimeoutRef.current = null;
+      }
+      setCopiedReferralCode((current) => (current === referralCode ? null : current));
+    }
+  }
 
   return (
     <>
@@ -698,27 +729,23 @@ export default function LeaderboardContent() {
                       </div>
                       <div className="mt-0.5 flex items-center gap-1.5">
                         <span className="font-mono text-[0.72rem] text-fg-muted">{entry.referral_code}</span>
-                        <button
-                          type="button"
-                          title="Copy referral link"
-                          className="cursor-pointer text-fg-muted transition-colors hover:text-fg-heading"
+                        <CopyIconButton
                           onClick={() => {
-                            void navigator.clipboard.writeText(
-                              `https://zcashnames.com/?ref=${entry.referral_code}`,
-                            );
+                            void copyReferralLink(entry.referral_code);
                           }}
-                        >
-                          <svg
-                            viewBox="0 0 16 16"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            className="h-3.5 w-3.5"
-                          >
-                            <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
-                            <path d="M10.5 5.5V3.5a1.5 1.5 0 0 0-1.5-1.5H3.5A1.5 1.5 0 0 0 2 3.5V9a1.5 1.5 0 0 0 1.5 1.5h2" />
-                          </svg>
-                        </button>
+                          ariaLabel="Copy referral link"
+                          title={copiedReferralCode === entry.referral_code ? "Copied!" : "Copy referral link"}
+                          copied={copiedReferralCode === entry.referral_code}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "var(--fg-muted)",
+                            height: "0.875rem",
+                            width: "0.875rem",
+                            padding: 0,
+                            borderRadius: 0,
+                          }}
+                        />
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums sm:px-6">

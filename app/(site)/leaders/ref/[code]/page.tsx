@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   Area,
   AreaChart,
@@ -36,6 +36,7 @@ import {
   type ReferralDashboardData,
   type ProjectionModel,
 } from "@/lib/leaders/referral-dashboard";
+import CopyIconButton from "@/components/CopyIconButton";
 
 const DIRECT_CHART_COLOR = "var(--leaders-area-referred)";
 const INDIRECT_CHART_COLOR = "var(--leaders-area-non-referred)";
@@ -181,6 +182,8 @@ export default function ReferralDashboardPage() {
   const [commissionPinEmail, setCommissionPinEmail] = useState("");
   const [commissionPinRecoveryOpen, setCommissionPinRecoveryOpen] = useState(false);
   const [modeSwitching, setModeSwitching] = useState(false);
+  const [copiedReferralLink, setCopiedReferralLink] = useState(false);
+  const copiedResetTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -268,6 +271,14 @@ export default function ReferralDashboardPage() {
     setCommissionError("");
     setCommissionPinMessage("");
   }, [referralCode]);
+
+  useEffect(() => {
+    return () => {
+      if (copiedResetTimeoutRef.current !== null) {
+        window.clearTimeout(copiedResetTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleCommissionAccessGesture = () => {
     if (!data?.root?.cabal || modeSwitching) return;
@@ -382,6 +393,26 @@ export default function ReferralDashboardPage() {
     return prices[bucket] * conversionRate * (projection?.commissionRate ?? 0.15);
   };
 
+  async function copyReferralLink(referralCodeToCopy: string) {
+    try {
+      await navigator.clipboard.writeText(`https://zcashnames.com/?ref=${referralCodeToCopy}`);
+      setCopiedReferralLink(true);
+      if (copiedResetTimeoutRef.current !== null) {
+        window.clearTimeout(copiedResetTimeoutRef.current);
+      }
+      copiedResetTimeoutRef.current = window.setTimeout(() => {
+        setCopiedReferralLink(false);
+        copiedResetTimeoutRef.current = null;
+      }, 2000);
+    } catch {
+      if (copiedResetTimeoutRef.current !== null) {
+        window.clearTimeout(copiedResetTimeoutRef.current);
+        copiedResetTimeoutRef.current = null;
+      }
+      setCopiedReferralLink(false);
+    }
+  }
+
   if (loading) {
     return (
       <main className="mx-auto w-full max-w-5xl px-4 pb-20 pt-4 sm:px-6">
@@ -433,25 +464,23 @@ export default function ReferralDashboardPage() {
             </h1>
             <div className="mt-1 flex items-center gap-1.5">
               <span className="font-mono text-sm text-fg-muted">{data.referralCode}</span>
-              <button
-                type="button"
-                title="Copy referral link"
-                className="cursor-pointer text-fg-muted transition-colors hover:text-fg-heading"
+              <CopyIconButton
                 onClick={() => {
-                  void navigator.clipboard.writeText(`https://zcashnames.com/?ref=${data.referralCode}`);
+                  void copyReferralLink(data.referralCode);
                 }}
-              >
-                <svg
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  className="h-3.5 w-3.5"
-                >
-                  <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
-                  <path d="M10.5 5.5V3.5a1.5 1.5 0 0 0-1.5-1.5H3.5A1.5 1.5 0 0 0 2 3.5V9a1.5 1.5 0 0 0 1.5 1.5h2" />
-                </svg>
-              </button>
+                ariaLabel="Copy referral link"
+                title={copiedReferralLink ? "Copied!" : "Copy referral link"}
+                copied={copiedReferralLink}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--fg-muted)",
+                  height: "0.875rem",
+                  width: "0.875rem",
+                  padding: 0,
+                  borderRadius: 0,
+                }}
+              />
             </div>
           </div>
           <div className="text-right">
