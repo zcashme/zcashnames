@@ -2,7 +2,16 @@
 
 Explains why names are easier than raw addresses, using familiar internet, messaging, and payment behavior.
 
-## Post 1
+## Post 1 
+
+Make Zcash easier to send, and people will actually use it.
+
+Let's grow @ZcashNames
+
+[your link]
+
+
+## Post 2
 
 Try memorizing 188.114.96.0.
 That's bitcoin dot org.
@@ -15,7 +24,7 @@ Crypto still hasn't caught up. You're stuck copying long strings and hoping noth
 
 Waitlist: [your link]
 
-## Post 2
+## Post 3
 
 You don't send a message by typing a phone number anymore. You search a name in your contacts.
 
@@ -27,7 +36,7 @@ Crypto still feels stuck in the past.
 
 Get early access: [your link]
 
-## Post 3
+## Post 4
 
 Ever copied a crypto address, switched apps, pasted it, then double-checked every character?
 
@@ -85,13 +94,37 @@ Frames the broader product vision: sending money should feel closer to sending a
 
 ## Post 1
 
-Sending money shouldn't feel different from sending a message.
+Sending money should feel like sending a message.
 
-Right now, it does.
+Type a name. Send.
 
-@ZcashNames feels better. Skip the long addresses, QR codes, and extra steps.
+That’s it.
 
-Get early access: [your link]
+@ZcashNames is getting us there.
+
+Get yours: [your link]
+
+## Post 2
+
+Address people by their @ZcashNames.  
+
+https://x.com/ZcashNames/status/2046636749787685232?s=20
+
+Get yours: [your link]
+
+## Post 3
+
+No one wants to share this:
+u1qw…7k3…x9p…
+
+It's easier to share a name.
+
+Claim yours 
+
+[your link]
+
+
+
 
 ---
 
