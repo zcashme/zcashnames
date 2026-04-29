@@ -89,7 +89,7 @@ Sending money shouldn't feel different from sending a message.
 
 Right now, it does.
 
-@ZcashNames makes it feel a lot closer. Skip the long addresses, QR codes, and extra steps.
+@ZcashNames feels better. Skip the long addresses, QR codes, and extra steps.
 
 Get early access: [your link]
 
@@ -110,3 +110,16 @@ Actually, inviting friends helps you skip the line.
 Get on the waitlist for early access here: [your link]
 
 You'll get your own referral link, too.  
+
+## Post 2
+
+Whoa - @ZcashNames is going to be big. I found the waitlist. Sign up and get alerted before they launch. [your link]
+
+## Post 3
+
+Sending and receiving $ZEC will be much easier with @ZcashNames.
+
+Get your @ZcashName before it's taken:
+[your link]
+
+You'll get your own referral link to earn rewards too.
