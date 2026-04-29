@@ -15,11 +15,20 @@ export const metadata: Metadata = {
     title: "Roadmap | ZcashNames",
     description: "Calendar roadmap for the next ZcashNames product phases and tasks.",
     url: "https://www.zcashnames.com/roadmap",
+    images: [
+      {
+        url: "https://www.zcashnames.com/og/roadmap.png",
+        width: 1200,
+        height: 630,
+        alt: "Roadmap | ZcashNames",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Roadmap | ZcashNames",
     description: "Calendar roadmap for the next ZcashNames product phases and tasks.",
+    images: ["https://www.zcashnames.com/og/roadmap.png"],
   },
 };
 
