@@ -69,7 +69,7 @@ Get early access: [your link]
 
 ## Post 3
 
-Using crypto shouldnâ€™t mean pasting long addresses or revealing your past.
+Using crypto shouldn't mean pasting long addresses or revealing your past.
 
 Zcash keeps transactions shielded. @ZcashNames makes them simple to send.
 
