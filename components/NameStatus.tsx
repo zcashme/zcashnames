@@ -148,10 +148,12 @@ export function NameStatusButtons({
   status,
   onAction,
   align = "start",
+  hasPendingBuy = false,
 }: {
   status: NameAvailabilityState;
   onAction: (action: Action) => void;
   align?: "start" | "center";
+  hasPendingBuy?: boolean;
 }) {
   const justifyClass = align === "center" ? "justify-center" : "justify-start";
 
@@ -183,6 +185,8 @@ export function NameStatusButtons({
           type="button"
           className="home-result-action is-secondary"
           onClick={() => onAction("delist")}
+                        disabled={hasPendingBuy}
+                        title={hasPendingBuy ? "Cannot delist while a purchase is pending" : "Remove this name from the marketplace"}
         >
           Delist from Sale
         </button>

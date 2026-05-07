@@ -5,7 +5,7 @@ import Image from "next/image";
 import type { ResolveName } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import type { Event } from "@/lib/zns/client";
-import { formatUsdEquivalent } from "@/lib/zns/client";
+import { formatUsdEquivalent, zatsToZec } from "@/lib/zns/client";
 import ActionBadge from "@/components/ActionBadge";
 import CopyIconButton from "@/components/CopyIconButton";
 import {
@@ -123,6 +123,7 @@ export default function ExplorerNameDetail({
                   status={availabilityState}
                   onAction={onAction}
                   align="center"
+                  hasPendingBuy={!!listed?.pendingBuy}
                 />
               )}
               <div
@@ -188,6 +189,67 @@ export default function ExplorerNameDetail({
                   <span className="inline-flex items-center leading-none">View on ZcashMe</span>
                 </a>
               </div>
+
+          {listed && (
+            <div className="flex flex-col gap-1.5 text-sm">
+              <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
+                <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                  Payout
+                </span>
+                <span className="min-w-0 flex-1 font-mono text-fg-muted break-all">
+                  {listed.payTaddr}
+                </span>
+                <CopyIconButton
+                  onClick={() => copyValue(listed.payTaddr)}
+                  ariaLabel="Copy payout address"
+                  title={copiedValue === listed.payTaddr ? "Copied!" : "Copy payout address"}
+                  copied={copiedValue === listed.payTaddr}
+                />
+              </div>
+              {listed.pendingBuy && (
+                <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
+                  <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                    Buyer
+                  </span>
+                  <span className="min-w-0 flex-1 font-mono text-fg-muted break-all">
+                    {listed.pendingBuy.buyer_ua}
+                  </span>
+                  <CopyIconButton
+                    onClick={() => copyValue(listed.pendingBuy!.buyer_ua)}
+                    ariaLabel="Copy buyer address"
+                    title={copiedValue === listed.pendingBuy!.buyer_ua ? "Copied!" : "Copy buyer address"}
+                    copied={copiedValue === listed.pendingBuy!.buyer_ua}
+                  />
+                </div>
+              )}
+              {listed.pendingBuy && (
+                <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
+                  <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                    Price
+                  </span>
+                  <span className="text-fg-muted">
+                    {zatsToZec(listed.pendingBuy.price)} ZEC
+                  </span>
+                </div>
+              )}
+              {listed.pendingBuy && (
+                <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
+                  <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                    Expires
+                  </span>
+                  <span className="text-fg-muted">
+                    Block {listed.pendingBuy.expires_at.toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          {listed && (
+            <div
+              className="h-px w-full"
+              style={{ background: "var(--leaders-card-border)" }}
+            />
+          )}
             </div>
           )}
 
