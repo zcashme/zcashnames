@@ -17,7 +17,10 @@ import {
   buildReferralDashboard,
   type ReferralDashboardData,
   type WaitlistReferralRow,
+  type ReferralScope,
 } from "@/lib/leaders/referral-dashboard";
+
+export type { ReferralScope };
 
 export interface TimeSeriesPoint {
   date: string;
@@ -73,8 +76,6 @@ export interface DailyNewNameEntry {
   created_at: string;
   email_verified: boolean;
 }
-
-export type ReferralScope = "all" | "confirmed";
 
 type ReferralCommissionUnlockResult =
   | { ok: true }

@@ -1,6 +1,17 @@
-import { ZNS } from "zcashname-sdk";
-import type { Network } from "zcashname-sdk";
+import { ZNS, ZNS_ACTIONS } from "zcashname-sdk";
+import type { Network, PendingBuy, Zats } from "zcashname-sdk";
 
+export { ZNS_ACTIONS };
+export const ACTIONS = ([
+  "claim",
+  "buy",
+  "update",
+  "list",
+  "delist",
+  "release",
+] as const);
+export type Action = (typeof ACTIONS)[number];
+export type { PendingBuy };
 export type {
   Network,
   Registration,
@@ -8,8 +19,8 @@ export type {
   Event,
   EventsFilter,
   CompletedAction,
-  PendingBuy,
   Status,
+  Zats,
 } from "zcashname-sdk";
 
 /* ── Network type ───────────────────────────────────────────────────── */

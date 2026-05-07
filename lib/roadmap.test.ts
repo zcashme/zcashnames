@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseRoadmapMarkdown, parseIsoDateUtc, startOfUtcWeek, endOfUtcWeek, diffUtcWeeks } from "./roadmap.ts";
+import { parseRoadmapMarkdown, parseIsoDateUtc, startOfUtcWeek, endOfUtcWeek, diffUtcWeeks } from "./roadmap";
 
 test("parseRoadmapMarkdown returns typed periods in source order", () => {
   const periods = parseRoadmapMarkdown(`

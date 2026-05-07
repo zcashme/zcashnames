@@ -101,6 +101,15 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
+      <section className="hero-stage-bg">
+        <Hero
+          searchForm={form}
+          rightPanel={<PhoneStage embedded />}
+          formExpanded={false}
+          subtitle={<>Powered by Zcash. Claim your name</>}
+        />
+      </section>
+
       {searchError && (
         <div className="mx-auto mb-3 flex max-w-[600px] items-center gap-3 rounded-2xl px-5 py-3 text-sm font-semibold backdrop-blur-md"
           style={{
@@ -159,14 +168,7 @@ export default function HomePage() {
         );
       })}
 
-      <section className="hero-stage-bg">
-        <Hero
-          searchForm={form}
-          rightPanel={<PhoneStage embedded />}
-          formExpanded={false}
-          subtitle={<>Powered by Zcash. Claim your name</>}
-        />
-      </section>
+      <MarketStats />
 
       {network && pendingHydrated && pendingTransaction && !modalTarget && (
         <PendingTransactionBanner
@@ -177,8 +179,6 @@ export default function HomePage() {
           onDismiss={clearPendingTransaction}
         />
       )}
-
-      <MarketStats />
 
       <div className="relative z-[2] -mt-4 mb-2 flex justify-center">
         <Link

@@ -1,4 +1,4 @@
-import type { Network } from "@/lib/zns/client";
+import type { Network, Action, PendingBuy } from "@/lib/zns/client";
 
 /**
  * Per-network constants used by Zip321Modal.
@@ -37,7 +37,7 @@ export function getNetworkConstants(network: Network = "testnet"): NetworkConsta
 export const MAX_LIST_FOR_SALE_AMOUNT = 21_000_000;
 
 /** The six operations a user can perform on a Zcash name. */
-export type Action = "claim" | "buy" | "update" | "list" | "delist" | "release";
+export type { Action };
 
 export interface ModalTarget {
   name: string;
@@ -70,20 +70,11 @@ export interface PendingTransactionState {
   warnings?: string[];
 }
 
-/** A pending buy — created when a buyer sends a BUY memo and awaiting transparent funding tx. */
-export interface PendingBuy {
-  buyer: string;
-  price: number;
-  claimHeight: number;
-  expiresAt: number;
-  txid: string;
-}
-
-/** Tracked UTXO from the mempool watcher for a transparent address. */
-export interface TrackedUtxo {
-  txid: string;
-  value_zats: number;
-}
+/**
+ * @deprecated Import PendingBuy from @/lib/zns/client instead.
+ * This alias exists for ResolveName compatibility.
+ */
+export type { PendingBuy };
 
 /**
  * Result of resolving a name query. Discriminated union representing the possible states.

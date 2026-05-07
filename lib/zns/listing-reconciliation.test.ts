@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getListingMap, reconcileRegistrationListing } from "./listing-reconciliation.ts";
-import type { Registration, Listing } from "./client.ts";
+import { getListingMap, reconcileRegistrationListing } from "./listing-reconciliation";
+import type { Registration, Listing } from "./client";
 
 function registration(overrides: Partial<Registration> = {}): Registration {
   return {
@@ -11,7 +11,7 @@ function registration(overrides: Partial<Registration> = {}): Registration {
     height: 100,
     nonce: 1,
     signature: "sig",
-    last_action: "CLAIM",
+    lastAction: "CLAIM",
     pubkey: null,
     listing: null,
     ...overrides,
@@ -22,15 +22,15 @@ function listing(overrides: Partial<Listing> = {}): Listing {
   return {
     name: "listedname",
     price: 123,
-    pay_taddr: "u1test",
+    payTaddr: "u1test",
     nonce: 2,
     txid: "listtx",
     height: 110,
     signature: "listsig",
     pubkey: null,
-    pending_buy: null,
+    pendingBuy: undefined,
     ...overrides,
-  } as Listing;
+  };
 }
 
 test("reconcileRegistrationListing restores active listing stripped from resolve result", () => {

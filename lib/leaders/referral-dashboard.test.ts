@@ -10,8 +10,8 @@ import {
   fixedRewardForDepth,
   getNameLengthBucket,
   type WaitlistReferralRow,
-} from "./referral-dashboard.ts";
-import { deriveCommissionPin, normalizeCommissionReferralCode } from "./commission-pin.ts";
+} from "./referral-dashboard";
+import { deriveCommissionPin, normalizeCommissionReferralCode } from "./commission-pin";
 
 let rowIndex = 0;
 
