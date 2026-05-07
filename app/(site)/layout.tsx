@@ -4,7 +4,6 @@ import { ThemeProvider } from "next-themes";
 import { NetworkProvider } from "@/components/NetworkToggle";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import BetaApplyBar from "@/components/closedbeta/BetaApplyBar";
 import CabalLaunchBar from "@/components/influencer/CabalLaunchBar";
 import { Analytics } from "@vercel/analytics/next";
 import { BRAND } from "@/lib/zns/brand";
@@ -107,7 +106,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         >
         <NetworkProvider>
 
-        <BetaApplyBar />
         <CabalLaunchBar />
         <Header />
         {children}

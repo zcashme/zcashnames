@@ -1,21 +1,17 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
-import { createHash, randomBytes, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { Network } from "@/lib/zns/client";
-import { findTesterByCode } from "./testers";
 import {
   BETA_COOKIE_NAME,
   BETA_STAGE_COOKIE_NAME,
   betaCookieOptions,
-  buildBetaCookieValue,
   readCurrentStage,
   readCurrentTester,
   setStageCookie,
 } from "./gate";
-import { sendBetaApplicationNotice } from "@/lib/email/beta-application";
-import { CONTACT_KINDS, type ContactKind } from "@/lib/contact-methods";
 
 const FEEDBACK_BUCKET = "beta-feedback";
 
@@ -34,51 +30,6 @@ export async function switchToNetwork(network: Network): Promise<void> {
   await setStageCookie(network);
 }
 
-
-async function setTesterCookie(testerId: string) {
-  const { value, expiresAt } = buildBetaCookieValue(testerId);
-  const store = await cookies();
-  const maxAge = expiresAt - Math.floor(Date.now() / 1000);
-  store.set(BETA_COOKIE_NAME, value, betaCookieOptions(maxAge));
-}
-
-// ---------------------------------------------------------------------------
-// Network access — beta tester invite code validation.
-// Accepts a beta tester's invite code, sets the zn_beta cookie and
-// zn_beta_stage cookie, returns { ok: true, attributedTo: name }.
-// ---------------------------------------------------------------------------
-
-export type NetworkAccessResult =
-  | { ok: true; attributedTo: string | null }
-  | { ok: false; error: string };
-
-export async function verifyNetworkAccess(
-  network: Network,
-  password: string,
-): Promise<NetworkAccessResult> {
-  const trimmed = (password ?? "").trim();
-  if (!trimmed) return { ok: false, error: "Password required." };
-
-  // Beta invite code path (sets attribution cookie).
-  const tester = await findTesterByCode(trimmed);
-  if (tester) {
-    await setTesterCookie(tester.id);
-    await setStageCookie(network);
-    // Fire-and-forget status flip: applied|invited → active. Never overwrites
-    // an existing activated_at, never re-flips revoked rows (the lookup
-    // already filters revoked).
-    db.from("beta_testers")
-      .update({ status: "active", activated_at: new Date().toISOString() })
-      .eq("id", tester.id)
-      .in("status", ["applied", "invited"])
-      .then((r) => {
-        if (r.error) console.error("[beta] status flip failed:", r.error);
-      });
-    return { ok: true, attributedTo: tester.displayName };
-  }
-
-  return { ok: false, error: "Invite code not recognized." };
-}
 
 /** Read the current tester's display name from the cookie, or null. */
 export async function getCurrentTesterName(): Promise<string | null> {
@@ -324,170 +275,33 @@ export async function loadChecklistProgress(
 // submission time and inserts a row with status='applied'. The admin (you)
 // reviews rows in the Supabase table editor and DMs the code to chosen
 // applicants. The applicant never sees the code in the response.
+
+// ---------------------------------------------------------------------------
+// Open beta — store email + set stage cookie in one call.
+// Reuses the zn_waitlist table for email collection.
 // ---------------------------------------------------------------------------
 
-export type BetaApplicationResult =
-  | { ok: true }
-  | { ok: false; error: string };
-
-const APP_MAX_NAME = 60;
-const APP_MIN_WHY = 20;
-const APP_MAX_WHY = 2000;
-const APP_MAX_TEXT = 2000;
-const APP_MAX_CONTACT = 200;
-
-function slugifyId(displayName: string): string {
-  const slug = displayName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 24);
-  const suffix = randomBytes(3).toString("hex");
-  return `tester_${slug || "anon"}_${suffix}`;
-}
-
-function generateInviteCode(): string {
-  // 12 url-safe chars (~72 bits of entropy). Plenty for a closed beta.
-  return randomBytes(9).toString("base64url");
-}
-
-function hashInviteCode(code: string): string {
-  return createHash("sha256").update(code).digest("hex");
-}
-
-function hashIp(ip: string | null): string | null {
-  if (!ip) return null;
-  const secret = process.env.BETA_GATE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-  return createHash("sha256").update(`${secret}:${ip}`).digest("hex");
-}
-
-async function readClientMeta(): Promise<{ ip: string | null; userAgent: string | null }> {
-  const h = await headers();
-  const xff = h.get("x-forwarded-for");
-  const ip = xff ? xff.split(",")[0].trim() : h.get("x-real-ip");
-  const userAgent = h.get("user-agent");
-  return { ip: ip || null, userAgent: userAgent || null };
-}
-
-function isValidEmail(v: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-}
-
-export async function submitBetaApplication(
-  formData: FormData,
-): Promise<BetaApplicationResult> {
-  // Required fields
-  const displayName = String(formData.get("display_name") ?? "").trim();
-  const why = String(formData.get("why") ?? "").trim();
-  const focusRaw = String(formData.get("focus_areas") ?? "").trim();
-  const focusAreas: ("user" | "sdk")[] = focusRaw
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s): s is "user" | "sdk" => s === "user" || s === "sdk");
-  const experience = String(formData.get("experience") ?? "").trim();
-  const referralSource = String(formData.get("referral_source") ?? "").trim();
-
-  if (!displayName) return { ok: false, error: "Display name is required." };
-  if (displayName.length > APP_MAX_NAME) return { ok: false, error: "Display name is too long." };
-  if (!why) return { ok: false, error: "Tell us why you want to join." };
-  if (why.length < APP_MIN_WHY) {
-    return { ok: false, error: `Please write at least ${APP_MIN_WHY} characters about why you want to join.` };
-  }
-  if (why.length > APP_MAX_WHY) return { ok: false, error: "Why field is too long." };
-  if (focusAreas.length === 0) {
-    return { ok: false, error: "Pick at least one thing you want to test." };
-  }
-  for (const [k, v] of [["experience", experience], ["referral_source", referralSource]] as const) {
-    if (v.length > APP_MAX_TEXT) return { ok: false, error: `${k} is too long.` };
+export async function setOpenBetaAccess(
+  email: string,
+  newsletter: boolean,
+  network: Network,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const normalized = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    return { ok: false, error: "Enter a valid email address." };
   }
 
-  // Contacts (one column per kind, plus a best_contact_kind enum)
-  const contacts: Record<ContactKind, string> = {
-    email: "",
-    signal: "",
-    discord: "",
-    x: "",
-    telegram: "",
-    forum: "",
-  };
-  for (const kind of CONTACT_KINDS) {
-    const v = String(formData.get(`contact_${kind}`) ?? "").trim();
-    if (v.length > APP_MAX_CONTACT) {
-      return { ok: false, error: `${kind} contact is too long.` };
-    }
-    contacts[kind] = v;
-  }
-  if (contacts.email && !isValidEmail(contacts.email)) {
-    return { ok: false, error: "Email address is not valid." };
+  try {
+    await db.from("zn_waitlist").insert({
+      name: "openbeta_user",
+      email: normalized,
+      newsletter,
+      email_verified: false,
+    });
+  } catch {
+    // Email may already exist — unique constraint rejects duplicate silently.
   }
 
-  const filledKinds = CONTACT_KINDS.filter((k) => contacts[k].length > 0);
-  if (filledKinds.length === 0) {
-    return { ok: false, error: "Add at least one contact method." };
-  }
-
-  let bestContactKind = String(formData.get("best_contact_kind") ?? "").trim() as ContactKind | "";
-  if (filledKinds.length === 1) {
-    bestContactKind = filledKinds[0];
-  } else if (!bestContactKind || !filledKinds.includes(bestContactKind as ContactKind)) {
-    return { ok: false, error: "Pick which contact you'd like us to use." };
-  }
-
-  // Generate id + code
-  const testerId = slugifyId(displayName);
-  const inviteCode = generateInviteCode();
-  const codeHash = hashInviteCode(inviteCode);
-
-  const submittedAtIso = new Date().toISOString();
-  const { ip, userAgent } = await readClientMeta();
-
-  const { error: insertError } = await db.from("beta_testers").insert({
-    id: testerId,
-    display_name: displayName,
-    code_hash: codeHash,
-    invite_code: inviteCode,
-    status: "applied",
-    submitted_at: submittedAtIso,
-    why,
-    focus_areas: focusAreas,
-    experience: experience || null,
-    referral_source: referralSource || null,
-    contact_email: contacts.email || null,
-    contact_signal: contacts.signal || null,
-    contact_discord: contacts.discord || null,
-    contact_x: contacts.x || null,
-    contact_telegram: contacts.telegram || null,
-    contact_forum: contacts.forum || null,
-    best_contact_kind: bestContactKind,
-    ip_hash: hashIp(ip),
-    user_agent: userAgent,
-  });
-
-  if (insertError) {
-    // Soft email-dedupe via the partial unique index.
-    const code = (insertError as { code?: string }).code;
-    if (code === "23505") {
-      return { ok: false, error: "An application with that email is already in the queue." };
-    }
-    console.error("[beta-apply] insert failed:", insertError);
-    return { ok: false, error: "Couldn't save your application. Try again." };
-  }
-
-  await sendBetaApplicationNotice({
-    testerId,
-    displayName,
-    inviteCode,
-    why,
-    focusAreas,
-    experience: experience || null,
-    referralSource: referralSource || null,
-    contacts: filledKinds.map((kind) => ({
-      kind,
-      value: contacts[kind],
-      isBest: kind === bestContactKind,
-    })),
-    submittedAt: submittedAtIso,
-  });
-
+  await setStageCookie(network);
   return { ok: true };
 }

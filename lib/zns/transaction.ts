@@ -9,9 +9,8 @@ import {
   buildSignedUpdateAction,
 } from "@/lib/zns/admin";
 import { normalizeUsername, isValidUsername, validateAddress, type Network, fetchClaimCost, getZns } from "@/lib/zns/client";
-import { MAX_LIST_FOR_SALE_AMOUNT, BUY_COMMISSION_ZATS } from "@/lib/types";
+import { MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import { getReservedName, verifyUnlockCode } from "@/lib/zns/reserved";
-import { readCurrentStage } from "@/lib/beta/gate";
 import { verifyProof, verifyProofKind, issueProof, parseProofSubject } from "@/lib/zns/proof";
 import { verifyOtp as _verifyOtp } from "@/lib/payment/otp";
 
@@ -28,15 +27,7 @@ type ActionResult =
   | { ok: true; uri: string }
   | { ok: false; error: string };
 
-async function verifyNetworkAccess(network: Network): Promise<boolean> {
-  const cookieStage = await readCurrentStage();
-  return cookieStage === network;
-}
 
-async function requireNetworkAccess(network: Network): Promise<ActionResult | undefined> {
-  if (await verifyNetworkAccess(network)) return undefined;
-  return { ok: false, error: "Network access required." };
-}
 
 function requireUnifiedAddress(address: string | undefined): ActionResult | { address: string } {
   const addr = address?.trim();
@@ -96,9 +87,6 @@ export async function buildClaim(input: ClaimInput): Promise<ActionResult> {
   const name = normalizeUsername(input.name);
   if (!isValidUsername(name)) return { ok: false, error: "Invalid name." };
 
-  const denied = await requireNetworkAccess(input.network);
-  if (denied) return denied;
-
   const addrResult = requireUnifiedAddress(input.address);
   if (!("address" in addrResult)) return addrResult;
 
@@ -114,12 +102,6 @@ export async function buildClaim(input: ClaimInput): Promise<ActionResult> {
   if (costZats == null) return { ok: false, error: "Pricing unavailable - indexer may be down." };
 
   try {
-    if (input.sovereignSig) {
-      const sig = input.sovereignSig.trim();
-      const pub = input.sovereignPub?.trim();
-      if (!pub) throw new Error("Public key is required for sovereign claim.");
-      return { ok: true, uri: getZns(input.network).prepareClaim(name, addrResult.address, costZats).complete(sig, pub).uri };
-    }
     return { ok: true, uri: (await buildSignedClaimAction(name, addrResult.address, input.network)).uri };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
@@ -142,20 +124,10 @@ export async function buildBuy(input: BuyInput): Promise<ActionResult> {
   const name = normalizeUsername(input.name);
   if (!isValidUsername(name)) return { ok: false, error: "Invalid name." };
 
-  const denied = await requireNetworkAccess(input.network);
-  if (denied) return denied;
-
   const addrResult = requireUnifiedAddress(input.address);
   if (!("address" in addrResult)) return addrResult;
 
   try {
-    if (input.sovereignSig) {
-      const sig = input.sovereignSig.trim();
-      const pub = input.sovereignPub?.trim();
-      if (!pub) throw new Error("Public key is required for sovereign buy.");
-      const prepared = getZns(input.network).prepareBuy(name, addrResult.address, input.listingPriceZats ?? 0);
-      return { ok: true, uri: prepared.complete(sig, pub).uri };
-    }
     return { ok: true, uri: (await buildSignedBuyAction(name, addrResult.address, input.listingPriceZats ?? 0, input.network)).uri };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
@@ -177,26 +149,9 @@ export async function buildUpdate(input: UpdateInput): Promise<ActionResult> {
   const name = normalizeUsername(input.name);
   if (!isValidUsername(name)) return { ok: false, error: "Invalid name." };
 
-  const denied = await requireNetworkAccess(input.network);
-  if (denied) return denied;
-
   const zns = getZns(input.network);
   const reg = await zns.resolveName(name);
   if (!reg) return { ok: false, error: "Name is not registered." };
-
-  if (reg.pubkey) {
-    if (!input.sovereignSig) return { ok: false, error: "This name is controlled by a keypair. Use sovereign signing." };
-    const sig = input.sovereignSig.trim();
-    const pub = input.sovereignPub?.trim() || reg.pubkey;
-    const addrResult = requireUnifiedAddress(input.address);
-    if (!("address" in addrResult)) return addrResult;
-
-    try {
-      return { ok: true, uri: zns.prepareUpdate(name, addrResult.address, reg.nonce + 1).complete(sig, pub).uri };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
-    }
-  }
 
   const otpDenied = requireOtpProof(input.otpProof, reg.address);
   if (otpDenied) return otpDenied;
@@ -237,24 +192,9 @@ export async function buildList(input: ListInput): Promise<ActionResult> {
     return { ok: false, error: "Enter a valid transparent Zcash address (t1, t3, tm, or t2)." };
   }
 
-  const denied = await requireNetworkAccess(input.network);
-  if (denied) return denied;
-
   const zns = getZns(input.network);
   const reg = await zns.resolveName(name);
   if (!reg) return { ok: false, error: "Name is not registered." };
-
-  if (reg.pubkey) {
-    if (!input.sovereignSig) return { ok: false, error: "This name is controlled by a keypair. Use sovereign signing." };
-    const sig = input.sovereignSig.trim();
-    const pub = input.sovereignPub?.trim() || reg.pubkey;
-
-    try {
-      return { ok: true, uri: zns.prepareList(name, input.priceZats, input.payTaddr, reg.nonce + 1).complete(sig, pub).uri };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
-    }
-  }
 
   const otpDenied = requireOtpProof(input.otpProof, reg.address);
   if (otpDenied) return otpDenied;
@@ -280,24 +220,9 @@ export async function buildDelist(input: DelistInput): Promise<ActionResult> {
   const name = normalizeUsername(input.name);
   if (!isValidUsername(name)) return { ok: false, error: "Invalid name." };
 
-  const denied = await requireNetworkAccess(input.network);
-  if (denied) return denied;
-
   const zns = getZns(input.network);
   const reg = await zns.resolveName(name);
   if (!reg) return { ok: false, error: "Name is not registered." };
-
-  if (reg.pubkey) {
-    if (!input.sovereignSig) return { ok: false, error: "This name is controlled by a keypair. Use sovereign signing." };
-    const sig = input.sovereignSig.trim();
-    const pub = input.sovereignPub?.trim() || reg.pubkey;
-
-    try {
-      return { ok: true, uri: zns.prepareDelist(name, reg.nonce + 1).complete(sig, pub).uri };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
-    }
-  }
 
   const otpDenied = requireOtpProof(input.otpProof, reg.address);
   if (otpDenied) return otpDenied;
@@ -323,24 +248,9 @@ export async function buildRelease(input: ReleaseInput): Promise<ActionResult> {
   const name = normalizeUsername(input.name);
   if (!isValidUsername(name)) return { ok: false, error: "Invalid name." };
 
-  const denied = await requireNetworkAccess(input.network);
-  if (denied) return denied;
-
   const zns = getZns(input.network);
   const reg = await zns.resolveName(name);
   if (!reg) return { ok: false, error: "Name is not registered." };
-
-  if (reg.pubkey) {
-    if (!input.sovereignSig) return { ok: false, error: "This name is controlled by a keypair. Use sovereign signing." };
-    const sig = input.sovereignSig.trim();
-    const pub = input.sovereignPub?.trim() || reg.pubkey;
-
-    try {
-      return { ok: true, uri: zns.prepareRelease(name, reg.nonce + 1).complete(sig, pub).uri };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
-    }
-  }
 
   const otpDenied = requireOtpProof(input.otpProof, reg.address);
   if (otpDenied) return otpDenied;

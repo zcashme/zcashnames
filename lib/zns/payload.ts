@@ -16,7 +16,7 @@ const ACTION_SPECS: ActionSpec[] = [
   { action: "CLAIM", parts: [{ type: "name" }, { type: "address" }] },
   { action: "BUY", parts: [{ type: "name" }, { type: "address" }] },
   { action: "UPDATE", parts: [{ type: "name" }, { type: "address" }, { type: "nonce" }] },
-  { action: "LIST", parts: [{ type: "name" }, { type: "price" }, { type: "nonce" }] },
+  { action: "LIST", parts: [{ type: "name" }, { type: "price" }, { type: "address" }, { type: "nonce" }] },
   { action: "DELIST", parts: [{ type: "name" }, { type: "nonce" }] },
   { action: "RELEASE", parts: [{ type: "name" }, { type: "nonce" }] },
 ];

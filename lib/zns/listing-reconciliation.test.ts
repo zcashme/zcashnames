@@ -22,13 +22,15 @@ function listing(overrides: Partial<Listing> = {}): Listing {
   return {
     name: "listedname",
     price: 123,
+    pay_taddr: "u1test",
     nonce: 2,
     txid: "listtx",
     height: 110,
     signature: "listsig",
     pubkey: null,
+    pending_buy: null,
     ...overrides,
-  };
+  } as Listing;
 }
 
 test("reconcileRegistrationListing restores active listing stripped from resolve result", () => {

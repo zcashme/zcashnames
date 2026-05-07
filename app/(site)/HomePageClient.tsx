@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Hero from "@/components/landing/Hero";
 import SearchForm from "@/components/search/SearchForm";
-import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import FeedbackModal from "@/components/closedbeta/FeedbackModal";
 import HomeResultCard from "@/components/landing/HomeResultCard";
 import MarketStats from "@/components/landing/MarketStats";
@@ -25,8 +24,6 @@ import Zip321Modal from "@/components/landing/Zip321Modal";
 import type { ModalTarget } from "@/components/landing/Zip321Modal";
 import { useSearchState } from "@/components/hooks/useSearchState";
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
-import { useWaitlistVerification } from "@/components/hooks/useWaitlistVerification";
-import { VerifiedModal } from "@/components/landing/VerifiedModal";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 
@@ -66,10 +63,8 @@ const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
 export default function HomePage() {
   const { network, refresh } = useNetwork();
   const usdPerZec = useUsdPrice();
-  const [waitlistConfirmed, setWaitlistConfirmed] = useState(false);
   const [isClientMounted, setIsClientMounted] = useState(false);
   const [modalTarget, setModalTarget] = useState<ModalTarget | null>(null);
-  const hasAutoOpenedFeedback = useRef(false);
 
   const {
     input,
@@ -88,174 +83,221 @@ export default function HomePage() {
     persistPendingTransaction,
     clearPendingTransaction,
     resumeTarget,
-  } = usePendingTransaction(refreshResult);
+  } = usePendingTransaction();
 
-  const { status: verificationStatus, banner, clearBanner, closeSuccessModal } = useWaitlistVerification();
+  // Mark client as mounted after first render.
+  useEffect(() => { setIsClientMounted(true); }, []);
 
-  useEffect(() => {
-    resetSearch();
-  }, [network, resetSearch]);
+  /* ── Name resolution → UI props ────────────────────────────────────── */
 
-  useEffect(() => {
-    setIsClientMounted(true);
-  }, []);
+  function buildCardProps(result: ResolveName) {
+    if (result.status === "available") {
+      const claimCostZec = result.claimCost.zec;
+      const priceLabel = `~${claimCostZec.toFixed(6)} ZEC`;
+      const usdLabel = result.claimCost ? formatUsdEquivalent(claimCostZec, usdPerZec) : undefined;
+      return {
+        availabilityState: result.status as NameAvailabilityState,
+        priceLabel,
+        usdLabel,
+        firstBucket: result.firstBucket,
+      };
+    }
 
-  const shouldAutoOpenFeedback = network !== null && !hasAutoOpenedFeedback.current;
+    if (result.status === "reserved") {
+      const claimCostZec = result.claimCost.zec;
+      const priceLabel = `~${claimCostZec.toFixed(6)} ZEC`;
+      const usdLabel = result.claimCost ? formatUsdEquivalent(claimCostZec, usdPerZec) : undefined;
+      return {
+        availabilityState: result.status as NameAvailabilityState,
+        priceLabel,
+        usdLabel,
+        firstBucket: result.firstBucket,
+      };
+    }
 
-  useEffect(() => {
-    if (network === null || hasAutoOpenedFeedback.current) return;
-    hasAutoOpenedFeedback.current = true;
-  }, [network]);
+    if (result.status === "listed") {
+      const listingZec = result.listingPrice.zec;
+      const priceLabel = `${listingZec} ZEC`;
+      const usdLabel = formatUsdEquivalent(listingZec, usdPerZec);
+      return {
+        availabilityState: "forsale" as NameAvailabilityState,
+        priceLabel,
+        usdLabel,
+        firstBucket: result.firstBucket,
+      };
+    }
 
-  const form = network !== null ? (
-    <>
-      <SearchForm
-        value={input}
-        onChange={setInput}
-        onSubmit={handleSearch}
-        claimLoading={searching}
-      />
-      {results.length > 0 && (
-        <div className="mt-4 flex w-full max-w-4xl flex-col gap-3">
-          {results.map((item) => (
-            <HomeResultCard
-              key={item.query}
-              displayName={`${item.query}.zcash`}
-              network={network}
-              firstBucket={"firstBucket" in item ? item.firstBucket : undefined}
-              isPopularName={POPULAR_NAMES.has(item.query.toLowerCase())}
-              availabilityState={
-                item.status === "available"
-                  ? "available"
-                  : item.status === "reserved"
-                  ? "reserved"
-                  : item.status === "blocked"
-                  ? "blocked"
-                  : item.status === "listed"
-                  ? "forsale"
-                  : "unavailable"
-              }
-              priceLabel={
-                item.status === "available"
-                  ? `${item.claimCost.zec} ZEC`
-                  : item.status === "reserved"
-                  ? `${item.claimCost.zec} ZEC`
-                  : item.status === "listed"
-                  ? `${item.listingPrice.zec} ZEC`
-                  : undefined
-              }
-              usdLabel={
-                item.status === "available"
-                  ? formatUsdEquivalent(item.claimCost.zec, usdPerZec)
-                  : item.status === "reserved"
-                  ? formatUsdEquivalent(item.claimCost.zec, usdPerZec)
-                  : item.status === "listed"
-                  ? formatUsdEquivalent(item.listingPrice.zec, usdPerZec)
-                  : undefined
-              }
-              onAction={(action) => {
-                const t: ModalTarget = {
-                  name: item.query,
-                  action,
-                  network,
-                  isReserved: item.status === "reserved",
-                };
-                if (item.status === "registered" || item.status === "listed") {
-                  t.registrationAddress = item.registration.address;
-                  t.registrationNonce = item.registration.nonce;
-                  t.registrationPubkey = item.registration.pubkey ?? null;
-                }
-                if (item.status === "listed") {
-                  t.listingPriceZec = item.listingPrice.zec;
-                  t.payTaddr = item.payTaddr;
-                }
-                setModalTarget(t);
-              }}
-              onDismiss={() => removeResult(item.query)}
-            />
-          ))}
-        </div>
-      )}
-      {searchError && (
-        <p className="home-search-error rounded-xl border px-4 py-3 text-sm font-semibold">
-          {searchError}
-        </p>
-      )}
-    </>
-  ) : (
-    <WaitlistEntryForm
-      usdPerZec={usdPerZec}
-      onConfirm={() => {
-        setWaitlistConfirmed(true);
-        refresh();
-      }}
-      onReset={() => setWaitlistConfirmed(false)}
+    if (result.status === "registered") {
+      return {
+        availabilityState: "unavailable" as NameAvailabilityState,
+        firstBucket: result.firstBucket,
+      };
+    }
+
+    // blocked
+    return { availabilityState: "blocked" as NameAvailabilityState };
+  }
+
+  type NameAvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
+
+  /* ── Action dispatch ───────────────────────────────────────────────── */
+
+  function handleAction(result: ResolveName, action: Action) {
+    if (!network) return;
+
+    if (result.status === "available" || result.status === "reserved") {
+      setModalTarget({
+        name: result.query,
+        action: "claim",
+        network,
+        isReserved: result.status === "reserved",
+      });
+      return;
+    }
+
+    if (result.status === "listed") {
+      if (action === "buy") {
+        setModalTarget({
+          name: result.query,
+          action: "buy",
+          network,
+          registrationAddress: result.registration.address,
+          registrationNonce: result.registration.nonce,
+          registrationPubkey: result.registration.pubkey,
+          listingPriceZec: result.listingPrice.zec,
+        });
+      } else if (action === "delist") {
+        setModalTarget({
+          name: result.query,
+          action: "delist",
+          network,
+          registrationAddress: result.registration.address,
+          registrationNonce: result.registration.nonce,
+          registrationPubkey: result.registration.pubkey,
+        });
+      } else if (action === "release") {
+        setModalTarget({
+          name: result.query,
+          action: "release",
+          network,
+          registrationAddress: result.registration.address,
+          registrationNonce: result.registration.nonce,
+          registrationPubkey: result.registration.pubkey,
+        });
+      }
+      return;
+    }
+
+    if (result.status === "registered") {
+      if (action === "update") {
+        setModalTarget({
+          name: result.query,
+          action: "update",
+          network,
+          registrationAddress: result.registration.address,
+          registrationNonce: result.registration.nonce,
+          registrationPubkey: result.registration.pubkey,
+        });
+      } else if (action === "list") {
+        setModalTarget({
+          name: result.query,
+          action: "list",
+          network,
+          registrationAddress: result.registration.address,
+          registrationNonce: result.registration.nonce,
+          registrationPubkey: result.registration.pubkey,
+        });
+      } else if (action === "release") {
+        setModalTarget({
+          name: result.query,
+          action: "release",
+          network,
+          registrationAddress: result.registration.address,
+          registrationNonce: result.registration.nonce,
+          registrationPubkey: result.registration.pubkey,
+        });
+      }
+    }
+  }
+
+  /* ── Render ────────────────────────────────────────────────────────── */
+
+  const form = (
+    <SearchForm
+      value={input}
+      onChange={setInput}
+      onSubmit={handleSearch}
+      claimLoading={searching}
     />
   );
 
-  const successModalData =
-    verificationStatus.type === "success"
-      ? { name: verificationStatus.name, ref: verificationStatus.ref }
-      : null;
-
   return (
-    <div className="home-theme-scope">
-      {banner && (
-        <div className="relative z-20 mx-auto max-w-xl px-4 pt-2">
-          <div
-            className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm font-semibold"
-            style={{
-              background: "var(--home-error-bg, rgba(255,116,116,0.12))",
-              borderColor: "var(--home-error-border, rgba(255,116,116,0.4))",
-              color: "var(--home-error-text, #ffc0c0)",
-            }}
+    <div className="home-page">
+      {searchError && (
+        <div className="mx-auto mb-3 flex max-w-[600px] items-center gap-3 rounded-2xl px-5 py-3 text-sm font-semibold backdrop-blur-md"
+          style={{
+            background: "var(--home-result-status-negative-bg)",
+            color: "var(--home-result-status-negative-fg)",
+            border: "1px solid var(--home-result-status-negative-border)",
+          }}
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="13" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span className="flex-1">{searchError}</span>
+          <button
+            type="button"
+            onClick={resetSearch}
+            className="cursor-pointer rounded-full px-3 py-1 text-xs font-bold transition-opacity hover:opacity-70"
+            style={{ background: "transparent", border: "1.5px solid currentColor" }}
           >
-            <span>{banner}</span>
-            <button
-              type="button"
-              onClick={clearBanner}
-              className="shrink-0 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-              aria-label="Dismiss"
-            >
-              ×
-            </button>
-          </div>
+            Dismiss
+          </button>
         </div>
       )}
 
-      {verificationStatus.type === "confirming" && (
-        <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center"
-          style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
+      {results.length === 0 && !searching && (
+        <div className="mx-auto mb-4 flex max-w-[580px] items-center justify-center gap-3 rounded-2xl px-5 py-4 text-sm font-semibold backdrop-blur-md"
+          style={{
+            background: "var(--home-result-status-neutral-bg, var(--feature-card-bg))",
+            color: "var(--home-result-link-fg, var(--fg-muted))",
+            border: "1px solid var(--home-result-link-border, var(--faq-border))",
+          }}
         >
-          <div className="flex flex-col items-center gap-3">
-            <div
-              className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent"
-              style={{ color: "var(--fg-heading)" }}
-            />
-            <p className="text-sm font-medium" style={{ color: "var(--fg-heading)" }}>
-              Confirming your email…
-            </p>
-          </div>
+          <span>Enter a name above to check availability.</span>
         </div>
       )}
+
+      {results.map((result, idx) => {
+        const props = buildCardProps(result);
+        const displayName = `${result.query}.zcash`;
+        const isPopular = POPULAR_NAMES.has(result.query);
+
+        return (
+          <HomeResultCard
+            key={result.query}
+            displayName={displayName}
+            network={network ?? "testnet"}
+            {...props}
+            isPopularName={isPopular}
+            onAction={(action) => handleAction(result, action)}
+            onDismiss={() => removeResult(result.query)}
+          />
+        );
+      })}
 
       <section className="hero-stage-bg">
         <Hero
           searchForm={form}
           rightPanel={<PhoneStage embedded />}
-          formExpanded={network === null && waitlistConfirmed}
-          subtitle={
-            network !== null ? (
-              <>Powered by Zcash. Claim your name</>
-            ) : (
-              <>Be first to claim a name you can use, hold, or sell.</>
-            )
-          }
+          formExpanded={false}
+          subtitle={<>Powered by Zcash. Claim your name</>}
         />
       </section>
 
-      {network !== null && pendingHydrated && pendingTransaction && !modalTarget && (
+      {network && pendingHydrated && pendingTransaction && !modalTarget && (
         <PendingTransactionBanner
           pendingTransaction={pendingTransaction}
           onResume={() => {
@@ -268,34 +310,18 @@ export default function HomePage() {
       <MarketStats />
 
       <div className="relative z-[2] -mt-4 mb-2 flex justify-center">
-        {network !== null ? (
-          <Link
-            href={network === "testnet" ? "/explorer?env=testnet" : "/explorer"}
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--home-result-link-border)] bg-[var(--home-result-link-bg)] px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform,background-color] duration-[140ms] hover:-translate-y-px hover:bg-[var(--home-result-link-hover-bg)]"
-          >
-            <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
-              <circle cx="12" cy="12" r="4.25" stroke="currentColor" strokeWidth="1.7" />
-              <circle cx="12" cy="12" r="1.15" fill="currentColor" />
-              <path d="M12 2.4v3.2M12 18.4v3.2M2.4 12h3.2M18.4 12h3.2M5.6 5.6l2.2 2.2M16.2 16.2l2.2 2.2M18.4 5.6l-2.2 2.2M7.8 16.2l-2.2 2.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="12" cy="12" r="8.85" stroke="currentColor" strokeWidth="1.4" />
-            </svg>
-            Explorer →
-          </Link>
-        ) : (
-          <Link
-            href="/leaders"
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--home-result-link-border)] bg-transparent px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform,background-color] duration-[140ms] hover:-translate-y-px hover:bg-[var(--home-result-link-hover-bg)]"
-          >
-            <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
-              <path d="M8 21L12 17L16 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M8 21V14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M16 21V14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="12" cy="10" r="6" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M12 6.5L13.1 8.8L15.6 9.1L13.8 10.8L14.2 13.3L12 12.1L9.8 13.3L10.2 10.8L8.4 9.1L10.9 8.8L12 6.5Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
-            </svg>
-            Leaderboard →
-          </Link>
-        )}
+        <Link
+          href={network === "testnet" ? "/explorer?env=testnet" : "/explorer"}
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--home-result-link-border)] bg-[var(--home-result-link-bg)] px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform,background-color] duration-[140ms] hover:-translate-y-px hover:bg-[var(--home-result-link-hover-bg)]"
+        >
+          <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
+            <circle cx="12" cy="12" r="4.25" stroke="currentColor" strokeWidth="1.7" />
+            <circle cx="12" cy="12" r="1.15" fill="currentColor" />
+            <path d="M12 2.4v3.2M12 18.4v3.2M2.4 12h3.2M18.4 12h3.2M5.6 5.6l2.2 2.2M16.2 16.2l2.2 2.2M18.4 5.6l-2.2 2.2M7.8 16.2l-2.2 2.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="12" cy="12" r="8.85" stroke="currentColor" strokeWidth="1.4" />
+          </svg>
+          Explorer →
+        </Link>
       </div>
 
       <HowItWorks />
@@ -315,15 +341,6 @@ export default function HomePage() {
         </button>
       </div>
 
-      {isClientMounted && successModalData && (
-        <VerifiedModal
-          name={successModalData.name}
-          ref={successModalData.ref}
-          isOpen={true}
-          onClose={closeSuccessModal}
-        />
-      )}
-
       {isClientMounted && modalTarget && (
         <Zip321Modal
           target={modalTarget}
@@ -335,8 +352,8 @@ export default function HomePage() {
         />
       )}
 
-      {isClientMounted && network !== null && (
-        <FeedbackModal defaultNetwork={network} openOnMount={shouldAutoOpenFeedback} />
+      {isClientMounted && network && (
+        <FeedbackModal defaultNetwork={network} />
       )}
     </div>
   );

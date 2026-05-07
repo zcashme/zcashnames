@@ -45,12 +45,6 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(left, right);
 }
 
-export function buildBetaCookieValue(testerId: string): { value: string; expiresAt: number } {
-  const expiresAt = Math.floor(Date.now() / 1000) + COOKIE_TTL_SECONDS;
-  const signature = sign(testerId, expiresAt);
-  return { value: `${testerId}.${expiresAt}.${signature}`, expiresAt };
-}
-
 export function parseBetaCookieValue(value: string): { testerId: string; expiresAt: number } | null {
   const parts = value.split(".");
   if (parts.length < 3) return null;

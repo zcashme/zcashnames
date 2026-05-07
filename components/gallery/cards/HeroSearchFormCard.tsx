@@ -1,6 +1,5 @@
 "use client";
 
-import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import GalleryCard, { type Snippets, type ThemeName } from "@/components/gallery/GalleryCard";
 
 interface ThemeTokens {
@@ -354,7 +353,27 @@ export default function HeroSearchFormCard() {
     >
       <div className="home-theme-scope" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
         <div className="w-full max-w-2xl sm:max-w-3xl xl:max-w-4xl self-center flex flex-col items-center gap-3">
-          <WaitlistEntryForm usdPerZec={null} onConfirm={() => {}} onReset={() => {}} />
+          {/* WaitlistEntryForm removed in open beta — showing SearchForm shell instead */}
+          <div style={{ width: "100%", maxWidth: "100%" }}>
+            <div
+              style={{
+                background: "var(--color-raised)",
+                border: "1.5px solid var(--faq-border)",
+                borderRadius: "999px",
+                padding: "12px 20px",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+              }}
+            >
+              <span style={{ color: "var(--fg-muted)", fontSize: "clamp(1.05rem, 2.1vw, 1.5rem)", fontWeight: 700 }}>
+                yourname<span style={{ opacity: 0.5 }}>.zcash</span>
+              </span>
+              <span style={{ marginLeft: "auto", padding: "4px 12px", borderRadius: "999px", background: "var(--feature-chip-bg)", border: "1px solid var(--feature-chip-border-color)", fontSize: "0.78rem", fontWeight: 700, color: "var(--home-result-link-fg)" }}>
+                Search
+              </span>
+            </div>
+          </div>
           <p
             className="type-section-subtitle text-center"
             style={{ color: "var(--fg-body)", letterSpacing: "-0.01em" }}

@@ -45,56 +45,6 @@ export async function fetchClaimCost(
   }
 }
 
-/* ── Signing payloads (instance-dependent: needs registry address) ──── */
-
-export function getSigningPayload(
-  action: "claim" | "buy" | "update" | "list" | "delist" | "release",
-  name: string,
-  params: { address?: string; priceZats?: number; nonce?: number; payTaddr?: string },
-  network: Network = "testnet",
-): string {
-  const zns = getZns(network);
-  try {
-    switch (action) {
-      case "claim":
-        return zns.prepareClaim(name, params.address ?? "", 0).payload;
-      case "buy":
-        return zns.prepareBuy(name, params.address ?? "", 0).payload;
-      case "update":
-        return zns.prepareUpdate(name, params.address ?? "", params.nonce ?? 0).payload;
-      case "list":
-        return zns.prepareList(name, params.priceZats ?? 0, params.payTaddr ?? "", params.nonce ?? 0).payload;
-      case "delist":
-        return zns.prepareDelist(name, params.nonce ?? 0).payload;
-      case "release":
-        return zns.prepareRelease(name, params.nonce ?? 0).payload;
-    }
-  } catch {
-    return buildRawPayload(action, name, params);
-  }
-}
-
-function buildRawPayload(
-  action: "claim" | "buy" | "update" | "list" | "delist" | "release",
-  name: string,
-  params: { address?: string; priceZats?: number; nonce?: number; payTaddr?: string },
-): string {
-  switch (action) {
-    case "claim":
-      return `CLAIM:${name}:${params.address ?? ""}`;
-    case "buy":
-      return `BUY:${name}:${params.address ?? ""}`;
-    case "update":
-      return `UPDATE:${name}:${params.address ?? ""}:${params.nonce ?? ""}`;
-    case "list":
-      return `LIST:${name}:${params.priceZats ?? ""}:${params.payTaddr ?? ""}:${params.nonce ?? ""}`;
-    case "delist":
-      return `DELIST:${name}:${params.nonce ?? ""}`;
-    case "release":
-      return `RELEASE:${name}:${params.nonce ?? ""}`;
-  }
-}
-
 /* ── Address validation (instance-dependent: uses SDK bech32m check) ── */
 
 export type AddressStatus = "unified" | "sapling" | "transparent" | "viewkey" | "tex" | "invalid";
@@ -159,4 +109,31 @@ export function formatUsdEquivalent(
   if (usdPerZec == null) return "";
   const usd = zecAmount * usdPerZec;
   return `$${usd.toFixed(2)} USD`;
+}
+
+/**
+ * Build the raw signing payload string for an action (no signature attached).
+ * Uses the SDK under the hood. Throws on invalid inputs.
+ */
+export function buildSigningPayload(
+  action: "claim" | "buy" | "update" | "list" | "delist" | "release",
+  name: string,
+  params: { address?: string; priceZats?: number; nonce?: number; payTaddr?: string },
+  network: Network = "testnet",
+): string {
+  const zns = getZns(network);
+  switch (action) {
+    case "claim":
+      return zns.prepareClaim(name, params.address ?? "", 0).payload;
+    case "buy":
+      return zns.prepareBuy(name, params.address ?? "", 0).payload;
+    case "update":
+      return zns.prepareUpdate(name, params.address ?? "", params.nonce ?? 0).payload;
+    case "list":
+      return zns.prepareList(name, params.priceZats ?? 0, params.payTaddr ?? "", params.nonce ?? 0).payload;
+    case "delist":
+      return zns.prepareDelist(name, params.nonce ?? 0).payload;
+    case "release":
+      return zns.prepareRelease(name, params.nonce ?? 0).payload;
+  }
 }
