@@ -64,7 +64,7 @@ const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
 });
 
 export default function HomePage() {
-  const { network, networkPassword, refresh } = useNetwork();
+  const { network, refresh } = useNetwork();
   const usdPerZec = useUsdPrice();
   const [waitlistConfirmed, setWaitlistConfirmed] = useState(false);
   const [isClientMounted, setIsClientMounted] = useState(false);
@@ -158,7 +158,6 @@ export default function HomePage() {
                   name: item.query,
                   action,
                   network,
-                  networkPassword,
                   isReserved: item.status === "reserved",
                 };
                 if (item.status === "registered" || item.status === "listed") {
@@ -260,7 +259,7 @@ export default function HomePage() {
         <PendingTransactionBanner
           pendingTransaction={pendingTransaction}
           onResume={() => {
-            if (resumeTarget) setModalTarget({ ...resumeTarget, networkPassword });
+            if (resumeTarget) setModalTarget({ ...resumeTarget });
           }}
           onDismiss={clearPendingTransaction}
         />

@@ -24,8 +24,6 @@ export type NetworkData =
 export interface NetworkContextValue {
   network: Network | null;
   setNetwork: (n: Network | null) => void;
-  networkPassword: string;
-  setNetworkPassword: (v: string) => void;
   data: NetworkData | null;
   loading: boolean;
   refresh: () => void;
@@ -34,8 +32,6 @@ export interface NetworkContextValue {
 export const NetworkContext = createContext<NetworkContextValue>({
   network: null,
   setNetwork: () => {},
-  networkPassword: "",
-  setNetworkPassword: () => {},
   data: null,
   loading: true,
   refresh: () => {},

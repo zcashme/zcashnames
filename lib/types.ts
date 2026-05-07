@@ -52,7 +52,6 @@ export interface ModalTarget {
   /** Transparent address where the seller receives payment (required for LIST). */
   payTaddr?: string;
   network: Network;
-  networkPassword: string;
   isReserved?: boolean;
 }
 
@@ -60,7 +59,7 @@ export type PendingTransactionPhase = "payment" | "scanning" | "fund";
 export type PendingTransactionScanState = "loading" | "not_detected" | "in_mempool" | "being_mined" | "mined";
 
 export interface PendingTransactionState {
-  target: Omit<ModalTarget, "networkPassword">;
+  target: ModalTarget;
   phase: PendingTransactionPhase;
   addressInput: string;
   priceInput: string;
@@ -72,10 +71,10 @@ export interface PendingTransactionState {
 
 /** A pending buy — created when a buyer sends a BUY memo and awaiting transparent funding tx. */
 export interface PendingBuy {
-  buyerUa: string;
+  buyer_ua: string;
   price: number;
-  claimHeight: number;
-  expiresAt: number;
+  claim_height: number;
+  expires_at: number;
   txid: string;
 }
 

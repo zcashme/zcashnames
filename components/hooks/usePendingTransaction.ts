@@ -113,7 +113,6 @@ export function usePendingTransaction(onSuccess?: (name: string) => void) {
     if (!pendingTransaction) return null;
     return {
       ...pendingTransaction.target,
-      networkPassword: "",
     };
   }, [pendingTransaction]);
 

@@ -30,6 +30,11 @@ export async function signOutBetaTester(): Promise<{ ok: true }> {
   return { ok: true };
 }
 
+export async function switchToNetwork(network: Network): Promise<void> {
+  await setStageCookie(network);
+}
+
+
 async function setTesterCookie(testerId: string) {
   const { value, expiresAt } = buildBetaCookieValue(testerId);
   const store = await cookies();
@@ -38,14 +43,9 @@ async function setTesterCookie(testerId: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Network access — checked from StatusToggle. Accepts EITHER:
-//   1. The plaintext network password (MAINNET_PASSWORD/TESTNET_PASSWORD env)
-//      → returns { ok: true, attributedTo: null }  (anonymous tester)
-//   2. A beta tester's invite code
-//      → sets the zn_beta cookie, returns { ok: true, attributedTo: name }
-//
-// Either path also stamps the zn_beta_stage cookie so the standalone feedback
-// window knows which stage to log against. One code unlocks BOTH networks.
+// Network access — beta tester invite code validation.
+// Accepts a beta tester's invite code, sets the zn_beta cookie and
+// zn_beta_stage cookie, returns { ok: true, attributedTo: name }.
 // ---------------------------------------------------------------------------
 
 export type NetworkAccessResult =
@@ -59,7 +59,7 @@ export async function verifyNetworkAccess(
   const trimmed = (password ?? "").trim();
   if (!trimmed) return { ok: false, error: "Password required." };
 
-  // 1. Beta invite code path (sets attribution cookie).
+  // Beta invite code path (sets attribution cookie).
   const tester = await findTesterByCode(trimmed);
   if (tester) {
     await setTesterCookie(tester.id);
@@ -77,15 +77,7 @@ export async function verifyNetworkAccess(
     return { ok: true, attributedTo: tester.displayName };
   }
 
-  // 2. Plain network password path (anonymous).
-  const expected =
-    network === "mainnet" ? process.env.MAINNET_PASSWORD : process.env.TESTNET_PASSWORD;
-  if (expected && trimmed === expected) {
-    await setStageCookie(network);
-    return { ok: true, attributedTo: null };
-  }
-
-  return { ok: false, error: "Incorrect password." };
+  return { ok: false, error: "Invite code not recognized." };
 }
 
 /** Read the current tester's display name from the cookie, or null. */

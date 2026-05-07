@@ -89,7 +89,7 @@ export default function ExplorerShell({
   nameEvents,
 }: ExplorerShellProps) {
   const router = useRouter();
-  const { networkPassword } = useNetwork();
+  
   const usdPerZec = useUsdPrice();
   const [isPending, startTransition] = useTransition();
   const [optimisticEnv, setOptimisticEnv] = useOptimistic(environment);
@@ -284,7 +284,6 @@ export default function ExplorerShell({
       name: nameResult.query,
       action,
       network: detailNetwork,
-      networkPassword,
       isReserved: nameResult.status === "reserved",
     };
 
@@ -380,7 +379,7 @@ export default function ExplorerShell({
         <PendingTransactionBanner
           pendingTransaction={pendingTransaction}
           onResume={() => {
-            if (resumeTarget) setModalTarget({ ...resumeTarget, networkPassword });
+            if (resumeTarget) setModalTarget({ ...resumeTarget });
           }}
           onDismiss={clearPendingTransaction}
         />

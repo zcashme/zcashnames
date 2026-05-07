@@ -158,7 +158,6 @@ export default function Zip321Modal({
 
     payTaddr,
     network,
-    networkPassword,
     isReserved,
   } = target;
   const { OTP_SIGNIN_ADDR, OTP_AMOUNT, OTP_MAX_ATTEMPTS } =
@@ -606,7 +605,7 @@ export default function Zip321Modal({
     // claim / buy → call builder directly
     setInputLoading(true);
     try {
-      const base = { name, network, networkPassword };
+      const base = { name, network };
       const address = addressInput.trim();
       const result = action === "buy"
         ? await buildBuy({ ...base, address, listingPriceZats: listingPriceZec != null ? Math.round(listingPriceZec * 1e8) : undefined })
@@ -642,7 +641,6 @@ export default function Zip321Modal({
       const base = {
         name,
         network,
-        networkPassword,
         otpProof: otpResult.proof,
       };
 
@@ -738,7 +736,6 @@ export default function Zip321Modal({
       const base = {
         name,
         network,
-        networkPassword,
         sovereignSig: sig,
         sovereignPub: pub || undefined,
       };
@@ -1704,6 +1701,12 @@ export default function Zip321Modal({
               <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
                 Send exact amount and memo to address to complete transaction.
               </p>
+
+            {action === "list" && paymentUri && (
+              <p className="text-xs mt-1" style={{ color: "var(--fg-muted)" }}>
+                Listing commission: {(() => { const p = parseZip321Uri(paymentUri); return p.amount ? `${p.amount} ZEC` : "0.00001 ZEC"; })()} (10% of minimum pricing tier)
+              </p>
+            )}
             </div>
 
             {paymentUri && (

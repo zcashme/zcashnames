@@ -28,26 +28,14 @@ type ActionResult =
   | { ok: true; uri: string }
   | { ok: false; error: string };
 
-const NETWORK_PASSWORDS: Record<Network, string | undefined> = {
-  testnet: process.env.TESTNET_PASSWORD,
-  mainnet: process.env.MAINNET_PASSWORD,
-};
-
-function verifyNetworkPassword(network: Network, password: string | undefined): boolean {
-  const expected = NETWORK_PASSWORDS[network];
-  if (!expected) return false;
-  return password === expected;
-}
-
-async function verifyNetworkAccess(network: Network, password: string | undefined): Promise<boolean> {
-  if (verifyNetworkPassword(network, password)) return true;
+async function verifyNetworkAccess(network: Network): Promise<boolean> {
   const cookieStage = await readCurrentStage();
   return cookieStage === network;
 }
 
-async function requireNetworkAccess(network: Network, password: string | undefined): Promise<ActionResult | undefined> {
-  if (await verifyNetworkAccess(network, password)) return undefined;
-  return { ok: false, error: "Invalid network password." };
+async function requireNetworkAccess(network: Network): Promise<ActionResult | undefined> {
+  if (await verifyNetworkAccess(network)) return undefined;
+  return { ok: false, error: "Network access required." };
 }
 
 function requireUnifiedAddress(address: string | undefined): ActionResult | { address: string } {
@@ -99,7 +87,6 @@ export interface ClaimInput {
   name: string;
   address: string;
   network: Network;
-  networkPassword?: string;
   unlockProof?: string;
   sovereignSig?: string;
   sovereignPub?: string;
@@ -109,7 +96,7 @@ export async function buildClaim(input: ClaimInput): Promise<ActionResult> {
   const name = normalizeUsername(input.name);
   if (!isValidUsername(name)) return { ok: false, error: "Invalid name." };
 
-  const denied = await requireNetworkAccess(input.network, input.networkPassword);
+  const denied = await requireNetworkAccess(input.network);
   if (denied) return denied;
 
   const addrResult = requireUnifiedAddress(input.address);
@@ -145,7 +132,6 @@ export interface BuyInput {
   name: string;
   address: string;
   network: Network;
-  networkPassword?: string;
   /** Listing price in zats, for inclusion in the BUY memo. */
   listingPriceZats?: number;
   sovereignSig?: string;
@@ -156,7 +142,7 @@ export async function buildBuy(input: BuyInput): Promise<ActionResult> {
   const name = normalizeUsername(input.name);
   if (!isValidUsername(name)) return { ok: false, error: "Invalid name." };
 
-  const denied = await requireNetworkAccess(input.network, input.networkPassword);
+  const denied = await requireNetworkAccess(input.network);
   if (denied) return denied;
 
   const addrResult = requireUnifiedAddress(input.address);
@@ -182,7 +168,6 @@ export interface UpdateInput {
   name: string;
   address: string;
   network: Network;
-  networkPassword?: string;
   otpProof?: string;
   sovereignSig?: string;
   sovereignPub?: string;
@@ -192,7 +177,7 @@ export async function buildUpdate(input: UpdateInput): Promise<ActionResult> {
   const name = normalizeUsername(input.name);
   if (!isValidUsername(name)) return { ok: false, error: "Invalid name." };
 
-  const denied = await requireNetworkAccess(input.network, input.networkPassword);
+  const denied = await requireNetworkAccess(input.network);
   if (denied) return denied;
 
   const zns = getZns(input.network);
@@ -234,7 +219,6 @@ export interface ListInput {
   /** Transparent address where the seller will receive the buyer's payment. */
   payTaddr: string;
   network: Network;
-  networkPassword?: string;
   otpProof?: string;
   sovereignSig?: string;
   sovereignPub?: string;
@@ -253,7 +237,7 @@ export async function buildList(input: ListInput): Promise<ActionResult> {
     return { ok: false, error: "Enter a valid transparent Zcash address (t1, t3, tm, or t2)." };
   }
 
-  const denied = await requireNetworkAccess(input.network, input.networkPassword);
+  const denied = await requireNetworkAccess(input.network);
   if (denied) return denied;
 
   const zns = getZns(input.network);
@@ -287,7 +271,6 @@ export async function buildList(input: ListInput): Promise<ActionResult> {
 export interface DelistInput {
   name: string;
   network: Network;
-  networkPassword?: string;
   otpProof?: string;
   sovereignSig?: string;
   sovereignPub?: string;
@@ -297,7 +280,7 @@ export async function buildDelist(input: DelistInput): Promise<ActionResult> {
   const name = normalizeUsername(input.name);
   if (!isValidUsername(name)) return { ok: false, error: "Invalid name." };
 
-  const denied = await requireNetworkAccess(input.network, input.networkPassword);
+  const denied = await requireNetworkAccess(input.network);
   if (denied) return denied;
 
   const zns = getZns(input.network);
@@ -331,7 +314,6 @@ export async function buildDelist(input: DelistInput): Promise<ActionResult> {
 export interface ReleaseInput {
   name: string;
   network: Network;
-  networkPassword?: string;
   otpProof?: string;
   sovereignSig?: string;
   sovereignPub?: string;
@@ -341,7 +323,7 @@ export async function buildRelease(input: ReleaseInput): Promise<ActionResult> {
   const name = normalizeUsername(input.name);
   if (!isValidUsername(name)) return { ok: false, error: "Invalid name." };
 
-  const denied = await requireNetworkAccess(input.network, input.networkPassword);
+  const denied = await requireNetworkAccess(input.network);
   if (denied) return denied;
 
   const zns = getZns(input.network);
