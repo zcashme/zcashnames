@@ -11,7 +11,7 @@ import FAQ from "@/components/landing/FAQ";
 import HowItWorks from "@/components/landing/HowItWorks";
 import Link from "next/link";
 import { useNetwork } from "@/components/hooks/useNetwork";
-import { formatUsdEquivalent } from "@/lib/zns/client";
+import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 
 const POPULAR_NAMES = new Set([
   "adam", "alex", "alice", "anna", "bob", "chris", "david", "emma", "ethan",
@@ -19,11 +19,9 @@ const POPULAR_NAMES = new Set([
   "olivia", "satoshi",
 ]);
 
-import type { ResolveName, Action } from "@/lib/types";
+import type { Action, ModalTarget } from "@/lib/types";
 import Zip321Modal from "@/components/landing/Zip321Modal";
-import type { ModalTarget } from "@/components/landing/Zip321Modal";
 import { useSearchState } from "@/components/hooks/useSearchState";
-import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 
@@ -76,6 +74,8 @@ export default function HomePage() {
     refreshResult,
     removeResult,
     reset: resetSearch,
+    buildCardProps,
+    getModalTarget,
   } = useSearchState(network ?? "testnet");
   const {
     hydrated: pendingHydrated,
@@ -87,138 +87,6 @@ export default function HomePage() {
 
   // Mark client as mounted after first render.
   useEffect(() => { setIsClientMounted(true); }, []);
-
-  /* ── Name resolution → UI props ────────────────────────────────────── */
-
-  function buildCardProps(result: ResolveName) {
-    if (result.status === "available") {
-      const claimCostZec = result.claimCost.zec;
-      const priceLabel = `~${claimCostZec.toFixed(6)} ZEC`;
-      const usdLabel = result.claimCost ? formatUsdEquivalent(claimCostZec, usdPerZec) : undefined;
-      return {
-        availabilityState: result.status as NameAvailabilityState,
-        priceLabel,
-        usdLabel,
-        firstBucket: result.firstBucket,
-      };
-    }
-
-    if (result.status === "reserved") {
-      const claimCostZec = result.claimCost.zec;
-      const priceLabel = `~${claimCostZec.toFixed(6)} ZEC`;
-      const usdLabel = result.claimCost ? formatUsdEquivalent(claimCostZec, usdPerZec) : undefined;
-      return {
-        availabilityState: result.status as NameAvailabilityState,
-        priceLabel,
-        usdLabel,
-        firstBucket: result.firstBucket,
-      };
-    }
-
-    if (result.status === "listed") {
-      const listingZec = result.listingPrice.zec;
-      const priceLabel = `${listingZec} ZEC`;
-      const usdLabel = formatUsdEquivalent(listingZec, usdPerZec);
-      return {
-        availabilityState: "forsale" as NameAvailabilityState,
-        priceLabel,
-        usdLabel,
-        firstBucket: result.firstBucket,
-      };
-    }
-
-    if (result.status === "registered") {
-      return {
-        availabilityState: "unavailable" as NameAvailabilityState,
-        firstBucket: result.firstBucket,
-      };
-    }
-
-    // blocked
-    return { availabilityState: "blocked" as NameAvailabilityState };
-  }
-
-  type NameAvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
-
-  /* ── Action dispatch ───────────────────────────────────────────────── */
-
-  function handleAction(result: ResolveName, action: Action) {
-    if (!network) return;
-
-    if (result.status === "available" || result.status === "reserved") {
-      setModalTarget({
-        name: result.query,
-        action: "claim",
-        network,
-        isReserved: result.status === "reserved",
-      });
-      return;
-    }
-
-    if (result.status === "listed") {
-      if (action === "buy") {
-        setModalTarget({
-          name: result.query,
-          action: "buy",
-          network,
-          registrationAddress: result.registration.address,
-          registrationNonce: result.registration.nonce,
-          registrationPubkey: result.registration.pubkey,
-          listingPriceZec: result.listingPrice.zec,
-        });
-      } else if (action === "delist") {
-        setModalTarget({
-          name: result.query,
-          action: "delist",
-          network,
-          registrationAddress: result.registration.address,
-          registrationNonce: result.registration.nonce,
-          registrationPubkey: result.registration.pubkey,
-        });
-      } else if (action === "release") {
-        setModalTarget({
-          name: result.query,
-          action: "release",
-          network,
-          registrationAddress: result.registration.address,
-          registrationNonce: result.registration.nonce,
-          registrationPubkey: result.registration.pubkey,
-        });
-      }
-      return;
-    }
-
-    if (result.status === "registered") {
-      if (action === "update") {
-        setModalTarget({
-          name: result.query,
-          action: "update",
-          network,
-          registrationAddress: result.registration.address,
-          registrationNonce: result.registration.nonce,
-          registrationPubkey: result.registration.pubkey,
-        });
-      } else if (action === "list") {
-        setModalTarget({
-          name: result.query,
-          action: "list",
-          network,
-          registrationAddress: result.registration.address,
-          registrationNonce: result.registration.nonce,
-          registrationPubkey: result.registration.pubkey,
-        });
-      } else if (action === "release") {
-        setModalTarget({
-          name: result.query,
-          action: "release",
-          network,
-          registrationAddress: result.registration.address,
-          registrationNonce: result.registration.nonce,
-          registrationPubkey: result.registration.pubkey,
-        });
-      }
-    }
-  }
 
   /* ── Render ────────────────────────────────────────────────────────── */
 
@@ -270,7 +138,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {results.map((result, idx) => {
+      {results.map((result) => {
         const props = buildCardProps(result);
         const displayName = `${result.query}.zcash`;
         const isPopular = POPULAR_NAMES.has(result.query);
@@ -282,7 +150,10 @@ export default function HomePage() {
             network={network ?? "testnet"}
             {...props}
             isPopularName={isPopular}
-            onAction={(action) => handleAction(result, action)}
+            onAction={(action) => {
+              const target = getModalTarget(result, action);
+              if (target) setModalTarget(target);
+            }}
             onDismiss={() => removeResult(result.query)}
           />
         );

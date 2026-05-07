@@ -1,10 +1,19 @@
 "use server";
 
-import { getZns, registrationStatus, normalizeUsername, isValidUsername, zatsToZec, type Network, type Registration, type Listing, type EventsFilter } from "@/lib/zns/client";
+import {
+  getZns,
+  registrationStatus,
+  normalizeUsername,
+  isValidUsername,
+  zatsToZec,
+  type Network,
+  type Registration,
+  type Listing,
+  type EventsFilter,
+} from "@/lib/zns/client";
 
 import { getReservedName } from "@/lib/zns/reserved";
-import { getListingMap, reconcileRegistrationListing } from "@/lib/zns/listing-reconciliation";
-import type { Action, ResolveName, PendingBuy } from "@/lib/types";
+import type { Action, ResolveName } from "@/lib/types";
 
 const FIRST_BUCKET_SIZE = 100;
 
@@ -12,24 +21,17 @@ function toFirstBucket(ordinal: number): number {
   return Math.max(FIRST_BUCKET_SIZE, Math.ceil(ordinal / FIRST_BUCKET_SIZE) * FIRST_BUCKET_SIZE);
 }
 
-async function findActiveListing(name: string, network: Network): Promise<Listing | null> {
-  try {
-    const { listings } = await getZns(network).listings();
-    return listings.find((listing) => listing.name === name) ?? null;
-  } catch {
-    return null;
-  }
-}
-
 async function getClaimOrdinal(name: string, network: Network): Promise<number | null> {
   const zns = getZns(network);
+
+  // SDK uses snake_case internally for filter params (matches API)
   const byName = await zns.events({ name, action: "CLAIM", limit: 1 });
   const claim = byName.events[0];
   if (!claim) return null;
 
   const [allClaims, claimsAfterBlock] = await Promise.all([
     zns.events({ action: "CLAIM", limit: 1 }),
-    zns.events({ action: "CLAIM", since_height: claim.height, limit: 1 }),
+    zns.events({ action: "CLAIM", sinceHeight: claim.height, limit: 1 }),
   ]);
 
   if (allClaims.total <= 0) return null;
@@ -79,23 +81,11 @@ async function getFirstBucketForClaim(name: string, network: Network): Promise<n
 
 export async function getCurrentRegistrations(network: Network = "testnet"): Promise<Registration[]> {
   try {
-    const zns = getZns(network);
-    const [registrations, listingsMap] = await Promise.all([
-      zns.listAllRegistrations(),
-      zns.listings().then((r) => getListingMap(r.listings)).catch(() => new Map()),
-    ]);
-
-    return registrations
-      .map((reg) => reconcileRegistrationListing(reg, listingsMap))
-      .sort((a, b) => b.height - a.height || a.name.localeCompare(b.name));
+    const registrations = await getZns(network).listAllRegistrations();
+    return [...registrations].sort((a, b) => b.height - a.height || a.name.localeCompare(b.name));
   } catch {
     return [];
   }
-}
-
-function toPendingBuy(listing: Listing): PendingBuy | undefined {
-  const pb = (listing as Listing & { pending_buy?: PendingBuy | null }).pending_buy;
-  return pb ?? undefined;
 }
 
 export async function resolveName(
@@ -109,7 +99,7 @@ export async function resolveName(
   }
 
   const zns = getZns(network);
-  let registration = await zns.resolveName(normalized);
+  const registration = await zns.resolveName(normalized);
   const nameStatus = registrationStatus(registration);
 
   if (nameStatus === "available") {
@@ -146,32 +136,40 @@ export async function resolveName(
     };
   }
 
+  // If registration exists but listing is null, check if it's actually listed
+  let regWithListing: Registration | null = registration;
   if (registration && !registration.listing) {
-    const listing = await findActiveListing(normalized, network);
-    if (listing) registration = { ...registration, listing };
+    const { listings } = await zns.listings();
+    const listing = listings.find((l) => l.name === normalized);
+    if (listing) {
+      regWithListing = {
+        ...registration,
+        listing,
+      };
+    }
   }
 
   const reg = {
-    name: registration!.name,
-    address: registration!.address,
-    txid: registration!.txid,
-    height: registration!.height,
-    nonce: registration!.nonce,
-    pubkey: registration!.pubkey ?? null,
+    name: regWithListing!.name,
+    address: regWithListing!.address,
+    txid: regWithListing!.txid,
+    height: regWithListing!.height,
+    nonce: regWithListing!.nonce,
+    pubkey: regWithListing!.pubkey ?? null,
   };
 
-  if (registration!.listing) {
+  if (regWithListing!.listing) {
     const firstBucket = await getFirstBucketForClaim(normalized, network);
     return {
       status: "listed",
       query: normalized,
       registration: reg,
       listingPrice: {
-        zats: registration!.listing!.price,
-        zec: zatsToZec(registration!.listing!.price),
+        zats: regWithListing!.listing!.price,
+        zec: zatsToZec(regWithListing!.listing!.price),
       },
-      payTaddr: registration!.listing.pay_taddr,
-      pendingBuy: toPendingBuy(registration!.listing),
+      payTaddr: regWithListing!.listing.payTaddr,
+      pendingBuy: regWithListing!.listing.pendingBuy,
       firstBucket: firstBucket ?? undefined,
     };
   }
@@ -234,7 +232,7 @@ export async function getHomeStats(network: Network = "testnet"): Promise<{ clai
       claimed: s.registered,
       forSale: s.listed,
       verifiedOnZcashMe: 0,
-      syncedHeight: s.synced_height,
+      syncedHeight: s.syncedHeight,
       uivk: s.uivk,
     };
   } catch {
@@ -262,6 +260,7 @@ export async function getEvents(
   network: Network = "testnet",
 ) {
   try {
+    // SDK handles snake_case conversion internally
     return await getZns(network).events(params);
   } catch {
     return { events: [], total: 0 };

@@ -72,10 +72,10 @@ export interface PendingTransactionState {
 
 /** A pending buy — created when a buyer sends a BUY memo and awaiting transparent funding tx. */
 export interface PendingBuy {
-  buyer_ua: string;
+  buyer: string;
   price: number;
-  claim_height: number;
-  expires_at: number;
+  claimHeight: number;
+  expiresAt: number;
   txid: string;
 }
 

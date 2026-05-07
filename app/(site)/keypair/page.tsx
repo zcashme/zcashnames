@@ -4,8 +4,8 @@ import { getPublicKeyAsync, signAsync } from "@noble/ed25519";
 import { Suspense, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import { validatePayload, payloadBorderStyle, payloadMessageColor } from "@/lib/zns/payload";
-import type { PayloadValidation } from "@/lib/zns/payload";
+import { getZns } from "@/lib/zns/client";
+import type { PayloadValidationResult } from "zcashname-sdk";
 import { useCopy } from "@/components/hooks/useCopy";
 
 function bytesToBase64(bytes: ArrayBuffer | Uint8Array): string {
@@ -63,7 +63,10 @@ function KeypairPageInner() {
   const [generatedPrivateKeySaved, setGeneratedPrivateKeySaved] = useState(false);
 
   const privkeyB64 = seed ? bytesToBase64(seed) : "";
-  const payloadValidation = useMemo(() => validatePayload(payload), [payload]);
+  const payloadValidation = useMemo((): PayloadValidationResult => {
+    if (!payload.trim()) return { valid: false, action: "", canonicalAction: null, message: "No payload yet. Paste the payload from the signing modal.", level: "invalid" };
+    return getZns("testnet").validatePayload(payload);
+  }, [payload]);
   const isGeneratedKey = tab === "generate" && !!seed && !!pubkeyB64;
   const isImportedKey = tab === "import" && !!seed && !!pubkeyB64 && !!importPrivB64.trim() && !importPrivError;
   const hasActiveKey = isGeneratedKey || isImportedKey;
@@ -199,8 +202,18 @@ function KeypairPageInner() {
     setGeneratedPrivateKeySaved(true);
   }
 
-  const borderStyle = (v: PayloadValidation) => payloadBorderStyle(v.level);
-  const msgColor = (v: PayloadValidation) => payloadMessageColor(v.level);
+  const borderStyle = (v: PayloadValidationResult) => {
+    if (!payload.trim()) return "1px solid var(--border-muted)";
+    if (v.valid) return "1px solid var(--color-accent-green)";
+    if (v.level === "unrecognized") return "1px solid #ca8a04";
+    return "1px solid var(--accent-red, #e05252)";
+  };
+  const msgColor = (v: PayloadValidationResult) => {
+    if (!payload.trim()) return "var(--fg-muted)";
+    if (v.valid) return "var(--color-accent-green)";
+    if (v.level === "unrecognized") return "#ca8a04";
+    return "var(--accent-red, #e05252)";
+  };
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-10">

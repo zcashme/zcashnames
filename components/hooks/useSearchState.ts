@@ -2,23 +2,33 @@
 
 import { useState, useRef, useCallback } from "react";
 import { resolveName } from "@/lib/zns/resolve";
-import { normalizeUsername, isValidUsername } from "@/lib/zns/client";
-import type { ResolveName } from "@/lib/types";
-import type { Network } from "@/lib/zns/client";
+import { normalizeUsername, isValidUsername, formatUsdEquivalent, type Network } from "@/lib/zns/client";
+import type { ResolveName, Action, ModalTarget } from "@/lib/types";
 
-interface SearchState {
+export type NameAvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
+
+interface CardProps {
+  availabilityState: NameAvailabilityState;
+  priceLabel?: string;
+  usdLabel?: string;
+  firstBucket?: number;
+}
+
+interface UseSearchStateReturn {
+  // State
   input: string;
   results: ResolveName[];
   searching: boolean;
   searchError: string | null;
-}
-
-interface UseSearchStateReturn extends SearchState {
   setInput: (value: string) => void;
+  // Actions
   handleSearch: (nameValue: string) => Promise<void>;
   refreshResult: (name: string) => Promise<void>;
   removeResult: (query: string) => void;
   reset: () => void;
+  // Domain helpers
+  buildCardProps: (result: ResolveName) => CardProps;
+  getModalTarget: (result: ResolveName, action: Action) => ModalTarget | null;
 }
 
 export function useSearchState(network: Network): UseSearchStateReturn {
@@ -95,6 +105,93 @@ export function useSearchState(network: Network): UseSearchStateReturn {
     setResults((prev) => prev.filter((item) => item.query !== query));
   }, []);
 
+  // ── Domain helpers ────────────────────────────────────────────────────────
+
+  function buildCardProps(result: ResolveName): CardProps {
+    switch (result.status) {
+      case "available":
+      case "reserved": {
+        const zec = result.claimCost.zec;
+        return {
+          availabilityState: result.status,
+          priceLabel: `~${zec.toFixed(6)} ZEC`,
+          usdLabel: formatUsdEquivalent(zec, null),
+          firstBucket: result.firstBucket,
+        };
+      }
+      case "listed":
+        return {
+          availabilityState: "forsale",
+          priceLabel: `${result.listingPrice.zec} ZEC`,
+          usdLabel: formatUsdEquivalent(result.listingPrice.zec, null),
+          firstBucket: result.firstBucket,
+        };
+      case "registered":
+        return {
+          availabilityState: "unavailable",
+          firstBucket: result.firstBucket,
+        };
+      case "blocked":
+        return { availabilityState: "blocked" };
+    }
+  }
+
+  function getModalTarget(result: ResolveName, action: Action): ModalTarget | null {
+    const hasRegistration = "registration" in result;
+    const base = {
+      name: result.query,
+      network,
+      registrationAddress: hasRegistration ? result.registration.address : undefined,
+      registrationNonce: hasRegistration ? result.registration.nonce : undefined,
+      registrationPubkey: hasRegistration ? result.registration.pubkey : undefined,
+    };
+
+    switch (result.status) {
+      case "available":
+        if (action === "claim") {
+          return { ...base, action: "claim" };
+        }
+        return null;
+
+      case "reserved":
+        if (action === "claim") {
+          return { ...base, action: "claim", isReserved: true };
+        }
+        return null;
+
+      case "listed":
+        switch (action) {
+          case "buy":
+            return {
+              ...base,
+              action: "buy",
+              listingPriceZec: result.listingPrice.zec,
+            };
+          case "delist":
+            return { ...base, action: "delist" };
+          case "release":
+            return { ...base, action: "release" };
+          default:
+            return null;
+        }
+
+      case "registered":
+        switch (action) {
+          case "update":
+            return { ...base, action: "update" };
+          case "list":
+            return { ...base, action: "list" };
+          case "release":
+            return { ...base, action: "release" };
+          default:
+            return null;
+        }
+
+      case "blocked":
+        return null;
+    }
+  }
+
   return {
     input,
     results,
@@ -105,5 +202,7 @@ export function useSearchState(network: Network): UseSearchStateReturn {
     refreshResult,
     removeResult,
     reset,
+    buildCardProps,
+    getModalTarget,
   };
 }

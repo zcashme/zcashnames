@@ -212,13 +212,13 @@ export default function ExplorerNameDetail({
                     Buyer
                   </span>
                   <span className="min-w-0 flex-1 font-mono text-fg-muted break-all">
-                    {listed.pendingBuy.buyer_ua}
+                    {listed.pendingBuy.buyer}
                   </span>
                   <CopyIconButton
-                    onClick={() => copyValue(listed.pendingBuy!.buyer_ua)}
+                    onClick={() => copyValue(listed.pendingBuy!.buyer)}
                     ariaLabel="Copy buyer address"
-                    title={copiedValue === listed.pendingBuy!.buyer_ua ? "Copied!" : "Copy buyer address"}
-                    copied={copiedValue === listed.pendingBuy!.buyer_ua}
+                    title={copiedValue === listed.pendingBuy!.buyer ? "Copied!" : "Copy buyer address"}
+                    copied={copiedValue === listed.pendingBuy!.buyer}
                   />
                 </div>
               )}
@@ -238,7 +238,7 @@ export default function ExplorerNameDetail({
                     Expires
                   </span>
                   <span className="text-fg-muted">
-                    Block {listed.pendingBuy.expires_at.toLocaleString()}
+                    Block {listed.pendingBuy.expiresAt.toLocaleString()}
                   </span>
                 </div>
               )}

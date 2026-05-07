@@ -253,7 +253,7 @@ export default function ExplorerContent({
                 </tr>
               ) : (
                 visibleListings.map((l) => {
-                  const pending = l.pending_buy;
+                  const pending = l.pendingBuy;
                   return (
                   <tr
                     key={`${l.network}:${l.txid}`}
@@ -279,11 +279,11 @@ export default function ExplorerContent({
                           >
                             Purchase pending
                           </span>
-                          <span className="text-[0.65rem] text-fg-muted font-mono" title={pending.buyer_ua}>
-                            {pending.buyer_ua.slice(0, 12)}…
+                          <span className="text-[0.65rem] text-fg-muted font-mono" title={pending.buyer}>
+                            {pending.buyer.slice(0, 12)}…
                           </span>
                           <span className="text-[0.62rem] text-fg-muted">
-                            Expires block {pending.expires_at.toLocaleString()}
+                            Expires block {pending.expiresAt.toLocaleString()}
                           </span>
                         </div>
                       ) : (

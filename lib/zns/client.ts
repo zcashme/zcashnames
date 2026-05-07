@@ -1,16 +1,18 @@
 import { ZNS } from "zcashname-sdk";
+import type { Network } from "zcashname-sdk";
 
 export type {
+  Network,
   Registration,
   Listing,
   Event,
   EventsFilter,
   CompletedAction,
+  PendingBuy,
+  Status,
 } from "zcashname-sdk";
 
 /* ── Network type ───────────────────────────────────────────────────── */
-
-export type Network = "testnet" | "mainnet";
 
 const ZNS_RPC_URLS: Record<Network, string> = {
   testnet: process.env.ZNS_TESTNET_RPC_URL ?? "https://light.zcash.me/zns-testnet",
@@ -45,7 +47,7 @@ export async function fetchClaimCost(
   }
 }
 
-/* ── Address validation (instance-dependent: uses SDK bech32m check) ── */
+/* ── Address validation ──────────────────────────────────────────────── */
 
 export type AddressStatus = "unified" | "sapling" | "transparent" | "viewkey" | "tex" | "invalid";
 
