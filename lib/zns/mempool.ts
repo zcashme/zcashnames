@@ -3,21 +3,75 @@
 import type { Network } from "@/lib/zns/client";
 
 /**
- * Check whether a name is currently sitting in the indexer's mempool view.
+ * Result from the mempool watcher for a pending ZNS transaction.
+ * The watcher decodes every Orchard note it can trial-decrypt, parses the
+ * ZNS memo, extracts the transparent output ZEC amount and pay_taddr,
+ * and returns everything the frontend needs for engagement UX.
+ *
+ * Mempool watcher endpoints:
+ *   GET https://light.zcash.me/mempool-mainnet/lookup/:name
+ *   GET https://light.zcash.me/mempool-mainnet/utxo/:taddr
+ */
+export interface MempoolEntry {
+  /** Hex txid of the pending transaction. */
+  txid: string;
+  /** Action kind: "claim" | "list" | "delist" | "release" | "update" | "buy" */
+  action: string;
+  /** Name from the memo. */
+  name: string;
+  /** Destination unified address (CLAIM). */
+  ua?: string;
+  /** New address (UPDATE). */
+  new_ua?: string;
+  /** Buyer unified address (BUY). */
+  buyer_ua?: string;
+  /** Price in zats (LIST / BUY). */
+  price?: number;
+  /** Seller payout transparent address (LIST). */
+  pay_taddr?: string;
+  /** Nonce (LIST/DELIST/RELEASE/UPDATE). */
+  nonce?: number;
+  /** Base64 Ed25519 pubkey if sovereign, otherwise undefined. */
+  user_pubkey?: string;
+  /** Total ZEC in zats from transparent outputs in this tx. */
+  zec_amount: number;
+  /** Unix timestamp when first seen in mempool. */
+  seen_at: number;
+  /** Validation warnings, e.g. "amount may be too low". */
+  warnings: string[];
+}
+
+/**
+ * UTXO response for a transparent t-address.
+ * Tracked from the mempool stream — not a full UTXO query, just what the
+ * watcher has seen go to this address from mempool txs.
+ */
+export interface UtxoResponse {
+  address: string;
+  /** Total ZEC in zats received at this address from tracked UTXOs. */
+  total_received_zats: number;
+  utxos: TrackedUtxo[];
+}
+
+export interface TrackedUtxo {
+  txid: string;
+  value_zats: number;
+}
+
+/**
+ * Check the mempool watcher's cache for a pending ZNS transaction.
  *
  * - Mainnet: GET https://light.zcash.me/mempool-mainnet/lookup/:name
- *   - 200 → tx is in the mempool (`found: true`)
- *   - 404 (or anything else) → not in the mempool (`found: false`)
- * - Testnet: no public mempool endpoint, so we always return `found: false`
- *   and let the caller fall back to the resolver.
+ *   - 200 → full MempoolEntry (found: true)
+ *   - 404 (or anything else) → found: false
+ * - Testnet: no public mempool endpoint → always returns { found: false }
  *
- * Network errors are swallowed and reported as `found: false` so the polling
- * loop in the scanner phase doesn't get stuck on transient failures.
+ * Network errors are swallowed so the polling loop doesn't get stuck.
  */
 export async function checkMempool(
   name: string,
   network: Network,
-): Promise<{ found: boolean }> {
+): Promise<{ found: boolean; entry?: MempoolEntry }> {
   if (network !== "mainnet") return { found: false };
 
   try {
@@ -25,7 +79,37 @@ export async function checkMempool(
       `https://light.zcash.me/mempool-mainnet/lookup/${encodeURIComponent(name)}`,
       { cache: "no-store" },
     );
-    return { found: res.status === 200 };
+    if (res.status !== 200) return { found: false };
+    const entry = await res.json() as MempoolEntry;
+    return { found: true, entry };
+  } catch {
+    return { found: false };
+  }
+}
+
+/**
+ * Check tracked UTXOs for a transparent t-address.
+ * Used for BUY payment detection — the seller can see incoming transparent
+ * payments to their pay_taddr from the mempool stream.
+ *
+ * - Mainnet: GET https://light.zcash.me/mempool-mainnet/utxo/:taddr
+ *   - 200 → UtxoResponse
+ *   - 404 → no tracked UTXOs for this address
+ */
+export async function checkUtxo(
+  taddr: string,
+  network: Network,
+): Promise<{ found: boolean; response?: UtxoResponse }> {
+  if (network !== "mainnet") return { found: false };
+
+  try {
+    const res = await fetch(
+      `https://light.zcash.me/mempool-mainnet/utxo/${encodeURIComponent(taddr)}`,
+      { cache: "no-store" },
+    );
+    if (res.status !== 200) return { found: false };
+    const response = await res.json() as UtxoResponse;
+    return { found: true, response };
   } catch {
     return { found: false };
   }

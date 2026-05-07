@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { checkScannerState } from "@/lib/zns/resolve";
-import { checkMempool } from "@/lib/zns/mempool";
+import { checkMempool, type MempoolEntry } from "@/lib/zns/mempool";
 import type { ModalTarget, PendingTransactionState } from "@/lib/types";
 
 const STORAGE_KEY = "zns-pending-transaction-v1";
@@ -65,7 +65,7 @@ export function usePendingTransaction(onSuccess?: (name: string) => void) {
     };
 
     async function poll() {
-      const [mempool, resolver] = await Promise.all([
+      const [mempoolResult, resolver] = await Promise.all([
         checkMempool(current.target.name, current.target.network),
         checkScannerState(
           current.target.name,
@@ -77,18 +77,35 @@ export function usePendingTransaction(onSuccess?: (name: string) => void) {
       if (cancelled) return;
 
       let nextScanState = current.scanState;
-      if (resolver === "success") nextScanState = "mined";
-      else if (mempool.found) nextScanState = "in_mempool";
-      else if (
+      let nextTxid: string | undefined = current.txid;
+      let nextWarnings: string[] | undefined = current.warnings;
+
+      if (resolver === "success") {
+        nextScanState = "mined";
+      } else if (mempoolResult.found && mempoolResult.entry) {
+        nextScanState = "in_mempool";
+        // Capture metadata the first time we see this tx in the mempool.
+        if (!nextTxid && mempoolResult.entry.txid) nextTxid = mempoolResult.entry.txid;
+        if (mempoolResult.entry.warnings?.length) nextWarnings = mempoolResult.entry.warnings;
+      } else if (
         current.scanState === "in_mempool" ||
         current.scanState === "being_mined"
-      ) nextScanState = "being_mined";
-      else nextScanState = "not_detected";
+      ) {
+        nextScanState = "being_mined";
+      } else {
+        nextScanState = "not_detected";
+      }
 
-      if (nextScanState !== current.scanState) {
+      if (
+        nextScanState !== current.scanState ||
+        nextTxid !== current.txid ||
+        JSON.stringify(nextWarnings) !== JSON.stringify(current.warnings)
+      ) {
         persistPendingTransaction({
           ...current,
           scanState: nextScanState,
+          txid: nextTxid,
+          warnings: nextWarnings,
           updatedAt: Date.now(),
         });
       }

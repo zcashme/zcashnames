@@ -7,7 +7,7 @@ import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { verifyOtp, buildClaim, buildBuy, buildUpdate, buildList, buildDelist, buildRelease, checkUnlockCode } from "@/lib/zns/transaction";
 import { checkScannerState } from "@/lib/zns/resolve";
 import { checkMempool } from "@/lib/zns/mempool";
-import { validateAddress, getSigningPayload } from "@/lib/zns/client";
+import { validateAddress } from "@/lib/zns/client";
 import { buildZcashUri, parseZip321Uri } from "@/lib/payment/zip321";
 import { generateSessionId, buildZvsMemo } from "@/lib/payment/memo";
 import { getNetworkConstants, MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
@@ -42,7 +42,6 @@ interface Zip321ModalProps {
 
 type Phase = "unlock" | "input" | "otp" | "sign" | "payment" | "scanning" | "fund";
 
-type AuthMode = "default" | "otp" | "sovereign";
 
 type ScanState = PendingTransactionScanState;
 
@@ -153,7 +152,6 @@ export default function Zip321Modal({
     action,
     registrationAddress,
     registrationNonce,
-    registrationPubkey,
     listingPriceZec,
 
     payTaddr,
@@ -167,7 +165,6 @@ export default function Zip321Modal({
   const needsPrice = action === "list";
   const needsPayTaddr = action === "list";
   const ownerAction = action === "update" || action === "list" || action === "delist" || action === "release";
-  const ownerAuthMode: AuthMode | null = ownerAction ? (registrationPubkey ? "sovereign" : "otp") : null;
   const needsUnlock = isReserved && action === "claim";
   const displayName = `${name}.zcash`;
   const listingPriceLabel = listingPriceZec == null ? "the listed price" : `${listingPriceZec} ZEC`;
@@ -209,10 +206,8 @@ export default function Zip321Modal({
   const [payTaddrInput, setPayTaddrInput] = useState(initialResumeState?.payTaddrInput ?? "");
   const [inputError, setInputError] = useState("");
   const [inputLoading, setInputLoading] = useState(false);
-  const [authMode, setAuthMode] = useState<AuthMode>(ownerAuthMode ?? "default");
   const [signError, setSignError] = useState("");
   const [signLoading, setSignLoading] = useState(false);
-  const [sovereignPubkeyInput, setSovereignPubkeyInput] = useState("");
   const [signatureInput, setSignatureInput] = useState("");
   const [pubkeyLiveError, setPubkeyLiveError] = useState("");
   const [signatureLiveError, setSignatureLiveError] = useState("");
@@ -257,7 +252,6 @@ export default function Zip321Modal({
         action,
         registrationAddress,
         registrationNonce,
-        registrationPubkey,
         listingPriceZec,
 
     payTaddr,
@@ -283,7 +277,6 @@ export default function Zip321Modal({
   // Focus first input on mount
   const addressRef = useRef<HTMLInputElement>(null);
   const priceRef = useRef<HTMLInputElement>(null);
-  const sovereignPubkeyRef = useRef<HTMLInputElement>(null);
   const signatureRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (needsAddress) addressRef.current?.focus();
@@ -291,10 +284,9 @@ export default function Zip321Modal({
   }, [needsAddress, needsPrice]);
 
   useEffect(() => {
-    setAuthMode(ownerAuthMode ?? "default");
     setInputError("");
     setSignError("");
-  }, [ownerAuthMode, name, action]);
+  }, [name, action]);
 
   // ESC key
   useEffect(() => {
@@ -403,18 +395,10 @@ export default function Zip321Modal({
 
   // OTP URI
   const otpUri = zvsMemo ? buildZcashUri(OTP_SIGNIN_ADDR, OTP_AMOUNT, zvsMemo) : "";
-  const isSovereignMode = authMode === "sovereign";
   const usesOtpFlow = ownerAction && authMode === "otp";
-  const requiresPubkeyInput = !ownerAction || !registrationPubkey;
   const nextOwnerNonce = ownerAction ? (registrationNonce ?? 0) + 1 : undefined;
   const parsedPrice = parsePrice(priceInput);
   const priceZats = needsPrice && parsedPrice ? Math.round(parsedPrice * 1e8) : undefined;
-  const sovereignPayload = getSigningPayload(action, name, {
-    address: needsAddress ? addressInput.trim() : undefined,
-    priceZats,
-    nonce: nextOwnerNonce,
-  }, network);
-
   useEffect(() => {
     if (phase !== "sign") return;
     if (requiresPubkeyInput) sovereignPubkeyRef.current?.focus();
@@ -519,10 +503,6 @@ export default function Zip321Modal({
     };
   }, [phase, requiresPubkeyInput, registrationPubkey, sovereignPubkeyInput, signatureInput, sovereignPayload]);
 
-  const canSubmitSovereign =
-    !signLoading &&
-    !!signatureInput.trim() &&
-    (!requiresPubkeyInput || !!sovereignPubkeyInput.trim()) &&
     !pubkeyLiveError &&
     !signatureLiveError;
 
@@ -570,16 +550,6 @@ export default function Zip321Modal({
         setInputError("Price must be between 0 and 21,000,000 ZEC.");
         return;
       }
-    }
-
-    if (isSovereignMode) {
-      if (ownerAction && !registrationNonce && registrationNonce !== 0) {
-        setInputError("Registration nonce unavailable. Search the name again and retry.");
-        return;
-      }
-      setSignError("");
-      setPhase("sign");
-      return;
     }
 
     if (usesOtpFlow) {
@@ -674,15 +644,6 @@ export default function Zip321Modal({
     }
   }
 
-  async function handleVerifySovereign() {
-    if (signLoading) return;
-    const sig = signatureInput.trim();
-    const pub = (registrationPubkey ?? sovereignPubkeyInput).trim();
-
-    if (!sig) {
-      setSignError("Signature is required.");
-      return;
-    }
     if (requiresPubkeyInput && !pub) {
       setSignError("Public key is required.");
       return;
@@ -736,8 +697,6 @@ export default function Zip321Modal({
       const base = {
         name,
         network,
-        sovereignSig: sig,
-        sovereignPub: pub || undefined,
       };
 
       let result;
@@ -961,7 +920,6 @@ export default function Zip321Modal({
     const steps: Phase[] = [];
     if (needsUnlock) steps.push("unlock");
     steps.push("input");
-    if (isSovereignMode) steps.push("sign");
     else if (usesOtpFlow) steps.push("otp");
     steps.push("payment", "scanning");
     return steps;
@@ -1410,7 +1368,7 @@ export default function Zip321Modal({
               <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
                 Changes to this name are authorized by{" "}
                 <strong style={{ color: "var(--fg-heading)" }}>
-                  {ownerAuthMode === "sovereign" ? "keypairs" : "passcodes"}
+                  {"passcodes"}
                 </strong>
               </p>
             ) : (
@@ -1424,26 +1382,6 @@ export default function Zip321Modal({
                     onClick={() => { setAuthMode("default"); setInputError(""); setSignError(""); }}
                     className="cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
                     style={{
-                      ...(authMode === "default" ? primaryBtnStyle : secondaryBtnStyle),
-                      opacity: authMode === "default" ? 1 : 0.85,
-                    }}
-                  >
-                    Passcodes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setAuthMode("sovereign"); setInputError(""); setSignError(""); }}
-                    className="cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
-                    style={{
-                      ...(authMode === "sovereign" ? primaryBtnStyle : secondaryBtnStyle),
-                      opacity: authMode === "sovereign" ? 1 : 0.85,
-                    }}
-                  >
-                    Keypairs
-                  </button>
-                </div>
-              </div>
-            )}
 
             {inputError && (
               <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
@@ -1469,7 +1407,6 @@ export default function Zip321Modal({
               >
                 {inputLoading
                   ? "Preparing…"
-                  : isSovereignMode
                     ? "Continue to Sign"
                     : usesOtpFlow
                       ? "Continue"

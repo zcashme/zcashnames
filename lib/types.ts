@@ -67,6 +67,10 @@ export interface PendingTransactionState {
   paymentUri: string;
   scanState: PendingTransactionScanState;
   updatedAt: number;
+  /** Hex txid from the mempool watcher, captured when first seen. */
+  txid?: string;
+  /** Validation warnings from the mempool watcher. */
+  warnings?: string[];
 }
 
 /** A pending buy — created when a buyer sends a BUY memo and awaiting transparent funding tx. */
@@ -76,6 +80,12 @@ export interface PendingBuy {
   claim_height: number;
   expires_at: number;
   txid: string;
+}
+
+/** Tracked UTXO from the mempool watcher for a transparent address. */
+export interface TrackedUtxo {
+  txid: string;
+  value_zats: number;
 }
 
 /**
