@@ -17,6 +17,7 @@ type MenuLink = {
   external?: boolean;
   disabled?: boolean;
   comingSoon?: boolean;
+  featured?: boolean;
   children?: MenuLink[];
 };
 
@@ -93,6 +94,7 @@ const menuLinks: MenuLink[] = [
   },
   { label: "Roadmap", href: "/roadmap" },
   { label: "Brand Kit", href: "/brandkit" },
+  { label: "Beta", href: "/beta", displayPath: "/beta", featured: true },
 ];
 
 function sectionCardMenuLinks(sectionSlug: string): MenuLink[] {
@@ -267,7 +269,11 @@ function MenuAnchor({
   hidden?: boolean;
 }) {
   const className = primary
-    ? "flex w-full items-center rounded-md px-3 py-2.5 text-left text-base font-bold text-fg-heading transition-colors hover:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)] focus-visible:outline-none"
+    ? `flex w-full items-center rounded-md px-3 py-2.5 text-left text-base font-bold transition-colors focus-visible:outline-none ${
+        item.featured
+          ? "bg-[color-mix(in_srgb,var(--color-accent-green)_18%,transparent)] text-fg-heading ring-1 ring-inset ring-[color-mix(in_srgb,var(--color-accent-green)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-accent-green)_26%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--color-accent-green)_26%,transparent)]"
+          : "text-fg-heading hover:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)]"
+      }`
     : `flex w-full items-center gap-3 rounded-md py-2 pl-16 pr-3 text-left text-[0.95rem] font-semibold transition-colors focus-visible:outline-none ${
         item.disabled
           ? "cursor-not-allowed text-fg-muted/60"
@@ -296,6 +302,7 @@ function MenuAnchor({
   const labelContent = (
     <span className="flex min-w-0 flex-1 items-center gap-2">
       <span className="truncate">{item.label}</span>
+      {item.featured && <FeaturedBadge />}
       {item.comingSoon && <ComingSoonBadge />}
     </span>
   );
@@ -375,6 +382,19 @@ function ComingSoonBadge() {
   return (
     <span className="inline-flex shrink-0 rounded-md border border-border-muted px-1.5 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.1em] text-fg-muted">
       Coming soon
+    </span>
+  );
+}
+
+function FeaturedBadge() {
+  return (
+    <span className="inline-flex shrink-0 rounded-md border px-1.5 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.1em]"
+      style={{
+        borderColor: "color-mix(in srgb, var(--color-accent-green) 45%, transparent)",
+        color: "var(--color-accent-green)",
+      }}
+    >
+      New
     </span>
   );
 }
