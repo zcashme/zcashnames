@@ -36,7 +36,10 @@ export function getNetworkConstants(network: Network = "testnet"): NetworkConsta
  *  Used for both client-side validation (Zip321Modal) and server-side validation (actions.ts). */
 export const MAX_LIST_FOR_SALE_AMOUNT = 21_000_000;
 
-/** The five operations a user can perform on a Zcash name. */
+/** Dust commission paid to indexer for a BUY memo (0.0001 ZEC = 10,000 zats). */
+export const BUY_COMMISSION_ZATS = 10_000;
+
+/** The six operations a user can perform on a Zcash name. */
 export type Action = "claim" | "buy" | "update" | "list" | "delist" | "release";
 
 export interface ModalTarget {
@@ -46,12 +49,14 @@ export interface ModalTarget {
   registrationNonce?: number;
   registrationPubkey?: string | null;
   listingPriceZec?: number;
+  /** Transparent address where the seller receives payment (required for LIST). */
+  payTaddr?: string;
   network: Network;
   networkPassword: string;
   isReserved?: boolean;
 }
 
-export type PendingTransactionPhase = "payment" | "scanning";
+export type PendingTransactionPhase = "payment" | "scanning" | "fund";
 export type PendingTransactionScanState = "loading" | "not_detected" | "in_mempool" | "being_mined" | "mined";
 
 export interface PendingTransactionState {
@@ -59,13 +64,23 @@ export interface PendingTransactionState {
   phase: PendingTransactionPhase;
   addressInput: string;
   priceInput: string;
+  payTaddrInput?: string;
   paymentUri: string;
   scanState: PendingTransactionScanState;
   updatedAt: number;
 }
 
+/** A pending buy — created when a buyer sends a BUY memo and awaiting transparent funding tx. */
+export interface PendingBuy {
+  buyerUa: string;
+  price: number;
+  claimHeight: number;
+  expiresAt: number;
+  txid: string;
+}
+
 /**
- * Result of resolving a name query. Discriminated union representing the three possible states.
+ * Result of resolving a name query. Discriminated union representing the possible states.
  */
 export type ResolveName =
   | {
@@ -95,5 +110,9 @@ export type ResolveName =
       query: string
       registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null }
       listingPrice: { zats: number; zec: number }
+      /** Transparent address where the seller receives payment. */
+      payTaddr: string
+      /** Active pending purchase, if any. */
+      pendingBuy?: PendingBuy
       firstBucket?: number
     }

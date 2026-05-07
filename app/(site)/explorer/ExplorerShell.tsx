@@ -293,6 +293,7 @@ export default function ExplorerShell({
       target.registrationNonce = nameResult.registration.nonce;
       target.registrationPubkey = nameResult.registration.pubkey ?? null;
       target.listingPriceZec = nameResult.status === "listed" ? nameResult.listingPrice.zec : undefined;
+      target.payTaddr = nameResult.status === "listed" ? nameResult.payTaddr : undefined;
     }
 
     setModalTarget(target);

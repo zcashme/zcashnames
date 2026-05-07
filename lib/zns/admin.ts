@@ -64,24 +64,26 @@ export async function buildSignedClaimAction(
 export async function buildSignedBuyAction(
   name: string,
   buyerUa: string,
+  listingPriceZats?: number,
   network: Network = "testnet",
 ): Promise<CompletedAction> {
   const zns = getZns(network);
   const reg = await zns.resolveName(name);
   if (!reg?.listing) throw new Error(`Name "${name}" is not listed for sale.`);
-  return completeWithAdmin(zns.prepareBuy(name, buyerUa));
+  return completeWithAdmin(zns.prepareBuy(name, buyerUa, listingPriceZats ?? reg?.listing?.price ?? 0));
 }
 
 export async function buildSignedListAction(
   name: string,
   priceZats: number,
+  payTaddr: string,
   network: Network = "testnet",
 ): Promise<{ action: CompletedAction; nonce: number }> {
   const zns = getZns(network);
   const reg = await zns.resolveName(name);
   if (!reg) throw new Error(`Name "${name}" is not registered.`);
   const nonce = reg.nonce + 1;
-  return { action: completeWithAdmin(zns.prepareList(name, priceZats, nonce)), nonce };
+  return { action: completeWithAdmin(zns.prepareList(name, priceZats, payTaddr, nonce)), nonce };
 }
 
 export async function buildSignedDelistAction(

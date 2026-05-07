@@ -168,6 +168,7 @@ export default function HomePage() {
                 }
                 if (item.status === "listed") {
                   t.listingPriceZec = item.listingPrice.zec;
+                  t.payTaddr = item.payTaddr;
                 }
                 setModalTarget(t);
               }}

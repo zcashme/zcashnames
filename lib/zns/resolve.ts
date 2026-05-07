@@ -4,7 +4,7 @@ import { getZns, registrationStatus, normalizeUsername, isValidUsername, zatsToZ
 
 import { getReservedName } from "@/lib/zns/reserved";
 import { getListingMap, reconcileRegistrationListing } from "@/lib/zns/listing-reconciliation";
-import type { Action, ResolveName } from "@/lib/types";
+import type { Action, ResolveName, PendingBuy } from "@/lib/types";
 
 const FIRST_BUCKET_SIZE = 100;
 
@@ -93,6 +93,11 @@ export async function getCurrentRegistrations(network: Network = "testnet"): Pro
   }
 }
 
+function toPendingBuy(listing: Listing): PendingBuy | undefined {
+  const pb = (listing as Listing & { pending_buy?: PendingBuy | null }).pending_buy;
+  return pb ?? undefined;
+}
+
 export async function resolveName(
   rawName: string,
   network: Network = "testnet"
@@ -165,6 +170,8 @@ export async function resolveName(
         zats: registration!.listing!.price,
         zec: zatsToZec(registration!.listing!.price),
       },
+      payTaddr: registration!.listing.pay_taddr,
+      pendingBuy: toPendingBuy(registration!.listing),
       firstBucket: firstBucket ?? undefined,
     };
   }

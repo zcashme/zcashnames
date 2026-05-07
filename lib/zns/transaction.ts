@@ -9,7 +9,7 @@ import {
   buildSignedUpdateAction,
 } from "@/lib/zns/admin";
 import { normalizeUsername, isValidUsername, validateAddress, type Network, fetchClaimCost, getZns } from "@/lib/zns/client";
-import { MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
+import { MAX_LIST_FOR_SALE_AMOUNT, BUY_COMMISSION_ZATS } from "@/lib/types";
 import { getReservedName, verifyUnlockCode } from "@/lib/zns/reserved";
 import { readCurrentStage } from "@/lib/beta/gate";
 import { verifyProof, verifyProofKind, issueProof, parseProofSubject } from "@/lib/zns/proof";
@@ -72,6 +72,11 @@ function requireOtpProof(otpProof: string | undefined, expectedAddress: string):
     return { ok: false, error: "Verification invalid. Please start over." };
   }
   return undefined;
+}
+
+/** Validate a transparent Zcash address (t1, t3, tm, t2 prefixes). */
+function isValidTaddr(addr: string): boolean {
+  return /^[tT][1-3mM][A-Za-z0-9]{20,}$/.test(addr.trim());
 }
 
 /* ── checkUnlockCode ──────────────────────────────────────────────────── */
@@ -141,6 +146,8 @@ export interface BuyInput {
   address: string;
   network: Network;
   networkPassword?: string;
+  /** Listing price in zats, for inclusion in the BUY memo. */
+  listingPriceZats?: number;
   sovereignSig?: string;
   sovereignPub?: string;
 }
@@ -160,9 +167,10 @@ export async function buildBuy(input: BuyInput): Promise<ActionResult> {
       const sig = input.sovereignSig.trim();
       const pub = input.sovereignPub?.trim();
       if (!pub) throw new Error("Public key is required for sovereign buy.");
-      return { ok: true, uri: getZns(input.network).prepareBuy(name, addrResult.address).complete(sig, pub).uri };
+      const prepared = getZns(input.network).prepareBuy(name, addrResult.address, input.listingPriceZats ?? 0);
+      return { ok: true, uri: prepared.complete(sig, pub).uri };
     }
-    return { ok: true, uri: (await buildSignedBuyAction(name, addrResult.address, input.network)).uri };
+    return { ok: true, uri: (await buildSignedBuyAction(name, addrResult.address, input.listingPriceZats ?? 0, input.network)).uri };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
@@ -223,6 +231,8 @@ export async function buildUpdate(input: UpdateInput): Promise<ActionResult> {
 export interface ListInput {
   name: string;
   priceZats: number;
+  /** Transparent address where the seller will receive the buyer's payment. */
+  payTaddr: string;
   network: Network;
   networkPassword?: string;
   otpProof?: string;
@@ -239,6 +249,10 @@ export async function buildList(input: ListInput): Promise<ActionResult> {
     return { ok: false, error: "Price must be between 0 and 21,000,000 ZEC." };
   }
 
+  if (!isValidTaddr(input.payTaddr)) {
+    return { ok: false, error: "Enter a valid transparent Zcash address (t1, t3, tm, or t2)." };
+  }
+
   const denied = await requireNetworkAccess(input.network, input.networkPassword);
   if (denied) return denied;
 
@@ -252,7 +266,7 @@ export async function buildList(input: ListInput): Promise<ActionResult> {
     const pub = input.sovereignPub?.trim() || reg.pubkey;
 
     try {
-      return { ok: true, uri: zns.prepareList(name, input.priceZats, reg.nonce + 1).complete(sig, pub).uri };
+      return { ok: true, uri: zns.prepareList(name, input.priceZats, input.payTaddr, reg.nonce + 1).complete(sig, pub).uri };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
     }
@@ -262,7 +276,7 @@ export async function buildList(input: ListInput): Promise<ActionResult> {
   if (otpDenied) return otpDenied;
 
   try {
-    return { ok: true, uri: (await buildSignedListAction(name, input.priceZats, input.network)).action.uri };
+    return { ok: true, uri: (await buildSignedListAction(name, input.priceZats, input.payTaddr, input.network)).action.uri };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }

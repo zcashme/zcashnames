@@ -40,7 +40,7 @@ interface Zip321ModalProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
-type Phase = "unlock" | "input" | "otp" | "sign" | "payment" | "scanning";
+type Phase = "unlock" | "input" | "otp" | "sign" | "payment" | "scanning" | "fund";
 
 type AuthMode = "default" | "otp" | "sovereign";
 
@@ -155,6 +155,8 @@ export default function Zip321Modal({
     registrationNonce,
     registrationPubkey,
     listingPriceZec,
+
+    payTaddr,
     network,
     networkPassword,
     isReserved,
@@ -164,6 +166,7 @@ export default function Zip321Modal({
 
   const needsAddress = action === "claim" || action === "buy" || action === "update";
   const needsPrice = action === "list";
+  const needsPayTaddr = action === "list";
   const ownerAction = action === "update" || action === "list" || action === "delist" || action === "release";
   const ownerAuthMode: AuthMode | null = ownerAction ? (registrationPubkey ? "sovereign" : "otp") : null;
   const needsUnlock = isReserved && action === "claim";
@@ -204,6 +207,7 @@ export default function Zip321Modal({
   // Input phase
   const [addressInput, setAddressInput] = useState(initialResumeState?.addressInput ?? "");
   const [priceInput, setPriceInput] = useState(initialResumeState?.priceInput ?? "");
+  const [payTaddrInput, setPayTaddrInput] = useState(initialResumeState?.payTaddrInput ?? "");
   const [inputError, setInputError] = useState("");
   const [inputLoading, setInputLoading] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>(ownerAuthMode ?? "default");
@@ -256,6 +260,8 @@ export default function Zip321Modal({
         registrationNonce,
         registrationPubkey,
         listingPriceZec,
+
+    payTaddr,
         network,
         isReserved,
       },
@@ -269,7 +275,7 @@ export default function Zip321Modal({
   }
 
   function handleCloseRequest() {
-    if ((phase === "payment" || phase === "scanning") && paymentUri && onPersistState) {
+    if ((phase === "payment" || phase === "scanning" || phase === "fund") && paymentUri && onPersistState) {
       onPersistState(buildPendingState(phase, phase === "scanning" ? scanState : "loading"));
     }
     onClose();
@@ -376,7 +382,7 @@ export default function Zip321Modal({
 
   useEffect(() => {
     if (!onPersistState) return;
-    if ((phase === "payment" || phase === "scanning") && paymentUri) {
+    if ((phase === "payment" || phase === "scanning" || phase === "fund") && paymentUri) {
       onPersistState(buildPendingState(phase, phase === "scanning" ? scanState : "loading"));
       return;
     }
@@ -603,7 +609,7 @@ export default function Zip321Modal({
       const base = { name, network, networkPassword };
       const address = addressInput.trim();
       const result = action === "buy"
-        ? await buildBuy({ ...base, address })
+        ? await buildBuy({ ...base, address, listingPriceZats: listingPriceZec != null ? Math.round(listingPriceZec * 1e8) : undefined })
         : await buildClaim({ ...base, address, unlockProof: verifiedUnlockCode });
 
       if (!result.ok) { setInputError(result.error); return; }
@@ -646,7 +652,7 @@ export default function Zip321Modal({
           result = await buildUpdate({ ...base, address: addressInput.trim() });
           break;
         case "list":
-          result = await buildList({ ...base, priceZats: priceZats! });
+          result = await buildList({ ...base, priceZats: priceZats!, payTaddr: payTaddrInput.trim() });
           break;
         case "delist":
           result = await buildDelist(base);
@@ -743,13 +749,13 @@ export default function Zip321Modal({
           result = await buildClaim({ ...base, address: addressInput.trim(), unlockProof: verifiedUnlockCode });
           break;
         case "buy":
-          result = await buildBuy({ ...base, address: addressInput.trim() });
+          result = await buildBuy({ ...base, address: addressInput.trim(), listingPriceZats: listingPriceZec != null ? Math.round(listingPriceZec * 1e8) : undefined });
           break;
         case "update":
           result = await buildUpdate({ ...base, address: addressInput.trim() });
           break;
         case "list":
-          result = await buildList({ ...base, priceZats: priceZats! });
+          result = await buildList({ ...base, priceZats: priceZats!, payTaddr: payTaddrInput.trim() });
           break;
         case "delist":
           result = await buildDelist(base);
@@ -1386,6 +1392,23 @@ export default function Zip321Modal({
               </div>
             )}
 
+            {needsPayTaddr && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                  Payout Address (transparent t-address)
+                </label>
+                <input
+                  type="text"
+                  value={payTaddrInput}
+                  onChange={(e) => { setPayTaddrInput(e.target.value); setInputError(""); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleContinue(); }}
+                  placeholder="t1..."
+                  className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+                  style={inputStyle()}
+                />
+              </div>
+            )}
+
             {ownerAction ? (
               <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
                 Changes to this name are authorized by{" "}
@@ -1703,12 +1726,89 @@ export default function Zip321Modal({
                 onClick={() => {
                   setScanState("loading");
                   setShowNotDetectedDetail(false);
-                  setPhase("scanning");
+                  setPhase(action === "buy" ? "fund" : "scanning");
                 }}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
                 style={{ background: "var(--fg-heading)", color: "var(--color-background)" }}
               >
                 I Sent It!
+              </button>
+            </div>
+          </div>
+        )}
+
+
+        {/* ── Phase: Fund (BUY only) ── */}
+        {phase === "fund" && action === "buy" && (
+          <div className="px-8 pb-8 pt-12 flex flex-col items-center gap-5 text-center">
+            {renderProgressSegments()}
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
+                Fund the Purchase
+              </h2>
+              <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
+                Send the listing price to the seller&rsquo;s transparent address to complete your purchase of <strong>{displayName}</strong>.
+              </p>
+            </div>
+
+            <div
+              className="w-full rounded-xl p-5 flex flex-col items-center gap-3"
+              style={{ background: "var(--color-raised)", border: "1.5px solid var(--faq-border)" }}
+            >
+              <div className="flex flex-col gap-1.5 w-full text-left">
+                <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                  Seller Address
+                </span>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs break-all flex-1 rounded-lg px-3 py-2" style={{ background: "var(--color-background)", color: "var(--fg-heading)" }}>
+                    {payTaddr || "(unknown)"}
+                  </code>
+                  {payTaddr && (
+                    <CopyIconButton
+                      copied={paymentAddressCopy.copied}
+                      onClick={() => paymentAddressCopy.copy(payTaddr!)}
+                      disabled={!payTaddr}
+                      ariaLabel="Copy seller address"
+                      title={paymentAddressCopy.copied ? "Copied!" : "Copy seller address"}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5 w-full text-left">
+                <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                  Amount
+                </span>
+                <code className="text-xs rounded-lg px-3 py-2" style={{ background: "var(--color-background)", color: "var(--fg-heading)" }}>
+                  {listingPriceLabel}
+                </code>
+              </div>
+
+              <p className="text-xs mt-1" style={{ color: "var(--fg-muted)" }}>
+                Send the exact amount from your wallet as a transparent transaction. Once the indexer detects your payment, the name will be transferred to your address.
+              </p>
+            </div>
+
+            <div className="flex gap-3 w-full justify-between items-center pt-1">
+              <button
+                type="button"
+                onClick={() => setPhase("payment")}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                style={secondaryBtnStyle}
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setScanState("loading");
+                  setShowNotDetectedDetail(false);
+                  setPhase("scanning");
+                }}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                style={{ background: "var(--fg-heading)", color: "var(--color-background)" }}
+              >
+                I&rsquo;ve Sent the Payment
               </button>
             </div>
           </div>

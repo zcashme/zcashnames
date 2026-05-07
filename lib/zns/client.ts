@@ -50,7 +50,7 @@ export async function fetchClaimCost(
 export function getSigningPayload(
   action: "claim" | "buy" | "update" | "list" | "delist" | "release",
   name: string,
-  params: { address?: string; priceZats?: number; nonce?: number },
+  params: { address?: string; priceZats?: number; nonce?: number; payTaddr?: string },
   network: Network = "testnet",
 ): string {
   const zns = getZns(network);
@@ -59,11 +59,11 @@ export function getSigningPayload(
       case "claim":
         return zns.prepareClaim(name, params.address ?? "", 0).payload;
       case "buy":
-        return zns.prepareBuy(name, params.address ?? "").payload;
+        return zns.prepareBuy(name, params.address ?? "", 0).payload;
       case "update":
         return zns.prepareUpdate(name, params.address ?? "", params.nonce ?? 0).payload;
       case "list":
-        return zns.prepareList(name, params.priceZats ?? 0, params.nonce ?? 0).payload;
+        return zns.prepareList(name, params.priceZats ?? 0, params.payTaddr ?? "", params.nonce ?? 0).payload;
       case "delist":
         return zns.prepareDelist(name, params.nonce ?? 0).payload;
       case "release":
@@ -77,7 +77,7 @@ export function getSigningPayload(
 function buildRawPayload(
   action: "claim" | "buy" | "update" | "list" | "delist" | "release",
   name: string,
-  params: { address?: string; priceZats?: number; nonce?: number },
+  params: { address?: string; priceZats?: number; nonce?: number; payTaddr?: string },
 ): string {
   switch (action) {
     case "claim":
@@ -87,7 +87,7 @@ function buildRawPayload(
     case "update":
       return `UPDATE:${name}:${params.address ?? ""}:${params.nonce ?? ""}`;
     case "list":
-      return `LIST:${name}:${params.priceZats ?? ""}:${params.nonce ?? ""}`;
+      return `LIST:${name}:${params.priceZats ?? ""}:${params.payTaddr ?? ""}:${params.nonce ?? ""}`;
     case "delist":
       return `DELIST:${name}:${params.nonce ?? ""}`;
     case "release":
