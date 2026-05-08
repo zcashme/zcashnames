@@ -9,7 +9,6 @@ import { checkUnlockCode, verifyOtp } from "@/lib/zns/actions";
 import { validateAddress } from "@/lib/zns/utils";
 import { generateSessionId, buildZvsMemo } from "@/lib/purchases/memo";
 import { buildZcashUri } from "@/lib/purchases/zip321";
-import { checkScannerState } from "@/lib/zns/resolve";
 import { checkMempool } from "@/lib/zns/mempool";
 import { generatePayload } from "@/lib/zns/payload";
 
@@ -157,7 +156,7 @@ export default function Zip321Modal({
     });
   }
 
-  function advance(result?: Record<string, string>) {
+  function advance(result?: Record<string, string | undefined>) {
     if (result) {
       if (result.address !== undefined) setAddress(result.address);
       if (result.price !== undefined) setPrice(result.price);
@@ -227,8 +226,8 @@ export default function Zip321Modal({
     const reg = "registration" in resolveResult ? resolveResult.registration : null;
     return generatePayload(action, name, network, {
       address: address ?? "",
-      priceZats: price ? Math.round(parsePrice(price) * 1e8) : 0,
-      payTaddr: payTaddrInput || ("listing" in resolveResult ? resolveResult.payTaddr : ""),
+      priceZats: price ? Math.round((parsePrice(price) ?? 0) * 1e8) : 0,
+      payTaddr: payTaddrInput || (resolveResult.status === "listed" ? resolveResult.payTaddr : ""),
       nonce: (reg?.nonce ?? 0) + 1,
     });
   }, [action, name, network, address, price, payTaddrInput, resolveResult]);
@@ -264,9 +263,8 @@ export default function Zip321Modal({
   }
 
   // scanning phase
-  const [scanState, setScanState] = useState<ScanState>("loading");
-  const scanStateRef = useRef<ScanState>("loading");
-  const sawMempoolRef = useRef(false);
+  const [scanState, setScanState] = useState<ScanState>("not_detected");
+  const scanStateRef = useRef<ScanState>("not_detected");
   const firedSuccessRef = useRef(false);
 
   useEffect(() => { scanStateRef.current = scanState; }, [scanState]);
@@ -276,39 +274,47 @@ export default function Zip321Modal({
     let cancelled = false;
 
     async function poll() {
-      const [mempool, resolver] = await Promise.all([
-        checkMempool(name, network),
-        checkScannerState(name, network, action, {
-          address: address,
-          priceZats: price ? Math.round(parsePrice(price) * 1e8) : undefined,
-        }),
-      ]);
+      const result = await checkMempool(name, network);
       if (cancelled) return;
 
-      if (mempool.found) sawMempoolRef.current = true;
-
-      if (resolver === "success") {
-        setScanState("mined");
-        if (!firedSuccessRef.current) {
-          firedSuccessRef.current = true;
-          onSuccess?.(name);
+      if (!result.found || !result.response) {
+        setScanState("not_detected");
+      } else {
+        const { state } = result.response;
+        switch (state.status) {
+          case "pending":
+            setScanState("in_mempool");
+            break;
+          case "resolving":
+            setScanState("confirming");
+            break;
+          case "confirmed":
+            setScanState("mined");
+            if (!firedSuccessRef.current) {
+              firedSuccessRef.current = true;
+              onSuccess?.(name);
+            }
+            break;
+          case "rejected":
+            setScanState("rejected");
+            break;
         }
-      } else if (mempool.found) setScanState("in_mempool");
-      else if (sawMempoolRef.current) setScanState("being_mined");
-      else setScanState("not_detected");
+      }
     }
 
-    sawMempoolRef.current = false;
     firedSuccessRef.current = false;
-    setScanState("loading");
+    setScanState("not_detected");
     poll();
     const id = setInterval(() => {
-      if (scanStateRef.current === "mined") { clearInterval(id); return; }
+      if (scanStateRef.current === "mined" || scanStateRef.current === "rejected") {
+        clearInterval(id);
+        return;
+      }
       poll();
     }, 2000);
 
     return () => { cancelled = true; clearInterval(id); };
-  }, [phase, name, network, action, address, price]);
+  }, [phase, name, network, onSuccess]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -521,14 +527,14 @@ export default function Zip321Modal({
                 <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Seller Address</span>
                 <code className="text-xs break-all rounded-lg px-3 py-2"
                   style={{ background: "var(--color-background)", color: "var(--fg-heading)" }}>
-                  {"listing" in resolveResult ? resolveResult.payTaddr : "(unknown)"}
+                  {resolveResult.status === "listed" ? resolveResult.payTaddr : "(unknown)"}
                 </code>
               </div>
               <div className="flex flex-col gap-1.5 w-full text-left">
                 <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Amount</span>
                 <code className="text-xs rounded-lg px-3 py-2"
                   style={{ background: "var(--color-background)", color: "var(--fg-heading)" }}>
-                  {"listing" in resolveResult ? `${resolveResult.listingPrice.zec} ZEC` : "the listed price"}
+                  {resolveResult.status === "listed" ? `${resolveResult.listingPrice.zec} ZEC` : "the listed price"}
                 </code>
               </div>
             </div>
@@ -548,14 +554,14 @@ export default function Zip321Modal({
             <div className="w-full rounded-xl p-5 flex flex-col items-center gap-3"
               style={{
                 background: "var(--color-raised)",
-                border: `1.5px solid ${scanState === "mined" ? "#22c55e" : scanState === "in_mempool" || scanState === "being_mined" ? "#ca8a04" : "var(--faq-border)"}`,
+                border: `1.5px solid ${scanState === "mined" ? "#22c55e" : scanState === "in_mempool" || scanState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
               }}>
               <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-                {scanState === "loading" && "Checking…"}
                 {scanState === "not_detected" && "Transaction not detected yet."}
                 {scanState === "in_mempool" && "Transaction is in the mempool. Waiting to be mined."}
-                {scanState === "being_mined" && "Transaction is being mined. Hang tight."}
+                {scanState === "confirming" && "Confirming transaction. Hang tight."}
                 {scanState === "mined" && "Transaction confirmed on-chain."}
+                {scanState === "rejected" && "Transaction not found."}
               </p>
             </div>
             <button type="button" onClick={onClose}

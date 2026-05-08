@@ -97,6 +97,17 @@ export const MAX_LIST_FOR_SALE_AMOUNT = 21_000_000;
 
 export type ScanState = "not_detected" | "in_mempool" | "confirming" | "mined" | "rejected";
 
+export interface PendingTransactionState {
+  target: { action: Action; name: string; network: Network };
+  phase: Phase;
+  scanState: ScanState;
+  txid?: string;
+  warnings?: string[];
+  updatedAt: number;
+  addressInput?: string;
+  priceInput?: string;
+}
+
 /* ── Resolve result ──────────────────────────────────────────────────── */
 
 export type ResolveName =

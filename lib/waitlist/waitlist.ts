@@ -1,4 +1,4 @@
-import "server-only";
+"use server";
 
 import { db } from "@/lib/db";
 import { sendFollowUp } from "@/lib/email/followup";
@@ -11,7 +11,7 @@ import {
 } from "@/lib/waitlist/confirm-token";
 import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
 import { normalizeUsername } from "@/lib/zns/utils";
-import { resolveBaseUrl } from "@/lib/url";
+import { resolveBaseUrl } from "@/lib/url-server";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 const MAX_REFERRAL_CODE_RETRIES = 6;

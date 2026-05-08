@@ -18,7 +18,7 @@ import {
   type WaitlistReferralRow,
   type ReferralScope,
 } from "@/lib/leaders/referral-dashboard";
-import { resolveBaseUrl } from "@/lib/url";
+import { resolveBaseUrl } from "@/lib/url-server";
 import { roundZec } from "@/lib/zns/utils";
 
 export type { ReferralScope };

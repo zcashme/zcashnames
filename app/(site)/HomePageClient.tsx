@@ -401,7 +401,7 @@ export default function HomePageClient({
               <HomeResultCard
                 key={result.query}
                 displayName={displayName}
-                network={zns.mode}
+          network={zns.mode !== "mainnet" ? "testnet" : "mainnet"}
                 {...props}
                 isPopularName={isPopular}
                 onAction={(action) => openModal(action, result)}
@@ -440,7 +440,7 @@ export default function HomePageClient({
       <HowItWorks />
       <FAQ />
 
-      {modalState && (
+      {modalState && zns.mode !== "waitlist" && (
         <Zip321Modal
           action={modalState.action}
           name={modalState.resolveResult.query}

@@ -6,7 +6,7 @@ import type { PendingTransactionState } from "@/lib/types";
 import { ACTION_LABELS } from "@/lib/zns/actions";
 
 function describePending(state: PendingTransactionState): string {
-  if (state.phase === "payment") return "Ready to send";
+  if (state.phase === "confirm") return "Ready to send";
   switch (state.scanState) {
     case "not_detected":
       return "Waiting for detection";
@@ -40,7 +40,7 @@ export default function PendingTransactionBanner({
   const label = ACTION_LABELS[pendingTransaction.target.action];
   const status = describePending(pendingTransaction);
   const isComplete = pendingTransaction.scanState === "mined";
-  const isPaymentPhase = pendingTransaction.phase === "payment";
+  const isPaymentPhase = pendingTransaction.phase === "confirm";
   const secondaryText = isComplete ? "This transaction is confirmed on-chain." : null;
   const clearWarning = isPaymentPhase
     ? "Removes this prepared request. Sent payments cannot be undone."
