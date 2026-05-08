@@ -1,9 +1,8 @@
 "use server";
 
 import crypto from "node:crypto";
-import { ZNS } from "zcashname-sdk";
 import type { Network } from "@/lib/types";
-import { getZns, fetchClaimCost, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
+import { getZns, getVerifiedZns, fetchClaimCost, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
 import { MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import { getReservedName, verifyUnlockCode } from "@/lib/zns/reserved";
 import { verifyProof, verifyProofKind, issueProof, parseProofSubject } from "@/lib/zns/proof";
@@ -67,7 +66,7 @@ async function buildSignedClaimAction(
   userUa: string,
   network: Network = "testnet",
 ): Promise<CompletedAction> {
-  const zns = getZns(network);
+  const zns = await getVerifiedZns(network);
   const reg = await zns.resolveName(name);
   if (reg) throw new Error(`Name "${name}" is already registered.`);
   const cost = await fetchClaimCost(name, network);
@@ -81,7 +80,7 @@ async function buildSignedBuyAction(
   listingPriceZats?: number,
   network: Network = "testnet",
 ): Promise<CompletedAction> {
-  const zns = getZns(network);
+  const zns = await getVerifiedZns(network);
   const reg = await zns.resolveName(name);
   if (!reg?.listing) throw new Error(`Name "${name}" is not listed for sale.`);
   return completeWithAdmin(zns.prepareBuy(name, buyerUa, listingPriceZats ?? reg?.listing?.price ?? 0));
@@ -93,7 +92,7 @@ async function buildSignedListAction(
   payTaddr: string,
   network: Network = "testnet",
 ): Promise<{ action: CompletedAction; nonce: number }> {
-  const zns = getZns(network);
+  const zns = await getVerifiedZns(network);
   const reg = await zns.resolveName(name);
   if (!reg) throw new Error(`Name "${name}" is not registered.`);
   const nonce = reg.nonce + 1;
@@ -104,7 +103,7 @@ async function buildSignedDelistAction(
   name: string,
   network: Network = "testnet",
 ): Promise<{ action: CompletedAction; nonce: number }> {
-  const zns = getZns(network);
+  const zns = await getVerifiedZns(network);
   const reg = await zns.resolveName(name);
   if (!reg) throw new Error(`Name "${name}" is not registered.`);
   const nonce = reg.nonce + 1;
@@ -115,7 +114,7 @@ async function buildSignedReleaseAction(
   name: string,
   network: Network = "testnet",
 ): Promise<{ action: CompletedAction; nonce: number }> {
-  const zns = getZns(network);
+  const zns = await getVerifiedZns(network);
   const reg = await zns.resolveName(name);
   if (!reg) throw new Error(`Name "${name}" is not registered.`);
   const nonce = reg.nonce + 1;
@@ -127,7 +126,7 @@ async function buildSignedUpdateAction(
   newUa: string,
   network: Network = "testnet",
 ): Promise<{ action: CompletedAction; nonce: number }> {
-  const zns = getZns(network);
+  const zns = await getVerifiedZns(network);
   const reg = await zns.resolveName(name);
   if (!reg) throw new Error(`Name "${name}" is not registered.`);
   const nonce = reg.nonce + 1;
@@ -164,9 +163,7 @@ function requireOtpProof(otpProof: string | undefined, expectedAddress: string):
   return undefined;
 }
 
-function isValidTaddr(addr: string): boolean {
-  return /^[tT][1-3mM][A-Za-z0-9]{20,}$/.test(addr.trim());
-}
+
 
 /* ── checkUnlockCode ──────────────────────────────────────────────────── */
 
@@ -290,11 +287,10 @@ export async function buildList(input: ListInput): Promise<ActionResult> {
     return { ok: false, error: "Price must be between 0 and 21,000,000 ZEC." };
   }
 
-  if (!isValidTaddr(input.payTaddr)) {
-    return { ok: false, error: "Enter a valid transparent Zcash address (t1, t3, tm, or t2)." };
-  }
-
   const zns = getZns(input.network);
+  if (!zns.isValidTransparentAddress(input.payTaddr.trim())) {
+    return { ok: false, error: "Enter a valid transparent Zcash address (t1, t3, tm, or tn)." };
+  }
   const reg = await zns.resolveName(name);
   if (!reg) return { ok: false, error: "Name is not registered." };
 

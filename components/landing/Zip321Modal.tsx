@@ -9,7 +9,7 @@ import { checkScannerState } from "@/lib/zns/resolve";
 import { checkMempool } from "@/lib/zns/mempool";
 import { validateAddress } from "@/lib/zns/utils";
 import { ZNS } from "zcashname-sdk";
-import { buildZcashUri, parseZip321Uri } from "@/lib/payment/zip321";
+import { buildZcashUri } from "@/lib/payment/zip321";
 import { generateSessionId, buildZvsMemo } from "@/lib/payment/memo";
 import { getNetworkConstants, MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import type {
@@ -392,7 +392,7 @@ export default function Zip321Modal({
 
   // Address validation (live)
   const addrValidation = addressInput.trim()
-    ? validateAddress(addressInput.trim(), network)
+    ? validateAddress(addressInput.trim())
     : { status: "invalid" as const, warning: "" };
 
   const addrBorderColor = !addressInput.trim()
@@ -566,7 +566,7 @@ export default function Zip321Modal({
     if (needsAddress) {
       const addr = addressInput.trim();
       if (!addr) { setInputError("Address is required."); return; }
-      const v = validateAddress(addr, network);
+      const v = validateAddress(addr);
       if (v.status === "viewkey" || v.status === "tex" || v.status === "invalid") {
         setInputError(v.warning || "Invalid address format."); return;
       }
@@ -1054,7 +1054,7 @@ export default function Zip321Modal({
 
   function renderQrPaymentBlock(kind: QrSectionKind, uri: string, size: number) {
     const isOtp = kind === "otp";
-    const parsed = uri ? parseZip321Uri(uri) : { address: "", amount: "", memoRaw: "", memoDecoded: "" };
+    const parsed = uri ? znsInst.parseZip321Uri(uri) : { address: "", amount: "", memoRaw: "", memoDecoded: "" };
     const showUri = isOtp ? showOtpUri : showPaymentUri;
     const setShowUri = isOtp ? setShowOtpUri : setShowPaymentUri;
     const showHelp = isOtp ? showOtpHelp : showPaymentHelp;
@@ -1714,7 +1714,7 @@ export default function Zip321Modal({
 
             {action === "LIST" && paymentUri && (
               <p className="text-xs mt-1" style={{ color: "var(--fg-muted)" }}>
-                Listing commission: {(() => { const p = parseZip321Uri(paymentUri); return p.amount ? `${p.amount} ZEC` : "0.00001 ZEC"; })()} (10% of minimum pricing tier)
+                Listing commission: {(() => { const p = znsInst.parseZip321Uri(paymentUri); return p.amount ? `${p.amount} ZEC` : "0.00001 ZEC"; })()} (10% of minimum pricing tier)
               </p>
             )}
             </div>

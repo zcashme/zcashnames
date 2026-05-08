@@ -9,12 +9,22 @@ const ZNS_RPC_URLS: Record<Network, string> = {
 };
 
 const instances = new Map<Network, ZNS>();
+const verified = new Set<Network>();
 
 export function getZns(network: Network): ZNS {
   const cached = instances.get(network);
   if (cached) return cached;
   const zns = new ZNS({ network, url: ZNS_RPC_URLS[network] });
   instances.set(network, zns);
+  return zns;
+}
+
+export async function getVerifiedZns(network: Network): Promise<ZNS> {
+  const zns = getZns(network);
+  if (!verified.has(network)) {
+    await zns.verify();
+    verified.add(network);
+  }
   return zns;
 }
 
@@ -45,7 +55,7 @@ export interface AddressValidationResult {
 
 const VIEWKEY_RE = /^(uview1|utestview1|zsview1|ztestsaplingview1)/i;
 
-export function validateAddress(address: string, network: Network = "testnet"): AddressValidationResult {
+export function validateAddress(address: string): AddressValidationResult {
   const t = String(address ?? "").trim();
   if (!t) return { status: "invalid", warning: "" };
 
@@ -55,7 +65,7 @@ export function validateAddress(address: string, network: Network = "testnet"): 
   if (/^(tex1|textest1)/i.test(t))
     return { status: "tex", warning: "TEX addresses are not supported." };
 
-  if (getZns(network).isValidUnifiedAddress(t))
+  if (t.startsWith("utest1") || t.startsWith("u1"))
     return { status: "unified", warning: "" };
 
   if (/^(zs1|ztestsapling1)/i.test(t))

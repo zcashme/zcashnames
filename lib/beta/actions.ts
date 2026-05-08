@@ -30,6 +30,11 @@ export async function switchToNetwork(network: Network): Promise<void> {
   await setStageCookie(network);
 }
 
+export async function clearStageCookie(): Promise<void> {
+  const store = await cookies();
+  store.set(BETA_STAGE_COOKIE_NAME, "", betaCookieOptions(0));
+}
+
 export async function getCurrentTesterName(): Promise<string | null> {
   const tester = await readCurrentTester();
   return tester?.displayName ?? null;

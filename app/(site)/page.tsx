@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import HomePageClient from "./HomePageClient";
 import { db } from "@/lib/db";
+import { confirmWaitlistEmail } from "@/lib/waitlist/waitlist";
 
 type HomePageProps = {
-  searchParams?: Promise<{ ref?: string }>;
+  searchParams?: Promise<{ ref?: string; token?: string }>;
 };
 
 const HOME_METADATA: Metadata = {
@@ -88,6 +89,10 @@ export async function generateMetadata({ searchParams }: HomePageProps): Promise
   };
 }
 
-export default function HomePage() {
-  return <HomePageClient />;
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const params = (await searchParams) ?? {};
+  const referralCode = normalizeReferralCode(params.ref);
+  const initialConfirmed = params.token ? await confirmWaitlistEmail(params.token) : null;
+
+  return <HomePageClient initialReferralCode={referralCode} initialConfirmed={initialConfirmed} />;
 }

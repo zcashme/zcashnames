@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Dancing_Script, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
-import { NetworkProvider } from "@/components/NetworkToggle";
+import { NetworkProvider } from "@/components/hooks/useZns";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CabalLaunchBar from "@/components/influencer/CabalLaunchBar";

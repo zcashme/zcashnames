@@ -26,7 +26,7 @@ import ExplorerNameDetail from "./ExplorerNameDetail";
 import Zip321Modal, { type ModalTarget } from "@/components/landing/Zip321Modal";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import { useNetwork } from "@/components/hooks/useNetwork";
+
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 import CopyIconButton from "@/components/CopyIconButton";

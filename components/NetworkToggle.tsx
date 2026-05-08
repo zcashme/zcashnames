@@ -1,94 +1,21 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { getCurrentBetaStage, switchToNetwork } from "@/lib/beta/actions";
-import { getWaitlistStats } from "@/lib/leaders/leaders";
-import { getHomeStats } from "@/lib/zns/resolve";
-import { NetworkContext, useNetwork } from "@/components/hooks/useNetwork";
-import type { NetworkData } from "@/components/hooks/useNetwork";
-import type { Network } from "@/lib/types";
+import { useZns, type ZnsMode } from "@/components/hooks/useZns";
 
-const TABS: { key: Network | null; label: string }[] = [
-  { key: "mainnet", label: "Mainnet" },
-  { key: "testnet", label: "Testnet" },
-  { key: null, label: "Waitlist" },
-];
+const LABELS: Record<ZnsMode["mode"], string> = {
+  waitlist: "Waitlist",
+  mainnet: "Mainnet",
+  testnet: "Testnet",
+};
 
-export function NetworkProvider({ children }: { children: React.ReactNode }) {
-  const [network, setNetworkState] = useState<Network | null>(null);
-  const [data, setData] = useState<NetworkData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [stageHydrated, setStageHydrated] = useState(false);
-  const [refreshCounter, setRefreshCounter] = useState(0);
-
-  function setNetwork(n: Network | null) {
-    setNetworkState(n);
-  }
-
-  function refresh() {
-    setRefreshCounter((c) => c + 1);
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-
-    getCurrentBetaStage()
-      .then((stage) => {
-        if (cancelled || !stage) return;
-        setNetworkState(stage);
-      })
-      .catch(() => {
-        // Fall back to waitlist when the stage cookie cannot be read.
-      })
-      .finally(() => {
-        if (!cancelled) setStageHydrated(true);
-      });
-
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    if (!stageHydrated) return;
-
-    let cancelled = false;
-    setData(null);
-    setLoading(true);
-
-    (async () => {
-      try {
-        if (network) {
-          const stats = await getHomeStats(network);
-          if (!cancelled) setData({ network, stats });
-        } else {
-          const stats = await getWaitlistStats();
-          if (!cancelled) setData({ network: null, stats });
-        }
-      } catch {
-        // keep data as null on error
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [network, refreshCounter, stageHydrated]);
-
-  return (
-    <NetworkContext.Provider
-      value={{ network, setNetwork, data, loading, refresh }}
-    >
-      {children}
-    </NetworkContext.Provider>
-  );
-}
+const MODES: ZnsMode["mode"][] = ["mainnet", "testnet", "waitlist"];
 
 export default function NetworkToggle() {
   const pathname = usePathname();
-  const { network, setNetwork } = useNetwork();
-
-  const activeIndex = Math.max(0, TABS.findIndex((tab) => tab.key === network));
-
+  const { zns, setMode } = useZns();
+  const activeIndex = MODES.findIndex((m) => m === zns.mode);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [tabMetrics, setTabMetrics] = useState<Array<{ left: number; width: number }>>([]);
 
@@ -122,54 +49,44 @@ export default function NetworkToggle() {
 
   const activeMetrics = tabMetrics[activeIndex];
 
-  function handleTabClick(key: Network | null) {
-    if (key === network) return;
-    setNetwork(key);
-    if (key) switchToNetwork(key);
-  }
-
   if (pathname !== "/") return null;
 
   return (
-    <>
+    <div
+      className="relative flex items-center rounded-full h-8 text-sm font-bold tracking-tight leading-none"
+      style={{ isolation: "isolate", background: "var(--color-raised)" }}
+    >
+      <span
+        className="absolute inset-y-0 rounded-full pointer-events-none"
+        style={{
+          left: 0,
+          width: activeMetrics ? `${activeMetrics.width}px` : 0,
+          transform: activeMetrics ? `translateX(${activeMetrics.left}px)` : undefined,
+          transition: tabMetrics.length
+            ? "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), width 0.28s cubic-bezier(0.4, 0, 0.2, 1)"
+            : "none",
+          willChange: "transform, width",
+          background: "var(--color-raised)",
+          boxShadow: "0 0 0 2px var(--fg-heading)",
+          zIndex: 0,
+          opacity: activeMetrics ? 1 : 0,
+        }}
+        aria-hidden="true"
+      />
 
-      <div
-        className="relative flex items-center rounded-full h-8 text-sm font-bold tracking-tight leading-none"
-        style={{ isolation: "isolate", background: "var(--color-raised)" }}
-      >
-        <span
-          className="absolute inset-y-0 rounded-full pointer-events-none"
-          style={{
-            left: 0,
-            width: activeMetrics ? `${activeMetrics.width}px` : 0,
-            transform: activeMetrics ? `translateX(${activeMetrics.left}px)` : undefined,
-            transition: tabMetrics.length
-              ? "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), width 0.28s cubic-bezier(0.4, 0, 0.2, 1)"
-              : "none",
-            willChange: "transform, width",
-            background: "var(--color-raised)",
-            boxShadow: "0 0 0 2px var(--fg-heading)",
-            zIndex: 0,
-            opacity: activeMetrics ? 1 : 0,
-          }}
-          aria-hidden="true"
-        />
-
-        {TABS.map((tab, i) => (
-          <button
-            key={tab.label}
-            ref={(el) => { tabRefs.current[i] = el; }}
-            type="button"
-            className="relative z-10 flex items-center justify-center h-full px-2.5 rounded-full whitespace-nowrap transition-opacity duration-200 cursor-pointer"
-            style={{ opacity: network === tab.key ? 1 : 0.4 }}
-            aria-pressed={network === tab.key}
-            onClick={() => handleTabClick(tab.key)}
-          >
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
-    </>
+      {MODES.map((m, i) => (
+        <button
+          key={m}
+          ref={(el) => { tabRefs.current[i] = el; }}
+          type="button"
+          className="relative z-10 flex items-center justify-center h-full px-2.5 rounded-full whitespace-nowrap transition-opacity duration-200 cursor-pointer"
+          style={{ opacity: zns.mode === m ? 1 : 0.4 }}
+          aria-pressed={zns.mode === m}
+          onClick={() => setMode(m)}
+        >
+          <span>{LABELS[m]}</span>
+        </button>
+      ))}
+    </div>
   );
 }

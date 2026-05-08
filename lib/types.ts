@@ -51,18 +51,14 @@ export interface ZnsEvent {
   pubkey: string | null;
 }
 
-/**
- * Per-network constants used by Zip321Modal.
- * Payment URIs are now built by the SDK (CompletedAction.uri) using the
- * indexer's registry address — no hardcoded ZIP321_RECIPIENT_ADDRESS needed.
- */
+/* ── Network constants ───────────────────────────────────────────────── */
+
 interface NetworkConstants {
   OTP_SIGNIN_ADDR: string;
   OTP_AMOUNT: string;
   OTP_MAX_ATTEMPTS: number;
 }
 
-/** Testnet and mainnet each have their own set of addresses. Testnet addresses start with "utest1". */
 const NETWORK_CONSTANTS: Record<Network, NetworkConstants> = {
   testnet: {
     OTP_SIGNIN_ADDR:
@@ -78,80 +74,43 @@ const NETWORK_CONSTANTS: Record<Network, NetworkConstants> = {
   },
 };
 
-/** Returns the addresses and limits for the given network. Defaults to testnet. */
 export function getNetworkConstants(network: Network = "testnet"): NetworkConstants {
   return NETWORK_CONSTANTS[network];
 }
 
-/** Maximum ZEC a name can be listed for sale at. 21 million = the Zcash total supply cap.
- *  Used for both client-side validation (Zip321Modal) and server-side validation (actions.ts). */
 export const MAX_LIST_FOR_SALE_AMOUNT = 21_000_000;
 
-export interface ModalTarget {
+/* ── Modal machine ───────────────────────────────────────────────────── */
+
+export interface ModalRequest {
   name: string;
   action: Action;
-  registrationAddress?: string;
-  registrationNonce?: number;
-  registrationPubkey?: string | null;
-  listingPriceZec?: number;
-  /** Transparent address where the seller receives payment (required for LIST). */
-  payTaddr?: string;
   network: Network;
+  registration?: { address: string; nonce: number; pubkey: string | null };
+  listing?: { priceZec: number; payTaddr: string };
   isReserved?: boolean;
 }
 
-export type PendingTransactionPhase = "payment" | "scanning" | "fund";
-export type PendingTransactionScanState = "loading" | "not_detected" | "in_mempool" | "being_mined" | "mined";
+export type ScanState = "loading" | "not_detected" | "in_mempool" | "being_mined" | "mined";
 
-export interface PendingTransactionState {
-  target: ModalTarget;
-  phase: PendingTransactionPhase;
-  addressInput: string;
-  priceInput: string;
-  payTaddrInput?: string;
-  paymentUri: string;
-  scanState: PendingTransactionScanState;
-  updatedAt: number;
-  /** Hex txid from the mempool watcher, captured when first seen. */
-  txid?: string;
-  /** Validation warnings from the mempool watcher. */
-  warnings?: string[];
-}
+export type ModalPhase =
+  | { phase: "idle" }
+  | { phase: "unlock"; request: ModalRequest; code: string; loading: boolean; error: string }
+  | { phase: "input"; request: ModalRequest; address: string; price: string; payTaddr: string; auth: "default" | "otp" | "sovereign"; unlockProof?: string; loading: boolean; error: string }
+  | { phase: "otp"; request: ModalRequest; sessionId: string; registeredAddress: string; code: string; sent: boolean; proof?: string; attempts: number; address: string; price: string; payTaddr: string; loading: boolean; error: string }
+  | { phase: "sign"; request: ModalRequest; payload: string; unlockProof?: string; pubkey: string; sig: string; address: string; price: string; payTaddr: string; loading: boolean; error: string; pubkeyError: string; sigError: string }
+  | { phase: "confirm"; request: ModalRequest; uri: string }
+  | { phase: "fund"; request: ModalRequest; payTaddr: string; amountZec: number; uri: string }
+  | { phase: "scanning"; request: ModalRequest; uri: string; scan: ScanState; txid?: string; warnings?: string[] }
+  | { phase: "done"; request: ModalRequest };
 
-/**
- * Result of resolving a name query.
- */
+export type ModalPhaseKind = ModalPhase["phase"];
+
+/* ── Resolve result ──────────────────────────────────────────────────── */
+
 export type ResolveName =
-  | {
-      status: 'available'
-      query: string
-      claimCost: { zats: number; zec: number }
-      firstBucket?: number
-    }
-  | {
-      status: 'reserved'
-      query: string
-      claimCost: { zats: number; zec: number }
-      firstBucket?: number
-    }
-  | {
-      status: 'blocked'
-      query: string
-    }
-  | {
-      status: 'registered'
-      query: string
-      registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null }
-      firstBucket?: number
-    }
-  | {
-      status: 'listed'
-      query: string
-      registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null }
-      listingPrice: { zats: number; zec: number }
-  /** Transparent address where the seller receives payment. */
-  payTaddr: string;
-  /** Active pending purchase, if any. */
-  pendingBuy?: PendingBuy;
-  firstBucket?: number
-}
+  | { status: "available"; query: string; claimCost: { zats: number; zec: number }; firstBucket?: number }
+  | { status: "reserved"; query: string; claimCost: { zats: number; zec: number }; firstBucket?: number }
+  | { status: "blocked"; query: string }
+  | { status: "registered"; query: string; registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null }; firstBucket?: number }
+  | { status: "listed"; query: string; registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null }; listingPrice: { zats: number; zec: number }; payTaddr: string; pendingBuy?: PendingBuy; firstBucket?: number };
