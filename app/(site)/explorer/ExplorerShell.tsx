@@ -105,6 +105,7 @@ export default function ExplorerShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const [uivkOpen, setUivkOpen] = useState(false);
   const [copied, setCopied] = useState<"mainnet" | "testnet" | null>(null);
+  const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
 
   useEffect(() => {
     setIsClientMounted(true);
@@ -271,7 +272,10 @@ export default function ExplorerShell({
     });
   }
 
-  function handleDetailAction(_action: Action) {}
+  function handleDetailAction(action: Action) {
+    if (!nameDataReady || !nameResult) return;
+    setModalState({ action, resolveResult: nameResult });
+  }
 
   function handleRefresh() {
     startTransition(() => {
@@ -545,6 +549,17 @@ export default function ExplorerShell({
             </div>
           </div>
         </div>
+      )}
+
+      {isClientMounted && modalState && (
+        <Zip321Modal
+          action={modalState.action}
+          name={modalState.resolveResult.query}
+          network={detailNetwork}
+          resolveResult={modalState.resolveResult}
+          onClose={() => setModalState(null)}
+          onSuccess={() => router.refresh()}
+        />
       )}
     </div>
   );

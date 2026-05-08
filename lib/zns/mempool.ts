@@ -38,22 +38,35 @@ export interface MempoolEntry {
   zec_amount: number;
   /** Unix timestamp when first seen in mempool. */
   seen_at: number;
-  /** Validation warnings, e.g. "amount may be too low". */
-  warnings: string[];
 }
 
-/** Transaction state from the mempool watcher's state machine. */
-export type TxState =
-  | { state: "Pending"; seen_at: number; checks: number }
-  | { state: "Confirmed"; height: number; confirmed_at: number }
-  | { state: "Rejected"; reason: string; rejected_at: number };
+/**
+ * Transaction state from the mempool watcher's state machine.
+ * Flattened for direct frontend consumption — status maps 1:1 to ScanState.
+ */
+export interface MempoolTxState {
+  /** One of: "pending" | "resolving" | "confirmed" | "rejected" */
+  status: string;
+  /** Unix timestamp when first seen in mempool. (pending/resolving only) */
+  seen_at?: number;
+  /** Number of LWD resolution attempts. (resolving only) */
+  checks?: number;
+  /** Block height when confirmed. (confirmed only) */
+  height?: number;
+  /** Unix timestamp when confirmed. (confirmed only) */
+  confirmed_at?: number;
+  /** Rejection reason. (rejected only) */
+  reason?: string;
+  /** Unix timestamp when rejected. (rejected only) */
+  rejected_at?: number;
+}
 
 /** Full response from /tx/:txid or /name/:name */
 export interface TxStatusResponse {
   txid: string;
   name: string;
   action: string;
-  state: TxState;
+  state: MempoolTxState;
   entry: MempoolEntry;
 }
 

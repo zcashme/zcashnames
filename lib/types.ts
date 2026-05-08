@@ -95,7 +95,7 @@ export function getNetworkConstants(network: Network = "testnet"): NetworkConsta
 
 export const MAX_LIST_FOR_SALE_AMOUNT = 21_000_000;
 
-export type ScanState = "loading" | "not_detected" | "in_mempool" | "being_mined" | "mined";
+export type ScanState = "not_detected" | "in_mempool" | "confirming" | "mined" | "rejected";
 
 /* ── Resolve result ──────────────────────────────────────────────────── */
 

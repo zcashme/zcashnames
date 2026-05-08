@@ -8,16 +8,16 @@ import { ACTION_LABELS } from "@/lib/zns/actions";
 function describePending(state: PendingTransactionState): string {
   if (state.phase === "payment") return "Ready to send";
   switch (state.scanState) {
-    case "loading":
-      return "Checking status";
     case "not_detected":
       return "Waiting for detection";
     case "in_mempool":
       return "In mempool";
-    case "being_mined":
-      return "Being mined";
+    case "confirming":
+      return "Confirming";
     case "mined":
       return "Confirmed";
+    case "rejected":
+      return "Not found";
   }
 }
 

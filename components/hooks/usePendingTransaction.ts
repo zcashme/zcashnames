@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import { checkScannerState } from "@/lib/zns/resolve";
-import { checkMempool, type MempoolEntry } from "@/lib/zns/mempool";
+import { useCallback, useEffect, useRef } from "react";
+import { checkMempool } from "@/lib/zns/mempool";
 import type { PendingTransactionState } from "@/lib/types";
 import { useLocalStorage } from "@/components/hooks/useLocalStorage";
 
@@ -24,67 +23,51 @@ export function usePendingTransaction(onSuccess?: (name: string) => void) {
   );
 
   useEffect(() => {
-    if (!pendingTransaction || pendingTransaction.phase !== "scanning" || pendingTransaction.scanState === "mined") {
+    if (
+      !pendingTransaction ||
+      pendingTransaction.phase !== "scanning" ||
+      pendingTransaction.scanState === "mined" ||
+      pendingTransaction.scanState === "rejected"
+    ) {
       return;
     }
 
     const current = pendingTransaction;
     let cancelled = false;
-    const expected = {
-      address: current.addressInput.trim() || undefined,
-      priceZats: current.priceInput.trim()
-        ? Math.round(Number(current.priceInput.replace(/,/g, "").trim()) * 1e8)
-        : undefined,
-    };
 
     async function poll() {
-const [mempoolResult, resolver] = await Promise.all([
-          checkMempool(current.target.name, current.target.network),
-          checkScannerState(
-            current.target.name,
-            current.target.network,
-            current.target.action,
-            expected,
-          ),
-        ]);
-        if (cancelled) return;
+      const result = await checkMempool(current.target.name, current.target.network);
+      if (cancelled) return;
 
-        let nextScanState = current.scanState;
-        let nextTxid: string | undefined = current.txid;
-        let nextWarnings: string[] | undefined = current.warnings;
+      let nextScanState = current.scanState;
+      let nextTxid: string | undefined = current.txid;
 
-        if (resolver === "success") {
-          nextScanState = "mined";
-        } else if (mempoolResult.found && mempoolResult.response) {
-          const { state, entry } = mempoolResult.response;
-          if (state.state === "Confirmed") {
-            nextScanState = "mined";
-          } else if (state.state === "Pending") {
+      if (!result.found || !result.response) {
+        nextScanState = "not_detected";
+      } else {
+        const { state, entry } = result.response;
+        switch (state.status) {
+          case "pending":
             nextScanState = "in_mempool";
-            if (entry.txid) nextTxid = entry.txid;
-            if (entry.warnings?.length) nextWarnings = entry.warnings;
-          } else if (state.state === "Rejected") {
-            nextScanState = "not_detected";
-          }
-        } else if (
-          current.scanState === "in_mempool" ||
-          current.scanState === "being_mined"
-        ) {
-          nextScanState = "being_mined";
-        } else {
-          nextScanState = "not_detected";
+            break;
+          case "resolving":
+            nextScanState = "confirming";
+            break;
+          case "confirmed":
+            nextScanState = "mined";
+            break;
+          case "rejected":
+            nextScanState = "rejected";
+            break;
         }
+        if (entry.txid) nextTxid = entry.txid;
+      }
 
-      if (
-        nextScanState !== current.scanState ||
-        nextTxid !== current.txid ||
-        JSON.stringify(nextWarnings) !== JSON.stringify(current.warnings)
-      ) {
+      if (nextScanState !== current.scanState || nextTxid !== current.txid) {
         setPendingTransaction({
           ...current,
           scanState: nextScanState,
           txid: nextTxid,
-          warnings: nextWarnings,
           updatedAt: Date.now(),
         });
       }

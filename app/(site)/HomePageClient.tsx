@@ -18,7 +18,7 @@ import { useSearchState } from "@/components/hooks/useSearchState";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 import { submitWaitlist } from "@/lib/waitlist/waitlist";
 import { isValidUsername, normalizeUsername } from "@/lib/zns/utils";
-import type { Action } from "@/lib/types";
+import type { Action, ResolveName } from "@/lib/types";
 import type { ConfirmWaitlistResult } from "@/lib/waitlist/waitlist";
 
 const POPULAR_NAMES = new Set([
@@ -280,7 +280,7 @@ export default function HomePageClient({
   const [isClientMounted, setIsClientMounted] = useState(false);
   const [waitlistConfirmed, setWaitlistConfirmed] = useState<ConfirmWaitlistResult | null>(initialConfirmed);
   const [waitlistSearchedName, setWaitlistSearchedName] = useState(initialConfirmed?.name ?? "");
-  const [modalState, setModalState] = useState<{ action: Action; name: string } | null>(null);
+  const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
 
   const {
     input,
@@ -325,8 +325,8 @@ export default function HomePageClient({
     setWaitlistSearchedName(nameValue);
   }
 
-  function openModal(action: Action, name: string) {
-    setModalState({ action, name });
+  function openModal(action: Action, resolveResult: ResolveName) {
+    setModalState({ action, resolveResult });
   }
 
   const form = (
@@ -404,7 +404,7 @@ export default function HomePageClient({
                 network={zns.mode}
                 {...props}
                 isPopularName={isPopular}
-                onAction={(action) => openModal(action, result.query)}
+                onAction={(action) => openModal(action, result)}
                 onDismiss={() => removeResult(result.query)}
               />
             );
@@ -443,7 +443,9 @@ export default function HomePageClient({
       {modalState && (
         <Zip321Modal
           action={modalState.action}
-          name={modalState.name}
+          name={modalState.resolveResult.query}
+          network={zns.mode}
+          resolveResult={modalState.resolveResult}
           onClose={() => setModalState(null)}
           onSuccess={(name) => {
             setModalState(null);
