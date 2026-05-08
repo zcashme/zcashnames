@@ -106,48 +106,6 @@ export async function resolveName(
   };
 }
 
-/**
- * Check whether the resolver reflects the expected post-action state for `name`.
- * Used by the scanner phase of Zip321Modal to know when an action has been mined.
- *
- * Returns "success" once the resolver matches the expected state, "empty" otherwise.
- * Network/parsing errors are reported as "empty" so the polling loop keeps going.
- */
-export async function checkScannerState(
-  name: string,
-  network: Network,
-  action: Action,
-  expected: { address?: string; priceZats?: number },
-): Promise<"empty" | "success"> {
-  try {
-    const reg = await getZns(network).resolveName(name);
-
-    switch (action) {
-      case "CLAIM":
-      case "BUY":
-      case "UPDATE": {
-        if (!reg) return "empty";
-        if (!expected.address) return "empty";
-        return reg.address === expected.address ? "success" : "empty";
-      }
-      case "LIST": {
-        if (!reg || !reg.listing) return "empty";
-        if (expected.priceZats == null) return "empty";
-        return reg.listing.price === expected.priceZats ? "success" : "empty";
-      }
-      case "DELIST": {
-        if (!reg) return "empty";
-        return reg.listing == null ? "success" : "empty";
-      }
-      case "RELEASE": {
-        return reg == null ? "success" : "empty";
-      }
-    }
-  } catch {
-    return "empty";
-  }
-}
-
 export async function getHomeStats(network: Network = "testnet"): Promise<{ claimed: number; forSale: number; verifiedOnZcashMe: number; syncedHeight: number; uivk: string }> {
   try {
     const s = await getZns(network).status();
