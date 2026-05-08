@@ -280,6 +280,7 @@ export default function HomePageClient({
   const [isClientMounted, setIsClientMounted] = useState(false);
   const [waitlistConfirmed, setWaitlistConfirmed] = useState<ConfirmWaitlistResult | null>(initialConfirmed);
   const [waitlistSearchedName, setWaitlistSearchedName] = useState(initialConfirmed?.name ?? "");
+  const [modalState, setModalState] = useState<{ action: Action; name: string } | null>(null);
 
   const {
     input,
@@ -322,6 +323,10 @@ export default function HomePageClient({
   function resetWaitlistSearch(nameValue = "") {
     setWaitlistConfirmed(null);
     setWaitlistSearchedName(nameValue);
+  }
+
+  function openModal(action: Action, name: string) {
+    setModalState({ action, name });
   }
 
   const form = (
@@ -399,7 +404,7 @@ export default function HomePageClient({
                 network={zns.mode}
                 {...props}
                 isPopularName={isPopular}
-                onAction={(_action: Action) => {}}
+                onAction={(action) => openModal(action, result.query)}
                 onDismiss={() => removeResult(result.query)}
               />
             );
@@ -434,6 +439,18 @@ export default function HomePageClient({
 
       <HowItWorks />
       <FAQ />
+
+      {modalState && (
+        <Zip321Modal
+          action={modalState.action}
+          name={modalState.name}
+          onClose={() => setModalState(null)}
+          onSuccess={(name) => {
+            setModalState(null);
+            refreshResult(name);
+          }}
+        />
+      )}
 
       <div className="flex justify-center pb-10">
         <button

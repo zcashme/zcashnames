@@ -4,12 +4,13 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ACTION_PHASES } from "@/lib/types";
-import type { Action } from "@/lib/types";
+import type { Action, Phase, ResolveName } from "@/lib/types";
 import PhaseUnlock from "./PhaseUnlock";
 
 interface Zip321ModalProps {
   action: Action;
   name: string;
+  resolveResult: ResolveName;
   onClose: () => void;
   onSuccess?: (name: string) => void;
 }
@@ -68,10 +69,17 @@ function prepareDescription(action: Action, name: string, amount: string): React
 export default function Zip321Modal({
   action,
   name,
+  resolveResult,
   onClose,
   onSuccess,
 }: Zip321ModalProps) {
-  const phases = ACTION_PHASES[action];
+  const phases: Phase[] = (() => {
+    const base = [...ACTION_PHASES[action]];
+    if (action === "CLAIM" && resolveResult.status === "reserved") {
+      base.unshift("unlock");
+    }
+    return base;
+  })();
   const [step, setStep] = useState(0);
   const phase = phases[step] ?? phases[phases.length - 1];
 
