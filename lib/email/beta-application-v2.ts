@@ -1,7 +1,7 @@
 import "server-only";
 
 import { FROM_EMAIL, TO_EMAIL } from "@/lib/email/constants";
-import { getResend } from "@/lib/email/client";
+import { sendEmail } from "@/lib/email/client";
 
 interface BetaV2ApplicationNotice {
   testerId: string;
@@ -28,7 +28,6 @@ function row(label: string, value: string | null | undefined): string {
 export async function sendBetaV2ApplicationNotice(
   notice: BetaV2ApplicationNotice,
 ): Promise<void> {
-  const resend = getResend();
   const contactBlock = notice.contacts
     .map((c) => `  - ${c.kind}${c.isBest ? " (best)" : ""}: ${c.value}`)
     .join("\n");
@@ -58,7 +57,7 @@ export async function sendBetaV2ApplicationNotice(
     "Open the beta_testers_v2 table in Supabase to review and invite this applicant.",
   ].join("\n");
 
-  await resend.emails.send({
+  await sendEmail({
     from: FROM_EMAIL,
     to: TO_EMAIL,
     subject: `New beta v2 application: ${notice.displayName}`,

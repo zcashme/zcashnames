@@ -101,6 +101,10 @@ export function zatsToZec(zats: number): number {
   return zats / 100_000_000;
 }
 
+export function roundZec(value: number): number {
+  return Math.round(value * 10000) / 10000;
+}
+
 export function formatUsdEquivalent(
   zecAmount: number,
   usdPerZec: number | null

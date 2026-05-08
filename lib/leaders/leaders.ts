@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { sendCommissionPinEmail } from "@/lib/email/commission-pin";
 import {
@@ -19,6 +18,8 @@ import {
   type WaitlistReferralRow,
   type ReferralScope,
 } from "@/lib/leaders/referral-dashboard";
+import { resolveBaseUrl } from "@/lib/url";
+import { roundZec } from "@/lib/zns/utils";
 
 export type { ReferralScope };
 
@@ -110,19 +111,6 @@ function toWaitlistReferralRows(data: Record<string, unknown>[]): WaitlistReferr
     .filter((row) => Boolean(row.referral_code));
 }
 
-function roundZec(value: number): number {
-  return Math.round(value * 10000) / 10000;
-}
-
-function resolveBaseUrl(headerStore: { get(name: string): string | null }): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
-
-  const proto = headerStore.get("x-forwarded-proto") || "https";
-  const host = headerStore.get("x-forwarded-host") || headerStore.get("host");
-  if (host) return `${proto}://${host}`;
-  return "https://zcashnames.com";
-}
 
 function wasCommissionPinSentToday(value: unknown): boolean {
   if (typeof value !== "string" || !value) return false;
@@ -650,13 +638,13 @@ export async function requestReferralCommissionPin(
       return { ok: true, message: COMMISSION_PIN_RATE_LIMIT_MESSAGE };
     }
 
-    const headerStore = await headers();
+    const baseUrl = await resolveBaseUrl();
     await sendCommissionPinEmail({
       email: normalizedEmail,
       name: String(data.name || "there"),
       pin: getCommissionPin(String(data.referral_code)),
       referralCode: String(data.referral_code),
-      baseUrl: resolveBaseUrl(headerStore),
+      baseUrl,
     });
 
     const { error: updateError } = await db

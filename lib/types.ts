@@ -6,6 +6,8 @@ export type Zats = number;
 export const ACTIONS = ["CLAIM", "BUY", "UPDATE", "LIST", "DELIST", "RELEASE"] as const;
 export type Action = (typeof ACTIONS)[number];
 
+export type NameAvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
+
 export type AuthMethod = "otp" | "sovereign";
 
 export type Phase = "unlock" | "input" | "otp" | "sign" | "confirm" | "fund" | "scanning";

@@ -349,7 +349,26 @@ export default function Zip321Modal({
             )}
           </div>
         )}
-        {phase !== "unlock" && phase !== "input" && phase !== "otp" && (
+        {phase === "confirm" && (
+          <div className="flex flex-col items-center gap-4 text-center">
+            <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Send Payment</h2>
+            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+              Send exact amount and memo to complete the transaction.
+            </p>
+            {uri && (
+              <code className="w-full break-all rounded-lg px-3 py-2 text-xs text-left"
+                style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}>
+                {uri}
+              </code>
+            )}
+            <button type="button" onClick={() => advance()}
+              className="px-5 py-2.5 rounded-full text-sm font-semibold"
+              style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
+              I Sent It!
+            </button>
+          </div>
+        )}
+        {phase !== "unlock" && phase !== "input" && phase !== "otp" && phase !== "confirm" && (
           <>
             <p className="text-sm">Phase: {phase} ({step + 1}/{phases.length})</p>
             {address && <p className="text-xs mt-1">Address: {address}</p>}

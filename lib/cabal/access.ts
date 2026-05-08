@@ -1,7 +1,7 @@
 import "server-only";
 
-import { createHmac, timingSafeEqual } from "crypto";
-import { cookies } from "next/headers";
+import { signHmac, resolveSecret } from "@/lib/hmac";
+import { parseSignedCookie, setCookie, getCookie } from "@/lib/cookie";
 import { db } from "@/lib/db";
 
 type CabalInvite = {
@@ -13,9 +13,7 @@ export const CABAL_COOKIE_NAME = "zn_cabal";
 const COOKIE_TTL_SECONDS = 60 * 60 * 24 * 30;
 
 function getSecret(): string {
-  const secret = process.env.CABAL_GATE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!secret) throw new Error("Missing CABAL_GATE_SECRET or SUPABASE_SERVICE_ROLE_KEY.");
-  return secret;
+  return resolveSecret(process.env.CABAL_GATE_SECRET);
 }
 
 function encodePayload(payload: { id: string; expiresAt: number }): string {
@@ -37,42 +35,19 @@ function decodePayload(value: string): { id: string; expiresAt: number } | null 
   }
 }
 
-function sign(payload: string): string {
-  return createHmac("sha256", getSecret()).update(payload).digest("hex");
-}
-
-function safeEqual(a: string, b: string): boolean {
-  const left = Buffer.from(a);
-  const right = Buffer.from(b);
-  if (left.length !== right.length) return false;
-  return timingSafeEqual(left, right);
-}
-
-function cabalCookieOptions(maxAgeSeconds: number) {
-  return {
-    httpOnly: true as const,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: maxAgeSeconds,
-  };
+function parseInvitePayload(payload: string): { id: string; expiresAt: number } | null {
+  const parsed = decodePayload(payload);
+  if (!parsed) return null;
+  if (parsed.expiresAt < Math.floor(Date.now() / 1000)) return null;
+  return parsed;
 }
 
 function buildCookieValue(inviteId: string): { value: string; expiresAt: number } {
   const expiresAt = Math.floor(Date.now() / 1000) + COOKIE_TTL_SECONDS;
   const payload = encodePayload({ id: inviteId, expiresAt });
-  return { value: `${payload}.${sign(payload)}`, expiresAt };
-}
-
-function parseCookieValue(value: string): { id: string; expiresAt: number } | null {
-  const [payload, signature] = value.split(".");
-  if (!payload || !signature || value.split(".").length !== 2) return null;
-  if (!safeEqual(sign(payload), signature)) return null;
-
-  const parsed = decodePayload(payload);
-  if (!parsed) return null;
-  if (parsed.expiresAt < Math.floor(Date.now() / 1000)) return null;
-  return parsed;
+  const secret = getSecret();
+  const signature = signHmac(secret, payload);
+  return { value: `${payload}.${signature}`, expiresAt };
 }
 
 async function findInviteById(id: string): Promise<CabalInvite | null> {
@@ -124,16 +99,15 @@ export async function verifyCabalPassword(password: string): Promise<CabalInvite
 export async function setCabalAccessCookie(inviteId: string): Promise<void> {
   const { value, expiresAt } = buildCookieValue(inviteId);
   const maxAge = expiresAt - Math.floor(Date.now() / 1000);
-  const store = await cookies();
-  store.set(CABAL_COOKIE_NAME, value, cabalCookieOptions(maxAge));
+  await setCookie(CABAL_COOKIE_NAME, value, maxAge);
 }
 
 export async function readCurrentCabalInvite(): Promise<CabalInvite | null> {
-  const store = await cookies();
-  const cookie = store.get(CABAL_COOKIE_NAME);
-  if (!cookie?.value) return null;
+  const value = await getCookie(CABAL_COOKIE_NAME);
+  if (!value) return null;
 
-  const parsed = parseCookieValue(cookie.value);
+  const parsed = parseSignedCookie(value, getSecret(), parseInvitePayload);
   if (!parsed) return null;
+
   return findInviteById(parsed.id);
 }

@@ -7,11 +7,11 @@ import type { Network } from "@/lib/types";
 import {
   BETA_COOKIE_NAME,
   BETA_STAGE_COOKIE_NAME,
-  betaCookieOptions,
   readCurrentStage,
   readCurrentTester,
   setStageCookie,
 } from "./gate";
+import { cookieOptions } from "@/lib/cookie";
 
 const FEEDBACK_BUCKET = "beta-feedback";
 
@@ -21,8 +21,8 @@ const FEEDBACK_BUCKET = "beta-feedback";
 
 export async function signOutBetaTester(): Promise<{ ok: true }> {
   const store = await cookies();
-  store.set(BETA_COOKIE_NAME, "", betaCookieOptions(0));
-  store.set(BETA_STAGE_COOKIE_NAME, "", betaCookieOptions(0));
+  store.set(BETA_COOKIE_NAME, "", cookieOptions(0));
+  store.set(BETA_STAGE_COOKIE_NAME, "", cookieOptions(0));
   return { ok: true };
 }
 
@@ -32,7 +32,7 @@ export async function switchToNetwork(network: Network): Promise<void> {
 
 export async function clearStageCookie(): Promise<void> {
   const store = await cookies();
-  store.set(BETA_STAGE_COOKIE_NAME, "", betaCookieOptions(0));
+  store.set(BETA_STAGE_COOKIE_NAME, "", cookieOptions(0));
 }
 
 export async function getCurrentTesterName(): Promise<string | null> {

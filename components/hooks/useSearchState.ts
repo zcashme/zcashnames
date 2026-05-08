@@ -3,10 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { resolveName } from "@/lib/zns/resolve";
 import { normalizeUsername, isValidUsername, formatUsdEquivalent } from "@/lib/zns/utils";
-import type { Network } from "@/lib/types";
-import type { ResolveName, Action } from "@/lib/types";
-
-export type NameAvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
+import type { Network, ResolveName, Action, NameAvailabilityState } from "@/lib/types";
 
 interface CardProps {
   availabilityState: NameAvailabilityState;

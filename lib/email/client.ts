@@ -13,3 +13,10 @@ export function getResend(): Resend {
   }
   return _resend;
 }
+
+export async function sendEmail(
+  params: Parameters<Resend["emails"]["send"]>[0],
+): Promise<void> {
+  const resend = getResend();
+  await resend.emails.send(params);
+}

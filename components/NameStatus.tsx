@@ -1,9 +1,7 @@
 "use client";
 
 import type React from "react";
-import type { Action } from "@/lib/types";
-
-export type NameAvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
+import type { Action, NameAvailabilityState } from "@/lib/types";
 
 function StatusBadge({
   variant,

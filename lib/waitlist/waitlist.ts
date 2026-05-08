@@ -1,7 +1,5 @@
-"use server";
+import "server-only";
 
-import { createHash } from "crypto";
-import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { sendFollowUp } from "@/lib/email/followup";
 import { sendWaitlistConfirmationEmail } from "@/lib/email/waitlist";
@@ -13,6 +11,7 @@ import {
 } from "@/lib/waitlist/confirm-token";
 import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
 import { normalizeUsername } from "@/lib/zns/utils";
+import { resolveBaseUrl } from "@/lib/url";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 const MAX_REFERRAL_CODE_RETRIES = 6;
@@ -82,16 +81,6 @@ function normalizeReferredBy(input: string | null): string | null {
   return isValidReferralCode(code) ? code : null;
 }
 
-function resolveBaseUrl(headerStore: { get(name: string): string | null }): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
-
-  const proto = headerStore.get("x-forwarded-proto") || "https";
-  const host = headerStore.get("x-forwarded-host") || headerStore.get("host");
-  if (host) return `${proto}://${host}`;
-  return "https://zcashnames.com";
-}
-
 export async function submitWaitlist(
   payload: WaitlistPayload,
 ): Promise<{ error: string | null }> {
@@ -102,8 +91,6 @@ export async function submitWaitlist(
   if (!isValidName(normalizedName) || !isValidEmail(normalizedEmail)) {
     return { error: GENERIC_ERROR };
   }
-
-  const headerStore = await headers();
 
   const { data: existingRows, error: existingError } = await db
     .from("zn_waitlist")
@@ -177,7 +164,7 @@ export async function submitWaitlist(
     waitlistId,
     email: normalizedEmail,
   });
-  const confirmUrl = `${resolveBaseUrl(headerStore)}/?token=${encodeURIComponent(confirmToken)}`;
+  const confirmUrl = `${await resolveBaseUrl()}/?token=${encodeURIComponent(confirmToken)}`;
 
   try {
     await sendWaitlistConfirmationEmail({
@@ -233,7 +220,7 @@ export async function submitSurvey(
     try {
       const reasons: string[] = [];
       if (want_early_trial) reasons.push("You expressed interest in trying ZcashNames before launch.");
-      if (integrateSelected) reasons.push("You’re interested in integrating ZcashNames with your app.");
+      if (integrateSelected) reasons.push("You're interested in integrating ZcashNames with your app.");
       if (may_contact && reasons.length === 0) reasons.push("You said we could reach out.");
       const reasonCopy = reasons.join(" ");
 
@@ -303,8 +290,6 @@ export interface ConfirmWaitlistResult {
 export async function confirmWaitlistEmail(
   token: string,
 ): Promise<ConfirmWaitlistResult> {
-  const headerStore = await headers();
-
   const parsed = parseWaitlistConfirmToken(token);
   if (!parsed || isWaitlistConfirmTokenExpired(parsed)) {
     return { status: "invalid" };
@@ -344,7 +329,7 @@ export async function confirmWaitlistEmail(
       email: row.email,
       name: row.name,
       referralCode: row.referral_code ?? "",
-      baseUrl: resolveBaseUrl(headerStore),
+      baseUrl: await resolveBaseUrl(),
     });
   } catch (emailError) {
     console.error("Waitlist welcome email error:", emailError);

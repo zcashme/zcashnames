@@ -1,3 +1,5 @@
+import { roundZec } from "@/lib/zns/utils";
+
 export type ReferralScope = "all" | "confirmed";
 
 export type NameLengthBucket = "1" | "2" | "3" | "4" | "5" | "6" | "7+";
@@ -342,8 +344,4 @@ export function calculateReferralProjection({
 
 function sanitizeNumber(value: number): number {
   return Number.isFinite(value) ? value : 0;
-}
-
-function roundZec(value: number): number {
-  return Math.round(value * 10000) / 10000;
 }

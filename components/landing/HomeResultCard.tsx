@@ -1,12 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import type { Action, Network } from "@/lib/types";
+import type { Action, Network, NameAvailabilityState } from "@/lib/types";
 import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
 import {
   NameStatusBadge,
   NameStatusButtons,
-  type NameAvailabilityState,
   statusSupportsPrice,
 } from "@/components/NameStatus";
 

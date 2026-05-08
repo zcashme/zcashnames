@@ -11,21 +11,14 @@ export type ShareKitSection = {
   drafts: ShareKitDraft[];
 };
 
+import { slugify } from "@/lib/url";
+
 function normalizeLineEndings(markdown: string): string {
   return markdown.replace(/\r\n?/g, "\n");
 }
 
 function isRule(line: string): boolean {
   return /^\s*---+\s*$/.test(line);
-}
-
-function slugify(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return slug || "item";
 }
 
 function createUniqueId(base: string, seen: Map<string, number>): string {

@@ -1,8 +1,8 @@
 import "server-only";
 
-import { createHmac, timingSafeEqual } from "crypto";
+import { safeEqual, signHmac, resolveSecret } from "@/lib/hmac";
 
-const DEFAULT_TOKEN_TTL_SECONDS = 60 * 60 * 24; // 24 hours
+const DEFAULT_TOKEN_TTL_SECONDS = 60 * 60 * 24;
 
 export interface ParsedWaitlistConfirmToken {
   waitlistId: string;
@@ -11,27 +11,15 @@ export interface ParsedWaitlistConfirmToken {
 }
 
 function getSecret(): string {
-  const secret =
-    process.env.WAITLIST_CONFIRM_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.RESEND_API_KEY;
-  if (!secret) {
-    throw new Error("Missing WAITLIST_CONFIRM_SECRET (or fallback email/db secret).");
-  }
-  return secret;
+  return resolveSecret(
+    process.env.WAITLIST_CONFIRM_SECRET,
+    process.env.RESEND_API_KEY,
+  );
 }
 
 function sign(waitlistId: string, email: string, expiresAt: number): string {
-  const hmac = createHmac("sha256", getSecret());
-  hmac.update(`${waitlistId}:${email.toLowerCase().trim()}:${expiresAt}`);
-  return hmac.digest("hex");
-}
-
-function safeEqual(a: string, b: string): boolean {
-  const left = Buffer.from(a);
-  const right = Buffer.from(b);
-  if (left.length !== right.length) return false;
-  return timingSafeEqual(left, right);
+  const message = `${waitlistId}:${email.toLowerCase().trim()}:${expiresAt}`;
+  return signHmac(getSecret(), message);
 }
 
 export function buildWaitlistConfirmToken({

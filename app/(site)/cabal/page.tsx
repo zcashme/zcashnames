@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Metadata } from "next";
+import { slugify } from "@/lib/url";
 import CabalAccessGate from "@/components/influencer/CabalAccessGate";
 import InfluencerDeck, { type InfluencerSlide } from "@/components/influencer/InfluencerDeck";
 import { readCurrentCabalInvite } from "@/lib/cabal/access";
@@ -29,15 +30,6 @@ function stripFrontmatter(markdown: string): string {
 
 function stripToc(markdown: string): string {
   return markdown.replace(/^\s*\[toc\]\s*$/gim, "");
-}
-
-function slugify(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return slug || "slide";
 }
 
 function getSlideHeading(content: string, index: number, locked: boolean): { title: string; level: number } {

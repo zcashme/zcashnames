@@ -1,3 +1,5 @@
+import { slugify } from "@/lib/url";
+
 export type RoadmapPeriod = {
   id: string;
   title: string;
@@ -11,15 +13,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 function normalizeLineEndings(markdown: string): string {
   return markdown.replace(/\r\n?/g, "\n");
-}
-
-function slugify(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return slug || "period";
 }
 
 function createUniqueId(base: string, seen: Map<string, number>): string {

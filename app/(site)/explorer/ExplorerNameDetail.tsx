@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import type { ResolveName, ZnsEvent } from "@/lib/types";
+import type { ResolveName, ZnsEvent, NameAvailabilityState } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import { formatUsdEquivalent, zatsToZec } from "@/lib/zns/utils";
 import ActionBadge from "@/components/ActionBadge";
@@ -10,7 +10,6 @@ import CopyIconButton from "@/components/CopyIconButton";
 import {
   NameStatusBadge,
   NameStatusButtons,
-  type NameAvailabilityState,
   statusSupportsPrice,
 } from "@/components/NameStatus";
 
