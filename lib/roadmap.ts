@@ -3,11 +3,33 @@ import { slugify } from "@/lib/url";
 export type RoadmapPeriod = {
   id: string;
   title: string;
+  status: string;
   summary: string;
   startDate: string;
   endDate: string;
   tasks: string[];
 };
+
+export type RoadmapStatusKind = "complete" | "apply-now" | "tba";
+
+export type RoadmapStatusMeta = {
+  kind: RoadmapStatusKind;
+  icon: "check" | "checkbox" | "dot";
+  animated: boolean;
+};
+
+const STATUS_PATTERNS: [RegExp, RoadmapStatusMeta][] = [
+  [/^complete$/i, { kind: "complete", icon: "check", animated: false }],
+  [/^apply\s*now$/i, { kind: "apply-now", icon: "checkbox", animated: true }],
+  [/^tba$/i, { kind: "tba", icon: "dot", animated: false }],
+];
+
+export function getRoadmapStatusMeta(status: string): RoadmapStatusMeta {
+  for (const [pattern, meta] of STATUS_PATTERNS) {
+    if (pattern.test(status.trim())) return meta;
+  }
+  return { kind: "tba", icon: "dot", animated: false };
+}
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -34,6 +56,7 @@ function parseDateField(value: string, field: "Start" | "End", title: string): s
 function finalizePeriod(
   sectionIds: Map<string, number>,
   title: string,
+  status: string,
   summaryLines: string[],
   startDate: string | null,
   endDate: string | null,
@@ -62,6 +85,7 @@ function finalizePeriod(
   return {
     id: createUniqueId(slugify(title), sectionIds),
     title,
+    status,
     summary,
     startDate,
     endDate,
@@ -88,7 +112,16 @@ export function parseRoadmapMarkdown(markdown: string): RoadmapPeriod[] {
       continue;
     }
 
-    const title = headingMatch[1].trim();
+    let rawTitle = headingMatch[1].trim();
+    let status = "TBA";
+
+    const pillMatch = rawTitle.match(/^(.+)\s+`([^`]+)`\s*$/);
+    if (pillMatch) {
+      rawTitle = pillMatch[1].trim();
+      status = pillMatch[2].trim();
+    }
+
+    const title = rawTitle;
     const summaryLines: string[] = [];
     const tasks: string[] = [];
     let startDate: string | null = null;
@@ -135,7 +168,7 @@ export function parseRoadmapMarkdown(markdown: string): RoadmapPeriod[] {
       index += 1;
     }
 
-    periods.push(finalizePeriod(sectionIds, title, summaryLines, startDate, endDate, tasks));
+    periods.push(finalizePeriod(sectionIds, title, status, summaryLines, startDate, endDate, tasks));
   }
 
   if (periods.length === 0) {
