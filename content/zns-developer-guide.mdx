@@ -314,6 +314,7 @@ curl -sX POST https://light.zcash.me/zns-testnet \
     {
       "name": "bob",
       "price": 100000000,
+      "pay_taddr": "t1abc123...",
       "nonce": 3,
       "txid": "fed321...",
       "height": 3901250,
@@ -327,6 +328,7 @@ curl -sX POST https://light.zcash.me/zns-testnet \
 ### Wallet checks
 
 - `price` is in zatoshis (1 ZEC = 10⁸ zatoshis).
+- `pay_taddr` is the seller's transparent address — buyers must send payment here, not to the registry.
 - `total` is the global count — use it for pagination, not `listings.length`.
 - Each listing has a signature you can verify against the `pubkey` on the backing registration. See [Verifying Signatures](#security-verifying-signatures).
 
@@ -560,9 +562,11 @@ The memo format depends on `last_action`:
 |--------|-------------|
 | `CLAIM` | `CLAIM:{name}:{address}` |
 | `UPDATE` | `UPDATE:{name}:{address}:{nonce}` |
-| `BUY` | `BUY:{name}:{address}` |
+| `LIST` | `LIST:{name}:{price}:{pay_taddr}:{nonce}` |
 | `DELIST` | `DELIST:{name}:{nonce}` |
 | `RELEASE` | `RELEASE:{name}:{nonce}` |
+
+**BUY is a two-step protocol.** The buyer first sends a shielded memo: `BUY:{name}:{buyer_ua}` with note value ≥ 0.0001 ZEC. This locks the listing for ~2 hours (144 blocks). The buyer then sends the listing price as a transparent transaction to the seller's `pay_taddr`. The indexer detects the payment and finalizes the transfer. The `BUY` event in the event log records the ua of the buyer, not a memo-derived pre-image.
 
 **Example:**
 ```typescript
@@ -581,7 +585,7 @@ const valid = await verify(
 
 ### Listing Signatures
 
-Pre-image format is always: `LIST:{name}:{price}:{nonce}`
+Pre-image format is always: `LIST:{name}:{price}:{pay_taddr}:{nonce}`
 
 **Example:**
 ```typescript
@@ -620,6 +624,7 @@ interface Registration {
 interface Listing {
   name: string;
   price: number;        // Price in zatoshis
+  pay_taddr: string;   // Seller's transparent address for receiving payment
   nonce: number;
   txid: string;
   height: number;

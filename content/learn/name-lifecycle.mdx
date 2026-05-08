@@ -12,7 +12,9 @@ flowchart LR
     A[Available] -->|CLAIM| R[Registered]
     R -->|LIST| L[Listed]
     L -->|DELIST| R
-    L -->|BUY| R
+    L -->|BUY claim| P[Buy Pending]
+    P -->|payment detected| R
+    P -->|lock expires| L
     R -->|UPDATE| R
     R -->|RELEASE| A
     L -->|RELEASE| A
@@ -22,7 +24,8 @@ flowchart LR
 |-------|---------------|
 | **Available** | Not registered. Anyone can claim. |
 | **Registered** | Owned, not for sale. |
-| **Listed** | Owned and listed on the marketplace. Anyone can buy. |
+| **Listed** | Owned and listed on the marketplace. A buyer has the lock for ~2 hours. |
+| **Buy Pending** | A buyer has claimed the listing; waiting for transparent payment to the seller's `pay_taddr`. |
 
 <Callout type="info">
 Released names return to Available and are indistinguishable from never-claimed names.
@@ -34,11 +37,11 @@ Released names return to Available and are indistinguishable from never-claimed 
 
 **UPDATE** rewrites which address the name resolves to. Nonce must advance.
 
-**LIST** puts a registered name on the marketplace at a seller-chosen price. Creates a listing with its own signature; the registration itself is unchanged.
+**LIST** puts a registered name on the marketplace at a seller-chosen price, with a transparent `pay_taddr` for receiving payment. Creates a listing with its own signature; the registration itself is unchanged. Requires a 0.01 ZEC non-refundable commission.
 
-**DELIST** removes the listing without changing the registration.
+**DELIST** removes the listing without changing the registration. Rejected while a buyer's claim is pending.
 
-**BUY** transfers ownership atomically. Payment must cover the listing price. Nonce resets to 0, invalidating any signed memos from the previous owner.
+**BUY** is a two-step process. First, a buyer sends a signed shielded BUY claim memo to lock the listing. The indexer holds an exclusive lock for ~2 hours (144 blocks). Second, the buyer sends the listing price as a transparent transaction to the seller's `pay_taddr`. The indexer detects the payment and finalizes the transfer. If the lock expires before payment, the listing reopens.
 
 **RELEASE** permanently deletes the registration. Irreversible.
 

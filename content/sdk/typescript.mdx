@@ -173,19 +173,33 @@ const action = prepared.complete(signature, userPubkey);
 
 ### BUY
 
+BUY is a two-step protocol. Step 1 claims the listing and locks it for ~2 hours. Step 2 pays the seller directly via transparent ZEC.
+
 ```typescript
-const prepared = zns.prepareBuy("alice", "utest1buyer…");
+// Step 1: Claim the listing (shielded memo + 0.0001 ZEC dust)
+const prepared = zns.prepareBuy("alice", "utest1buyer…", 100_000_000);
 const action = prepared.complete(signature);
-// { memo: "ZNS:BUY:alice:utest1buyer…:<sig>", uri: "zcash:…" }
+// { memo: "ZNS:BUY:alice:utest1buyer…:100000000:<sig>", uri: "zcash:…" }
+
+await sendTransaction(action.uri); // Wait for confirmation
+
+// Step 2: Pay seller directly (transparent tx to seller's pay_taddr)
+// Fetch the listing's pay_taddr from zns.listings(), then:
+await sendTransparentZec(sellertAddr, price);
 ```
+
+The buyer must complete both steps within ~2 hours (144 blocks). If the lock expires before payment, the claim is void and the name returns to the listing.
 
 ### LIST
 
 ```typescript
-const prepared = zns.prepareList("alice", 100_000_000, 1);
+// price in zatoshis, pay_taddr is the seller's transparent address
+const prepared = zns.prepareList("alice", 100_000_000, "t1abc123…", 1);
 const action = prepared.complete(signature);
-// { memo: "ZNS:LIST:alice:100000000:1:<sig>", uri: "zcash:…" }
+// { memo: "ZNS:LIST:alice:100000000:t1abc123…:1:<sig>", uri: "zcash:…" }
 ```
+
+The note value must include a 0.01 ZEC listing commission (non-refundable). The `pay_taddr` is where the seller will receive payment from buyers.
 
 ### DELIST
 
