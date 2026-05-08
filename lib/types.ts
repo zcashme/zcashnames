@@ -100,8 +100,8 @@ export type ScanState = "loading" | "not_detected" | "in_mempool" | "being_mined
 /* ── Resolve result ──────────────────────────────────────────────────── */
 
 export type ResolveName =
-  | { status: "available"; query: string; claimCost: { zats: number; zec: number }; firstBucket?: number }
-  | { status: "reserved"; query: string; claimCost: { zats: number; zec: number }; firstBucket?: number }
+  | { status: "available"; query: string; claimCost: { zats: number; zec: number } }
+  | { status: "reserved"; query: string; claimCost: { zats: number; zec: number } }
   | { status: "blocked"; query: string }
-  | { status: "registered"; query: string; registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null }; firstBucket?: number }
-  | { status: "listed"; query: string; registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null }; listingPrice: { zats: number; zec: number }; payTaddr: string; pendingBuy?: PendingBuy; firstBucket?: number };
+  | { status: "registered"; query: string; registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null } }
+  | { status: "listed"; query: string; registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null }; listingPrice: { zats: number; zec: number }; payTaddr: string; pendingBuy?: PendingBuy };

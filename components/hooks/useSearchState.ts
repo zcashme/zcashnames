@@ -12,7 +12,6 @@ interface CardProps {
   availabilityState: NameAvailabilityState;
   priceLabel?: string;
   usdLabel?: string;
-  firstBucket?: number;
 }
 
 interface UseSearchStateReturn {
@@ -116,7 +115,6 @@ export function useSearchState(network: Network): UseSearchStateReturn {
           availabilityState: result.status,
           priceLabel: `~${zec.toFixed(6)} ZEC`,
           usdLabel: formatUsdEquivalent(zec, null),
-          firstBucket: result.firstBucket,
         };
       }
       case "listed":
@@ -124,12 +122,10 @@ export function useSearchState(network: Network): UseSearchStateReturn {
           availabilityState: "forsale",
           priceLabel: `${result.listingPrice.zec} ZEC`,
           usdLabel: formatUsdEquivalent(result.listingPrice.zec, null),
-          firstBucket: result.firstBucket,
         };
       case "registered":
         return {
           availabilityState: "unavailable",
-          firstBucket: result.firstBucket,
         };
       case "blocked":
         return { availabilityState: "blocked" };

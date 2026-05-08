@@ -5,9 +5,11 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ACTION_PHASES } from "@/lib/types";
 import type { Action } from "@/lib/types";
+import PhaseUnlock from "./PhaseUnlock";
 
 interface Zip321ModalProps {
   action: Action;
+  name: string;
   onClose: () => void;
   onSuccess?: (name: string) => void;
 }
@@ -65,6 +67,7 @@ function prepareDescription(action: Action, name: string, amount: string): React
 
 export default function Zip321Modal({
   action,
+  name,
   onClose,
   onSuccess,
 }: Zip321ModalProps) {
@@ -110,24 +113,28 @@ export default function Zip321Modal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-sm">Phase: {phase} ({step + 1}/{phases.length})</p>
-        {address && <p className="text-xs mt-1">Address: {address}</p>}
-        {price && <p className="text-xs mt-1">Price: {price}</p>}
-        {proof && <p className="text-xs mt-1">Proof: {proof.slice(0, 16)}…</p>}
-        {uri && <p className="text-xs mt-1 break-all">URI: {uri}</p>}
-        {step < phases.length - 1 && (
-          <button
-            type="button"
-            onClick={() => advance()}
-            className="mt-4 px-4 py-2 rounded-full text-xs font-semibold"
-            style={{
-              background: "var(--home-result-primary-bg)",
-              color: "var(--home-result-primary-fg)",
-              boxShadow: "var(--home-result-primary-shadow)",
-            }}
-          >
-            Next → {phases[step + 1]}
-          </button>
+        {phase === "unlock" && (
+          <PhaseUnlock name={name} onComplete={(proof) => advance({ proof })} onCancel={onClose} />
+        )}
+        {phase !== "unlock" && (
+          <>
+            <p className="text-sm">Phase: {phase} ({step + 1}/{phases.length})</p>
+            {address && <p className="text-xs mt-1">Address: {address}</p>}
+            {price && <p className="text-xs mt-1">Price: {price}</p>}
+            {proof && <p className="text-xs mt-1">Proof: {proof.slice(0, 16)}…</p>}
+            {uri && <p className="text-xs mt-1 break-all">URI: {uri}</p>}
+            {step < phases.length - 1 && (
+              <button type="button" onClick={() => advance()}
+                className="mt-4 px-4 py-2 rounded-full text-xs font-semibold"
+                style={{
+                  background: "var(--home-result-primary-bg)",
+                  color: "var(--home-result-primary-fg)",
+                  boxShadow: "var(--home-result-primary-shadow)",
+                }}>
+                Next → {phases[step + 1]}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>,

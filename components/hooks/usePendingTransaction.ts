@@ -38,36 +38,42 @@ export function usePendingTransaction(onSuccess?: (name: string) => void) {
     };
 
     async function poll() {
-      const [mempoolResult, resolver] = await Promise.all([
-        checkMempool(current.target.name, current.target.network),
-        checkScannerState(
-          current.target.name,
-          current.target.network,
-          current.target.action,
-          expected,
-        ),
-      ]);
-      if (cancelled) return;
+const [mempoolResult, resolver] = await Promise.all([
+          checkMempool(current.target.name, current.target.network),
+          checkScannerState(
+            current.target.name,
+            current.target.network,
+            current.target.action,
+            expected,
+          ),
+        ]);
+        if (cancelled) return;
 
-      let nextScanState = current.scanState;
-      let nextTxid: string | undefined = current.txid;
-      let nextWarnings: string[] | undefined = current.warnings;
+        let nextScanState = current.scanState;
+        let nextTxid: string | undefined = current.txid;
+        let nextWarnings: string[] | undefined = current.warnings;
 
-      if (resolver === "success") {
-        nextScanState = "mined";
-      } else if (mempoolResult.found && mempoolResult.entry) {
-        nextScanState = "in_mempool";
-        // Capture metadata the first time we see this tx in the mempool.
-        if (!nextTxid && mempoolResult.entry.txid) nextTxid = mempoolResult.entry.txid;
-        if (mempoolResult.entry.warnings?.length) nextWarnings = mempoolResult.entry.warnings;
-      } else if (
-        current.scanState === "in_mempool" ||
-        current.scanState === "being_mined"
-      ) {
-        nextScanState = "being_mined";
-      } else {
-        nextScanState = "not_detected";
-      }
+        if (resolver === "success") {
+          nextScanState = "mined";
+        } else if (mempoolResult.found && mempoolResult.response) {
+          const { state, entry } = mempoolResult.response;
+          if (state.state === "Confirmed") {
+            nextScanState = "mined";
+          } else if (state.state === "Pending") {
+            nextScanState = "in_mempool";
+            if (entry.txid) nextTxid = entry.txid;
+            if (entry.warnings?.length) nextWarnings = entry.warnings;
+          } else if (state.state === "Rejected") {
+            nextScanState = "not_detected";
+          }
+        } else if (
+          current.scanState === "in_mempool" ||
+          current.scanState === "being_mined"
+        ) {
+          nextScanState = "being_mined";
+        } else {
+          nextScanState = "not_detected";
+        }
 
       if (
         nextScanState !== current.scanState ||

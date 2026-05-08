@@ -53,7 +53,6 @@ export default function ExplorerNameDetail({
 
   const listed = result?.status === "listed" ? result : null;
   const available = result?.status === "available" ? result : null;
-  const resultWithChips = result && "firstBucket" in result ? result : null;
   const availabilityState = result ? toAvailabilityState(result) : null;
   const encodedName = encodeURIComponent(result?.query ?? query);
   const zcashMeUrl = `https://zcash.me/${encodedName}`;
@@ -95,11 +94,6 @@ export default function ExplorerNameDetail({
                   <span className="home-result-feature-chip">
                     {result.query.length} characters
                   </span>
-                  {resultWithChips?.firstBucket && (
-                    <span className="home-result-feature-chip">
-                      First {resultWithChips.firstBucket}
-                    </span>
-                  )}
                 </div>
               </div>
               <div

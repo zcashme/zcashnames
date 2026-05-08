@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import Hero from "@/components/landing/Hero";
-import SearchForm from "@/components/search/SearchForm";
+import HeroSearchForm from "@/components/search/HeroSearchForm";
 import FeedbackModal from "@/components/closedbeta/FeedbackModal";
 import HomeResultCard from "@/components/landing/HomeResultCard";
 import MarketStats from "@/components/landing/MarketStats";
@@ -325,7 +325,7 @@ export default function HomePageClient({
   }
 
   const form = (
-    <SearchForm
+    <HeroSearchForm
       value={waitlistInput}
       onChange={isWaitlistMode ? handleWaitlistInput : setInput}
       onSubmit={isWaitlistMode ? handleWaitlistSearch : handleSearch}

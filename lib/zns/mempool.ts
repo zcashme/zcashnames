@@ -3,17 +3,18 @@
 import type { Network } from "@/lib/types";
 
 /**
- * Result from the mempool watcher for a pending ZNS transaction.
+ * Result from the mempool watcher for a ZNS transaction.
  * The watcher decodes every Orchard note it can trial-decrypt, parses the
  * ZNS memo, extracts the transparent output ZEC amount and pay_taddr,
  * and returns everything the frontend needs for engagement UX.
  *
  * Mempool watcher endpoints:
- *   GET https://light.zcash.me/mempool-mainnet/lookup/:name
+ *   GET https://light.zcash.me/mempool-mainnet/tx/:txid
+ *   GET https://light.zcash.me/mempool-mainnet/name/:name
  *   GET https://light.zcash.me/mempool-mainnet/utxo/:taddr
  */
 export interface MempoolEntry {
-  /** Hex txid of the pending transaction. */
+  /** Hex txid of the transaction. */
   txid: string;
   /** Action kind: "claim" | "list" | "delist" | "release" | "update" | "buy" */
   action: string;
@@ -41,6 +42,21 @@ export interface MempoolEntry {
   warnings: string[];
 }
 
+/** Transaction state from the mempool watcher's state machine. */
+export type TxState =
+  | { state: "Pending"; seen_at: number; checks: number }
+  | { state: "Confirmed"; height: number; confirmed_at: number }
+  | { state: "Rejected"; reason: string; rejected_at: number };
+
+/** Full response from /tx/:txid or /name/:name */
+export interface TxStatusResponse {
+  txid: string;
+  name: string;
+  action: string;
+  state: TxState;
+  entry: MempoolEntry;
+}
+
 /**
  * UTXO response for a transparent t-address.
  * Tracked from the mempool stream — not a full UTXO query, just what the
@@ -59,10 +75,10 @@ export interface TrackedUtxo {
 }
 
 /**
- * Check the mempool watcher's cache for a pending ZNS transaction.
+ * Check the mempool watcher's cache for a ZNS transaction.
  *
- * - Mainnet: GET https://light.zcash.me/mempool-mainnet/lookup/:name
- *   - 200 → full MempoolEntry (found: true)
+ * - Mainnet: GET https://light.zcash.me/mempool-mainnet/name/:name
+ *   - 200 → TxStatusResponse (found: true, check state for Pending/Confirmed/Rejected)
  *   - 404 (or anything else) → found: false
  * - Testnet: no public mempool endpoint → always returns { found: false }
  *
@@ -71,17 +87,17 @@ export interface TrackedUtxo {
 export async function checkMempool(
   name: string,
   network: Network,
-): Promise<{ found: boolean; entry?: MempoolEntry }> {
+): Promise<{ found: boolean; response?: TxStatusResponse }> {
   if (network !== "mainnet") return { found: false };
 
   try {
     const res = await fetch(
-      `https://light.zcash.me/mempool-mainnet/lookup/${encodeURIComponent(name)}`,
+      `https://light.zcash.me/mempool-mainnet/name/${encodeURIComponent(name)}`,
       { cache: "no-store" },
     );
     if (res.status !== 200) return { found: false };
-    const entry = await res.json() as MempoolEntry;
-    return { found: true, entry };
+    const response = await res.json() as TxStatusResponse;
+    return { found: true, response };
   } catch {
     return { found: false };
   }

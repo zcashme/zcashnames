@@ -1,26 +1,21 @@
-import { useState, type FormEvent } from "react";
+"use client";
 
-interface SearchFormProps {
+import { useState, type FormEvent } from "react";
+import { normalizeUsername } from "@/lib/zns/utils";
+
+interface HeroSearchFormProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit?: (name: string) => void;
   claimLoading?: boolean;
 }
 
-function validate(raw: string): string {
-  return raw
-    .toLowerCase()
-    .replace(/\s/g, "")
-    .replace(/[^a-z0-9]/g, "")
-    .slice(0, 62);
-}
-
-export default function SearchForm({
+export default function HeroSearchForm({
   value,
   onChange,
   onSubmit,
   claimLoading = false,
-}: SearchFormProps) {
+}: HeroSearchFormProps) {
   const [focused, setFocused] = useState(false);
 
   const handleSubmit = (e: FormEvent) => {
@@ -30,6 +25,10 @@ export default function SearchForm({
     if (trimmed.length >= 1 && trimmed.length <= 62) {
       onSubmit(trimmed);
     }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(normalizeUsername(e.target.value));
   };
 
   return (
@@ -46,7 +45,7 @@ export default function SearchForm({
             <input
               type="text"
               value={value}
-              onChange={(e) => onChange(validate(e.target.value))}
+              onChange={handleChange}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
               placeholder=""
