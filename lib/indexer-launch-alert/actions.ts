@@ -3,7 +3,7 @@
 import { createHash } from "crypto";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { CONTACT_KINDS, type ContactKind } from "@/lib/contact-methods";
+import { CONTACT_KINDS, type ContactKind } from "@/lib/types";
 
 const MAX_NAME = 60;
 const MAX_CONTACT = 200;

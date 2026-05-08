@@ -3,7 +3,7 @@
 import { createHash, randomBytes } from "crypto";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { CONTACT_KINDS, type ContactKind } from "@/lib/contact-methods";
+import { CONTACT_KINDS, type ContactKind } from "@/lib/types";
 import { sendBetaV2ApplicationNotice } from "@/lib/email/beta-application-v2";
 
 export type BetaV2ApplicationResult =

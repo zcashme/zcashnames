@@ -7,7 +7,7 @@ import {
   CONTACT_LABEL,
   CONTACT_PLACEHOLDER,
   type ContactKind,
-} from "@/lib/contact-methods";
+} from "@/lib/types";
 
 interface ContactRow {
   uid: string;

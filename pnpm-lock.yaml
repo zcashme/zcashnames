@@ -60,8 +60,8 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1
       zcashname-sdk:
-        specifier: ^0.7.0
-        version: 0.7.0
+        specifier: ^0.8.5
+        version: 0.8.5
     devDependencies:
       '@playwright/test':
         specifier: ^1.59.1
@@ -2922,8 +2922,8 @@ packages:
     engines: {node: '>= 14.6'}
     hasBin: true
 
-  zcashname-sdk@0.7.0:
-    resolution: {integrity: sha512-Hz/23BL18fFTqzHKu1Erac+TaM+Kwxcu8HfPFZauRQ6zQTKnzFbS99KIo8p4SQSJueGBV2P0uo/2LyVI8rxeag==}
+  zcashname-sdk@0.8.5:
+    resolution: {integrity: sha512-VYon+WoLYIRXxrbceQEylggkBaPjErLziElf6VBFUhUFCLRUyV4MivBMefzw02Ejnv656C+wTzP9AtgjziYneg==}
 
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
@@ -6169,7 +6169,7 @@ snapshots:
 
   yaml@2.8.3: {}
 
-  zcashname-sdk@0.7.0:
+  zcashname-sdk@0.8.5:
     dependencies:
       '@noble/ed25519': 2.3.0
       bech32: 2.0.0

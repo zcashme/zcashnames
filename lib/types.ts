@@ -91,8 +91,6 @@ export function getNetworkConstants(network: Network = "testnet"): NetworkConsta
   return NETWORK_CONSTANTS[network];
 }
 
-export type Phase = "unlock" | "input" | "otp" | "sign" | "confirm" | "fund" | "scanning";
-
 export const MAX_LIST_FOR_SALE_AMOUNT = 21_000_000;
 
 export type ScanState = "loading" | "not_detected" | "in_mempool" | "being_mined" | "mined";
@@ -105,3 +103,27 @@ export type ResolveName =
   | { status: "blocked"; query: string }
   | { status: "registered"; query: string; registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null } }
   | { status: "listed"; query: string; registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null }; listingPrice: { zats: number; zec: number }; payTaddr: string; pendingBuy?: PendingBuy };
+
+/* ── Contact methods ─────────────────────────────────────────────────── */
+
+export const CONTACT_KINDS = ["email", "signal", "discord", "x", "telegram", "forum"] as const;
+
+export type ContactKind = (typeof CONTACT_KINDS)[number];
+
+export const CONTACT_LABEL: Record<ContactKind, string> = {
+  email: "Email",
+  signal: "Signal",
+  discord: "Discord",
+  x: "X / Twitter",
+  telegram: "Telegram",
+  forum: "Zcash Community Forum",
+};
+
+export const CONTACT_PLACEHOLDER: Record<ContactKind, string> = {
+  email: "you@example.com",
+  signal: "@yourhandle or signal username",
+  discord: "@yourhandle",
+  x: "@yourhandle",
+  telegram: "@yourhandle",
+  forum: "@username on forum.zcashcommunity.com",
+};
