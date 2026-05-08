@@ -3787,4 +3787,24 @@ body::after {
   }
 }
 
+@keyframes roadmap-apply-pill-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+.roadmap-status-apply-now {
+  animation: roadmap-apply-pill-breathe 2.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-status-apply-now {
+    animation: none;
+  }
+}
+
 

@@ -1,10 +1,19 @@
 export type RoadmapPeriod = {
   id: string;
   title: string;
+  status: string;
   summary: string;
   startDate: string;
   endDate: string;
   tasks: string[];
+};
+
+export type RoadmapStatusKind = "complete" | "apply-now" | "attention";
+
+export type RoadmapStatusMeta = {
+  kind: RoadmapStatusKind;
+  icon: "check" | "checkbox" | "dot";
+  animated: boolean;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -28,19 +37,45 @@ function createUniqueId(base: string, seen: Map<string, number>): string {
   return count === 0 ? base : `${base}-${count + 1}`;
 }
 
+function parseHeading(line: string): { title: string; status: string } {
+  const headingMatch = line.match(/^#\s+(.+?)\s+`([^`]+)`\s*$/);
+  if (!headingMatch) {
+    throw new Error(
+      `Roadmap heading "${line}" must end with an inline-code status pill such as \`Complete\` or \`Apply Now\`.`,
+    );
+  }
+
+  const title = headingMatch[1].trim();
+  const status = headingMatch[2].trim();
+  if (!title) {
+    throw new Error(`Roadmap heading "${line}" is missing a title before its status pill.`);
+  }
+  if (!status) {
+    throw new Error(`Roadmap heading "${line}" is missing status text inside its pill tag.`);
+  }
+
+  return { title, status };
+}
+
 function parseDateField(value: string, field: "Start" | "End", title: string): string {
   const trimmed = value.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
     throw new Error(`Roadmap period "${title}" has an invalid ${field.toLowerCase()} date: "${value}".`);
   }
 
-  parseIsoDateUtc(trimmed);
+  try {
+    parseIsoDateUtc(trimmed);
+  } catch {
+    throw new Error(`Roadmap period "${title}" has an invalid ${field.toLowerCase()} date: "${value}".`);
+  }
+
   return trimmed;
 }
 
 function finalizePeriod(
   sectionIds: Map<string, number>,
   title: string,
+  status: string,
   summaryLines: string[],
   startDate: string | null,
   endDate: string | null,
@@ -69,11 +104,26 @@ function finalizePeriod(
   return {
     id: createUniqueId(slugify(title), sectionIds),
     title,
+    status,
     summary,
     startDate,
     endDate,
     tasks,
   };
+}
+
+export function getRoadmapStatusMeta(status: string): RoadmapStatusMeta {
+  const normalized = status.trim().toLowerCase();
+
+  if (normalized === "complete") {
+    return { kind: "complete", icon: "check", animated: false };
+  }
+
+  if (normalized === "apply now") {
+    return { kind: "apply-now", icon: "checkbox", animated: true };
+  }
+
+  return { kind: "attention", icon: "dot", animated: false };
 }
 
 export function parseRoadmapMarkdown(markdown: string): RoadmapPeriod[] {
@@ -89,13 +139,12 @@ export function parseRoadmapMarkdown(markdown: string): RoadmapPeriod[] {
       continue;
     }
 
-    const headingMatch = current.match(/^#\s+(.+)$/);
-    if (!headingMatch) {
+    if (!current.startsWith("# ")) {
       index += 1;
       continue;
     }
 
-    const title = headingMatch[1].trim();
+    const { title, status } = parseHeading(current);
     const summaryLines: string[] = [];
     const tasks: string[] = [];
     let startDate: string | null = null;
@@ -142,7 +191,7 @@ export function parseRoadmapMarkdown(markdown: string): RoadmapPeriod[] {
       index += 1;
     }
 
-    periods.push(finalizePeriod(sectionIds, title, summaryLines, startDate, endDate, tasks));
+    periods.push(finalizePeriod(sectionIds, title, status, summaryLines, startDate, endDate, tasks));
   }
 
   if (periods.length === 0) {
