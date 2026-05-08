@@ -1,4 +1,4 @@
-import { ACTION_COLORS } from "@/lib/zns/actions";
+import { ACTION_COLORS } from "@/lib/types";
 
 export default function ActionBadge({ action }: { action: string }) {
   const c = (ACTION_COLORS as Record<string, { bg: string; text: string }>)[action] ?? ACTION_COLORS.DELIST;

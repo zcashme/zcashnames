@@ -1,25 +1,22 @@
 "use client";
 
-import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import Hero from "@/components/landing/Hero";
-import HeroSearchForm from "@/components/search/HeroSearchForm";
+import SearchForm from "@/components/search/SearchForm";
+import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import FeedbackModal from "@/components/closedbeta/FeedbackModal";
 import HomeResultCard from "@/components/landing/HomeResultCard";
 import MarketStats from "@/components/landing/MarketStats";
 import FAQ from "@/components/landing/FAQ";
 import HowItWorks from "@/components/landing/HowItWorks";
-import Zip321Modal from "@/components/purchases/Zip321Modal";
-import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
+import Link from "next/link";
 import { useZns } from "@/components/hooks/useZns";
 import { useSearchState } from "@/components/hooks/useSearchState";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
-import { submitWaitlist } from "@/lib/waitlist/waitlist";
-import { isValidUsername, normalizeUsername } from "@/lib/zns/utils";
+import Zip321Modal from "@/components/purchases/Zip321Modal";
+import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import type { Action, ResolveName } from "@/lib/types";
-import type { ConfirmWaitlistResult } from "@/lib/waitlist/waitlist";
 
 const POPULAR_NAMES = new Set([
   "adam", "alex", "alice", "anna", "bob", "chris", "david", "emma", "ethan",
@@ -54,233 +51,14 @@ const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
   ),
 });
 
-type HomePageClientProps = {
-  initialReferralCode?: string | null;
-  initialConfirmed?: ConfirmWaitlistResult | null;
-};
-
-function InlineNotice({
-  tone,
-  children,
-  action,
-}: {
-  tone: "neutral" | "warning" | "success";
-  children: React.ReactNode;
-  action?: React.ReactNode;
-}) {
-  const style =
-    tone === "warning"
-      ? {
-          background: "var(--home-result-status-negative-bg)",
-          color: "var(--home-result-status-negative-fg)",
-          border: "1px solid var(--home-result-status-negative-border)",
-        }
-      : tone === "success"
-        ? {
-            background: "var(--home-result-status-positive-bg)",
-            color: "var(--home-result-status-positive-fg)",
-            border: "1px solid var(--feature-chip-border-color)",
-          }
-        : {
-            background: "var(--home-result-status-neutral-bg, var(--feature-card-bg))",
-            color: "var(--home-result-link-fg, var(--fg-muted))",
-            border: "1px solid var(--home-result-link-border, var(--faq-border))",
-          };
-
-  return (
-    <div className="mx-auto mb-4 flex max-w-[600px] items-center gap-3 rounded-2xl px-5 py-4 text-sm font-semibold backdrop-blur-md" style={style}>
-      <span className="flex-1">{children}</span>
-      {action}
-    </div>
-  );
-}
-
-function WaitlistPanel({
-  name,
-  referralCode,
-  confirmed,
-  onEditName,
-}: {
-  name: string;
-  referralCode: string | null;
-  confirmed: ConfirmWaitlistResult | null;
-  onEditName: (value: string) => void;
-}) {
-  const [email, setEmail] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-
-  useEffect(() => {
-    setSubmitError(null);
-    setSubmitted(false);
-    setEmail("");
-  }, [name]);
-
-  const normalizedName = useMemo(() => normalizeUsername(name), [name]);
-  const isConfirmed = confirmed?.status === "success" || confirmed?.status === "already";
-  const confirmedName = confirmed?.name ?? normalizedName;
-  const confirmedRef = confirmed?.ref ?? referralCode ?? null;
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (submitting || !isValidUsername(normalizedName)) return;
-
-    setSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      const result = await submitWaitlist({
-        name: normalizedName,
-        email,
-        newsletter: true,
-        referral_code: "",
-        referred_by: referralCode,
-      });
-
-      if (result.error) {
-        setSubmitError(result.error);
-        return;
-      }
-
-      setSubmitted(true);
-    } catch {
-      setSubmitError("Something went wrong. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (isConfirmed) {
-    return (
-      <section className="mx-auto mb-6 w-full max-w-[640px] px-4">
-        <div className="home-result-card relative overflow-hidden rounded-[20px] bg-[var(--home-result-bg)] px-5 py-5 shadow-[var(--home-result-shadow)]">
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--home-result-status-positive-bg)] text-[var(--home-result-status-positive-fg)]">
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M20 6 9 17l-5-5" />
-            </svg>
-          </div>
-          <h2 className="m-0 text-[1.35rem] font-extrabold text-[var(--home-result-name-color)]">You&apos;re on the waitlist</h2>
-          <p className="mt-2 text-sm leading-6 text-[var(--fg-body)]">
-            {confirmed?.status === "already"
-              ? `Your email was already confirmed for ${confirmedName}.`
-              : `Your email is confirmed for ${confirmedName}.`}
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {confirmedRef ? (
-              <Link
-                href={`/leaders/ref/${encodeURIComponent(confirmedRef)}`}
-                className="home-result-action is-primary inline-flex items-center justify-center no-underline"
-              >
-                View referral dashboard
-              </Link>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => onEditName(confirmedName)}
-              className="home-result-action is-secondary"
-            >
-              Search another name
-            </button>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (submitted) {
-    return (
-      <section className="mx-auto mb-6 w-full max-w-[640px] px-4">
-        <div className="home-result-card relative overflow-hidden rounded-[20px] bg-[var(--home-result-bg)] px-5 py-5 shadow-[var(--home-result-shadow)]">
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(244,183,40,0.15)] text-[#f4b728]">
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-          </div>
-          <h2 className="m-0 text-[1.35rem] font-extrabold text-[var(--home-result-name-color)]">Check your email</h2>
-          <p className="mt-2 text-sm leading-6 text-[var(--fg-body)]">
-            We sent a confirmation link for <span className="font-semibold">{normalizedName}.zcash</span>. Click it to secure your spot on the waitlist.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => onEditName(normalizedName)}
-              className="home-result-action is-secondary"
-            >
-              Edit name
-            </button>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="mx-auto mb-6 w-full max-w-[640px] px-4">
-      <div className="home-result-card relative overflow-hidden rounded-[20px] bg-[var(--home-result-bg)] px-5 py-5 shadow-[var(--home-result-shadow)]">
-        <div className="flex items-start justify-between gap-3 max-[700px]:flex-col">
-          <div className="min-w-0">
-            <p className="m-0 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-[var(--fg-muted)]">Early Access</p>
-            <h2 className="m-0 mt-1 break-all text-[1.35rem] font-extrabold text-[var(--home-result-name-color)]">{normalizedName}.zcash</h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--fg-body)]">
-              This stage collects your email and secures your waitlist spot for the name you searched.
-            </p>
-          </div>
-          <button type="button" onClick={() => onEditName(normalizedName)} className="home-result-action is-secondary">
-            Change name
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
-          <label className="text-sm font-semibold text-[var(--fg-body)]" htmlFor="waitlist-email">
-            Email
-          </label>
-          <input
-            id="waitlist-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            autoComplete="email"
-            required
-            className="h-12 rounded-[14px] border px-4 text-[0.98rem] outline-none transition-shadow"
-            style={{
-              background: "var(--waitlist-input-bg)",
-              borderColor: "var(--waitlist-input-border)",
-              color: "var(--waitlist-input-text)",
-              boxShadow: "none",
-            }}
-          />
-          {submitError ? (
-            <p className="m-0 text-sm font-semibold" style={{ color: "var(--home-result-status-negative-fg)" }}>
-              {submitError}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <button type="submit" disabled={submitting} className="home-result-action is-primary">
-              {submitting ? "Submitting..." : "Join waitlist"}
-            </button>
-            <p className="m-0 text-xs leading-5 text-[var(--fg-muted)]">
-              We&apos;ll send a confirmation link and your referral dashboard after you verify your email.
-            </p>
-          </div>
-        </form>
-      </div>
-    </section>
-  );
-}
-
-export default function HomePageClient({
-  initialReferralCode = null,
-  initialConfirmed = null,
-}: HomePageClientProps) {
+export default function HomePage() {
   const { zns } = useZns();
   const [isClientMounted, setIsClientMounted] = useState(false);
-  const [waitlistConfirmed, setWaitlistConfirmed] = useState<ConfirmWaitlistResult | null>(initialConfirmed);
-  const [waitlistSearchedName, setWaitlistSearchedName] = useState(initialConfirmed?.name ?? "");
   const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
+  const hasAutoOpenedFeedback = useRef(false);
+
+  const isWaitlistMode = zns.mode === "waitlist";
+  const searchNetwork = isWaitlistMode ? "testnet" : zns.mode;
 
   const {
     input,
@@ -293,7 +71,8 @@ export default function HomePageClient({
     removeResult,
     reset: resetSearch,
     buildCardProps,
-  } = useSearchState(zns.mode === "waitlist" ? "testnet" : zns.mode);
+  } = useSearchState(searchNetwork);
+
   const {
     hydrated: pendingHydrated,
     pendingTransaction,
@@ -302,119 +81,80 @@ export default function HomePageClient({
   } = usePendingTransaction();
 
   useEffect(() => {
+    resetSearch();
+  }, [zns.mode, resetSearch]);
+
+  useEffect(() => {
     setIsClientMounted(true);
   }, []);
 
-  const isWaitlistMode = zns.mode === "waitlist";
-  const waitlistName = useMemo(() => normalizeUsername(waitlistSearchedName), [waitlistSearchedName]);
-  const waitlistInput = isWaitlistMode ? waitlistSearchedName : input;
+  const shouldAutoOpenFeedback = zns.mode !== "waitlist" && !hasAutoOpenedFeedback.current;
 
-  function handleWaitlistInput(value: string) {
-    setWaitlistConfirmed(null);
-    setWaitlistSearchedName(value);
-  }
+  useEffect(() => {
+    if (zns.mode === "waitlist" || hasAutoOpenedFeedback.current) return;
+    hasAutoOpenedFeedback.current = true;
+  }, [zns.mode]);
 
-  function handleWaitlistSearch(nameValue: string) {
-    const normalized = normalizeUsername(nameValue);
-    setWaitlistConfirmed(null);
-    setWaitlistSearchedName(normalized);
-  }
-
-  function resetWaitlistSearch(nameValue = "") {
-    setWaitlistConfirmed(null);
-    setWaitlistSearchedName(nameValue);
-  }
-
-  function openModal(action: Action, resolveResult: ResolveName) {
-    setModalState({ action, resolveResult });
-  }
-
-  const form = (
-    <HeroSearchForm
-      value={waitlistInput}
-      onChange={isWaitlistMode ? handleWaitlistInput : setInput}
-      onSubmit={isWaitlistMode ? handleWaitlistSearch : handleSearch}
-      claimLoading={searching && !isWaitlistMode}
+  const form = isWaitlistMode ? (
+    <WaitlistEntryForm
+      onConfirm={() => {}}
+      onReset={() => {}}
     />
+  ) : (
+    <>
+      <SearchForm
+        value={input}
+        onChange={setInput}
+        onSubmit={handleSearch}
+        claimLoading={searching}
+      />
+      {results.length > 0 && (
+        <div className="mt-4 flex w-full max-w-4xl flex-col gap-3">
+          {results.map((item) => {
+            const props = buildCardProps(item);
+            const displayName = `${item.query}.zcash`;
+            const isPopular = POPULAR_NAMES.has(item.query);
+
+            return (
+              <HomeResultCard
+                key={item.query}
+                displayName={displayName}
+                network={zns.mode}
+                {...props}
+                isPopularName={isPopular}
+                onAction={(action) => setModalState({ action, resolveResult: item })}
+                onDismiss={() => removeResult(item.query)}
+              />
+            );
+          })}
+        </div>
+      )}
+      {searchError && (
+        <p className="home-search-error rounded-xl border px-4 py-3 text-sm font-semibold">
+          {searchError}
+        </p>
+      )}
+    </>
   );
 
   return (
-    <div className="home-page">
+    <div className="home-theme-scope">
       <section className="hero-stage-bg">
         <Hero
           searchForm={form}
           rightPanel={<PhoneStage embedded />}
           formExpanded={false}
-          subtitle={isWaitlistMode ? <>Search a name, then join the early access waitlist</> : <>Powered by Zcash. Claim your name</>}
+          subtitle={
+            isWaitlistMode ? (
+              <>Be first to claim a name you can use, hold, or sell.</>
+            ) : (
+              <>Powered by Zcash. Claim your name</>
+            )
+          }
         />
       </section>
 
-      {isWaitlistMode ? (
-        <>
-          {initialConfirmed?.status === "invalid" ? (
-            <InlineNotice tone="warning">That confirmation link is invalid or expired.</InlineNotice>
-          ) : null}
-
-          {!waitlistName && !waitlistConfirmed && (
-            <InlineNotice tone="neutral">Search a name above to join the waitlist.</InlineNotice>
-          )}
-
-          {waitlistName || waitlistConfirmed ? (
-            <WaitlistPanel
-              name={waitlistName || waitlistConfirmed?.name || ""}
-              referralCode={initialReferralCode}
-              confirmed={waitlistConfirmed}
-              onEditName={resetWaitlistSearch}
-            />
-          ) : null}
-        </>
-      ) : (
-        <>
-          {searchError && (
-            <InlineNotice
-              tone="warning"
-              action={(
-                <button
-                  type="button"
-                  onClick={resetSearch}
-                  className="cursor-pointer rounded-full px-3 py-1 text-xs font-bold transition-opacity hover:opacity-70"
-                  style={{ background: "transparent", border: "1.5px solid currentColor" }}
-                >
-                  Dismiss
-                </button>
-              )}
-            >
-              {searchError}
-            </InlineNotice>
-          )}
-
-          {results.length === 0 && !searching && (
-            <InlineNotice tone="neutral">Enter a name above to check availability.</InlineNotice>
-          )}
-
-          {results.map((result) => {
-            const props = buildCardProps(result);
-            const displayName = `${result.query}.zcash`;
-            const isPopular = POPULAR_NAMES.has(result.query);
-
-            return (
-              <HomeResultCard
-                key={result.query}
-                displayName={displayName}
-          network={zns.mode !== "mainnet" ? "testnet" : "mainnet"}
-                {...props}
-                isPopularName={isPopular}
-                onAction={(action) => openModal(action, result)}
-                onDismiss={() => removeResult(result.query)}
-              />
-            );
-          })}
-        </>
-      )}
-
-      <MarketStats />
-
-      {zns.mode !== "waitlist" && pendingHydrated && pendingTransaction && (
+      {!isWaitlistMode && pendingHydrated && pendingTransaction && !modalState && (
         <PendingTransactionBanner
           pendingTransaction={pendingTransaction}
           onResume={() => {}}
@@ -422,37 +162,41 @@ export default function HomePageClient({
         />
       )}
 
+      <MarketStats />
+
       <div className="relative z-[2] -mt-4 mb-2 flex justify-center">
-        <Link
-          href={zns.mode === "testnet" ? "/explorer?env=testnet" : "/explorer"}
-          className="inline-flex items-center gap-2 rounded-full border border-[var(--home-result-link-border)] bg-[var(--home-result-link-bg)] px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform,background-color] duration-[140ms] hover:-translate-y-px hover:bg-[var(--home-result-link-hover-bg)]"
-        >
-          <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
-            <circle cx="12" cy="12" r="4.25" stroke="currentColor" strokeWidth="1.7" />
-            <circle cx="12" cy="12" r="1.15" fill="currentColor" />
-            <path d="M12 2.4v3.2M12 18.4v3.2M2.4 12h3.2M18.4 12h3.2M5.6 5.6l2.2 2.2M16.2 16.2l2.2 2.2M18.4 5.6l-2.2 2.2M7.8 16.2l-2.2 2.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <circle cx="12" cy="12" r="8.85" stroke="currentColor" strokeWidth="1.4" />
-          </svg>
-          Explorer →
-        </Link>
+        {isWaitlistMode ? (
+          <Link
+            href="/leaders"
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--home-result-link-border)] bg-transparent px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform,background-color] duration-[140ms] hover:-translate-y-px hover:bg-[var(--home-result-link-hover-bg)]"
+          >
+            <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
+              <path d="M8 21L12 17L16 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M8 21V14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M16 21V14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="12" cy="10" r="6" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M12 6.5L13.1 8.8L15.6 9.1L13.8 10.8L14.2 13.3L12 12.1L9.8 13.3L10.2 10.8L8.4 9.1L10.9 8.8L12 6.5Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
+            </svg>
+            Leaderboard →
+          </Link>
+        ) : (
+          <Link
+            href={zns.mode === "testnet" ? "/explorer?env=testnet" : "/explorer"}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--home-result-link-border)] bg-[var(--home-result-link-bg)] px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform,background-color] duration-[140ms] hover:-translate-y-px hover:bg-[var(--home-result-link-hover-bg)]"
+          >
+            <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
+              <circle cx="12" cy="12" r="4.25" stroke="currentColor" strokeWidth="1.7" />
+              <circle cx="12" cy="12" r="1.15" fill="currentColor" />
+              <path d="M12 2.4v3.2M12 18.4v3.2M2.4 12h3.2M18.4 12h3.2M5.6 5.6l2.2 2.2M16.2 16.2l2.2 2.2M18.4 5.6l-2.2 2.2M7.8 16.2l-2.2 2.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="12" cy="12" r="8.85" stroke="currentColor" strokeWidth="1.4" />
+            </svg>
+            Explorer →
+          </Link>
+        )}
       </div>
 
       <HowItWorks />
       <FAQ />
-
-      {modalState && zns.mode !== "waitlist" && (
-        <Zip321Modal
-          action={modalState.action}
-          name={modalState.resolveResult.query}
-          network={zns.mode}
-          resolveResult={modalState.resolveResult}
-          onClose={() => setModalState(null)}
-          onSuccess={(name) => {
-            setModalState(null);
-            refreshResult(name);
-          }}
-        />
-      )}
 
       <div className="flex justify-center pb-10">
         <button
@@ -468,6 +212,23 @@ export default function HomePageClient({
         </button>
       </div>
 
+      {isClientMounted && modalState && (
+        <Zip321Modal
+          action={modalState.action}
+          name={modalState.resolveResult.query}
+          network={zns.mode === "waitlist" ? "testnet" : zns.mode}
+          resolveResult={modalState.resolveResult}
+          onClose={() => setModalState(null)}
+          onSuccess={(name) => {
+            setModalState(null);
+            refreshResult(name);
+          }}
+        />
+      )}
+
+      {isClientMounted && zns.mode !== "waitlist" && (
+        <FeedbackModal defaultNetwork={zns.mode} />
+      )}
     </div>
   );
 }

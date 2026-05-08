@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { PendingTransactionState } from "@/lib/types";
 
-import { ACTION_LABELS } from "@/lib/zns/actions";
+import { ACTION_LABELS } from "@/lib/types";
 
 function describePending(state: PendingTransactionState): string {
   if (state.phase === "confirm") return "Ready to send";

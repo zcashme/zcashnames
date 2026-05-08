@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import HomePageClient from "./HomePageClient";
-import { db } from "@/lib/db";
-import { confirmWaitlistEmail } from "@/lib/waitlist/waitlist";
 
 type HomePageProps = {
   searchParams?: Promise<{ ref?: string; token?: string }>;
@@ -34,65 +32,10 @@ const HOME_METADATA: Metadata = {
   },
 };
 
-function normalizeReferralCode(value: string | undefined): string | null {
-  const code = (value ?? "").trim();
-  if (!code) return null;
-  if (!/^[A-Za-z0-9_-]{4,64}$/.test(code)) return null;
-  return code;
-}
-
-async function lookupInviterName(referralCode: string): Promise<string | null> {
-  try {
-    const { data, error } = await db
-      .from("zn_waitlist")
-      .select("name")
-      .eq("referral_code", referralCode)
-      .limit(1)
-      .maybeSingle();
-
-    if (error) return null;
-    const name = (data?.name as string | null | undefined)?.trim();
-    return name && name.length > 0 ? name : null;
-  } catch {
-    return null;
-  }
-}
-
 export async function generateMetadata({ searchParams }: HomePageProps): Promise<Metadata> {
-  const params = (await searchParams) ?? {};
-  const code = normalizeReferralCode(params.ref);
-  if (!code) return HOME_METADATA;
-
-  const inviterName = await lookupInviterName(code);
-  if (!inviterName) return HOME_METADATA;
-
-  const inviterParam = encodeURIComponent(inviterName);
-  const ogImageUrl = `https://www.zcashnames.com/og/home.png?inviter=${inviterParam}`;
-
-  return {
-    ...HOME_METADATA,
-    openGraph: {
-      ...HOME_METADATA.openGraph,
-      images: [
-        {
-          url: ogImageUrl,
-          width: 1200,
-          height: 630,
-          alt: `ZcashNames invite from ${inviterName}`,
-        },
-      ],
-    },
-    twitter: {
-      ...HOME_METADATA.twitter,
-      images: [ogImageUrl],
-    },
-  };
+  return HOME_METADATA;
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const params = (await searchParams) ?? {};
-  const referralCode = normalizeReferralCode(params.ref);
-  const initialConfirmed = params.token ? await confirmWaitlistEmail(params.token) : null;
-
-  return <HomePageClient initialReferralCode={referralCode} initialConfirmed={initialConfirmed} />;
+  return <HomePageClient />;
 }

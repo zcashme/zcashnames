@@ -6,6 +6,20 @@ export type Zats = number;
 export const ACTIONS = ["CLAIM", "BUY", "UPDATE", "LIST", "DELIST", "RELEASE"] as const;
 export type Action = (typeof ACTIONS)[number];
 
+export const ACTION_LABELS = {
+  CLAIM: "Claim", BUY: "Buy", UPDATE: "Update",
+  LIST: "List", DELIST: "Delist", RELEASE: "Release",
+} as const satisfies Record<Action, string>;
+
+export const ACTION_COLORS = {
+  CLAIM:  { bg: "var(--color-accent-green-light)", text: "var(--color-accent-green)" },
+  BUY:    { bg: "rgba(59,130,246,0.15)",  text: "var(--color-brand-blue, #3b82f6)" },
+  UPDATE: { bg: "rgba(168,85,247,0.15)",  text: "#a855f7" },
+  LIST:   { bg: "rgba(234,179,8,0.15)",   text: "#eab308" },
+  DELIST: { bg: "rgba(156,163,175,0.15)", text: "var(--fg-muted)" },
+  RELEASE:{ bg: "rgba(239,68,68,0.15)",   text: "#ef4444" },
+} as const satisfies Record<Action, { bg: string; text: string }>;
+
 export type NameAvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
 
 export type AuthMethod = "otp" | "sovereign";
