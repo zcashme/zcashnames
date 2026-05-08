@@ -11,7 +11,7 @@ import HomeResultCard from "@/components/landing/HomeResultCard";
 import MarketStats from "@/components/landing/MarketStats";
 import FAQ from "@/components/landing/FAQ";
 import HowItWorks from "@/components/landing/HowItWorks";
-import Zip321Modal, { type ModalTarget } from "@/components/landing/Zip321Modal";
+import Zip321Modal from "@/components/purchases/Zip321Modal";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import { useZns } from "@/components/hooks/useZns";
 import { useSearchState } from "@/components/hooks/useSearchState";
@@ -278,7 +278,6 @@ export default function HomePageClient({
 }: HomePageClientProps) {
   const { zns } = useZns();
   const [isClientMounted, setIsClientMounted] = useState(false);
-  const [modalTarget, setModalTarget] = useState<ModalTarget | null>(null);
   const [waitlistConfirmed, setWaitlistConfirmed] = useState<ConfirmWaitlistResult | null>(initialConfirmed);
   const [waitlistSearchedName, setWaitlistSearchedName] = useState(initialConfirmed?.name ?? "");
 
@@ -293,14 +292,12 @@ export default function HomePageClient({
     removeResult,
     reset: resetSearch,
     buildCardProps,
-    getModalTarget,
   } = useSearchState(zns.mode === "waitlist" ? "testnet" : zns.mode);
   const {
     hydrated: pendingHydrated,
     pendingTransaction,
     persistPendingTransaction,
     clearPendingTransaction,
-    resumeTarget,
   } = usePendingTransaction();
 
   useEffect(() => {
@@ -402,10 +399,7 @@ export default function HomePageClient({
                 network={zns.mode}
                 {...props}
                 isPopularName={isPopular}
-                onAction={(action: Action) => {
-                  const target = getModalTarget(result, action);
-                  if (target) setModalTarget(target);
-                }}
+                onAction={(_action: Action) => {}}
                 onDismiss={() => removeResult(result.query)}
               />
             );
@@ -415,12 +409,10 @@ export default function HomePageClient({
 
       <MarketStats />
 
-      {zns.mode !== "waitlist" && pendingHydrated && pendingTransaction && !modalTarget && (
+      {zns.mode !== "waitlist" && pendingHydrated && pendingTransaction && (
         <PendingTransactionBanner
           pendingTransaction={pendingTransaction}
-          onResume={() => {
-            if (resumeTarget) setModalTarget({ ...resumeTarget });
-          }}
+          onResume={() => {}}
           onDismiss={clearPendingTransaction}
         />
       )}
@@ -457,20 +449,6 @@ export default function HomePageClient({
         </button>
       </div>
 
-      {isClientMounted && modalTarget && (
-        <Zip321Modal
-          target={modalTarget}
-          onClose={() => setModalTarget(null)}
-          onSuccess={refreshResult}
-          resumeState={pendingTransaction}
-          onPersistState={persistPendingTransaction}
-          onClearState={clearPendingTransaction}
-        />
-      )}
-
-      {isClientMounted && zns.mode !== "waitlist" && (
-        <FeedbackModal defaultNetwork={zns.mode} />
-      )}
     </div>
   );
 }

@@ -6,6 +6,19 @@ export type Zats = number;
 export const ACTIONS = ["CLAIM", "BUY", "UPDATE", "LIST", "DELIST", "RELEASE"] as const;
 export type Action = (typeof ACTIONS)[number];
 
+export type AuthMethod = "otp" | "sovereign";
+
+export type Phase = "unlock" | "input" | "otp" | "sign" | "confirm" | "fund" | "scanning";
+
+export const ACTION_PHASES: Record<Action, Phase[]> = {
+  CLAIM:   ["input", "confirm", "scanning"],
+  BUY:     ["input", "confirm", "fund", "scanning"],
+  UPDATE:  ["input", "otp", "confirm", "scanning"],
+  LIST:    ["input", "otp", "confirm", "scanning"],
+  DELIST:  ["otp", "confirm", "scanning"],
+  RELEASE: ["otp", "confirm", "scanning"],
+};
+
 export interface PendingBuy {
   buyer: string;
   price: Zats;
@@ -78,33 +91,11 @@ export function getNetworkConstants(network: Network = "testnet"): NetworkConsta
   return NETWORK_CONSTANTS[network];
 }
 
+export type Phase = "unlock" | "input" | "otp" | "sign" | "confirm" | "fund" | "scanning";
+
 export const MAX_LIST_FOR_SALE_AMOUNT = 21_000_000;
 
-/* ── Modal machine ───────────────────────────────────────────────────── */
-
-export interface ModalRequest {
-  name: string;
-  action: Action;
-  network: Network;
-  registration?: { address: string; nonce: number; pubkey: string | null };
-  listing?: { priceZec: number; payTaddr: string };
-  isReserved?: boolean;
-}
-
 export type ScanState = "loading" | "not_detected" | "in_mempool" | "being_mined" | "mined";
-
-export type ModalPhase =
-  | { phase: "idle" }
-  | { phase: "unlock"; request: ModalRequest; code: string; loading: boolean; error: string }
-  | { phase: "input"; request: ModalRequest; address: string; price: string; payTaddr: string; auth: "default" | "otp" | "sovereign"; unlockProof?: string; loading: boolean; error: string }
-  | { phase: "otp"; request: ModalRequest; sessionId: string; registeredAddress: string; code: string; sent: boolean; proof?: string; attempts: number; address: string; price: string; payTaddr: string; loading: boolean; error: string }
-  | { phase: "sign"; request: ModalRequest; payload: string; unlockProof?: string; pubkey: string; sig: string; address: string; price: string; payTaddr: string; loading: boolean; error: string; pubkeyError: string; sigError: string }
-  | { phase: "confirm"; request: ModalRequest; uri: string }
-  | { phase: "fund"; request: ModalRequest; payTaddr: string; amountZec: number; uri: string }
-  | { phase: "scanning"; request: ModalRequest; uri: string; scan: ScanState; txid?: string; warnings?: string[] }
-  | { phase: "done"; request: ModalRequest };
-
-export type ModalPhaseKind = ModalPhase["phase"];
 
 /* ── Resolve result ──────────────────────────────────────────────────── */
 

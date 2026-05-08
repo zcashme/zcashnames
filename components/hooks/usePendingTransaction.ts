@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { checkScannerState } from "@/lib/zns/resolve";
 import { checkMempool, type MempoolEntry } from "@/lib/zns/mempool";
-import type { ModalTarget, PendingTransactionState } from "@/lib/types";
+import type { PendingTransactionState } from "@/lib/types";
 import { useLocalStorage } from "@/components/hooks/useLocalStorage";
 
 const STORAGE_KEY = "zns-pending-transaction-v1";
@@ -99,18 +99,10 @@ export function usePendingTransaction(onSuccess?: (name: string) => void) {
     };
   }, [onSuccess, pendingTransaction, setPendingTransaction]);
 
-  const resumeTarget = useMemo<ModalTarget | null>(() => {
-    if (!pendingTransaction) return null;
-    return {
-      ...pendingTransaction.target,
-    };
-  }, [pendingTransaction]);
-
   return {
     hydrated: true,
     pendingTransaction,
     persistPendingTransaction,
     clearPendingTransaction,
-    resumeTarget,
   };
 }

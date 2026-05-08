@@ -23,7 +23,7 @@ import {
   type TaggedRegistration,
 } from "./explorerFilters";
 import ExplorerNameDetail from "./ExplorerNameDetail";
-import Zip321Modal, { type ModalTarget } from "@/components/landing/Zip321Modal";
+import Zip321Modal from "@/components/purchases/Zip321Modal";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 
@@ -94,7 +94,6 @@ export default function ExplorerShell({
     pendingTransaction,
     persistPendingTransaction,
     clearPendingTransaction,
-    resumeTarget,
   } = usePendingTransaction(() => router.refresh());
 
   const [activeTab, setActiveTab] = useState<ExplorerTab>(initialTab);
@@ -103,7 +102,6 @@ export default function ExplorerShell({
   const [searchQuery, setSearchQuery] = useState(nameQuery || "");
   const [selectedName, setSelectedName] = useState(nameQuery || "");
   const [isClientMounted, setIsClientMounted] = useState(false);
-  const [modalTarget, setModalTarget] = useState<ModalTarget | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [uivkOpen, setUivkOpen] = useState(false);
   const [copied, setCopied] = useState<"mainnet" | "testnet" | null>(null);
@@ -273,26 +271,7 @@ export default function ExplorerShell({
     });
   }
 
-  function handleDetailAction(action: Action) {
-    if (!nameDataReady || !nameResult) return;
-
-    const target: ModalTarget = {
-      name: nameResult.query,
-      action,
-      network: detailNetwork,
-      isReserved: nameResult.status === "reserved",
-    };
-
-    if (nameResult.status === "registered" || nameResult.status === "listed") {
-      target.registrationAddress = nameResult.registration.address;
-      target.registrationNonce = nameResult.registration.nonce;
-      target.registrationPubkey = nameResult.registration.pubkey ?? null;
-      target.listingPriceZec = nameResult.status === "listed" ? nameResult.listingPrice.zec : undefined;
-      target.payTaddr = nameResult.status === "listed" ? nameResult.payTaddr : undefined;
-    }
-
-    setModalTarget(target);
-  }
+  function handleDetailAction(_action: Action) {}
 
   function handleRefresh() {
     startTransition(() => {
@@ -371,12 +350,10 @@ export default function ExplorerShell({
         onSortChange={handleSortChange}
       />
 
-      {pendingHydrated && pendingTransaction && !modalTarget && (
+      {pendingHydrated && pendingTransaction && (
         <PendingTransactionBanner
           pendingTransaction={pendingTransaction}
-          onResume={() => {
-            if (resumeTarget) setModalTarget({ ...resumeTarget });
-          }}
+          onResume={() => {}}
           onDismiss={clearPendingTransaction}
         />
       )}
@@ -568,17 +545,6 @@ export default function ExplorerShell({
             </div>
           </div>
         </div>
-      )}
-
-      {isClientMounted && modalTarget && (
-        <Zip321Modal
-          target={modalTarget}
-          onClose={() => setModalTarget(null)}
-          onSuccess={() => router.refresh()}
-          resumeState={pendingTransaction}
-          onPersistState={persistPendingTransaction}
-          onClearState={clearPendingTransaction}
-        />
       )}
     </div>
   );

@@ -24,7 +24,7 @@ import { getZns, getVerifiedZns, fetchClaimCost, normalizeUsername, isValidUsern
 import { MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import { getReservedName, verifyUnlockCode } from "@/lib/zns/reserved";
 import { verifyProof, verifyProofKind, issueProof, parseProofSubject } from "@/lib/zns/proof";
-import { verifyOtp as _verifyOtp } from "@/lib/payment/otp";
+import { verifyOtp as _verifyOtp } from "@/lib/purchases/otp";
 
 interface CompletedAction {
   memo: string;

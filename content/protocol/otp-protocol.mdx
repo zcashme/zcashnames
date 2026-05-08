@@ -76,7 +76,7 @@ These are different from the ZNS registry addresses used for claim/list/etc.
 otp = HMAC-SHA256(ZVS_SECRET_SEED, sessionId || userAddress)[0..4] as u32 (big endian) % 1_000_000
 ```
 
-Formatted as a zero-padded 6-digit decimal string. Reference implementation from [`lib/payment/otp.ts`](https://github.com/zcashme/zcashnames/blob/main/lib/payment/otp.ts):
+Formatted as a zero-padded 6-digit decimal string. Reference implementation from [`lib/purchases/otp.ts`](https://github.com/zcashme/zcashnames/blob/main/lib/purchases/otp.ts):
 
 ```typescript
 const key = await crypto.subtle.importKey(
@@ -126,7 +126,7 @@ User                    Wallet              ZVS                Verifier (web)
 
 ## Verification
 
-The verifier re-parses the memo, rejects if the `userAddress` field doesn't match the address it expects to be authorizing, recomputes the OTP, and compares using a constant-time equality check. From [`verifyOtp`](https://github.com/zcashme/zcashnames/blob/main/lib/payment/otp.ts):
+The verifier re-parses the memo, rejects if the `userAddress` field doesn't match the address it expects to be authorizing, recomputes the OTP, and compares using a constant-time equality check. From [`verifyOtp`](https://github.com/zcashme/zcashnames/blob/main/lib/purchases/otp.ts):
 
 ```typescript
 export async function verifyOtp(memo: string, providedOtp: string, expectedAddress: string) {

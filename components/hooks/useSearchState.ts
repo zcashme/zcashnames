@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { resolveName } from "@/lib/zns/resolve";
 import { normalizeUsername, isValidUsername, formatUsdEquivalent } from "@/lib/zns/utils";
 import type { Network } from "@/lib/types";
-import type { ResolveName, Action, ModalTarget } from "@/lib/types";
+import type { ResolveName, Action } from "@/lib/types";
 
 export type NameAvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
 
@@ -29,7 +29,6 @@ interface UseSearchStateReturn {
   reset: () => void;
   // Domain helpers
   buildCardProps: (result: ResolveName) => CardProps;
-  getModalTarget: (result: ResolveName, action: Action) => ModalTarget | null;
 }
 
 export function useSearchState(network: Network): UseSearchStateReturn {
@@ -137,61 +136,6 @@ export function useSearchState(network: Network): UseSearchStateReturn {
     }
   }
 
-  function getModalTarget(result: ResolveName, action: Action): ModalTarget | null {
-    const hasRegistration = "registration" in result;
-    const base = {
-      name: result.query,
-      network,
-      registrationAddress: hasRegistration ? result.registration.address : undefined,
-      registrationNonce: hasRegistration ? result.registration.nonce : undefined,
-      registrationPubkey: hasRegistration ? result.registration.pubkey : undefined,
-    };
-
-    switch (result.status) {
-      case "available":
-        if (action === "CLAIM") {
-          return { ...base, action: "CLAIM" };
-        }
-        return null;
-
-      case "reserved":
-        if (action === "CLAIM") {
-          return { ...base, action: "CLAIM", isReserved: true };
-        }
-        return null;
-
-      case "listed":
-        switch (action) {
-          case "BUY":
-            return {
-              ...base,
-              action: "BUY",
-              listingPriceZec: result.listingPrice.zec,
-            };
-          case "DELIST":
-            return { ...base, action: "DELIST" };
-          case "RELEASE":
-            return { ...base, action: "RELEASE" };
-          default:
-            return null;
-        }
-
-      case "registered":
-        switch (action) {
-          case "UPDATE":
-            return { ...base, action: "UPDATE" };
-          case "LIST":
-            return { ...base, action: "LIST" };
-          case "RELEASE":
-            return { ...base, action: "RELEASE" };
-          default:
-            return null;
-        }
-
-      case "blocked":
-        return null;
-    }
-  }
 
   return {
     input,
@@ -204,6 +148,5 @@ export function useSearchState(network: Network): UseSearchStateReturn {
     removeResult,
     reset,
     buildCardProps,
-    getModalTarget,
   };
 }
