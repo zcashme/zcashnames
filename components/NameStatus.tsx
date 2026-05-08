@@ -163,7 +163,7 @@ export function NameStatusButtons({
         <button
           type="button"
           className="home-result-action is-primary"
-          onClick={() => onAction("claim")}
+          onClick={() => onAction("CLAIM")}
         >
           Claim Name
         </button>
@@ -177,14 +177,14 @@ export function NameStatusButtons({
         <button
           type="button"
           className="home-result-action is-primary"
-          onClick={() => onAction("buy")}
+          onClick={() => onAction("BUY")}
         >
           Buy Now
         </button>
         <button
           type="button"
           className="home-result-action is-secondary"
-          onClick={() => onAction("delist")}
+          onClick={() => onAction("DELIST")}
                         disabled={hasPendingBuy}
                         title={hasPendingBuy ? "Cannot delist while a purchase is pending" : "Remove this name from the marketplace"}
         >
@@ -193,7 +193,7 @@ export function NameStatusButtons({
         <button
           type="button"
           className="home-result-action is-secondary"
-          onClick={() => onAction("release")}
+          onClick={() => onAction("RELEASE")}
         >
           Release Name
         </button>
@@ -207,21 +207,21 @@ export function NameStatusButtons({
         <button
           type="button"
           className="home-result-action is-secondary"
-          onClick={() => onAction("update")}
+          onClick={() => onAction("UPDATE")}
         >
           Update Address
         </button>
         <button
           type="button"
           className="home-result-action is-secondary"
-          onClick={() => onAction("list")}
+          onClick={() => onAction("LIST")}
         >
           List for Sale
         </button>
         <button
           type="button"
           className="home-result-action is-secondary"
-          onClick={() => onAction("release")}
+          onClick={() => onAction("RELEASE")}
         >
           Release Name
         </button>
@@ -235,7 +235,7 @@ export function NameStatusButtons({
         <button
           type="button"
           className="home-result-action is-primary"
-          onClick={() => onAction("claim")}
+          onClick={() => onAction("CLAIM")}
         >
           Claim Name
         </button>

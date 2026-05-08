@@ -2,7 +2,8 @@
 
 import { useState, useRef, useCallback } from "react";
 import { resolveName } from "@/lib/zns/resolve";
-import { normalizeUsername, isValidUsername, formatUsdEquivalent, type Network } from "@/lib/zns/client";
+import { normalizeUsername, isValidUsername, formatUsdEquivalent } from "@/lib/zns/utils";
+import type { Network } from "@/lib/types";
 import type { ResolveName, Action, ModalTarget } from "@/lib/types";
 
 export type NameAvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
@@ -148,41 +149,41 @@ export function useSearchState(network: Network): UseSearchStateReturn {
 
     switch (result.status) {
       case "available":
-        if (action === "claim") {
-          return { ...base, action: "claim" };
+        if (action === "CLAIM") {
+          return { ...base, action: "CLAIM" };
         }
         return null;
 
       case "reserved":
-        if (action === "claim") {
-          return { ...base, action: "claim", isReserved: true };
+        if (action === "CLAIM") {
+          return { ...base, action: "CLAIM", isReserved: true };
         }
         return null;
 
       case "listed":
         switch (action) {
-          case "buy":
+          case "BUY":
             return {
               ...base,
-              action: "buy",
+              action: "BUY",
               listingPriceZec: result.listingPrice.zec,
             };
-          case "delist":
-            return { ...base, action: "delist" };
-          case "release":
-            return { ...base, action: "release" };
+          case "DELIST":
+            return { ...base, action: "DELIST" };
+          case "RELEASE":
+            return { ...base, action: "RELEASE" };
           default:
             return null;
         }
 
       case "registered":
         switch (action) {
-          case "update":
-            return { ...base, action: "update" };
-          case "list":
-            return { ...base, action: "list" };
-          case "release":
-            return { ...base, action: "release" };
+          case "UPDATE":
+            return { ...base, action: "UPDATE" };
+          case "LIST":
+            return { ...base, action: "LIST" };
+          case "RELEASE":
+            return { ...base, action: "RELEASE" };
           default:
             return null;
         }

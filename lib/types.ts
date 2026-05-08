@@ -1,4 +1,55 @@
-import type { Network, Action, PendingBuy } from "@/lib/zns/client";
+/* ── Shared domain types ─────────────────────────────────────────────── */
+
+export type Network = "testnet" | "mainnet";
+export type Zats = number;
+
+export const ACTIONS = ["CLAIM", "BUY", "UPDATE", "LIST", "DELIST", "RELEASE"] as const;
+export type Action = (typeof ACTIONS)[number];
+
+export interface PendingBuy {
+  buyer: string;
+  price: Zats;
+  claimHeight: number;
+  expiresAt: number;
+  txid: string;
+}
+
+export interface Listing {
+  name: string;
+  price: Zats;
+  payTaddr: string;
+  nonce: number;
+  txid: string;
+  height: number;
+  signature: string;
+  pubkey: string | null;
+  pendingBuy: PendingBuy | undefined;
+}
+
+export interface Registration {
+  name: string;
+  address: string;
+  txid: string;
+  height: number;
+  nonce: number;
+  signature: string | null;
+  lastAction: string;
+  pubkey: string | null;
+  listing: Listing | null;
+}
+
+export interface ZnsEvent {
+  id: number;
+  name: string;
+  action: string;
+  txid: string;
+  height: number;
+  ua: string | null;
+  price: number | null;
+  nonce: number | null;
+  signature: string | null;
+  pubkey: string | null;
+}
 
 /**
  * Per-network constants used by Zip321Modal.
@@ -36,9 +87,6 @@ export function getNetworkConstants(network: Network = "testnet"): NetworkConsta
  *  Used for both client-side validation (Zip321Modal) and server-side validation (actions.ts). */
 export const MAX_LIST_FOR_SALE_AMOUNT = 21_000_000;
 
-/** The six operations a user can perform on a Zcash name. */
-export type { Action };
-
 export interface ModalTarget {
   name: string;
   action: Action;
@@ -71,13 +119,7 @@ export interface PendingTransactionState {
 }
 
 /**
- * @deprecated Import PendingBuy from @/lib/zns/client instead.
- * This alias exists for ResolveName compatibility.
- */
-export type { PendingBuy };
-
-/**
- * Result of resolving a name query. Discriminated union representing the possible states.
+ * Result of resolving a name query.
  */
 export type ResolveName =
   | {
@@ -107,9 +149,9 @@ export type ResolveName =
       query: string
       registration: { name: string; address: string; txid: string; height: number; nonce: number; pubkey?: string | null }
       listingPrice: { zats: number; zec: number }
-      /** Transparent address where the seller receives payment. */
-      payTaddr: string
-      /** Active pending purchase, if any. */
-      pendingBuy?: PendingBuy
-      firstBucket?: number
-    }
+  /** Transparent address where the seller receives payment. */
+  payTaddr: string;
+  /** Active pending purchase, if any. */
+  pendingBuy?: PendingBuy;
+  firstBucket?: number
+}

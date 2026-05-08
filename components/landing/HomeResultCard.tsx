@@ -1,8 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { Action } from "@/lib/types";
-import type { Network } from "@/lib/zns/client";
+import type { Action, Network, PendingBuy } from "@/lib/types";
 import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
 import {
   NameStatusBadge,

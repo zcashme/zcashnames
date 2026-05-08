@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { Network } from "@/lib/zns/client";
+import type { Network } from "@/lib/types";
 
 export type WaitlistStatsData = {
   waitlist: number;

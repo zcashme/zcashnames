@@ -1,36 +1,12 @@
-import { ZNS, ZNS_ACTIONS } from "zcashname-sdk";
-import type { Network, PendingBuy, Zats } from "zcashname-sdk";
+import { ZNS } from "zcashname-sdk";
+import type { Network } from "@/lib/types";
 
-export { ZNS_ACTIONS };
-export const ACTIONS = ([
-  "claim",
-  "buy",
-  "update",
-  "list",
-  "delist",
-  "release",
-] as const);
-export type Action = (typeof ACTIONS)[number];
-export type { PendingBuy };
-export type {
-  Network,
-  Registration,
-  Listing,
-  Event,
-  EventsFilter,
-  CompletedAction,
-  Status,
-  Zats,
-} from "zcashname-sdk";
-
-/* ── Network type ───────────────────────────────────────────────────── */
+/* ── ZNS instance cache ─────────────────────────────────────────────── */
 
 const ZNS_RPC_URLS: Record<Network, string> = {
   testnet: process.env.ZNS_TESTNET_RPC_URL ?? "https://light.zcash.me/zns-testnet",
   mainnet: process.env.ZNS_MAINNET_RPC_URL ?? "https://light.zcash.me/zns-mainnet-test",
 };
-
-/* ── Single ZNS instance per network ────────────────────────────────── */
 
 const instances = new Map<Network, ZNS>();
 
@@ -42,7 +18,7 @@ export function getZns(network: Network): ZNS {
   return zns;
 }
 
-/* ── Claim cost (instance-dependent: needs RPC for pricing) ─────────── */
+/* ── Claim cost ─────────────────────────────────────────────────────── */
 
 export async function fetchClaimCost(
   name: string,
@@ -58,7 +34,7 @@ export async function fetchClaimCost(
   }
 }
 
-/* ── Address validation ──────────────────────────────────────────────── */
+/* ── Address validation ─────────────────────────────────────────────── */
 
 export type AddressStatus = "unified" | "sapling" | "transparent" | "viewkey" | "tex" | "invalid";
 
@@ -91,7 +67,7 @@ export function validateAddress(address: string, network: Network = "testnet"): 
   return { status: "invalid", warning: "Invalid address format." };
 }
 
-/* ── Pure functions (no instance needed) ─────────────────────────────── */
+/* ── Pure functions ─────────────────────────────────────────────────── */
 
 const NAME_RE = /^[a-z0-9]{1,62}$/;
 
@@ -122,31 +98,4 @@ export function formatUsdEquivalent(
   if (usdPerZec == null) return "";
   const usd = zecAmount * usdPerZec;
   return `$${usd.toFixed(2)} USD`;
-}
-
-/**
- * Build the raw signing payload string for an action (no signature attached).
- * Uses the SDK under the hood. Throws on invalid inputs.
- */
-export function buildSigningPayload(
-  action: "claim" | "buy" | "update" | "list" | "delist" | "release",
-  name: string,
-  params: { address?: string; priceZats?: number; nonce?: number; payTaddr?: string },
-  network: Network = "testnet",
-): string {
-  const zns = getZns(network);
-  switch (action) {
-    case "claim":
-      return zns.prepareClaim(name, params.address ?? "", 0).payload;
-    case "buy":
-      return zns.prepareBuy(name, params.address ?? "", 0).payload;
-    case "update":
-      return zns.prepareUpdate(name, params.address ?? "", params.nonce ?? 0).payload;
-    case "list":
-      return zns.prepareList(name, params.priceZats ?? 0, params.payTaddr ?? "", params.nonce ?? 0).payload;
-    case "delist":
-      return zns.prepareDelist(name, params.nonce ?? 0).payload;
-    case "release":
-      return zns.prepareRelease(name, params.nonce ?? 0).payload;
-  }
 }

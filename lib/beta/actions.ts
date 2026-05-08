@@ -3,7 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import type { Network } from "@/lib/zns/client";
+import type { Network } from "@/lib/types";
 import {
   BETA_COOKIE_NAME,
   BETA_STAGE_COOKIE_NAME,
@@ -30,22 +30,15 @@ export async function switchToNetwork(network: Network): Promise<void> {
   await setStageCookie(network);
 }
 
-
-/** Read the current tester's display name from the cookie, or null. */
 export async function getCurrentTesterName(): Promise<string | null> {
   const tester = await readCurrentTester();
   return tester?.displayName ?? null;
 }
 
-/** Read the current beta stage from the 30-day stage cookie, or null. */
 export async function getCurrentBetaStage(): Promise<"testnet" | "mainnet" | null> {
   return readCurrentStage();
 }
 
-/**
- * Read the current tester's stated focus areas from beta_testers.focus_areas.
- * Anonymous testers (no cookie) → empty array.
- */
 export async function getCurrentTesterFocus(): Promise<("user" | "sdk")[]> {
   const tester = await readCurrentTester();
   if (!tester) return [];
@@ -59,8 +52,6 @@ export async function getCurrentTesterFocus(): Promise<("user" | "sdk")[]> {
   return raw.filter((v): v is "user" | "sdk" => v === "user" || v === "sdk");
 }
 
-// ---------------------------------------------------------------------------
-// Feedback submission — allows anonymous submissions (no cookie).
 // ---------------------------------------------------------------------------
 
 export interface FeedbackPayload {
@@ -270,38 +261,3 @@ export async function loadChecklistProgress(
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// Public beta application — anyone can submit. Generates an invite code at
-// submission time and inserts a row with status='applied'. The admin (you)
-// reviews rows in the Supabase table editor and DMs the code to chosen
-// applicants. The applicant never sees the code in the response.
-
-// ---------------------------------------------------------------------------
-// Open beta — store email + set stage cookie in one call.
-// Reuses the zn_waitlist table for email collection.
-// ---------------------------------------------------------------------------
-
-export async function setOpenBetaAccess(
-  email: string,
-  newsletter: boolean,
-  network: Network,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const normalized = email.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
-    return { ok: false, error: "Enter a valid email address." };
-  }
-
-  try {
-    await db.from("zn_waitlist").insert({
-      name: "openbeta_user",
-      email: normalized,
-      newsletter,
-      email_verified: false,
-    });
-  } catch {
-    // Email may already exist — unique constraint rejects duplicate silently.
-  }
-
-  await setStageCookie(network);
-  return { ok: true };
-}

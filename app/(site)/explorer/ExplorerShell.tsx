@@ -30,9 +30,9 @@ import { useNetwork } from "@/components/hooks/useNetwork";
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 import CopyIconButton from "@/components/CopyIconButton";
-import type { ResolveName } from "@/lib/types";
+import type { ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
-import type { Event, Network } from "@/lib/zns/client";
+import type { Network } from "@/lib/types";
 
 const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "all", label: "All" },
@@ -71,7 +71,7 @@ interface ExplorerShellProps {
   initialPage: number;
   nameQuery: string;
   nameResult: ResolveName | null;
-  nameEvents: (Event & { network: string })[];
+  nameEvents: (ZnsEvent & { network: string })[];
 }
 
 export default function ExplorerShell({

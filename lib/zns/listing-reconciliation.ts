@@ -1,4 +1,4 @@
-import type { Registration, Listing } from "./client";
+import type { Registration, Listing } from "@/lib/types";
 
 export function getListingMap(listings: Listing[]): Map<string, Listing> {
   return new Map(listings.map((listing) => [listing.name, listing]));

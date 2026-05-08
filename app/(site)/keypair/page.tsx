@@ -4,8 +4,13 @@ import { getPublicKeyAsync, signAsync } from "@noble/ed25519";
 import { Suspense, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import { getZns } from "@/lib/zns/client";
-import type { PayloadValidationResult } from "zcashname-sdk";
+import { ZNS } from "zcashname-sdk";
+interface PayloadValidationResult {
+  readonly valid: boolean;
+  readonly action: string;
+  readonly message: string;
+  readonly level: "valid" | "invalid" | "unrecognized";
+}
 import { useCopy } from "@/components/hooks/useCopy";
 
 function bytesToBase64(bytes: ArrayBuffer | Uint8Array): string {
@@ -63,10 +68,11 @@ function KeypairPageInner() {
   const [generatedPrivateKeySaved, setGeneratedPrivateKeySaved] = useState(false);
 
   const privkeyB64 = seed ? bytesToBase64(seed) : "";
+  const zns = useMemo(() => new ZNS({ network: "testnet" }), []);
   const payloadValidation = useMemo((): PayloadValidationResult => {
-    if (!payload.trim()) return { valid: false, action: "", canonicalAction: null, message: "No payload yet. Paste the payload from the signing modal.", level: "invalid" };
-    return getZns("testnet").validatePayload(payload);
-  }, [payload]);
+    if (!payload.trim()) return { valid: false, action: "", message: "No payload yet. Paste the payload from the signing modal.", level: "invalid" };
+    return zns.validatePayload(payload);
+  }, [payload, zns]);
   const isGeneratedKey = tab === "generate" && !!seed && !!pubkeyB64;
   const isImportedKey = tab === "import" && !!seed && !!pubkeyB64 && !!importPrivB64.trim() && !importPrivError;
   const hasActiveKey = isGeneratedKey || isImportedKey;

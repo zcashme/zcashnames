@@ -1,6 +1,6 @@
 "use server";
 
-import type { Network } from "@/lib/zns/client";
+import type { Network } from "@/lib/types";
 
 /**
  * Result from the mempool watcher for a pending ZNS transaction.

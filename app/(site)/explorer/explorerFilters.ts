@@ -1,8 +1,8 @@
-import type { Network, Event, Registration, Listing } from "@/lib/zns/client";
+import type { Network, Listing, Registration, ZnsEvent } from "@/lib/types";
 
 export type ExplorerTab = "all" | "registered" | "forsale" | "admin" | "CLAIM" | "BUY" | "LIST" | "DELIST" | "UPDATE" | "RELEASE";
 export type TabCounts = Record<string, { filtered: number; total: number }>;
-export type TaggedEvent = Event & { network: Network };
+export type TaggedEvent = ZnsEvent & { network: Network };
 export type TaggedListing = Listing & { network: Network };
 export type TaggedRegistration = Registration & { network: Network };
 

@@ -1,13 +1,13 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
-import { verifyOtp, buildClaim, buildBuy, buildUpdate, buildList, buildDelist, buildRelease, checkUnlockCode } from "@/lib/zns/transaction";
+import { verifyOtp, buildClaim, buildBuy, buildUpdate, buildList, buildDelist, buildRelease, checkUnlockCode } from "@/lib/zns/actions";
 import { checkScannerState } from "@/lib/zns/resolve";
 import { checkMempool } from "@/lib/zns/mempool";
-import { validateAddress, buildSigningPayload } from "@/lib/zns/client";
+import { validateAddress } from "@/lib/zns/utils";
 import { ZNS } from "zcashname-sdk";
 import { buildZcashUri, parseZip321Uri } from "@/lib/payment/zip321";
 import { generateSessionId, buildZvsMemo } from "@/lib/payment/memo";
@@ -50,46 +50,46 @@ type ScanState = PendingTransactionScanState;
 type QrSectionKind = "otp" | "payment";
 
 const ACTION_LABEL: Record<Action, string> = {
-  claim: "Claim",
-  buy: "Buy",
-  update: "Update Address",
-  list: "List for Sale",
-  delist: "Delist",
-  release: "Release Name",
+  CLAIM: "Claim",
+  BUY: "Buy",
+  UPDATE: "Update Address",
+  LIST: "List for Sale",
+  DELIST: "Delist",
+  RELEASE: "Release Name",
 };
 
 const PREPARE_ACTION_LABEL: Record<Action, string> = {
-  claim: "Claim",
-  buy: "Buy",
-  update: "Update",
-  list: "List",
-  delist: "Delist",
-  release: "Release",
+  CLAIM: "Claim",
+  BUY: "Buy",
+  UPDATE: "Update",
+  LIST: "List",
+  DELIST: "Delist",
+  RELEASE: "Release",
 };
 
 // Used in scanner copy: "Your {noun} hasn't been detected yet."
 const ACTION_NOUN: Record<Action, string> = {
-  claim: "claim",
-  buy: "purchase",
-  update: "address update",
-  list: "listing",
-  delist: "delist",
-  release: "release",
+  CLAIM: "claim",
+  BUY: "purchase",
+  UPDATE: "address update",
+  LIST: "listing",
+  DELIST: "delist",
+  RELEASE: "release",
 };
 
 function minedMessage(action: Action, displayName: string): string {
   switch (action) {
-    case "claim":
+    case "CLAIM":
       return `${displayName} is yours. Claim confirmed on-chain.`;
-    case "buy":
+    case "BUY":
       return `${displayName} is now yours. Purchase confirmed on-chain.`;
-    case "update":
+    case "UPDATE":
       return `Address updated. ${displayName} now resolves to your new address.`;
-    case "list":
+    case "LIST":
       return `${displayName} is now listed for sale.`;
-    case "delist":
+    case "DELIST":
       return `${displayName} has been delisted.`;
-    case "release":
+    case "RELEASE":
       return `${displayName} has been released.`;
   }
 }
@@ -122,17 +122,17 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 
 function prepareDescription(action: Action, name: string, amount: string): React.ReactNode {
   switch (action) {
-    case "buy":
+    case "BUY":
       return <>Purchase for <strong>{amount}</strong>.</>;
-    case "delist":
+    case "DELIST":
       return <>Remove from sale.</>;
-    case "release":
+    case "RELEASE":
       return <>Allowing others to claim it.</>;
-    case "update":
+    case "UPDATE":
       return <>Set a new address.</>;
-    case "list":
+    case "LIST":
       return <>Set a price for <strong>{name}</strong>.</>;
-    case "claim":
+    case "CLAIM":
       return <><strong>{name}</strong></>;
   }
 }
@@ -164,13 +164,13 @@ export default function Zip321Modal({
   const { OTP_SIGNIN_ADDR, OTP_AMOUNT, OTP_MAX_ATTEMPTS } =
     getNetworkConstants(network);
 
-  const needsAddress = action === "claim" || action === "buy" || action === "update";
-  const needsPrice = action === "list";
-  const needsPayTaddr = action === "list";
-  const ownerAction = action === "update" || action === "list" || action === "delist" || action === "release";
+  const needsAddress = action === "CLAIM" || action === "BUY" || action === "UPDATE";
+  const needsPrice = action === "LIST";
+  const needsPayTaddr = action === "LIST";
+  const ownerAction = action === "UPDATE" || action === "LIST" || action === "DELIST" || action === "RELEASE";
   const ownerAuthMode: AuthMode | null = ownerAction ? (registrationPubkey ? "sovereign" : "otp") : null;
-  const needsUnlock = isReserved && action === "claim";
-  const needsOtp = action !== "claim";
+  const needsUnlock = isReserved && action === "CLAIM";
+  const needsOtp = action !== "CLAIM";
   const displayName = `${name}.zcash`;
   const listingPriceLabel = listingPriceZec == null ? "the listed price" : `${listingPriceZec} ZEC`;
   const explorerHref =
@@ -411,11 +411,19 @@ export default function Zip321Modal({
   const nextOwnerNonce = ownerAction ? (registrationNonce ?? 0) + 1 : undefined;
   const parsedPrice = parsePrice(priceInput);
   const priceZats = needsPrice && parsedPrice ? Math.round(parsedPrice * 1e8) : undefined;
-  const sovereignPayload = buildSigningPayload(action, name, {
-    address: needsAddress ? addressInput.trim() : undefined,
-    priceZats,
-    nonce: nextOwnerNonce,
-  }, network);
+  const znsInst = useMemo(() => new ZNS({ network }), [network]);
+  const sovereignPayload = useMemo(() => {
+    try {
+      switch (action) {
+        case "CLAIM": return znsInst.prepareClaim(name, needsAddress ? addressInput.trim() : "", 0).payload;
+        case "BUY": return znsInst.prepareBuy(name, needsAddress ? addressInput.trim() : "", 0).payload;
+        case "UPDATE": return znsInst.prepareUpdate(name, needsAddress ? addressInput.trim() : "", nextOwnerNonce ?? 0).payload;
+        case "LIST": return znsInst.prepareList(name, priceZats ?? 0, payTaddrInput.trim(), nextOwnerNonce ?? 0).payload;
+        case "DELIST": return znsInst.prepareDelist(name, nextOwnerNonce ?? 0).payload;
+        case "RELEASE": return znsInst.prepareRelease(name, nextOwnerNonce ?? 0).payload;
+      }
+    } catch { return ""; }
+  }, [action, name, addressInput, nextOwnerNonce, priceZats, payTaddrInput, znsInst]);
 
   useEffect(() => {
     if (phase !== "sign") return;
@@ -609,7 +617,7 @@ export default function Zip321Modal({
     try {
       const base = { name, network };
       const address = addressInput.trim();
-      const result = (action as string) === "buy"
+      const result = (action as string) === "BUY"
         ? await buildBuy({ ...base, address, listingPriceZats: listingPriceZec != null ? Math.round(listingPriceZec * 1e8) : undefined })
         : await buildClaim({ ...base, address, unlockProof: verifiedUnlockCode });
 
@@ -648,16 +656,16 @@ export default function Zip321Modal({
 
       let result;
       switch (action) {
-        case "update":
+        case "UPDATE":
           result = await buildUpdate({ ...base, address: addressInput.trim() });
           break;
-        case "list":
+        case "LIST":
           result = await buildList({ ...base, priceZats: priceZats!, payTaddr: payTaddrInput.trim() });
           break;
-        case "delist":
+        case "DELIST":
           result = await buildDelist(base);
           break;
-        case "release":
+        case "RELEASE":
           result = await buildRelease(base);
           break;
         default:
@@ -744,22 +752,22 @@ export default function Zip321Modal({
 
       let result;
       switch (action) {
-        case "claim":
+        case "CLAIM":
           result = await buildClaim({ ...base, address: addressInput.trim(), unlockProof: verifiedUnlockCode });
           break;
-        case "buy":
+        case "BUY":
           result = await buildBuy({ ...base, address: addressInput.trim(), listingPriceZats: listingPriceZec != null ? Math.round(listingPriceZec * 1e8) : undefined });
           break;
-        case "update":
+        case "UPDATE":
           result = await buildUpdate({ ...base, address: addressInput.trim() });
           break;
-        case "list":
+        case "LIST":
           result = await buildList({ ...base, priceZats: priceZats!, payTaddr: payTaddrInput.trim() });
           break;
-        case "delist":
+        case "DELIST":
           result = await buildDelist(base);
           break;
-        case "release":
+        case "RELEASE":
           result = await buildRelease(base);
           break;
         default:
@@ -1354,7 +1362,7 @@ export default function Zip321Modal({
             {needsAddress && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
-                  {action === "update" ? "New Zcash Address" : "Your Zcash Address"}
+                  {action === "UPDATE" ? "New Zcash Address" : "Your Zcash Address"}
                 </label>
                 <input
                   ref={addressRef}
@@ -1704,7 +1712,7 @@ export default function Zip321Modal({
                 Send exact amount and memo to address to complete transaction.
               </p>
 
-            {action === "list" && paymentUri && (
+            {action === "LIST" && paymentUri && (
               <p className="text-xs mt-1" style={{ color: "var(--fg-muted)" }}>
                 Listing commission: {(() => { const p = parseZip321Uri(paymentUri); return p.amount ? `${p.amount} ZEC` : "0.00001 ZEC"; })()} (10% of minimum pricing tier)
               </p>
@@ -1716,7 +1724,7 @@ export default function Zip321Modal({
             )}
 
             <div className="flex gap-3 w-full justify-center pt-1">
-              {(action === "claim" || action === "buy") && (
+              {(action === "CLAIM" || action === "BUY") && (
                 <button
                   type="button"
                   onClick={() => setPhase("input")}
@@ -1731,7 +1739,7 @@ export default function Zip321Modal({
                 onClick={() => {
                   setScanState("loading");
                   setShowNotDetectedDetail(false);
-                  setPhase(action === "buy" ? "fund" : "scanning");
+                  setPhase(action === "BUY" ? "fund" : "scanning");
                 }}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
                 style={{ background: "var(--fg-heading)", color: "var(--color-background)" }}
@@ -1744,7 +1752,7 @@ export default function Zip321Modal({
 
 
         {/* ── Phase: Fund (BUY only) ── */}
-        {phase === "fund" && action === "buy" && (
+        {phase === "fund" && action === "BUY" && (
           <div className="px-8 pb-8 pt-12 flex flex-col items-center gap-5 text-center">
             {renderProgressSegments()}
             <div>

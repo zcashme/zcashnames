@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import type { ResolveName } from "@/lib/types";
+import type { ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
-import type { Event } from "@/lib/zns/client";
-import { formatUsdEquivalent, zatsToZec } from "@/lib/zns/client";
+import { formatUsdEquivalent, zatsToZec } from "@/lib/zns/utils";
 import ActionBadge from "@/components/ActionBadge";
 import CopyIconButton from "@/components/CopyIconButton";
 import {
@@ -33,7 +32,7 @@ export default function ExplorerNameDetail({
 }: {
   query: string;
   result: ResolveName | null;
-  events: Event[];
+  events: ZnsEvent[];
   isPending: boolean;
   usdPerZec: number | null;
   onAction: (action: Action) => void;

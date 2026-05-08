@@ -1,18 +1,23 @@
 "use server";
 
-import {
-  buildSignedClaimAction,
-  buildSignedBuyAction,
-  buildSignedListAction,
-  buildSignedDelistAction,
-  buildSignedReleaseAction,
-  buildSignedUpdateAction,
-} from "@/lib/zns/admin";
-import { normalizeUsername, isValidUsername, validateAddress, type Network, fetchClaimCost, getZns } from "@/lib/zns/client";
+import crypto from "node:crypto";
+import { ZNS } from "zcashname-sdk";
+import type { Network } from "@/lib/types";
+import { getZns, fetchClaimCost, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
 import { MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import { getReservedName, verifyUnlockCode } from "@/lib/zns/reserved";
 import { verifyProof, verifyProofKind, issueProof, parseProofSubject } from "@/lib/zns/proof";
 import { verifyOtp as _verifyOtp } from "@/lib/payment/otp";
+
+interface CompletedAction {
+  memo: string;
+  uri: string;
+}
+
+interface PreparedAction {
+  readonly payload: string;
+  complete(signature: string, userPubkey?: string): CompletedAction;
+}
 
 export async function verifyOtp(
   memo: string,
@@ -22,12 +27,118 @@ export async function verifyOtp(
   return _verifyOtp(memo, code, expectedAddress);
 }
 
+/* ── Admin signing (server-only, Ed25519 via Node crypto) ───────────── */
+
+let cachedKeyPair: crypto.KeyObject | null = null;
+
+function getSigningKey(): crypto.KeyObject {
+  if (cachedKeyPair) return cachedKeyPair;
+
+  const hex = process.env.ZNS_SIGNING_KEY_PATH;
+  if (!hex) throw new Error("ZNS_SIGNING_KEY_PATH environment variable is required");
+
+  const seed = Buffer.from(hex, "hex");
+  cachedKeyPair = crypto.createPrivateKey({
+    key: Buffer.concat([
+      Buffer.from("302e020100300506032b657004220420", "hex"),
+      seed,
+    ]),
+    format: "der",
+    type: "pkcs8",
+  });
+
+  return cachedKeyPair;
+}
+
+function adminSign(payload: string): string {
+  const key = getSigningKey();
+  const sig = crypto.sign(null, Buffer.from(payload, "utf-8"), key);
+  return sig.toString("base64");
+}
+
+function completeWithAdmin(prepared: PreparedAction): CompletedAction {
+  return prepared.complete(adminSign(prepared.payload));
+}
+
+/* ── Signed action builders ──────────────────────────────────────────── */
+
+async function buildSignedClaimAction(
+  name: string,
+  userUa: string,
+  network: Network = "testnet",
+): Promise<CompletedAction> {
+  const zns = getZns(network);
+  const reg = await zns.resolveName(name);
+  if (reg) throw new Error(`Name "${name}" is already registered.`);
+  const cost = await fetchClaimCost(name, network);
+  if (cost == null) throw new Error("Pricing unavailable - indexer may be down.");
+  return completeWithAdmin(zns.prepareClaim(name, userUa, cost));
+}
+
+async function buildSignedBuyAction(
+  name: string,
+  buyerUa: string,
+  listingPriceZats?: number,
+  network: Network = "testnet",
+): Promise<CompletedAction> {
+  const zns = getZns(network);
+  const reg = await zns.resolveName(name);
+  if (!reg?.listing) throw new Error(`Name "${name}" is not listed for sale.`);
+  return completeWithAdmin(zns.prepareBuy(name, buyerUa, listingPriceZats ?? reg?.listing?.price ?? 0));
+}
+
+async function buildSignedListAction(
+  name: string,
+  priceZats: number,
+  payTaddr: string,
+  network: Network = "testnet",
+): Promise<{ action: CompletedAction; nonce: number }> {
+  const zns = getZns(network);
+  const reg = await zns.resolveName(name);
+  if (!reg) throw new Error(`Name "${name}" is not registered.`);
+  const nonce = reg.nonce + 1;
+  return { action: completeWithAdmin(zns.prepareList(name, priceZats, payTaddr, nonce)), nonce };
+}
+
+async function buildSignedDelistAction(
+  name: string,
+  network: Network = "testnet",
+): Promise<{ action: CompletedAction; nonce: number }> {
+  const zns = getZns(network);
+  const reg = await zns.resolveName(name);
+  if (!reg) throw new Error(`Name "${name}" is not registered.`);
+  const nonce = reg.nonce + 1;
+  return { action: completeWithAdmin(zns.prepareDelist(name, nonce)), nonce };
+}
+
+async function buildSignedReleaseAction(
+  name: string,
+  network: Network = "testnet",
+): Promise<{ action: CompletedAction; nonce: number }> {
+  const zns = getZns(network);
+  const reg = await zns.resolveName(name);
+  if (!reg) throw new Error(`Name "${name}" is not registered.`);
+  const nonce = reg.nonce + 1;
+  return { action: completeWithAdmin(zns.prepareRelease(name, nonce)), nonce };
+}
+
+async function buildSignedUpdateAction(
+  name: string,
+  newUa: string,
+  network: Network = "testnet",
+): Promise<{ action: CompletedAction; nonce: number }> {
+  const zns = getZns(network);
+  const reg = await zns.resolveName(name);
+  if (!reg) throw new Error(`Name "${name}" is not registered.`);
+  const nonce = reg.nonce + 1;
+  return { action: completeWithAdmin(zns.prepareUpdate(name, newUa, nonce)), nonce };
+}
+
+/* ── Input validation helpers ────────────────────────────────────────── */
 
 type ActionResult =
   | { ok: true; uri: string }
   | { ok: false; error: string };
-
-
 
 function requireUnifiedAddress(address: string | undefined): ActionResult | { address: string } {
   const addr = address?.trim();
@@ -53,7 +164,6 @@ function requireOtpProof(otpProof: string | undefined, expectedAddress: string):
   return undefined;
 }
 
-/** Validate a transparent Zcash address (t1, t3, tm, t2 prefixes). */
 function isValidTaddr(addr: string): boolean {
   return /^[tT][1-3mM][A-Za-z0-9]{20,}$/.test(addr.trim());
 }
@@ -72,7 +182,7 @@ export async function checkUnlockCode(
   return { ok: true, proof: issueProof("unlock", normalized) };
 }
 
-/* ── claim ────────────────────────────────────────────────────────────── */
+/* ── Public action builders ──────────────────────────────────────────── */
 
 export interface ClaimInput {
   name: string;
@@ -108,13 +218,10 @@ export async function buildClaim(input: ClaimInput): Promise<ActionResult> {
   }
 }
 
-/* ── buy ──────────────────────────────────────────────────────────────── */
-
 export interface BuyInput {
   name: string;
   address: string;
   network: Network;
-  /** Listing price in zats, for inclusion in the BUY memo. */
   listingPriceZats?: number;
   sovereignSig?: string;
   sovereignPub?: string;
@@ -133,8 +240,6 @@ export async function buildBuy(input: BuyInput): Promise<ActionResult> {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
 }
-
-/* ── update ───────────────────────────────────────────────────────────── */
 
 export interface UpdateInput {
   name: string;
@@ -166,12 +271,9 @@ export async function buildUpdate(input: UpdateInput): Promise<ActionResult> {
   }
 }
 
-/* ── list ─────────────────────────────────────────────────────────────── */
-
 export interface ListInput {
   name: string;
   priceZats: number;
-  /** Transparent address where the seller will receive the buyer's payment. */
   payTaddr: string;
   network: Network;
   otpProof?: string;
@@ -206,8 +308,6 @@ export async function buildList(input: ListInput): Promise<ActionResult> {
   }
 }
 
-/* ── delist ────────────────────────────────────────────────────────────── */
-
 export interface DelistInput {
   name: string;
   network: Network;
@@ -233,8 +333,6 @@ export async function buildDelist(input: DelistInput): Promise<ActionResult> {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
 }
-
-/* ── release ──────────────────────────────────────────────────────────── */
 
 export interface ReleaseInput {
   name: string;

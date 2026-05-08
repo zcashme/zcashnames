@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import FeedbackPanelBody from "@/components/closedbeta/FeedbackPanelBody";
-import { getCurrentTesterFocus, getCurrentTesterName } from "@/lib/beta/actions";
-import { readCurrentStage } from "@/lib/beta/gate";
+import { readCurrentStage, readCurrentTester } from "@/lib/beta/gate";
+import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Submit Feedback — ZcashNames Beta",
@@ -11,11 +11,26 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function FeedbackPopoutPage() {
-  const [testerName, stage, focus] = await Promise.all([
-    getCurrentTesterName(),
+  const [tester, stage] = await Promise.all([
+    readCurrentTester(),
     readCurrentStage(),
-    getCurrentTesterFocus(),
   ]);
+
+  let focus: ("user" | "sdk")[] = [];
+  if (tester) {
+    const { data } = await db
+      .from("beta_testers")
+      .select("focus_areas")
+      .eq("id", tester.id)
+      .maybeSingle();
+    if (data?.focus_areas) {
+      focus = (data.focus_areas as unknown[]).filter(
+        (v): v is "user" | "sdk" => v === "user" || v === "sdk",
+      );
+    }
+  }
+
+  const testerName = tester?.displayName ?? null;
   const activeStage = stage ?? "testnet";
 
   return (

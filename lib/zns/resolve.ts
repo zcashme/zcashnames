@@ -6,14 +6,9 @@ import {
   normalizeUsername,
   isValidUsername,
   zatsToZec,
-  type Network,
-  type Registration,
-  type Listing,
-  type EventsFilter,
-} from "@/lib/zns/client";
-
+} from "@/lib/zns/utils";
+import type { Network, Action, ResolveName } from "@/lib/types";
 import { getReservedName } from "@/lib/zns/reserved";
-import type { Action, ResolveName } from "@/lib/types";
 
 const FIRST_BUCKET_SIZE = 100;
 
@@ -24,7 +19,6 @@ function toFirstBucket(ordinal: number): number {
 async function getClaimOrdinal(name: string, network: Network): Promise<number | null> {
   const zns = getZns(network);
 
-  // SDK uses snake_case internally for filter params (matches API)
   const byName = await zns.events({ name, action: "CLAIM", limit: 1 });
   const claim = byName.events[0];
   if (!claim) return null;
@@ -36,7 +30,6 @@ async function getClaimOrdinal(name: string, network: Network): Promise<number |
 
   if (allClaims.total <= 0) return null;
 
-  // Events are newest-first. Start from the boundary where claims at this block begin.
   let positionFromNewest = claimsAfterBlock.total;
   let offset = claimsAfterBlock.total;
   const pageSize = 200;
@@ -66,7 +59,6 @@ async function getClaimOrdinal(name: string, network: Network): Promise<number |
     offset += page.events.length;
   }
 
-  // Convert "newest-first position" to "chronological claim number".
   return Math.max(1, allClaims.total - positionFromNewest);
 }
 
@@ -79,7 +71,7 @@ async function getFirstBucketForClaim(name: string, network: Network): Promise<n
   }
 }
 
-export async function getCurrentRegistrations(network: Network = "testnet"): Promise<Registration[]> {
+export async function getCurrentRegistrations(network: Network = "testnet") {
   try {
     const registrations = await getZns(network).listAllRegistrations();
     return [...registrations].sort((a, b) => b.height - a.height || a.name.localeCompare(b.name));
@@ -136,8 +128,7 @@ export async function resolveName(
     };
   }
 
-  // If registration exists but listing is null, check if it's actually listed
-  let regWithListing: Registration | null = registration;
+  let regWithListing = registration;
   if (registration && !registration.listing) {
     const { listings } = await zns.listings();
     const listing = listings.find((l) => l.name === normalized);
@@ -200,23 +191,23 @@ export async function checkScannerState(
     const reg = await getZns(network).resolveName(name);
 
     switch (action) {
-      case "claim":
-      case "buy":
-      case "update": {
+      case "CLAIM":
+      case "BUY":
+      case "UPDATE": {
         if (!reg) return "empty";
         if (!expected.address) return "empty";
         return reg.address === expected.address ? "success" : "empty";
       }
-      case "list": {
+      case "LIST": {
         if (!reg || !reg.listing) return "empty";
         if (expected.priceZats == null) return "empty";
         return reg.listing.price === expected.priceZats ? "success" : "empty";
       }
-      case "delist": {
+      case "DELIST": {
         if (!reg) return "empty";
         return reg.listing == null ? "success" : "empty";
       }
-      case "release": {
+      case "RELEASE": {
         return reg == null ? "success" : "empty";
       }
     }
@@ -246,7 +237,7 @@ export async function getHomeStats(network: Network = "testnet"): Promise<{ clai
   }
 }
 
-export async function getListings(network: Network = "testnet"): Promise<Listing[]> {
+export async function getListings(network: Network = "testnet") {
   try {
     const { listings } = await getZns(network).listings();
     return listings;
@@ -256,7 +247,7 @@ export async function getListings(network: Network = "testnet"): Promise<Listing
 }
 
 export async function getEvents(
-  params: EventsFilter = {},
+  params: Record<string, unknown> = {},
   network: Network = "testnet",
 ) {
   try {

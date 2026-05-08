@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getListingMap, reconcileRegistrationListing } from "./listing-reconciliation";
-import type { Registration, Listing } from "./client";
+import type { Registration, Listing } from "@/lib/types";
 
 function registration(overrides: Partial<Registration> = {}): Registration {
   return {

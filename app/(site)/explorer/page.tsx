@@ -1,5 +1,5 @@
 import { getCurrentRegistrations, getEvents, getListings, getHomeStats, resolveName } from "@/lib/zns/resolve";
-import type { Network, Event } from "@/lib/zns/client";
+import type { Network, ZnsEvent } from "@/lib/types";
 import type { ResolveName } from "@/lib/types";
 import ExplorerShell from "./ExplorerShell";
 import {
@@ -50,9 +50,9 @@ function getNetworks(env: Environment): Network[] {
   return [env];
 }
 
-function getEventActionFilter(tab: ExplorerTab): Event["action"] | undefined {
+function getEventActionFilter(tab: ExplorerTab): ZnsEvent["action"] | undefined {
   return ACTION_TYPES.includes(tab as typeof ACTION_TYPES[number])
-    ? (tab as Event["action"])
+    ? (tab as ZnsEvent["action"])
     : undefined;
 }
 
@@ -77,7 +77,7 @@ export default async function ExplorerPage({
     Promise.all(
       networks.map((n) =>
         getEvents({ action, limit: eventLimit, offset: eventOffset }, n).then((r) => ({
-          events: r.events.map((ev: Event) => ({ ...ev, network: n })),
+          events: r.events.map((ev: ZnsEvent) => ({ ...ev, network: n })),
           total: r.total,
         }))
       )
@@ -121,7 +121,7 @@ export default async function ExplorerPage({
         getEvents({ name: nameQuery, limit: 20 }, effectiveNetwork),
       ]);
       nameResult = resolved;
-      nameEvents = evResult.events.map((ev: Event) => ({ ...ev, network: effectiveNetwork }));
+      nameEvents = evResult.events.map((ev: ZnsEvent) => ({ ...ev, network: effectiveNetwork }));
     } catch {
       // name resolution failed (invalid name, indexer down, etc.)
     }

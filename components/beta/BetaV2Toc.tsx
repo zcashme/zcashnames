@@ -1,4 +1,6 @@
-import BetaToc from "@/components/closedbeta/BetaToc";
+"use client";
+
+import { useEffect, useState } from "react";
 
 interface Section {
   id: string;
@@ -6,5 +8,48 @@ interface Section {
 }
 
 export default function BetaV2Toc({ sections }: { sections: Section[] }) {
-  return <BetaToc sections={sections} />;
+  const [activeId, setActiveId] = useState<string>(sections[0]?.id ?? "");
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveId(entry.target.id);
+          }
+        }
+      },
+      { rootMargin: "-80px 0px -60% 0px" },
+    );
+
+    for (const { id } of sections) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+
+    return () => observer.disconnect();
+  }, [sections]);
+
+  return (
+    <nav className="flex flex-col gap-1.5" aria-label="Section table of contents">
+      {sections.map(({ id, label }) => (
+        <a
+          key={id}
+          href={`#${id}`}
+          onClick={(e) => {
+            e.preventDefault();
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+          }}
+          className="text-sm transition-colors"
+          style={{
+            color: activeId === id ? "var(--fg-heading)" : "var(--fg-muted)",
+            fontWeight: activeId === id ? 600 : 400,
+          }}
+        >
+          {label}
+        </a>
+      ))}
+    </nav>
+  );
 }

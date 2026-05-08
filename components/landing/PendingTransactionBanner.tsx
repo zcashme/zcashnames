@@ -4,12 +4,12 @@ import { useState } from "react";
 import type { PendingTransactionState } from "@/lib/types";
 
 const ACTION_LABEL = {
-  claim: "Claim",
-  buy: "Buy",
-  update: "Update",
-  list: "List",
-  delist: "Delist",
-  release: "Release",
+  CLAIM: "Claim",
+  BUY: "Buy",
+  UPDATE: "Update",
+  LIST: "List",
+  DELIST: "Delist",
+  RELEASE: "Release",
 } as const;
 
 function describePending(state: PendingTransactionState): string {
