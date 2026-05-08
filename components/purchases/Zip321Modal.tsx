@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ACTION_PHASES, getNetworkConstants } from "@/lib/types";
 import type { Action, Network, Phase, ResolveName, ScanState } from "@/lib/types";
@@ -11,6 +11,7 @@ import { generateSessionId, buildZvsMemo } from "@/lib/purchases/memo";
 import { buildZcashUri } from "@/lib/purchases/zip321";
 import { checkScannerState } from "@/lib/zns/resolve";
 import { checkMempool } from "@/lib/zns/mempool";
+import { generatePayload } from "@/lib/zns/payload";
 
 interface Zip321ModalProps {
   action: Action;
@@ -84,6 +85,11 @@ export default function Zip321Modal({
     const base = [...ACTION_PHASES[action]];
     if (action === "CLAIM" && resolveResult.status === "reserved") {
       base.unshift("unlock");
+    }
+    // swap otp → sign if owner has a pubkey (sovereign auth)
+    if ("registration" in resolveResult && resolveResult.registration.pubkey) {
+      const idx = base.indexOf("otp" as Phase);
+      if (idx !== -1) base[idx] = "sign";
     }
     return base;
   })();
@@ -208,6 +214,52 @@ export default function Zip321Modal({
       setOtpError("Something went wrong. Try again.");
     } finally {
       setOtpLoading(false);
+    }
+  }
+
+  // sign phase
+  const [signPubkey, setSignPubkey] = useState("");
+  const [signSignature, setSignSignature] = useState("");
+  const [signError, setSignError] = useState("");
+  const [signLoading, setSignLoading] = useState(false);
+
+  const sovereignPayload = useMemo(() => {
+    const reg = "registration" in resolveResult ? resolveResult.registration : null;
+    return generatePayload(action, name, network, {
+      address: address ?? "",
+      priceZats: price ? Math.round(parsePrice(price) * 1e8) : 0,
+      payTaddr: payTaddrInput || ("listing" in resolveResult ? resolveResult.payTaddr : ""),
+      nonce: (reg?.nonce ?? 0) + 1,
+    });
+  }, [action, name, network, address, price, payTaddrInput, resolveResult]);
+
+  async function handleVerifySign() {
+    if (signLoading || !signSignature.trim()) return;
+    const pub = (signPubkey || ("registration" in resolveResult ? resolveResult.registration.pubkey ?? "" : "")).trim();
+    if (!pub) { setSignError("Public key is required."); return; }
+    setSignError("");
+    setSignLoading(true);
+    try {
+      const sig = signSignature.trim();
+      const pubBytes = decodeBase64ToBytes(pub);
+      if (!pubBytes || pubBytes.length !== 32) { setSignError("Invalid public key (need 32 bytes base64)."); return; }
+      const sigBytes = decodeBase64ToBytes(sig);
+      if (!sigBytes || sigBytes.length !== 64) { setSignError("Invalid signature (need 64 bytes base64)."); return; }
+
+      const importedKey = await window.crypto.subtle.importKey(
+        "raw", toArrayBuffer(pubBytes), { name: "Ed25519" }, false, ["verify"],
+      );
+      const payloadBytes = new TextEncoder().encode(sovereignPayload);
+      const verified = await window.crypto.subtle.verify(
+        "Ed25519", importedKey, toArrayBuffer(sigBytes), payloadBytes,
+      );
+      if (!verified) { setSignError("Signature does not match the payload."); return; }
+
+      advance({ proof: sig });
+    } catch {
+      setSignError("Signature verification failed.");
+    } finally {
+      setSignLoading(false);
     }
   }
 
@@ -354,6 +406,45 @@ export default function Zip321Modal({
                 className="px-5 py-2.5 rounded-full text-sm font-semibold"
                 style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
                 Continue
+              </button>
+            </div>
+          </div>
+        )}
+        {phase === "sign" && (
+          <div className="flex flex-col gap-4">
+            <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Sovereign Signature</h2>
+            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+              Sign this payload with your Ed25519 private key to authorize this transaction.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Payload to Sign</label>
+              <code className="w-full break-all rounded-lg px-3 py-2 text-xs font-mono"
+                style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}>
+                {sovereignPayload}
+              </code>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Public Key (base64)</label>
+              <input type="text" value={signPubkey}
+                onChange={(e) => { setSignPubkey(e.target.value.trim()); setSignError(""); }}
+                placeholder="Paste your Ed25519 public key"
+                className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono"
+                style={{ background: "var(--color-raised)", border: "1.5px solid var(--faq-border)", color: "var(--fg-heading)" }} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Signature (base64)</label>
+              <textarea value={signSignature}
+                onChange={(e) => { setSignSignature(e.target.value.trim()); setSignError(""); }}
+                rows={3} placeholder="Paste signed payload"
+                className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono resize-none"
+                style={{ background: "var(--color-raised)", border: "1.5px solid var(--faq-border)", color: "var(--fg-heading)" }} />
+            </div>
+            {signError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{signError}</p>}
+            <div className="flex gap-3 justify-end">
+              <button type="button" onClick={() => advance()}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold"
+                style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
+                {signLoading ? "Verifying…" : "Use Signature"}
               </button>
             </div>
           </div>
