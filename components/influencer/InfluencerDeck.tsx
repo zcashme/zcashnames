@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { submitCabalChat, submitCabalInterest } from "@/app/(site)/cabal/actions";
+import { readLocalStorage, writeLocalStorage, removeLocalStorage } from "@/components/hooks/useLocalStorage";
 
 export type InfluencerSlide = {
   id: string;
@@ -229,16 +230,16 @@ export default function InfluencerDeck({
       return;
     }
 
-    const savedName = window.localStorage.getItem("cabal-chat-name");
+    const savedName = readLocalStorage("cabal-chat-name", "");
     if (savedName) setChatName(savedName);
   }, [initialCommentName]);
 
   useEffect(() => {
     const trimmedName = chatName.trim();
     if (trimmedName) {
-      window.localStorage.setItem("cabal-chat-name", trimmedName);
+      writeLocalStorage("cabal-chat-name", trimmedName);
     } else {
-      window.localStorage.removeItem("cabal-chat-name");
+      removeLocalStorage("cabal-chat-name");
     }
   }, [chatName]);
 

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BETA_CHECKLIST } from "@/lib/beta/checklist";
 import { loadChecklistProgress, saveChecklistProgress } from "@/lib/beta/actions";
+import { readLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
 
 // Shared client-side state for the beta checklist.
 //
@@ -39,15 +40,12 @@ function storageKey(testerName: string | null, stage: ChecklistStage): string {
 }
 
 function loadState(testerName: string | null, stage: ChecklistStage): Record<string, boolean> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(storageKey(testerName, stage));
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? sanitizeState(parsed as Record<string, boolean>) : {};
-  } catch {
-    return {};
-  }
+  const raw = readLocalStorage<Record<string, boolean> | null>(
+    storageKey(testerName, stage),
+    null,
+  );
+  if (!raw || typeof raw !== "object") return {};
+  return sanitizeState(raw);
 }
 
 function sanitizeState(state: Record<string, boolean>): Record<string, boolean> {
@@ -61,12 +59,7 @@ function persistState(
   stage: ChecklistStage,
   state: Record<string, boolean>,
 ) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(storageKey(testerName, stage), JSON.stringify(state));
-  } catch {
-    // localStorage full / blocked — silent fallback
-  }
+  writeLocalStorage(storageKey(testerName, stage), state);
 }
 
 interface SyncEventDetail {

@@ -3,14 +3,7 @@
 import { useState } from "react";
 import type { PendingTransactionState } from "@/lib/types";
 
-const ACTION_LABEL = {
-  CLAIM: "Claim",
-  BUY: "Buy",
-  UPDATE: "Update",
-  LIST: "List",
-  DELIST: "Delist",
-  RELEASE: "Release",
-} as const;
+import { ACTION_LABELS } from "@/lib/zns/actions";
 
 function describePending(state: PendingTransactionState): string {
   if (state.phase === "payment") return "Ready to send";
@@ -44,7 +37,7 @@ export default function PendingTransactionBanner({
   onDismiss: () => void;
 }) {
   const [confirmingClear, setConfirmingClear] = useState(false);
-  const label = ACTION_LABEL[pendingTransaction.target.action];
+  const label = ACTION_LABELS[pendingTransaction.target.action];
   const status = describePending(pendingTransaction);
   const isComplete = pendingTransaction.scanState === "mined";
   const isPaymentPhase = pendingTransaction.phase === "payment";

@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { readLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
 
 export default function CabalLaunchBar() {
   const pathname = usePathname();
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    setVisible(window.localStorage.getItem("cabal-launch-banner-dismissed") !== "true");
+    setVisible(readLocalStorage<string>("cabal-launch-banner-dismissed", "false") !== "true");
   }, []);
 
   if (!pathname.startsWith("/cabal") || !visible) return null;
@@ -28,7 +29,7 @@ export default function CabalLaunchBar() {
       <button
         type="button"
         onClick={() => {
-          window.localStorage.setItem("cabal-launch-banner-dismissed", "true");
+          writeLocalStorage("cabal-launch-banner-dismissed", "true");
           setVisible(false);
         }}
         aria-label="Dismiss launch video banner"

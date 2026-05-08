@@ -33,6 +33,7 @@ import CopyIconButton from "@/components/CopyIconButton";
 import type { ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import type { Network } from "@/lib/types";
+import { ACTIONS, ACTION_LABELS } from "@/lib/zns/actions";
 
 const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "all", label: "All" },
@@ -42,12 +43,7 @@ const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
 
 const MORE_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "admin", label: "Admin" },
-  { key: "CLAIM", label: "Claim" },
-  { key: "BUY", label: "Buy" },
-  { key: "LIST", label: "List" },
-  { key: "DELIST", label: "Delist" },
-  { key: "UPDATE", label: "Update" },
-  { key: "RELEASE", label: "Release" },
+  ...ACTIONS.map(a => ({ key: a, label: ACTION_LABELS[a] })),
 ];
 
 interface ExplorerShellProps {

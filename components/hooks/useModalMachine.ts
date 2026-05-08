@@ -10,33 +10,12 @@ import { checkMempool } from "@/lib/zns/mempool";
 import { validateAddress, normalizeUsername } from "@/lib/zns/utils";
 import { generateSessionId, buildZvsMemo } from "@/lib/payment/memo";
 import { buildZcashUri } from "@/lib/payment/zip321";
+import { readLocalStorage, writeLocalStorage, removeLocalStorage } from "@/components/hooks/useLocalStorage";
 
 const STORAGE_KEY = "zns-modal-v2";
 
 function initialState(): ModalPhase {
   return { phase: "idle" };
-}
-
-function load(): ModalPhase {
-  if (typeof window === "undefined") return initialState();
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return initialState();
-    return JSON.parse(raw) as ModalPhase;
-  } catch {
-    return initialState();
-  }
-}
-
-function save(state: ModalPhase) {
-  if (typeof window === "undefined") return;
-  try {
-    if (state.phase === "idle" || state.phase === "done") {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } else {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }
-  } catch { /* blocked storage */ }
 }
 
 function defaultAuth(request: ModalRequest): "default" | "otp" | "sovereign" {
@@ -82,21 +61,19 @@ export interface ModalMachineAPI {
 }
 
 export function useModalMachine(onSuccess?: (name: string) => void): ModalMachineAPI {
-  const [hydrated, setHydrated] = useState(false);
-  const [state, setState] = useState<ModalPhase>(initialState);
+  const [state, setState] = useState<ModalPhase>(() =>
+    readLocalStorage(STORAGE_KEY, initialState()),
+  );
   const successRef = useRef<string | null>(null);
 
-  // Hydrate
+  // Persist to localStorage on every state change
   useEffect(() => {
-    setState(load());
-    setHydrated(true);
-  }, []);
-
-  // Persist
-  useEffect(() => {
-    if (!hydrated) return;
-    save(state);
-  }, [state, hydrated]);
+    if (state.phase === "idle" || state.phase === "done") {
+      removeLocalStorage(STORAGE_KEY);
+    } else {
+      writeLocalStorage(STORAGE_KEY, state);
+    }
+  }, [state]);
 
   // Scanner polling
   useEffect(() => {

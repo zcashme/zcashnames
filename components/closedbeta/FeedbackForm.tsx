@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { submitBetaFeedback } from "@/lib/beta/actions";
 import type { ChecklistItem } from "@/lib/beta/checklist";
+import { readLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
 
 interface Props {
   /** Initial network — usually the current network from StatusToggle. */
@@ -131,22 +132,14 @@ export default function FeedbackForm({
 
   // Hydrate wallet from localStorage so it sticks across reports + sessions.
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(WALLET_STORAGE_KEY);
-      if (stored) setWallet(stored);
-    } catch {
-      // localStorage blocked — silent fallback
-    }
+    const stored = readLocalStorage(WALLET_STORAGE_KEY, "");
+    if (stored) setWallet(stored);
   }, []);
 
   // Persist wallet on every change.
   useEffect(() => {
-    try {
-      if (wallet) {
-        window.localStorage.setItem(WALLET_STORAGE_KEY, wallet);
-      }
-    } catch {
-      // silent
+    if (wallet) {
+      writeLocalStorage(WALLET_STORAGE_KEY, wallet);
     }
   }, [wallet]);
 

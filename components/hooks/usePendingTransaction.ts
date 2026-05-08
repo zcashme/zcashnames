@@ -1,54 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { checkScannerState } from "@/lib/zns/resolve";
 import { checkMempool, type MempoolEntry } from "@/lib/zns/mempool";
 import type { ModalTarget, PendingTransactionState } from "@/lib/types";
+import { useLocalStorage } from "@/components/hooks/useLocalStorage";
 
 const STORAGE_KEY = "zns-pending-transaction-v1";
 
-function loadPendingTransaction(): PendingTransactionState | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as PendingTransactionState;
-  } catch {
-    return null;
-  }
-}
-
 export function usePendingTransaction(onSuccess?: (name: string) => void) {
-  const [pendingTransaction, setPendingTransaction] = useState<PendingTransactionState | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  const [pendingTransaction, setPendingTransaction, removeStorage] =
+    useLocalStorage<PendingTransactionState | null>(STORAGE_KEY, null);
   const notifiedSuccessRef = useRef<string | null>(null);
 
   const clearPendingTransaction = useCallback(() => {
-    setPendingTransaction(null);
+    removeStorage();
     notifiedSuccessRef.current = null;
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Ignore blocked storage.
-    }
-  }, []);
+  }, [removeStorage]);
 
-  const persistPendingTransaction = useCallback((next: PendingTransactionState) => {
-    setPendingTransaction(next);
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Ignore blocked storage.
-    }
-  }, []);
-
-  useEffect(() => {
-    setPendingTransaction(loadPendingTransaction());
-    setHydrated(true);
-  }, []);
+  const persistPendingTransaction = useCallback(
+    (next: PendingTransactionState) => setPendingTransaction(next),
+    [setPendingTransaction],
+  );
 
   useEffect(() => {
     if (!pendingTransaction || pendingTransaction.phase !== "scanning" || pendingTransaction.scanState === "mined") {
@@ -101,7 +74,7 @@ export function usePendingTransaction(onSuccess?: (name: string) => void) {
         nextTxid !== current.txid ||
         JSON.stringify(nextWarnings) !== JSON.stringify(current.warnings)
       ) {
-        persistPendingTransaction({
+        setPendingTransaction({
           ...current,
           scanState: nextScanState,
           txid: nextTxid,
@@ -124,7 +97,7 @@ export function usePendingTransaction(onSuccess?: (name: string) => void) {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [onSuccess, pendingTransaction, persistPendingTransaction]);
+  }, [onSuccess, pendingTransaction, setPendingTransaction]);
 
   const resumeTarget = useMemo<ModalTarget | null>(() => {
     if (!pendingTransaction) return null;
@@ -134,7 +107,7 @@ export function usePendingTransaction(onSuccess?: (name: string) => void) {
   }, [pendingTransaction]);
 
   return {
-    hydrated,
+    hydrated: true,
     pendingTransaction,
     persistPendingTransaction,
     clearPendingTransaction,

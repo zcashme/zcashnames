@@ -1,15 +1,5 @@
 "use client";
 
-/**
- * OpenRPC Explorer - lightweight, zero-dependency renderer for an OpenRPC 1.x
- * document. Renders method list, parameters, result, schema tree (with $ref
- * resolution), worked examples, and an interactive Try-It panel.
- *
- * Built as a custom component rather than using @open-rpc/docs-react because
- * that package peer-pins React 18.3.1 + MUI 6, which conflicts with this
- * project's React 19 + Tailwind stack.
- */
-
 import { useMemo, useState } from "react";
 
 // ── Types ───────────────────────────────────────────────────────────────────

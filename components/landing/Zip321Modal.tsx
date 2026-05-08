@@ -49,51 +49,6 @@ type ScanState = PendingTransactionScanState;
 
 type QrSectionKind = "otp" | "payment";
 
-const ACTION_LABEL: Record<Action, string> = {
-  CLAIM: "Claim",
-  BUY: "Buy",
-  UPDATE: "Update Address",
-  LIST: "List for Sale",
-  DELIST: "Delist",
-  RELEASE: "Release Name",
-};
-
-const PREPARE_ACTION_LABEL: Record<Action, string> = {
-  CLAIM: "Claim",
-  BUY: "Buy",
-  UPDATE: "Update",
-  LIST: "List",
-  DELIST: "Delist",
-  RELEASE: "Release",
-};
-
-// Used in scanner copy: "Your {noun} hasn't been detected yet."
-const ACTION_NOUN: Record<Action, string> = {
-  CLAIM: "claim",
-  BUY: "purchase",
-  UPDATE: "address update",
-  LIST: "listing",
-  DELIST: "delist",
-  RELEASE: "release",
-};
-
-function minedMessage(action: Action, displayName: string): string {
-  switch (action) {
-    case "CLAIM":
-      return `${displayName} is yours. Claim confirmed on-chain.`;
-    case "BUY":
-      return `${displayName} is now yours. Purchase confirmed on-chain.`;
-    case "UPDATE":
-      return `Address updated. ${displayName} now resolves to your new address.`;
-    case "LIST":
-      return `${displayName} is now listed for sale.`;
-    case "DELIST":
-      return `${displayName} has been delisted.`;
-    case "RELEASE":
-      return `${displayName} has been released.`;
-  }
-}
-
 function parsePrice(raw: string): number | null {
   const n = raw.replace(/,/g, "").trim();
   if (!n) return null;
@@ -1351,9 +1306,6 @@ export default function Zip321Modal({
           <div className="px-8 pb-8 pt-12 flex flex-col gap-5">
             {renderProgressSegments()}
             <div className="text-center">
-              <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
-                {PREPARE_ACTION_LABEL[action]} {name}
-              </h2>
               <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
                 {prepareDescription(action, name, listingPriceLabel)}
               </p>
@@ -1483,7 +1435,7 @@ export default function Zip321Modal({
                     ? "Continue to Sign"
                     : usesOtpFlow
                       ? "Continue"
-                      : ACTION_LABEL[action]}
+                      : "Continue"}
               </button>
             </div>
           </div>
@@ -1583,7 +1535,7 @@ export default function Zip321Modal({
                 Sovereign Signature
               </h2>
               <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
-                Sign this payload with your Ed25519 private key to authorize <strong>{ACTION_LABEL[action].toLowerCase()}</strong> for <strong>{displayName}</strong>.
+                Sign this payload with your Ed25519 private key to authorize this transaction.
               </p>
             </div>
 
@@ -1706,7 +1658,7 @@ export default function Zip321Modal({
             {renderProgressSegments()}
             <div>
               <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
-                Send to {ACTION_LABEL[action].toLowerCase()} &quot;{name}&quot;
+                Send payment
               </h2>
               <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
                 Send exact amount and memo to address to complete transaction.
@@ -1856,18 +1808,11 @@ export default function Zip321Modal({
               <p className="text-sm" style={{ color: "var(--fg-body)" }}>
                 {scanState === "loading" && "Checking…"}
                 {scanState === "not_detected" && (
-                  <>
-                    Your {ACTION_NOUN[action]} hasn&rsquo;t been detected yet.
-                    {showNotDetectedDetail && " It may not have propagated, or wasn't sent correctly."}
-                  </>
+                  <>Transaction not detected yet. It may not have propagated, or wasn't sent correctly.</>
                 )}
-                {scanState === "in_mempool" && (
-                  <>Your {ACTION_NOUN[action]} is in the mempool. Waiting to be mined.</>
-                )}
-                {scanState === "being_mined" && (
-                  <>Your {ACTION_NOUN[action]} is being mined. Hang tight &mdash; this should only take a moment.</>
-                )}
-                {scanState === "mined" && minedMessage(action, displayName)}
+                {scanState === "in_mempool" && "Transaction is in the mempool. Waiting to be mined."}
+                {scanState === "being_mined" && "Transaction is being mined. Hang tight."}
+                {scanState === "mined" && "Transaction confirmed on-chain."}
               </p>
             </div>
 
