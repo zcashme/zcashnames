@@ -1,3 +1,4 @@
+// Sidebar navigation for the Integration docs section.
 import type { MetaRecord } from 'nextra'
 
 const meta: MetaRecord = {
