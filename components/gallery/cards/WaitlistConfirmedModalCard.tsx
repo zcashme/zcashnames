@@ -398,6 +398,10 @@ const SNIPPETS: Snippets = {
   monochrome: buildSnippet("monochrome"),
 };
 
+// Gallery card for the confirmed waitlist modal (shown after email verification).
+// Renders success swatch, launch message, referral reward panel with copy/share/X
+// actions, a Take Survey CTA, Done button, and terms link. SUCCESS_SWATCH provides
+// per-theme green color tokens used by the standalone snippet.
 export default function WaitlistConfirmedModalCard() {
   return (
     <GalleryCard

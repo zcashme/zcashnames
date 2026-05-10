@@ -1,3 +1,6 @@
+// Centralized design tokens for standalone HTML snippets shared across all
+// gallery cards. Each theme (dark/light/monochrome) provides concrete color
+// values that mirror the site's CSS variables but are self-contained.
 import type { ThemeName } from "@/components/gallery/GalleryCard";
 
 export interface Palette {

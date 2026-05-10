@@ -342,6 +342,10 @@ const SNIPPETS: Snippets = {
   monochrome: buildSnippet(TOKENS.monochrome),
 };
 
+// Gallery card for the hero search form. Displays the unfocused shell state
+// with locked .zcash suffix, the Early Access badge, arrow button, and CTA
+// subtitle. Live view uses a simplified CSS-variable-backed static render;
+// the snippet is a full standalone HTML with its own theme tokens.
 export default function HeroSearchFormCard() {
   return (
     <GalleryCard

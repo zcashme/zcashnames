@@ -3,6 +3,10 @@
 import GalleryCard, { type Snippets, type ThemeName } from "@/components/gallery/GalleryCard";
 import { PALETTE } from "@/components/gallery/theme-palette";
 
+// Individual stat-card gallery exports. Each named export wraps a StatCardLive
+// instance (big tabular number + uppercase label) inside GalleryCard with a
+// frozen snapshot value. buildStatCardSnippet generates the corresponding
+// standalone HTML for each label/value pair.
 function StatCardLive({ label, value }: { label: string; value: string }) {
   return (
     <button

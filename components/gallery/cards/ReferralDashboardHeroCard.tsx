@@ -396,6 +396,10 @@ const SNIPPETS: Snippets = {
   monochrome: buildSnippet("monochrome"),
 };
 
+// Gallery card for the referral dashboard hero panel. Displays referral name,
+// code (with copy), rank badge, join date, and an embedded SVG area chart
+// showing Direct vs Referrals growth + a Rewards line overlay. Both the live
+// view and the snippet share the same buildChartPaths generator and SERIES data.
 export default function ReferralDashboardHeroCard() {
   return (
     <GalleryCard
