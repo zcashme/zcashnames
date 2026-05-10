@@ -1,3 +1,14 @@
+/**
+ * OTP verification flow for ZVS-based domain purchases.
+ *
+ * 1. The user sends ZEC to a known address with a ZVS memo.
+ * 2. The server derives a deterministic 6-digit code from the memo
+ *    via HMAC-SHA-256 (keyed on ZVS_SECRET_SEED) and displays it to the user.
+ * 3. The user enters the code back on the site. If it matches (timing-safe
+ *    comparison) and the memo's embedded address matches the user's wallet,
+ *    the server issues a signed OTP proof token.
+ * 4. The proof token is submitted with the domain action to prove payment.
+ */
 import "server-only";
 
 import crypto from "node:crypto";

@@ -1,5 +1,13 @@
 /**
- * ZVS memo helpers - session generation, memo building, and parsing.
+ * ZVS memo helpers — session generation, memo building, and parsing.
+ *
+ * ZVS memos use the format:
+ *   DO NOT MODIFY:{zvs/<SESSION_ID>,<USER_ADDRESS>}
+ *
+ * where <SESSION_ID> is a 16-digit cryptographically-random number
+ * generated client-side, and <USER_ADDRESS> is the buyer's Zcash t-address.
+ * The "DO NOT MODIFY:" prefix is a convention to prevent wallet software
+ * from altering the memo body.
  */
 
 /** Generate a cryptographically secure 16-digit session ID. */
