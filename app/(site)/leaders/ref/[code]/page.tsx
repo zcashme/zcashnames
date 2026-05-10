@@ -1,3 +1,10 @@
+// Client component: referral dashboard for a specific code. Fetches full referral
+// tree from getReferralDashboard(), computes reward projections via
+// calculateReferralProjection(). Renders a growth chart, metric cards
+// (referrals / direct|indirect / rewards), a reward summary schedule, and a
+// filterable referrals table. Supports two projection models: "fixed" (halving
+// rewards by depth) and "commission" (percentage-based, unlockable via a 6-digit
+// PIN with email recovery). The referrals table is independently lockable.
 "use client";
 
 import Link from "next/link";

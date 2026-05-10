@@ -1,3 +1,6 @@
+// Server component: entry page for the referral dashboard. Exports SEO metadata and
+// renders the client-side ReferralCodeEntryClient form which accepts a referral code
+// or link and navigates to /leaders/ref/[code] for the full dashboard.
 import type { Metadata } from "next";
 import ReferralCodeEntryClient from "./ReferralCodeEntryClient";
 

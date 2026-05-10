@@ -1,3 +1,10 @@
+// Client component: the main leaderboard view. Fetches time series, rankings, and
+// stats from @/lib/leaders/leaders on mount. Data flows down into three visual sections:
+//   1. Stacked area chart (waitlist + referred) with a rewards line overlay
+//   2. Stat cards (waitlist/referred/rewards) with expandable help text
+//   3. Ranked all-time table (with streak/top24h badges & copy-reflink) and daily rankings
+// Links out to per-refcode dashboards (/leaders/ref/[code]), snapshots (/leaders/[date]),
+// the share kit, and the terms page.
 "use client";
 
 import Link from "next/link";

@@ -1,3 +1,5 @@
+// Server component: renders static referral rewards and early access terms.
+// Content is defined inline (no external data fetch). Links back to /leaders.
 import type { Metadata } from "next";
 import Link from "next/link";
 

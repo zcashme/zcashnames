@@ -1,3 +1,5 @@
+// Server component: renders the leaderboard page with SEO metadata and hydrates the
+// client-side LeaderboardContent which fetches its own data from leaderboard APIs.
 import type { Metadata } from "next";
 import LeaderboardContent from "./LeaderboardContent";
 
