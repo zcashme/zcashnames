@@ -1,29 +1,24 @@
+/*
+ * HomePageClient — the main client component that assembles the full
+ * marketing‑site homepage.  It conditionally displays different action
+ * links depending on `zns.mode` (waitlist vs. live/testnet) and wires
+ * up the FeedbackModal for beta testers in non‑waitlist mode.
+ */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Hero from "@/components/landing/Hero";
-import SearchForm from "@/components/search/SearchForm";
 import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
+import HomeSearchResults from "@/components/landing/HomeSearchResults";
 import FeedbackModal from "@/components/closedbeta/FeedbackModal";
-import HomeResultCard from "@/components/landing/HomeResultCard";
 import MarketStats from "@/components/landing/MarketStats";
 import FAQ from "@/components/landing/FAQ";
 import HowItWorks from "@/components/landing/HowItWorks";
 import Link from "next/link";
 import { useZns } from "@/components/hooks/useZns";
-import { useSearchState } from "@/components/hooks/useSearchState";
-import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
-import Zip321Modal from "@/components/purchases/Zip321Modal";
-import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
-import type { Action, ResolveName } from "@/lib/types";
 
-const POPULAR_NAMES = new Set([
-  "adam", "alex", "alice", "anna", "bob", "chris", "david", "emma", "ethan",
-  "jack", "james", "john", "leo", "lucas", "maria", "max", "mike", "noah",
-  "olivia", "satoshi",
-]);
-
+// Lazy‑loaded with ssr:false to avoid hydration mismatches on the 3D phone
+// carousel (it depends on browser‑only APIs and viewport measurements).
 const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
   ssr: false,
   loading: () => (
@@ -53,119 +48,19 @@ const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
 
 export default function HomePage() {
   const { zns } = useZns();
-  const [isClientMounted, setIsClientMounted] = useState(false);
-  const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
-  const hasAutoOpenedFeedback = useRef(false);
-
-  const isWaitlistMode = zns.mode === "waitlist";
-  const searchNetwork = isWaitlistMode ? "testnet" : zns.mode;
-
-  const {
-    input,
-    results,
-    searching,
-    searchError,
-    setInput,
-    handleSearch,
-    refreshResult,
-    removeResult,
-    reset: resetSearch,
-    buildCardProps,
-  } = useSearchState(searchNetwork);
-
-  const {
-    hydrated: pendingHydrated,
-    pendingTransaction,
-    persistPendingTransaction,
-    clearPendingTransaction,
-  } = usePendingTransaction();
-
-  useEffect(() => {
-    resetSearch();
-  }, [zns.mode, resetSearch]);
-
-  useEffect(() => {
-    setIsClientMounted(true);
-  }, []);
-
-  const shouldAutoOpenFeedback = zns.mode !== "waitlist" && !hasAutoOpenedFeedback.current;
-
-  useEffect(() => {
-    if (zns.mode === "waitlist" || hasAutoOpenedFeedback.current) return;
-    hasAutoOpenedFeedback.current = true;
-  }, [zns.mode]);
-
-  const form = isWaitlistMode ? (
-    <WaitlistEntryForm
-      onConfirm={() => {}}
-      onReset={() => {}}
-    />
-  ) : (
-    <>
-      <SearchForm
-        value={input}
-        onChange={setInput}
-        onSubmit={handleSearch}
-        claimLoading={searching}
-      />
-      {results.length > 0 && (
-        <div className="mt-4 flex w-full max-w-4xl flex-col gap-3">
-          {results.map((item) => {
-            const props = buildCardProps(item);
-            const displayName = `${item.query}.zcash`;
-            const isPopular = POPULAR_NAMES.has(item.query);
-
-            return (
-              <HomeResultCard
-                key={item.query}
-                displayName={displayName}
-                network={zns.mode}
-                {...props}
-                isPopularName={isPopular}
-                onAction={(action) => setModalState({ action, resolveResult: item })}
-                onDismiss={() => removeResult(item.query)}
-              />
-            );
-          })}
-        </div>
-      )}
-      {searchError && (
-        <p className="home-search-error rounded-xl border px-4 py-3 text-sm font-semibold">
-          {searchError}
-        </p>
-      )}
-    </>
-  );
 
   return (
     <div className="home-theme-scope">
-      <section className="hero-stage-bg">
-        <Hero
-          searchForm={form}
-          rightPanel={<PhoneStage embedded />}
-          formExpanded={false}
-          subtitle={
-            isWaitlistMode ? (
-              <>Be first to claim a name you can use, hold, or sell.</>
-            ) : (
-              <>Powered by Zcash. Claim your name</>
-            )
-          }
-        />
-      </section>
+      <Hero rightPanel={<PhoneStage embedded />} />
 
-      {!isWaitlistMode && pendingHydrated && pendingTransaction && !modalState && (
-        <PendingTransactionBanner
-          pendingTransaction={pendingTransaction}
-          onResume={() => {}}
-          onDismiss={clearPendingTransaction}
-        />
-      )}
+      <WaitlistEntryForm />
+      <HomeSearchResults />
 
       <MarketStats />
 
       <div className="relative z-[2] -mt-4 mb-2 flex justify-center">
-        {isWaitlistMode ? (
+        {/* Mode‑dependent action link: leaderboard during waitlist, explorer otherwise. */}
+        {zns.mode === "waitlist" ? (
           <Link
             href="/leaders"
             className="inline-flex items-center gap-2 rounded-full border border-[var(--home-result-link-border)] bg-transparent px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform,background-color] duration-[140ms] hover:-translate-y-px hover:bg-[var(--home-result-link-hover-bg)]"
@@ -212,23 +107,9 @@ export default function HomePage() {
         </button>
       </div>
 
-      {isClientMounted && modalState && (
-        <Zip321Modal
-          action={modalState.action}
-          name={modalState.resolveResult.query}
-          network={zns.mode === "waitlist" ? "testnet" : zns.mode}
-          resolveResult={modalState.resolveResult}
-          onClose={() => setModalState(null)}
-          onSuccess={(name) => {
-            setModalState(null);
-            refreshResult(name);
-          }}
-        />
-      )}
-
-      {isClientMounted && zns.mode !== "waitlist" && (
-        <FeedbackModal defaultNetwork={zns.mode} />
-      )}
+      {/* Auto‑opens a feedback survey in non‑waitlist mode to collect beta‑tester
+           impressions.  No‑op when mode === "waitlist". */}
+      <FeedbackModal />
     </div>
   );
 }
