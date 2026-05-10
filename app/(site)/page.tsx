@@ -1,3 +1,9 @@
+/*
+ * Homepage — a thin Server Component that delegates all rendering to
+ * HomePageClient.  `searchParams` (ref, token) are typed for referral-
+ * tracking and email‑verification flows, though the current implementation
+ * passes them implicitly via the client component.
+ */
 import type { Metadata } from "next";
 import HomePageClient from "./HomePageClient";
 

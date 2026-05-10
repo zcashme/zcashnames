@@ -1,3 +1,9 @@
+/**
+ * Default OpenGraph image for routes without a dedicated og image.
+ * Uses next/og ImageResponse to render a static 1200×630 PNG with the
+ * ZcashNames logo and tagline on a dark background. Imported by the
+ * Next.js file-convention route handler automatically.
+ */
 import { ImageResponse } from "next/og";
 import { BRAND } from "@/lib/zns/brand";
 
