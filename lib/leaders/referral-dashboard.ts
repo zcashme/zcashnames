@@ -1,5 +1,15 @@
 import { roundZec } from "@/lib/zns/utils";
 
+// Referral tree algorithms for the leaders dashboard.
+//
+// Core operations:
+//   buildFixedDepthReferralSummaries  — BFS over referral graph with cycle detection,
+//                                       decay rewards (0.05 / 2^(depth-1)), per-code summaries
+//   buildReferralDashboard            — single-code depth tree for the referral detail view
+//   calculateReferralProjection       — revenue/payout projections by name-length bucket
+//
+// Both tree traversals guard against cycles via visited + path sets.
+// Consumed by leaders.ts for leaderboard and referral dashboard data.
 export type ReferralScope = "all" | "confirmed";
 
 export type NameLengthBucket = "1" | "2" | "3" | "4" | "5" | "6" | "7+";

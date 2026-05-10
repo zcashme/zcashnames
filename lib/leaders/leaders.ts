@@ -1,5 +1,10 @@
 "use server";
 
+// Server actions powering the /leaders dashboard: time series aggregation,
+// leaderboard rankings, daily rankings, waitlist stats, referral dashboard,
+// and commission PIN email sending with daily rate limiting.
+// Fetches raw waitlist rows from Supabase and delegates tree algorithms
+// to referral-dashboard.ts and cookie gating to commission-access.ts.
 import { db } from "@/lib/db";
 import { sendCommissionPinEmail } from "@/lib/email/commission-pin";
 import {

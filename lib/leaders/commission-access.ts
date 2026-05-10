@@ -1,5 +1,9 @@
 import "server-only";
 
+// Cookie-based access control for the leaders commission dashboard.
+// Issues signed cookies (base64url payload + HMAC signature) for two tiers:
+// commission mode (cabal members) and referral table access (all users).
+// Uses the same HMAC secret derivation as commission-pin.
 import { safeEqual, signHmac, resolveSecret } from "@/lib/hmac";
 import { parseSignedCookie, setCookie, clearCookie, getCookie } from "@/lib/cookie";
 import { deriveCommissionPin, normalizeCommissionReferralCode } from "@/lib/leaders/commission-pin";
