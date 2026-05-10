@@ -10,6 +10,19 @@ import {
 import type { Network, Action, ResolveName } from "@/lib/types";
 import { getReservedName } from "@/lib/zns/reserved";
 
+//
+// Server-side name resolution. These functions are the read path for the
+// explorer and search — every name lookup in the app flows through here.
+//
+// resolveName() is the central dispatch: it normalises the input, queries
+// the ZNS indexer, checks the reserved-names table (Supabase), computes
+// the claim cost, and returns a typed ResolveName union the UI can switch on.
+//
+// The other exports (getCurrentRegistrations, getListings, getEvents,
+// getHomeStats) power the explorer page — they fetch paginated / filtered
+// data from the indexer and return it to the server component.
+//
+
 export async function getCurrentRegistrations(network: Network = "testnet") {
   try {
     const registrations = await getZns(network).listAllRegistrations();
@@ -33,9 +46,11 @@ export async function resolveName(
   const registration = await zns.resolveName(normalized);
   const nameStatus = registrationStatus(registration);
 
+  // Name is unregistered — check if it's reserved or blocked, then compute cost
   if (nameStatus === "available") {
     const reserved = await getReservedName(normalized);
 
+    // Some names (slurs, impersonation targets) are permanently blocked
     if (reserved && !reserved.redeemed && reserved.category === "offensive") {
       return { status: "blocked", query: normalized };
     }
@@ -49,6 +64,7 @@ export async function resolveName(
       throw new Error("Pricing unavailable - indexer may be down.");
     }
 
+    // Reserved names (brands, protocol terms, community) need an unlock code
     if (reserved && !reserved.redeemed) {
       return {
         status: "reserved",
@@ -64,6 +80,9 @@ export async function resolveName(
     };
   }
 
+  // Name is registered — check whether it also has an active listing.
+  // The SDK's resolveName() sometimes omits the listing, so we do a
+  // separate listings() query as a fallback.
   let regWithListing = registration;
   if (registration && !registration.listing) {
     const { listings } = await zns.listings();
@@ -112,7 +131,7 @@ export async function getHomeStats(network: Network = "testnet"): Promise<{ clai
     return {
       claimed: s.registered,
       forSale: s.listed,
-      verifiedOnZcashMe: 0,
+      verifiedOnZcashMe: 0, // placeholder — ZcashMe verification not yet wired
       syncedHeight: s.syncedHeight,
       uivk: s.uivk,
     };
@@ -141,7 +160,9 @@ export async function getEvents(
   network: Network = "testnet",
 ) {
   try {
-    // SDK handles snake_case conversion internally
+    // The SDK's events() method accepts camelCase filter keys and converts them
+    // to the snake_case JSON-RPC params the indexer expects. Query parameters
+    // like { name, action, limit, offset } all get passed through transparently.
     return await getZns(network).events(params);
   } catch {
     return { events: [], total: 0 };
