@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Hero from "@/components/landing/Hero";
-import NetworkStats from "@/components/landing/NetworkStats";
+import MarketStats from "@/components/landing/MarketStats";
 import HowItWorks from "@/components/landing/HowItWorks";
 import FAQ from "@/components/landing/FAQ";
 import type { NetworkStats as Stats } from "@/lib/network-stats";
@@ -45,13 +45,15 @@ export default function HomePage({ form, actionLink, stats }: Props) {
     <div className="home-theme-scope">
       <Hero rightPanel={<PhoneStage embedded />} />
 
-      {form}
+      <div className="w-full px-4 flex flex-col items-center">
+        {form}
+      </div>
+
+      <MarketStats stats={stats} />
 
       <div className="relative z-[2] -mt-4 mb-2 flex justify-center">
         {actionLink}
       </div>
-
-      <NetworkStats stats={stats} />
       <HowItWorks />
       <FAQ />
 
