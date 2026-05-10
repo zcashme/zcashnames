@@ -1,5 +1,7 @@
 import "server-only";
 
+// Follow-up email for partner outreach. Accepts a custom reason copy
+// and renders it via the FollowUpEmail React component.
 import { FROM_EMAIL } from "@/lib/email/constants";
 import { sendEmail } from "@/lib/email/client";
 import FollowUpEmail from "@/components/emails/FollowUpEmail";

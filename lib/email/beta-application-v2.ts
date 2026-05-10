@@ -1,5 +1,8 @@
 import "server-only";
 
+// Internal notification email for beta v2 applications. Builds a plain-text
+// summary of the applicant's profile and sends it to partner@zcash.me.
+// No React template — deliberately plain text for operator visibility.
 import { FROM_EMAIL, TO_EMAIL } from "@/lib/email/constants";
 import { sendEmail } from "@/lib/email/client";
 

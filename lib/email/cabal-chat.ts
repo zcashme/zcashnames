@@ -1,5 +1,7 @@
 import "server-only";
 
+// Internal notifications for cabal deck interactions: comments (chat)
+// and interest submissions. Both are plain-text emails to partner@zcash.me.
 import { FROM_EMAIL, TO_EMAIL } from "@/lib/email/constants";
 import { sendEmail } from "@/lib/email/client";
 

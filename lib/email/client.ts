@@ -1,3 +1,9 @@
+/**
+ * Resend email client — lazy-initialised singleton keyed off RESEND_API_KEY.
+ * Emails are sent from the address configured in the Resend dashboard
+ * (exported as FROM_EMAIL). The singleton ensures only one client instance
+ * exists per server process.
+ */
 import "server-only";
 
 import { Resend } from "resend";

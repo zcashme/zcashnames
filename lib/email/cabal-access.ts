@@ -1,5 +1,7 @@
 import "server-only";
 
+// Internal notification when someone views the cabal proposal deck.
+// Plain-text email sent to partner@zcash.me.
 import { FROM_EMAIL, TO_EMAIL } from "@/lib/email/constants";
 import { sendEmail } from "@/lib/email/client";
 

@@ -1,5 +1,8 @@
 import "server-only";
 
+// Waitlist lifecycle emails: confirmation (with verification link) and welcome
+// (with referral URL and commission PIN). The welcome email derives the PIN
+// via commission-access so it matches the cookie-gated dashboard.
 import ConfirmEmail from "@/components/emails/ConfirmEmail";
 import WaitlistEmail from "@/components/emails/WaitlistEmail";
 import { FROM_EMAIL } from "@/lib/email/constants";
