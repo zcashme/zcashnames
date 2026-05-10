@@ -39,8 +39,8 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
           "Profile infrastructure for connecting names, identity, and public Zcash presence.",
         href: "https://zcash.me",
         shareText: "@ZcashMe supports ZcashNames profiles and identity.",
-        detail: "Profiles and identity",
-        initials: "ZM",
+        detail: "zcash.me",
+        iconSrc: "/icons/zcashme.png",
       },
       {
         id: "edge-wallet",
