@@ -10,6 +10,12 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Standalone full-page feedback form rendered in a popout window.
+ * Reads the tester's identity from the gate cookie and their focus areas
+ * from the beta_testers DB table, then hydrates FeedbackPanelBody in "popout"
+ * mode — no surrounding site chrome, identical to the in-page panel visually.
+ */
 export default async function FeedbackPopoutPage() {
   const [tester, stage] = await Promise.all([
     readCurrentTester(),

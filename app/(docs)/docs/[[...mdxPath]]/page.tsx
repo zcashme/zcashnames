@@ -11,6 +11,12 @@ export async function generateMetadata(props: {
   return metadata;
 }
 
+/**
+ * Dynamic catch-all MDX page handler. Nextra's generateStaticParamsFor produces
+ * static paths from the content/docs directory; importPage loads each .mdx file
+ * at request time (or build time for static). The resolved MDX content, TOC, and
+ * metadata are wrapped in the project-level MDX component wrapper.
+ */
 const Wrapper = getMDXComponents().wrapper;
 
 export default async function Page(props: {
