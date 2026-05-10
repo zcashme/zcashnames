@@ -1,3 +1,9 @@
+// Next.js configuration for the ZcashNames documentation site.
+// Wraps the default config with the Nextra docs plugin and enriches it with:
+//   - Domain redirects (zcashna.me, zcashname.com → zcashnames.com)
+//   - Security headers (CSP, HSTS, framing, referrer policy)
+//   - A /api/confirm redirect that passes a ?token through to the landing page
+//   - Windows symlink workaround for OneDrive reparse points
 import type { NextConfig } from "next";
 import nextra from "nextra";
 import fs from "node:fs";
