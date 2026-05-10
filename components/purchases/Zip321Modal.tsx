@@ -270,7 +270,7 @@ export default function Zip321Modal({
       }
 
       // Call server action to build the signed memo
-      let actionResult: { ok: true; uri: string; memo: string } | { ok: false; error: string };
+      let actionResult: { ok: true; uri: string; memo: string; paymentAddress?: string; amountZec?: string } | { ok: false; error: string };
       if (action === "UPDATE") {
         actionResult = await updateAction(name, address ?? "", network, result.proof);
       } else if (action === "LIST") {
@@ -336,7 +336,7 @@ export default function Zip321Modal({
       if (!verified) { setSignError("Signature does not match the payload."); return; }
 
       // Call server action with sovereign sig+pubkey to get URI
-      let actionResult: { ok: true; uri: string; memo: string } | { ok: false; error: string };
+      let actionResult: { ok: true; uri: string; memo: string; paymentAddress?: string; amountZec?: string } | { ok: false; error: string };
       if (action === "CLAIM") {
         actionResult = await claimAction(name, address ?? "", network, undefined, sig, pub);
       } else if (action === "UPDATE") {
