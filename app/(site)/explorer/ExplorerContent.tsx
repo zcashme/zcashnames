@@ -1,3 +1,9 @@
+/**
+ * ExplorerContent — renders one of three tabbed table views from the initial
+ * server-fetched data: Registered names, For Sale listings, and Events (with
+ * action-badge sub-tabs like CLAIM, BUY, etc.). All filtering, sorting, and
+ * pagination happen client-side via explorerFilters utilities.
+ */
 "use client";
 
 import { useEffect, useMemo } from "react";

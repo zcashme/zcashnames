@@ -1,3 +1,9 @@
+/**
+ * Server-side explorer page — the single data-fetching entry point.
+ * Fires 5 parallel fetches (events, listings, registrations, mainnet stats, testnet stats)
+ * across one or both networks depending on ?env. Also resolves a name when ?name is set.
+ * All results are passed as props to ExplorerShell for client-side interactivity.
+ */
 import { getCurrentRegistrations, getEvents, getListings, getHomeStats, resolveName } from "@/lib/zns/resolve";
 import type { Network, ZnsEvent } from "@/lib/types";
 import type { ResolveName } from "@/lib/types";

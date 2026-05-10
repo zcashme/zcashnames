@@ -1,3 +1,11 @@
+/**
+ * ExplorerNameDetail — the name resolution panel that appears when a user
+ * searches for a specific name in the explorer. Displays the resolved status
+ * (available / registered / listed / reserved), ownership details (address,
+ * block, txid), a link to ZcashMe, listing info (payout, pending buyer), and
+ * an event history table. Accepts an onAction callback that opens Zip321Modal
+ * for buy/claim flows.
+ */
 "use client";
 
 import { useState } from "react";

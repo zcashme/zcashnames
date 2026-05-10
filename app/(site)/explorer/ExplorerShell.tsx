@@ -1,3 +1,11 @@
+/**
+ * ExplorerShell — the client-side orchestrator for the explorer page.
+ * Owns URL-derived state (environment, tab, page, search name) and uses
+ * optimistic URL updates via startTransition for snappy navigation.
+ * Delegates rendering to ExplorerToolbar (filters), ExplorerContent (tables),
+ * and ExplorerNameDetail (name lookup panel). Also hosts the UIVK modal,
+ * Zip321Modal for purchases, and the pending-transaction banner.
+ */
 "use client";
 
 import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";

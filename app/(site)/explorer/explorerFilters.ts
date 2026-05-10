@@ -1,3 +1,14 @@
+/**
+ * Explorer filter utilities — pure functions shared between page.tsx (server),
+ * ExplorerShell.tsx, and ExplorerContent.tsx.
+ *
+ * Types:  ExplorerTab is the union of primary tabs ("all", "registered", "forsale",
+ *         "admin") plus ZNS action types ("CLAIM", "BUY", "LIST", …).
+ *         TaggedEvent/Listing/Registration extend their base types with a `network`
+ *         field so "all" mode can merge mainnet+testnet rows.
+ *
+ * Primary exports: tab parsing, pagination helpers, search filtering, event scoping.
+ */
 import type { Network, Listing, Registration, ZnsEvent } from "@/lib/types";
 
 export type ExplorerTab = "all" | "registered" | "forsale" | "admin" | "CLAIM" | "BUY" | "LIST" | "DELIST" | "UPDATE" | "RELEASE";

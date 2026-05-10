@@ -1,3 +1,9 @@
+/**
+ * ExplorerToolbar — the filter bar for the explorer page.
+ * Renders a search input (delegated to ToolbarSearchInput), an environment
+ * selector (All / Mainnet / Testnet), and a sort dropdown (by height / name / type).
+ * All state is lifted to ExplorerShell; this component only receives callbacks.
+ */
 "use client";
 
 import { useState } from "react";
