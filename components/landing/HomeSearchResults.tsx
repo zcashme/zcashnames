@@ -20,10 +20,10 @@ const POPULAR_NAMES = new Set([
 
 export default function HomeSearchResults() {
   const { zns } = useZns();
-  if (zns.mode === "waitlist") return null;
-
   const { input, results, searching, searchError, setInput, handleSearch, refreshResult, removeResult, buildCardProps } = useSearchState();
   const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
+
+  if (zns.mode === "waitlist") return null;
 
   return (
     <>
