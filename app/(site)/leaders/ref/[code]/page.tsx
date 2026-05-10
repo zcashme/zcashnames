@@ -10,9 +10,6 @@ import {
   Line,
   ResponsiveContainer,
   Tooltip,
-  usePlotArea,
-  useXAxisScale,
-  useYAxisScale,
   XAxis,
   YAxis,
 } from "recharts";
@@ -41,86 +38,6 @@ import CopyIconButton from "@/components/CopyIconButton";
 const DIRECT_CHART_COLOR = "var(--leaders-area-referred)";
 const INDIRECT_CHART_COLOR = "var(--leaders-area-non-referred)";
 const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
-type AxisSide = "left" | "right";
-
-interface EndpointGuideLine {
-  yAxisId: string;
-  value: number;
-  color: string;
-  side: AxisSide;
-}
-
-function getActiveChartPoint<T extends { date: string }>(state: unknown, data: T[]): T | null {
-  const chartState = state as
-    | { activeTooltipIndex?: number | string; tooltipIndex?: number | string; activeLabel?: string }
-    | null;
-  const rawIndex = chartState?.activeTooltipIndex ?? chartState?.tooltipIndex;
-  const index = rawIndex === undefined ? NaN : Number(rawIndex);
-
-  if (Number.isInteger(index) && index >= 0 && index < data.length) {
-    return data[index];
-  }
-
-  if (chartState?.activeLabel) {
-    return data.find((point) => point.date === chartState.activeLabel) ?? null;
-  }
-
-  return null;
-}
-
-function AxisEndpointGuideLines({
-  point,
-  lines,
-}: {
-  point: { date: string } | null;
-  lines: EndpointGuideLine[];
-}) {
-  const plotArea = usePlotArea();
-  const xScale = useXAxisScale();
-
-  if (!point || !plotArea || !xScale) return null;
-
-  const x = xScale(point.date, { position: "middle" });
-  if (x === undefined) return null;
-
-  return (
-    <g pointerEvents="none">
-      {lines.map((line) => (
-        <AxisEndpointGuideLine key={`${line.yAxisId}-${line.color}`} x={x} plotArea={plotArea} line={line} />
-      ))}
-    </g>
-  );
-}
-
-function AxisEndpointGuideLine({
-  x,
-  plotArea,
-  line,
-}: {
-  x: number;
-  plotArea: { x: number; width: number };
-  line: EndpointGuideLine;
-}) {
-  const yScale = useYAxisScale(line.yAxisId);
-  const y = yScale?.(line.value);
-
-  if (y === undefined) return null;
-
-  const axisX = line.side === "left" ? plotArea.x : plotArea.x + plotArea.width;
-
-  return (
-    <line
-      x1={x}
-      x2={axisX}
-      y1={y}
-      y2={y}
-      stroke={line.color}
-      strokeDasharray="4 4"
-      strokeWidth={1}
-      opacity={0.35}
-    />
-  );
-}
 
 interface ReferralChartPoint {
   date: string;
@@ -995,10 +912,6 @@ function BackLink() {
 }
 
 function ReferralGrowthChart({ data }: { data: ReferralChartPoint[] }) {
-  const [activeChartPoint, setActiveChartPoint] = useState<ReferralChartPoint | null>(null);
-  const chartGuidePoint = activeChartPoint ?? data[data.length - 1] ?? null;
-  const chartGuideReferrals = chartGuidePoint ? chartGuidePoint.direct + chartGuidePoint.indirect : 0;
-
   return (
     <div className="mt-6 border-t pt-5" style={{ borderColor: "var(--leaders-card-border)" }}>
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -1024,8 +937,6 @@ function ReferralGrowthChart({ data }: { data: ReferralChartPoint[] }) {
           <AreaChart
             data={data}
             margin={{ top: 4, right: -12, bottom: 0, left: -12 }}
-            onMouseMove={(state) => setActiveChartPoint(getActiveChartPoint(state, data))}
-            onMouseLeave={() => setActiveChartPoint(null)}
           >
             <defs>
               <linearGradient id="gradDashboardDirect" x1="0" y1="0" x2="0" y2="1">
@@ -1086,14 +997,6 @@ function ReferralGrowthChart({ data }: { data: ReferralChartPoint[] }) {
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 4, fill: REWARDS_CHART_COLOR }}
-            />
-            <AxisEndpointGuideLines
-              point={chartGuidePoint}
-              lines={[
-                { yAxisId: "rewards", value: chartGuidePoint?.rewards ?? 0, color: REWARDS_CHART_COLOR, side: "left" },
-                { yAxisId: "referrals", value: chartGuideReferrals, color: INDIRECT_CHART_COLOR, side: "right" },
-                { yAxisId: "referrals", value: chartGuidePoint?.direct ?? 0, color: DIRECT_CHART_COLOR, side: "right" },
-              ]}
             />
           </AreaChart>
         </ResponsiveContainer>
