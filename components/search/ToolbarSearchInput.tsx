@@ -11,6 +11,9 @@ interface ToolbarSearchInputProps {
   ariaLabel?: string;
 }
 
+// Lighter search input variant for the explorer toolbar.
+// No `.zcash` suffix or input sanitation — accepts raw text, submits on Enter.
+// Optional `onClear` renders a Clear button when the input is non-empty.
 export default function ToolbarSearchInput({
   value,
   onChange,

@@ -61,6 +61,11 @@ const titleStyle: React.CSSProperties = {
   marginBottom: "0.85rem",
 };
 
+// Client-side form for the indexer bug bounty launch alert signup.
+// Manages dynamic contact rows (email, telegram, signal, etc.) with
+// add/remove/swap-kind and a "best contact" radio. Validates that at
+// least one contact is filled, then submits via server action
+// (submitIndexerLaunchAlert). Renders a success state inline on ok.
 export default function IndexerLaunchAlertForm() {
   const [displayName, setDisplayName] = useState("");
   const [newsletter, setNewsletter] = useState(false);
