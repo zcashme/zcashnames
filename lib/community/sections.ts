@@ -1,4 +1,4 @@
-import { COMMUNITIES } from "@/lib/zns/brand";
+import { BRAND, COMMUNITIES } from "@/lib/zns/brand";
 
 // CommunityCard represents a single community channel, event, or feature entry.
 // Rendered as cards on the /community page, grouped by CommunitySection.
@@ -13,8 +13,6 @@ export type CommunityCard = {
   detail: string;
   iconSrc?: string;
   initials?: string;
-  actionBadge?: string;
-  announcingSoon?: boolean;
 };
 
 export type CommunitySection = {
@@ -26,10 +24,60 @@ export type CommunitySection = {
 
 export const ambassadorForm = "https://form.typeform.com/to/oBd1YeoI";
 
-// Static section definitions for the /community page.
-// Cards are organized by category slug: get-involved, social, partners, features, events, blogs.
-// Community channel cards resolve their href/data from the shared COMMUNITIES brand config.
 export const COMMUNITY_SECTIONS: CommunitySection[] = [
+  {
+    slug: "partners",
+    title: "Partners",
+    description:
+      "Wallets, explorers, and ecosystem partners helping ZcashNames become useful across Zcash.",
+    cards: [
+      {
+        id: "zcashme",
+        name: "Zcash.me",
+        label: "Profile partner",
+        description:
+          "Profile infrastructure for connecting names, identity, and public Zcash presence.",
+        href: "https://zcash.me",
+        shareText: "@ZcashMe supports ZcashNames profiles and identity.",
+        detail: "Profiles and identity",
+        initials: "ZM",
+      },
+      {
+        id: "edge-wallet",
+        name: "Edge Wallet",
+        label: "Wallet partner",
+        description:
+          "Intuitive self-custody wallet with Zcash support — send and receive ZEC privately from anywhere.",
+        href: "https://edge.app/",
+        shareText: "Edge Wallet now supports ZcashNames — send ZEC to a personal name.",
+        detail: "edge.app",
+        iconSrc: "/icons/edge.png",
+      },
+      {
+        id: "unstoppable-wallet",
+        name: "Unstoppable Wallet",
+        label: "Wallet partner",
+        description:
+          "Multi-currency decentralized wallet built for privacy-conscious crypto management.",
+        href: "https://unstoppable.money/",
+        shareText: "Unstoppable Wallet now resolves ZcashNames — send to a personal name.",
+        detail: "unstoppable.money",
+        iconSrc: "/icons/unstoppable.png",
+      },
+      {
+        id: "zcash-network-school",
+        name: "Zcash Network School",
+        label: "Community hub",
+        description:
+          "A Zcash presence at Network School in Malaysia — weekly office hours, ZK education, and wallet onboarding.",
+        href: "https://forum.zcashcommunity.com/t/zcash-network-school/55269",
+        shareText:
+          "Zcash Network School is bringing privacy education and wallet onboarding to Southeast Asia.",
+        detail: "Network School, Malaysia",
+        iconSrc: "/icons/network-school.png",
+      },
+    ],
+  },
   {
     slug: "get-involved",
     title: "Get Involved",
@@ -103,61 +151,6 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         shareText: "Create and share your `Address Me By My Name` promo.",
         detail: "Share memes",
         initials: "AM",
-      },
-    ],
-  },
-  {
-    slug: "partners",
-    title: "Partners",
-    description:
-      "Wallets, explorers, and ecosystem partners helping ZcashNames become useful across Zcash.",
-    cards: [
-      {
-        id: "zcashme",
-        name: "Zcash.me",
-        label: "Profile partner",
-        description:
-          "Profile infrastructure for connecting names, identity, and public Zcash presence.",
-        href: "https://zcash.me",
-        shareText: "@ZcashMe supports ZcashNames profiles and identity.",
-        detail: "Profiles and identity",
-        initials: "ZM",
-      },
-      {
-        id: "wallet-partner-01",
-        name: "xxxxxxxx xxxxxx",
-        label: "Wallet partner",
-        description: "xxxxxxxx xxxxxxx xxxxxx xxxxxxxx xxxxxxxx xxxxx xxxxxxxxx xxxxx.",
-        href: "/community?section=partners",
-        shareText:
-          "@ZcashNames will be announcing wallets that resolve your personal name into your shielded address. Can't wait!",
-        detail: "Send privately with names",
-        initials: ";)",
-        announcingSoon: true,
-      },
-      {
-        id: "wallet-partner-02",
-        name: "xxxx xxxxxx",
-        label: "Wallet partner",
-        description: "xxxxxx xxxxx xxxxxxx xxxxxxxxx xxxxx xxxxx xxxxxxx xxxxxxxxx.",
-        href: "/community?section=partners",
-        shareText:
-          "@ZcashNames will be announcing wallets that resolve your personal name into your shielded address. Can't wait!",
-        detail: "Send privately with names",
-        initials: ";)",
-        announcingSoon: true,
-      },
-      {
-        id: "wallet-partner-03",
-        name: "xxxxxxxxxxx xxxxxx",
-        label: "Wallet partner",
-        description: "xxxxxxxx xxxxxxx xxxxx xxxxxxxx xxxxxxx xxxxxxxx xxxxxx xxxxx.",
-        href: "/community?section=partners",
-        shareText:
-          "@ZcashNames will be announcing wallets that resolve your personal name into your shielded address. Can't wait!",
-        detail: "Send privately with names",
-        initials: ";)",
-        announcingSoon: true,
       },
     ],
   },
@@ -256,10 +249,9 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         description:
           "Follow the core docs and product resources as ZcashNames moves toward release.",
         href: "/docs",
-        shareText: "@ZcashNames blog updates are announcing soon. Follow along for product notes and resources.",
+        shareText: "@ZcashNames blog updates are live. Follow along for product notes and resources.",
         detail: "Product resources",
         initials: "ZU",
-        actionBadge: "Announcing soon",
       },
       {
         id: "launch-notes",
@@ -268,10 +260,9 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         description:
           "Read pricing, rollout, and beta context for the current ZcashNames release phase.",
         href: "/docs/learn/pricing",
-        shareText: "@ZcashNames launch notes are announcing soon. Follow along for rollout updates.",
+        shareText: "@ZcashNames launch notes are live. Follow along for rollout updates.",
         detail: "Pricing and rollout context",
         initials: "LN",
-        actionBadge: "Announcing soon",
       },
       {
         id: "builder-stories",
@@ -280,32 +271,35 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         description:
           "Explore integration paths for wallets, explorers, apps, and ecosystem builders.",
         href: "/docs/integrate",
-        shareText: "@ZcashNames builder stories are announcing soon. Follow along for wallet, app, and integration updates.",
+        shareText: "@ZcashNames builder stories are live. Follow along for wallet, app, and integration updates.",
         detail: "Wallets, apps, and integrations",
         initials: "BS",
-        actionBadge: "Announcing soon",
       },
     ],
   },
 ];
 
-// Builds a section-based navigation href for the /community page.
-// The "all" slug maps to the bare /community path (no query param).
-export function communitySectionHref(slug: string): string {
-  return slug === "all" ? "/community" : `/community?section=${slug}`;
-}
-
 export function getCommunitySection(slug: string): CommunitySection | undefined {
   return COMMUNITY_SECTIONS.find((section) => section.slug === slug);
 }
 
-// Determines whether an href points off-site (http/https) for rendering external link indicators.
 export function isExternalHref(href: string): boolean {
   return href.startsWith("http://") || href.startsWith("https://");
 }
 
-// Builds a CommunityCard from a community label, pulling href and metadata from the brand COMMUNITIES config.
-// Used for social channel cards (Discord, Telegram, X, etc.) to avoid duplicating link data.
+function communityHref(label: string): string {
+  return COMMUNITIES.find((item) => item.label === label)?.href ?? "/community";
+}
+
+function displayHost(href: string): string {
+  try {
+    const url = new URL(href);
+    return url.hostname.replace(/^www\./, "");
+  } catch {
+    return href;
+  }
+}
+
 function communityCard(
   id: string,
   name: string,
@@ -325,17 +319,4 @@ function communityCard(
     detail: community ? displayHost(community.href) : "Community channel",
     iconSrc: `/icons/${iconFile}`,
   };
-}
-
-function communityHref(label: string): string {
-  return COMMUNITIES.find((item) => item.label === label)?.href ?? "/community";
-}
-
-function displayHost(href: string): string {
-  try {
-    const url = new URL(href);
-    return url.hostname.replace(/^www\./, "");
-  } catch {
-    return href;
-  }
 }

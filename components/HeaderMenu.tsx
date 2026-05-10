@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   COMMUNITY_SECTIONS,
-  communitySectionHref,
   getCommunitySection,
   isExternalHref,
   type CommunityCard,
@@ -29,17 +28,11 @@ const communitySectionLinks: MenuLink[] = COMMUNITY_SECTIONS
   .filter((section) => ["get-involved", "partners", "features", "events"].includes(section.slug))
   .map((section) => ({
     label: section.title,
-    href: communitySectionHref(section.slug),
-    displayPath: `?section=${section.slug}`,
+    href: "/community",
+    displayPath: `/${section.slug}`,
   }));
 
 const socialLinks = sectionCardMenuLinks("social");
-// Blogs section is gated behind "Coming soon" — all child links are disabled.
-const blogLinks = sectionCardMenuLinks("blogs").map((item) => ({
-  ...item,
-  displayPath: "Coming soon",
-  disabled: true,
-}));
 
 // Complete menu tree: static pages + nested sections sourced from
 // COMMUNITY_SECTIONS data. Rendered by HeaderMenu via MenuItem/MenuAnchor.
@@ -86,8 +79,7 @@ const menuLinks: MenuLink[] = [
     label: "Blogs",
     href: "/community?section=blogs",
     displayPath: "/blogs",
-    comingSoon: true,
-    children: blogLinks,
+    children: sectionCardMenuLinks("blogs"),
   },
   {
     label: "Leaderboard",

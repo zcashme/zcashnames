@@ -17,9 +17,10 @@ import {
 } from "@/lib/zns/actions";
 import { validateAddress } from "@/lib/zns/utils";
 import { generateSessionId, buildZvsMemo } from "@/lib/purchases/memo";
-import { buildZcashUri } from "@/lib/purchases/zip321";
+import { zip321Uri } from "@/lib/purchases/zip321";
 import { checkMempool } from "@/lib/zns/mempool";
 import { generatePayload } from "@/lib/zns/payload";
+import { QrBlock } from "@/components/ui/QrBlock";
 
 // Central purchase/action UX. Renders a portaled modal that walks the user
 // through a sequence of phases defined in ACTION_PHASES (types.ts).
@@ -130,6 +131,7 @@ export default function Zip321Modal({
   const [price, setPrice] = useState<string>();
   const [proof, setProof] = useState<string>();
   const [uri, setUri] = useState<string>();
+  const [memo, setMemo] = useState<string>();
 
   // unlock phase
   const [unlockCode, setUnlockCode] = useState("");
@@ -149,7 +151,7 @@ export default function Zip321Modal({
       // Call server action to build the signed memo
       const actionResult = await claimAction(name, address ?? "", network, result.proof);
       if (!actionResult.ok) { setUnlockError(actionResult.error); return; }
-      advance({ uri: actionResult.uri });
+      advance({ uri: actionResult.uri, memo: actionResult.memo });
     } catch {
       setUnlockError("Something went wrong. Try again.");
     } finally {
@@ -191,19 +193,19 @@ export default function Zip321Modal({
       // Non-reserved CLAIM path — no unlockProof
       claimAction(name, addressInput.trim(), network, undefined).then((result) => {
         if (!result.ok) { setInputError(result.error); return; }
-        advance({ address: addressInput.trim(), uri: result.uri });
+        advance({ address: addressInput.trim(), uri: result.uri, memo: result.memo });
       });
     } else if (action === "BUY") {
       buyAction(name, addressInput.trim(), network, undefined).then((result) => {
         if (!result.ok) { setInputError(result.error); return; }
-        advance({ address: addressInput.trim(), uri: result.uri });
+        advance({ address: addressInput.trim(), uri: result.uri, memo: result.memo });
       });
     } else if (action === "LIST") {
       const zec = parsePrice(priceInput) ?? 0;
       const priceZats = Math.round(zec * 1e8);
       listAction(name, priceZats, payTaddrInput.trim(), network, undefined).then((result) => {
         if (!result.ok) { setInputError(result.error); return; }
-        advance({ address: addressInput.trim(), price: priceInput.trim(), uri: result.uri });
+        advance({ address: addressInput.trim(), price: priceInput.trim(), uri: result.uri, memo: result.memo });
       });
     } else {
       advance({
@@ -219,6 +221,7 @@ export default function Zip321Modal({
       if (result.price !== undefined) setPrice(result.price);
       if (result.proof !== undefined) setProof(result.proof);
       if (result.uri !== undefined) setUri(result.uri);
+      if (result.memo !== undefined) setMemo(result.memo);
     }
     setStep((s) => Math.min(s + 1, phases.length - 1));
   }
@@ -242,7 +245,7 @@ export default function Zip321Modal({
     const memo = buildZvsMemo(sid, regAddr);
     const { OTP_SIGNIN_ADDR, OTP_AMOUNT } = getNetworkConstants(network);
     setOtpMemo(memo);
-    setOtpUri(buildZcashUri(OTP_SIGNIN_ADDR, OTP_AMOUNT, memo));
+    setOtpUri(zip321Uri(OTP_SIGNIN_ADDR, OTP_AMOUNT, memo).uri);
     setOtpCode("");
     setOtpError("");
     setOtpSent(false);
@@ -269,7 +272,7 @@ export default function Zip321Modal({
       }
 
       // Call server action to build the signed memo
-      let actionResult: { ok: true; uri: string } | { ok: false; error: string };
+      let actionResult: { ok: true; uri: string; memo: string } | { ok: false; error: string };
       if (action === "UPDATE") {
         actionResult = await updateAction(name, address ?? "", network, result.proof);
       } else if (action === "LIST") {
@@ -283,7 +286,7 @@ export default function Zip321Modal({
       }
 
       if (!actionResult.ok) { setOtpError(actionResult.error); setOtpLoading(false); return; }
-      advance({ uri: actionResult.uri });
+      advance({ uri: actionResult.uri, memo: actionResult.memo });
     } catch {
       setOtpError("Something went wrong. Try again.");
     } finally {
@@ -335,7 +338,7 @@ export default function Zip321Modal({
       if (!verified) { setSignError("Signature does not match the payload."); return; }
 
       // Call server action with sovereign sig+pubkey to get URI
-      let actionResult: { ok: true; uri: string } | { ok: false; error: string };
+      let actionResult: { ok: true; uri: string; memo: string } | { ok: false; error: string };
       if (action === "CLAIM") {
         actionResult = await claimAction(name, address ?? "", network, undefined, sig, pub);
       } else if (action === "UPDATE") {
@@ -351,7 +354,7 @@ export default function Zip321Modal({
       }
 
       if (!actionResult.ok) { setSignError(actionResult.error); return; }
-      advance({ uri: actionResult.uri });
+      advance({ uri: actionResult.uri, memo: actionResult.memo });
     } catch {
       setSignError("Signature verification failed.");
     } finally {
@@ -561,11 +564,13 @@ export default function Zip321Modal({
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               Send exact amount and memo to the address below to request a verification code.
             </p>
-            {otpUri && (
-              <code className="w-full break-all rounded-lg px-3 py-2 text-xs text-left"
-                style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}>
-                {otpUri}
-              </code>
+            {otpMemo && (
+              <QrBlock
+                address={getNetworkConstants(network).OTP_SIGNIN_ADDR}
+                amount={getNetworkConstants(network).OTP_AMOUNT}
+                memo={otpMemo}
+                size={180}
+              />
             )}
             {!otpSent ? (
               <button type="button" onClick={() => { setOtpSent(true); setOtpError(""); }}
@@ -602,11 +607,13 @@ export default function Zip321Modal({
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               Send exact amount and memo to complete the transaction.
             </p>
-            {uri && (
-              <code className="w-full break-all rounded-lg px-3 py-2 text-xs text-left"
-                style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}>
-                {uri}
-              </code>
+            {uri && address && (
+              <QrBlock
+                address={address}
+                amount={price ?? "0"}
+                memo={memo ?? ""}
+                size={200}
+              />
             )}
             <button type="button" onClick={() => advance()}
               className="px-5 py-2.5 rounded-full text-sm font-semibold"

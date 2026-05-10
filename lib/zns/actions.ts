@@ -83,7 +83,7 @@ export async function claimAction(
   unlockProof?: string,
   sovereignSig?: string,
   sovereignPub?: string,
-): Promise<{ ok: true; uri: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; uri: string; memo: string } | { ok: false; error: string }> {
   const n = normalizeUsername(name);
   if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
   const addrResult = validateAddress(address.trim());
@@ -102,8 +102,8 @@ export async function claimAction(
     if (await zns.resolveName(n)) return { ok: false, error: `Name "${n}" is already registered.` };
     const cost = await fetchClaimCost(n, network);
     if (cost == null) return { ok: false, error: "Pricing unavailable - indexer may be down." };
-    const { uri } = completeAction(zns.prepareClaim(n, address, cost), sovereignSig, sovereignPub);
-    return { ok: true, uri };
+    const { memo, uri } = completeAction(zns.prepareClaim(n, address, cost), sovereignSig, sovereignPub);
+    return { ok: true, uri, memo };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
@@ -118,7 +118,7 @@ export async function buyAction(
   listingPriceZats?: number,
   sovereignSig?: string,
   sovereignPub?: string,
-): Promise<{ ok: true; uri: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; uri: string; memo: string } | { ok: false; error: string }> {
   const n = normalizeUsername(name);
   if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
   const addrResult = validateAddress(address.trim());
@@ -129,8 +129,8 @@ export async function buyAction(
     const reg = await zns.resolveName(n);
     if (!reg?.listing) return { ok: false, error: `Name "${n}" is not listed for sale.` };
     const price = listingPriceZats ?? reg.listing.price;
-    const { uri } = completeAction(zns.prepareBuy(n, address, price), sovereignSig, sovereignPub);
-    return { ok: true, uri };
+    const { memo, uri } = completeAction(zns.prepareBuy(n, address, price), sovereignSig, sovereignPub);
+    return { ok: true, uri, memo };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
@@ -145,7 +145,7 @@ export async function updateAction(
   otpProof?: string,
   sovereignSig?: string,
   sovereignPub?: string,
-): Promise<{ ok: true; uri: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; uri: string; memo: string } | { ok: false; error: string }> {
   const n = normalizeUsername(name);
   if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
   const addrResult = validateAddress(address.trim());
@@ -162,8 +162,8 @@ export async function updateAction(
   if (proofAddress !== reg.address) return { ok: false, error: "Verification invalid." };
 
   try {
-    const { uri } = completeAction(zns.prepareUpdate(n, address, reg.nonce + 1), sovereignSig, sovereignPub);
-    return { ok: true, uri };
+    const { memo, uri } = completeAction(zns.prepareUpdate(n, address, reg.nonce + 1), sovereignSig, sovereignPub);
+    return { ok: true, uri, memo };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
@@ -180,7 +180,7 @@ export async function listAction(
   otpProof?: string,
   sovereignSig?: string,
   sovereignPub?: string,
-): Promise<{ ok: true; uri: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; uri: string; memo: string } | { ok: false; error: string }> {
   const n = normalizeUsername(name);
   if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
 
@@ -204,8 +204,8 @@ export async function listAction(
   }
 
   try {
-    const { uri } = completeAction(zns.prepareList(n, priceZats, payTaddr, reg.nonce + 1), sovereignSig, sovereignPub);
-    return { ok: true, uri };
+    const { memo, uri } = completeAction(zns.prepareList(n, priceZats, payTaddr, reg.nonce + 1), sovereignSig, sovereignPub);
+    return { ok: true, uri, memo };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
@@ -219,7 +219,7 @@ export async function delistAction(
   otpProof?: string,
   sovereignSig?: string,
   sovereignPub?: string,
-): Promise<{ ok: true; uri: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; uri: string; memo: string } | { ok: false; error: string }> {
   const n = normalizeUsername(name);
   if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
 
@@ -234,8 +234,8 @@ export async function delistAction(
   if (proofAddress !== reg.address) return { ok: false, error: "Verification invalid." };
 
   try {
-    const { uri } = completeAction(zns.prepareDelist(n, reg.nonce + 1), sovereignSig, sovereignPub);
-    return { ok: true, uri };
+    const { memo, uri } = completeAction(zns.prepareDelist(n, reg.nonce + 1), sovereignSig, sovereignPub);
+    return { ok: true, uri, memo };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
@@ -249,7 +249,7 @@ export async function releaseAction(
   otpProof?: string,
   sovereignSig?: string,
   sovereignPub?: string,
-): Promise<{ ok: true; uri: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; uri: string; memo: string } | { ok: false; error: string }> {
   const n = normalizeUsername(name);
   if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
 
@@ -264,8 +264,8 @@ export async function releaseAction(
   if (proofAddress !== reg.address) return { ok: false, error: "Verification invalid." };
 
   try {
-    const { uri } = completeAction(zns.prepareRelease(n, reg.nonce + 1), sovereignSig, sovereignPub);
-    return { ok: true, uri };
+    const { memo, uri } = completeAction(zns.prepareRelease(n, reg.nonce + 1), sovereignSig, sovereignPub);
+    return { ok: true, uri, memo };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
