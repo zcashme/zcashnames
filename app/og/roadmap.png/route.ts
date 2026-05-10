@@ -1,3 +1,5 @@
+// Edge-rendered OG image for /roadmap — monochrome green logo
+// variant with a green-tinted overlay.
 import { renderOgImage } from "@/lib/seo/ogTemplate";
 
 export const runtime = "edge";

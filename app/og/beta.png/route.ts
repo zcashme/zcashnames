@@ -1,3 +1,5 @@
+// Edge-rendered OG image for /beta — shows a branded lockup with
+// a "Beta Invitation" pill overlay, used by social crawlers.
 import { renderOgImage } from "@/lib/seo/ogTemplate";
 
 export const runtime = "edge";

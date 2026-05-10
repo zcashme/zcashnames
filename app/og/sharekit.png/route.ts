@@ -1,3 +1,5 @@
+// Edge-rendered OG image for /sharekit — dark logo variant with
+// a cool green overlay.
 import { renderOgImage } from "@/lib/seo/ogTemplate";
 
 export const runtime = "edge";

@@ -1,3 +1,6 @@
+// Edge-rendered OG image for the home page. Supports an optional
+// ?inviter= param — when present, the pill reads "You're invited
+// by {inviter}", enabling referral-based social previews.
 import { renderOgImage } from "@/lib/seo/ogTemplate";
 
 export const runtime = "edge";

@@ -1,3 +1,5 @@
+// Edge-rendered OG image for /leaders — dark logo variant with
+// a warm amber-tinted overlay.
 import { renderOgImage } from "@/lib/seo/ogTemplate";
 
 export const runtime = "edge";

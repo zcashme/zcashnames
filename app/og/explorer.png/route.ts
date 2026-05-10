@@ -1,3 +1,5 @@
+// Edge-rendered OG image for /explorer — branded lockup with a
+// cool-tinted overlay, no pill text.
 import { renderOgImage } from "@/lib/seo/ogTemplate";
 
 export const runtime = "edge";
