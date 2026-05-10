@@ -1,3 +1,13 @@
+// Fixed bottom-left banner tracking a pending on-chain ZNS transaction through
+// its lifecycle: not_detected → in_mempool → confirming → mined.
+//
+// Reads PendingTransactionState to determine phase (payment vs watch) and
+// available actions:
+//   - Payment phase (confirm): Abandon (two-step confirm) | Resume
+//   - Watch phase:             Ignore (two-step confirm)   | Watch
+//   - Complete (mined):        View on Explorer            | Dismiss
+//
+// Does NOT initiate transactions — only reflects state and offers resume/dismiss.
 "use client";
 
 import { useState } from "react";
@@ -5,6 +15,7 @@ import type { PendingTransactionState } from "@/lib/types";
 
 import { ACTION_LABELS } from "@/lib/types";
 
+// Derives a human-readable status label from the scan state.
 function describePending(state: PendingTransactionState): string {
   if (state.phase === "confirm") return "Ready to send";
   switch (state.scanState) {

@@ -1,3 +1,7 @@
+// Static marketing section: 3-step process diagram (responsive arrows: vertical on mobile,
+// horizontal on desktop) followed by a BenefitsBento sub-component.
+// No state, no data fetching — pure presentation.
+// Shares heading style with FAQ via the same CSS variable tokens.
 type Benefit = {
   title: string;
   description: React.ReactNode;

@@ -1,29 +1,24 @@
+// Hero section: animated headline + optional right panel (typically PhoneStage).
+// Headline has two accent spans ("names" and "addresses") with CSS-driven
+// checkmark and redact animations. Animations replay on hover (with cooldown
+// to prevent rapid re-trigger) or auto-fire once when the midpoint of the
+// right panel scrolls past the viewport top.
+// All timers are tracked in a Set ref and cleaned up on unmount.
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 interface HeroProps {
-  searchForm: React.ReactNode;
   rightPanel?: React.ReactNode;
-  searchFormContainerRef?: React.RefObject<HTMLDivElement | null>;
-  formExpanded?: boolean;
-  subtitle?: React.ReactNode;
 }
 
 const ANIM_MS = 2300;
 const HOVER_COOLDOWN_MS = 10000;
 
-export default function Hero({
-  searchForm,
-  rightPanel,
-  searchFormContainerRef,
-  formExpanded = false,
-  subtitle,
-}: HeroProps) {
+export default function Hero({ rightPanel }: HeroProps) {
   const [checkVisible, setCheckVisible] = useState(false);
   const [sweeping, setSweeping] = useState(false);
 
-  const headlineRef = useRef<HTMLHeadingElement>(null);
   const phonePanelRef = useRef<HTMLDivElement>(null);
 
   const animating = useRef(false);
@@ -186,17 +181,12 @@ export default function Hero({
           <div
             className="hidden xl:block w-full overflow-hidden"
             style={{
-              maxHeight: formExpanded ? "0px" : "600px",
-              opacity: formExpanded ? 0 : 1,
-              marginBottom: formExpanded ? "0px" : "1.75rem",
-              transition:
-                "max-height 0.5s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease, margin-bottom 0.5s cubic-bezier(0.4,0,0.2,1)",
-              pointerEvents: formExpanded ? "none" : "auto",
+              maxHeight: "600px",
+              opacity: 1,
+              marginBottom: "1.75rem",
             }}
-            aria-hidden={formExpanded}
           >
             <h1
-              ref={headlineRef}
               className="font-bold leading-[0.96] xl:text-left"
               style={{
                 fontSize: "clamp(2.55rem, 6.1vw + 0.5rem, 6.5rem)",
@@ -218,43 +208,6 @@ export default function Hero({
           >
             A name is all you need to transact privately.
           </p>
-
-          <div
-            ref={searchFormContainerRef}
-            className="w-full max-w-2xl sm:max-w-3xl xl:max-w-4xl self-center xl:self-start flex flex-col items-center gap-3"
-          >
-            {searchForm}
-            {subtitle && (
-              <p
-                className="type-section-subtitle text-center"
-                style={{
-                  color: "var(--fg-body)",
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                {subtitle}
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{
-                    display: "inline-block",
-                    verticalAlign: "0.25em",
-                    width: "1.2em",
-                    height: "1.2em",
-                    marginLeft: "0.25em",
-                  }}
-                  aria-hidden="true"
-                >
-                  <path d="M1 16 C10 16 14 10 14 2 M8 8 L14 2 L20 8" />
-                </svg>
-              </p>
-            )}
-          </div>
         </div>
 
         {rightPanel && (

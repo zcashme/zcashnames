@@ -1,3 +1,8 @@
+// Interactive stat cards that adapt to network mode via useZns:
+//   mainnet → Claimed / For Sale / Authenticated
+//   waitlist → Waitlist / Referred / Rewards
+// Click toggles a help text panel below via max-height animation.
+// Hover/focus highlight the active segment pill.
 "use client";
 
 import { useState } from "react";

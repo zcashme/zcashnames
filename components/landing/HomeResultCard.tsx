@@ -1,3 +1,7 @@
+// Search result card for the home page — purely presentational, driven by props.
+// Renders: name + status badge (via NameStatusBadge) + optional price +
+// action buttons (via NameStatusButtons) + footer chips (char count, popular) +
+// links to Explorer and ZcashMe. Derives explorer URL from network mode.
 "use client";
 
 import Image from "next/image";

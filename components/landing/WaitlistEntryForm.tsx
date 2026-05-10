@@ -1,15 +1,26 @@
+// Waitlist signup form — gated to waitlist mode (returns null otherwise).
+//
+// Two-phase UX:
+//   Phase 1: name input with .zcash suffix overlay ("Get Early Access" button
+//            confirms the name and reveals Phase 2).
+//   Phase 2: email + newsletter opt-in + submit button. On submit, generates a
+//            unique referral code, calls submitWaitlist server action, and opens
+//            a post-submit modal.
+//
+// Post-submit modal (createPortal) has four transition views:
+//   confirm → community → survey → thankyou
+// (confirm ↔ community slide horizontally; confirm → survey → thankyou vertically).
+// SurveyForm handles actual survey data submission.
+//
+// On mount, reads ?ref= from URL params for referral attribution.
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { normalizeUsername } from "@/lib/zns/utils";
 import { submitWaitlist, getWaitlistCountForName } from "@/lib/waitlist/waitlist";
+import { useZns } from "@/components/hooks/useZns";
 import SurveyForm from "@/components/SurveyForm";
-
-interface Props {
-  onConfirm?: () => void;
-  onReset?: () => void;
-}
 
 function isValidEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -56,7 +67,10 @@ function viewTransform(view: ModalView, current: ModalView): { transform: string
   return { transform: "translate(0, 0)", pointerEvents: active ? "auto" : "none" };
 }
 
-export default function WaitlistEntryForm({ onConfirm, onReset }: Props) {
+export default function WaitlistEntryForm() {
+  const { zns } = useZns();
+  if (zns.mode !== "waitlist") return null;
+
   const [mounted, setMounted] = useState(false);
   // ── Form state ──
   const [nameInput, setNameInput] = useState("");
@@ -70,7 +84,6 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: Props) {
 
   // ── Modal state ──
   const [modalView, setModalView] = useState<ModalView>("confirm");
-  const [copied, setCopied] = useState(false);
   const [myReferralCode, setMyReferralCode] = useState("");
 
   const [surveyContactMsg, setSurveyContactMsg] = useState(false);
@@ -97,7 +110,6 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: Props) {
   const confirmName = () => {
     if (name.length > 0) {
       setConfirmedName(name);
-      onConfirm?.();
       return;
     }
     nameInputRef.current?.focus();
@@ -181,16 +193,10 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: Props) {
     setSubmitted(true);
   };
 
-  const shareUrl =
-    typeof window !== "undefined" && myReferralCode
-      ? `${window.location.origin}?ref=${myReferralCode}`
-      : "";
-
   const handleClose = () => {
     setSubmitted(false);
     setNameInput("");
     setConfirmedName("");
-    onReset?.();
     setEmail("");
     setNewsletter(true);
     setMyReferralCode("");
@@ -341,7 +347,7 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: Props) {
                 ref={nameInputRef}
                 type="text"
                 value={nameInput}
-                onChange={(e) => { setNameInput(normalizeUsername(e.target.value)); setConfirmedName(""); onReset?.(); }}
+                onChange={(e) => { setNameInput(normalizeUsername(e.target.value)); setConfirmedName(""); }}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); confirmName(); } }}

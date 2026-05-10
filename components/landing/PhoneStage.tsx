@@ -1,3 +1,20 @@
+// 3D phone carousel mockup — the visual centerpiece of the landing page.
+//
+// Architecture layers:
+//   1. Phone screens (PhoneZodl, PhoneCakeWallet, PhoneEdge, PhoneAddressBook,
+//      PhoneMessages) — static wallet/app mockups rendered inside PhoneFrame.
+//      They receive phoneSuffixMode to toggle .zcash/.zec display.
+//   2. PhoneCarouselCard — wraps each screen with hover tilt (perspective transform)
+//      and stack positioning (desktop fan layout vs mobile stack).
+//   3. SecurityBadge — individual chip with floating animation + hover 3D tilt.
+//   4. DraggableChip — wraps SecurityBadge in @dnd-kit Draggable for free
+//      repositioning. On drag-end, detects horizontal overflow and snaps back.
+//   5. PhoneStage (main) — manages carousel state (activeCardIndex), auto-advance
+//      timer (9s), touch swipe, keyboard nav (ArrowLeft/Right), and the DndContext
+//      for all four chips. Resets chip positions on window resize.
+//   6. StageGlow — decorative layered blurs behind the phones.
+//
+// Embedded mode (embedded=true) is used when PhoneStage is passed as Hero's rightPanel.
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
