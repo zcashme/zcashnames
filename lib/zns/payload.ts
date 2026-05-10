@@ -1,3 +1,9 @@
+/**
+ * Generates unsigned ZNS payloads for each action type via the ZNS SDK.
+ * Used for debugging and testing (e.g. inspecting raw payload bytes).
+ * The production action flow signs payloads server-side in `lib/zns/proof.ts`
+ * — this module is NOT part of the production action pipeline.
+ */
 import { ZNS } from "zcashname-sdk";
 import type { Action, Network } from "@/lib/types";
 

@@ -1,7 +1,14 @@
 import { ZNS } from "zcashname-sdk";
 import type { Network } from "@/lib/types";
 
-/* ── ZNS instance cache ─────────────────────────────────────────────── */
+//
+// ZNS SDK instance cache.
+//
+// The SDK wraps the ZNS JSON-RPC indexer (light.zcash.me). Every call to
+// getZns() returns the same singleton per network so we don't re-create
+// connections. getVerifiedZns() additionally fetches and caches the indexer's
+// admin public key — required before building any signed transaction.
+//
 
 const ZNS_RPC_URLS: Record<Network, string> = {
   testnet: process.env.ZNS_TESTNET_RPC_URL ?? "https://light.zcash.me/zns-testnet",
@@ -19,6 +26,8 @@ export function getZns(network: Network): ZNS {
   return zns;
 }
 
+// Signing transactions requires the admin public key, which we fetch once
+// per network via zns.verify() and cache indefinitely.
 export async function getVerifiedZns(network: Network): Promise<ZNS> {
   const zns = getZns(network);
   if (!verified.has(network)) {
@@ -28,8 +37,10 @@ export async function getVerifiedZns(network: Network): Promise<ZNS> {
   return zns;
 }
 
-/* ── Claim cost ─────────────────────────────────────────────────────── */
-
+//
+// Claim cost lookup. Pricing is based on name length — shorter names cost more.
+// Fetches the indexer's current pricing table, then asks the SDK for the cost.
+//
 export async function fetchClaimCost(
   name: string,
   network: Network = "testnet",
@@ -44,7 +55,11 @@ export async function fetchClaimCost(
   }
 }
 
-/* ── Address validation ─────────────────────────────────────────────── */
+//
+// Zcash address classification. Only unified addresses (u1… / utest1…) are
+// accepted for name registrations — they support both transparent and shielded
+// receivers. Everything else gets a warning explaining why.
+//
 
 export type AddressStatus = "unified" | "sapling" | "transparent" | "viewkey" | "tex" | "invalid";
 
@@ -77,7 +92,10 @@ export function validateAddress(address: string): AddressValidationResult {
   return { status: "invalid", warning: "Invalid address format." };
 }
 
-/* ── Pure functions ─────────────────────────────────────────────────── */
+//
+// Pure name utilities — no side effects, no async. Used everywhere a name
+// string needs to be validated, normalised, or priced.
+//
 
 const NAME_RE = /^[a-z0-9]{1,62}$/;
 
@@ -89,6 +107,8 @@ export function isValidUsername(name: string): boolean {
   return NAME_RE.test(name);
 }
 
+// Quick tri-state check from the SDK registration object. Does NOT look up
+// listings separately — callers that need listing data use resolveName().
 export function registrationStatus(
   reg: { listing: unknown } | null,
 ): "available" | "registered" | "forsale" {

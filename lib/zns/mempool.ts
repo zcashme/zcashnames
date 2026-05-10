@@ -1,3 +1,26 @@
+/**
+ * Mempool watcher — polls light.zcash.me's mempool API to track ZNS
+ * transactions through their lifecycle.
+ *
+ * After the user sends a ZNS transaction (claim, list, buy, etc.), the client
+ * enters a scanning phase where it polls the mempool watcher endpoints every
+ * few seconds. The watcher has already decoded the Orchard notes and ZNS memos
+ * server-side, so the client gets back rich structured data (action, name,
+ * amounts, addresses) without doing any crypto work.
+ *
+ * Lifecycle: pending → resolving → confirmed | rejected
+ *   - pending:    tx seen in mempool, not yet mined
+ *   - resolving:  LWD is attempting to decrypt the note (Orchard trial-decrypt)
+ *   - confirmed:  mined + note successfully decrypted
+ *   - rejected:   mined but failed to decrypt within retry budget
+ *
+ * Endpoints:
+ *   GET /mempool-mainnet/name/:name  → TxStatusResponse (primary lookup)
+ *   GET /mempool-mainnet/utxo/:taddr → UtxoResponse (BUY payment detection)
+ *   GET /mempool-mainnet/tx/:txid    → TxStatusResponse (by txid)
+ *
+ * Consumed by usePendingTransaction.ts for the scanning / engagement UX.
+ */
 import type { Network } from "@/lib/types";
 
 /**

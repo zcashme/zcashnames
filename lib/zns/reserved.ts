@@ -1,3 +1,17 @@
+/**
+ * Reserved-name system — holds back select names so only authorized parties
+ * can claim them.
+ *
+ * Reserved names live in the zn_reserved_names table in Supabase. Each row has
+ * a category (brand, protocol, community, or offensive) and a redeemed flag.
+ * Offensive names are permanently blocked; the other three categories can be
+ * unlocked with a deterministic 12-char HMAC-derived code (XXXX-XXXX-XXXX).
+ *
+ * Checkpoints:
+ *  1. Name resolution — isReserved / getReservedName gates the claim flow.
+ *  2. Claim time — verifyUnlockCode checks the supplied code before allowing
+ *     the transaction.
+ */
 import "server-only";
 
 import crypto from "node:crypto";
