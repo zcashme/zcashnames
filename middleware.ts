@@ -27,6 +27,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  if (request.nextUrl.pathname === "/" && !request.cookies.get("zn_beta")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/waitlist";
+    return NextResponse.redirect(url);
+  }
+
   return NextResponse.next();
 }
 

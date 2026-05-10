@@ -1,19 +1,11 @@
-/**
- * Floating feedback launcher button + slide-out side panel. Rendered via createPortal
- * at document.body level. Only mounts in non-waitlist mode (testnet/mainnet).
- * Wraps FeedbackPanelBody in "panel" mode with an onboarding tooltip sequence.
- * The onboarding fires once when the panel first opens and steps through popout →
- * report → checkbox → readme → contact → collapse.
- */
 "use client";
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import FeedbackPanelBody from "./FeedbackPanelBody";
-import { useZns } from "@/components/hooks/useZns";
 
 interface Props {
-  /** Optional pre-loaded tester name. Otherwise the panel fetches on first open. */
+  network: "mainnet" | "testnet";
   initialTesterName?: string | null;
 }
 
@@ -38,8 +30,7 @@ function nextTooltipStep(step: TooltipStep | null): TooltipStep | null {
   }
 }
 
-export default function FeedbackModal({ initialTesterName }: Props) {
-  const { zns } = useZns();
+export default function FeedbackModal({ network, initialTesterName }: Props) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isWide, setIsWide] = useState(false);
@@ -47,34 +38,30 @@ export default function FeedbackModal({ initialTesterName }: Props) {
   const [hasShownTooltipSequence, setHasShownTooltipSequence] = useState(false);
 
   useEffect(() => {
-    if (zns.mode === "waitlist") return;
     setMounted(true);
     const mq = window.matchMedia(`(min-width: ${PANEL_BREAKPOINT_PX}px)`);
     setIsWide(mq.matches);
     const handler = (e: MediaQueryListEvent) => setIsWide(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [zns.mode]);
+  }, []);
 
   useEffect(() => {
-    if (zns.mode === "waitlist") return;
     if (!open || hasShownTooltipSequence) return;
     setHasShownTooltipSequence(true);
     setTooltipStep("popout");
-  }, [open, hasShownTooltipSequence, zns.mode]);
+  }, [open, hasShownTooltipSequence]);
 
   useEffect(() => {
-    if (zns.mode === "waitlist" || !open) return;
+    if (!open) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open, zns.mode]);
+  }, [open]);
 
-  if (zns.mode === "waitlist") return null;
-
-  const stage = zns.mode;
+  const stage = network;
 
   const primaryBtnStyle: React.CSSProperties = {
     background: "var(--home-result-primary-bg)",

@@ -1,24 +1,12 @@
-/*
- * HomePageClient — the main client component that assembles the full
- * marketing‑site homepage.  It conditionally displays different action
- * links depending on `zns.mode` (waitlist vs. live/testnet) and wires
- * up the FeedbackModal for beta testers in non‑waitlist mode.
- */
 "use client";
 
 import dynamic from "next/dynamic";
 import Hero from "@/components/landing/Hero";
-import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
-import HomeSearchResults from "@/components/landing/HomeSearchResults";
-import FeedbackModal from "@/components/closedbeta/FeedbackModal";
-import FAQ from "@/components/landing/FAQ";
-import HowItWorks from "@/components/landing/HowItWorks";
 import NetworkStats from "@/components/landing/NetworkStats";
-import Link from "next/link";
-import { useZns } from "@/components/hooks/useZns";
+import HowItWorks from "@/components/landing/HowItWorks";
+import FAQ from "@/components/landing/FAQ";
+import type { NetworkStats as Stats } from "@/lib/network-stats";
 
-// Lazy‑loaded with ssr:false to avoid hydration mismatches on the 3D phone
-// carousel (it depends on browser‑only APIs and viewport measurements).
 const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
   ssr: false,
   loading: () => (
@@ -46,49 +34,24 @@ const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
   ),
 });
 
-export default function HomePage() {
-  const { zns } = useZns();
+type Props = {
+  form: React.ReactNode;
+  actionLink: React.ReactNode;
+  stats: Stats;
+};
 
+export default function HomePage({ form, actionLink, stats }: Props) {
   return (
     <div className="home-theme-scope">
       <Hero rightPanel={<PhoneStage embedded />} />
 
-      <WaitlistEntryForm />
-      <HomeSearchResults />
+      {form}
 
       <div className="relative z-[2] -mt-4 mb-2 flex justify-center">
-        {/* Mode‑dependent action link: leaderboard during waitlist, explorer otherwise. */}
-        {zns.mode === "waitlist" ? (
-          <Link
-            href="/leaders"
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--home-result-link-border)] bg-transparent px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform,background-color] duration-[140ms] hover:-translate-y-px hover:bg-[var(--home-result-link-hover-bg)]"
-          >
-            <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
-              <path d="M8 21L12 17L16 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M8 21V14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M16 21V14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="12" cy="10" r="6" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M12 6.5L13.1 8.8L15.6 9.1L13.8 10.8L14.2 13.3L12 12.1L9.8 13.3L10.2 10.8L8.4 9.1L10.9 8.8L12 6.5Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
-            </svg>
-            Leaderboard →
-          </Link>
-        ) : (
-          <Link
-            href={zns.mode === "testnet" ? "/explorer?env=testnet" : "/explorer"}
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--home-result-link-border)] bg-[var(--home-result-link-bg)] px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform,background-color] duration-[140ms] hover:-translate-y-px hover:bg-[var(--home-result-link-hover-bg)]"
-          >
-            <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
-              <circle cx="12" cy="12" r="4.25" stroke="currentColor" strokeWidth="1.7" />
-              <circle cx="12" cy="12" r="1.15" fill="currentColor" />
-              <path d="M12 2.4v3.2M12 18.4v3.2M2.4 12h3.2M18.4 12h3.2M5.6 5.6l2.2 2.2M16.2 16.2l2.2 2.2M18.4 5.6l-2.2 2.2M7.8 16.2l-2.2 2.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="12" cy="12" r="8.85" stroke="currentColor" strokeWidth="1.4" />
-            </svg>
-            Explorer →
-          </Link>
-        )}
+        {actionLink}
       </div>
 
-      <NetworkStats />
+      <NetworkStats stats={stats} />
       <HowItWorks />
       <FAQ />
 
@@ -105,10 +68,6 @@ export default function HomePage() {
           Back to top
         </button>
       </div>
-
-      {/* Auto‑opens a feedback survey in non‑waitlist mode to collect beta‑tester
-           impressions.  No‑op when mode === "waitlist". */}
-      <FeedbackModal />
     </div>
   );
 }

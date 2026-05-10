@@ -1,4 +1,4 @@
-// Waitlist signup form — gated to waitlist mode (returns null otherwise).
+// Waitlist signup form.
 //
 // Two-phase UX:
 //   Phase 1: name input with .zcash suffix overlay ("Get Early Access" button
@@ -19,7 +19,6 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { normalizeUsername } from "@/lib/zns/utils";
 import { submitWaitlist, getWaitlistCountForName } from "@/lib/waitlist/waitlist";
-import { useZns } from "@/components/hooks/useZns";
 import SurveyForm from "@/components/SurveyForm";
 
 function isValidEmail(v: string) {
@@ -68,9 +67,6 @@ function viewTransform(view: ModalView, current: ModalView): { transform: string
 }
 
 export default function WaitlistEntryForm() {
-  const { zns } = useZns();
-  if (zns.mode !== "waitlist") return null;
-
   const [mounted, setMounted] = useState(false);
   // ── Form state ──
   const [nameInput, setNameInput] = useState("");

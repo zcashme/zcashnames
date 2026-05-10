@@ -1,34 +1,18 @@
-/*
- * Homepage — a thin Server Component that delegates all rendering to
- * HomePageClient.  `searchParams` (ref, token) are typed for referral-
- * tracking and email‑verification flows, though the current implementation
- * passes them implicitly via the client component.
- */
 import type { Metadata } from "next";
-import HomePageClient from "./HomePageClient";
+import { cookies } from "next/headers";
+import { parseStageCookieValue, BETA_STAGE_COOKIE_NAME } from "@/lib/beta/gate";
+import { getChainStats } from "@/lib/network-stats";
+import MainnetPageClient from "./MainnetPageClient";
 
-type HomePageProps = {
-  searchParams?: Promise<{ ref?: string; token?: string }>;
-};
-
-const HOME_METADATA: Metadata = {
+export const metadata: Metadata = {
   title: "ZcashNames | Personal names for shielded addresses",
   description: "Claim yours.",
-  alternates: {
-    canonical: "https://www.zcashnames.com/",
-  },
+  alternates: { canonical: "https://www.zcashnames.com/" },
   openGraph: {
     title: "ZcashNames",
     description: "Personal names for shielded addresses.",
     url: "https://www.zcashnames.com/",
-    images: [
-      {
-        url: "https://www.zcashnames.com/og/home.png",
-        width: 1200,
-        height: 630,
-        alt: "ZcashNames homepage preview",
-      },
-    ],
+    images: [{ url: "https://www.zcashnames.com/og/home.png", width: 1200, height: 630, alt: "ZcashNames" }],
   },
   twitter: {
     card: "summary_large_image",
@@ -38,10 +22,12 @@ const HOME_METADATA: Metadata = {
   },
 };
 
-export async function generateMetadata({ searchParams }: HomePageProps): Promise<Metadata> {
-  return HOME_METADATA;
-}
+export default async function HomePage() {
+  const store = await cookies();
+  const stageCookie = store.get(BETA_STAGE_COOKIE_NAME)?.value;
+  const parsed = stageCookie ? parseStageCookieValue(stageCookie) : null;
+  const network = parsed?.stage ?? "mainnet";
+  const stats = await getChainStats(network);
 
-export default async function HomePage({ searchParams }: HomePageProps) {
-  return <HomePageClient />;
+  return <MainnetPageClient network={network} stats={stats} />;
 }

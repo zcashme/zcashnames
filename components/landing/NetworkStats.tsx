@@ -1,26 +1,6 @@
-"use client";
+import type { NetworkStats as Stats } from "@/lib/network-stats";
 
-import { useEffect, useState } from "react";
-import { useZns } from "@/components/hooks/useZns";
-import { getNetworkStats, type NetworkStats as Stats } from "@/lib/network-stats";
-
-function zeroStats(mode: "waitlist" | "mainnet" | "testnet"): Stats {
-  if (mode === "waitlist") return { mode: "waitlist", waitlist: 0, referred: 0, rewardsPot: 0 };
-  return { mode, claimed: 0, forSale: 0, syncedHeight: 0, uivk: "" };
-}
-
-export default function NetworkStats() {
-  const { zns } = useZns();
-  const [stats, setStats] = useState<Stats>(() => zeroStats(zns.mode));
-
-  useEffect(() => {
-    let cancelled = false;
-    getNetworkStats(zns.mode).then((s) => {
-      if (!cancelled) setStats(s);
-    });
-    return () => { cancelled = true; };
-  }, [zns.mode]);
-
+export default function NetworkStats({ stats }: { stats: Stats }) {
   if (stats.mode === "waitlist") {
     return (
       <div className="flex gap-6 justify-center text-sm text-[var(--home-result-link-fg)]">

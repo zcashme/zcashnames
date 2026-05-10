@@ -1,11 +1,6 @@
-// Search orchestrator: wires useZns (network mode) + useSearchState (input/query/results cache)
-// into SearchForm + HomeResultCard list + Zip321Modal for purchase flow.
-// Gated to non-waitlist mode; returns null on waitlist.
-// NOTE: Not used by the current HomePageClient, which inlines this pattern directly.
 "use client";
 
 import { useState } from "react";
-import { useZns } from "@/components/hooks/useZns";
 import { useSearchState } from "@/components/hooks/useSearchState";
 import HomeResultCard from "./HomeResultCard";
 import SearchForm from "@/components/search/SearchForm";
@@ -18,13 +13,11 @@ const POPULAR_NAMES = new Set([
   "olivia", "satoshi",
 ]);
 
-export default function HomeSearchResults() {
-  const { zns } = useZns();
+export default function HomeSearchResults({ network }: { network: "mainnet" | "testnet" }) {
   const { input, results, searching, searchError, setInput, handleSearch, refreshResult, removeResult, buildCardProps } = useSearchState();
   const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
 
-  if (zns.mode === "waitlist") return null;
-  const mode = zns.mode;
+  const mode = network;
 
   return (
     <>
@@ -56,7 +49,7 @@ export default function HomeSearchResults() {
         <Zip321Modal
           action={modalState.action}
           name={modalState.resolveResult.query}
-          network={zns.mode}
+          network={network}
           resolveResult={modalState.resolveResult}
           onClose={() => setModalState(null)}
           onSuccess={() => refreshResult(modalState.resolveResult.query)}

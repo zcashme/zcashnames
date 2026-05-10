@@ -24,6 +24,21 @@ const FEEDBACK_BUCKET = "beta-feedback";
 // Beta gate session helpers.
 // ---------------------------------------------------------------------------
 
+export async function verifyBetaPassword(
+  password: string,
+  network: "mainnet" | "testnet",
+): Promise<{ ok: boolean }> {
+  const expected = process.env.BETA_PASSWORD;
+  if (!expected || password !== expected) return { ok: false };
+
+  const store = await cookies();
+  const ttl = 60 * 60 * 24 * 30;
+  store.set(BETA_COOKIE_NAME, "1", cookieOptions(ttl));
+  await setStageCookie(network);
+
+  return { ok: true };
+}
+
 export async function signOutBetaTester(): Promise<{ ok: true }> {
   const store = await cookies();
   store.set(BETA_COOKIE_NAME, "", cookieOptions(0));
