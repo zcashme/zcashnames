@@ -1,3 +1,9 @@
+/**
+ * React Email template: waitlist welcome email. Includes the user's referral URL,
+ * a pre-crafted X/Twitter share intent link, commission PIN, and links to the
+ * leaderboard and personal dashboard. This is the primary onboarding email sent
+ * after email confirmation completes.
+ */
 import { Button, Hr, Link, Section, Text } from "@react-email/components";
 import { EmailLayout } from "./EmailLayout";
 import { content, paragraph, ctaButton, divider } from "@/lib/email/styles";
