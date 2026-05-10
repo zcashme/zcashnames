@@ -3,6 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { confirmWaitlistEmail } from "@/lib/waitlist/waitlist";
 
+// Discriminated union for the verification lifecycle. Rendered by the waitlist
+// page to drive banner text ("Confirming…", "Invalid link", etc.) and modal
+// visibility on success.
 export type VerificationStatus =
   | { type: "idle" }
   | { type: "confirming" }
@@ -18,6 +21,11 @@ interface UseWaitlistVerificationReturn {
   closeSuccessModal: () => void;
 }
 
+// Scans the URL on mount for two verification patterns:
+//   1. ?token= — direct email link; confirms via server action, cleans URL.
+//   2. ?verified= — pre-resolved redirect param from OAuth/server-side flow.
+// Returns a status discriminant, an optional banner message, and callbacks to
+// dismiss the banner or close the success modal.
 export function useWaitlistVerification(): UseWaitlistVerificationReturn {
   const [status, setStatus] = useState<VerificationStatus>({ type: "idle" });
   const [banner, setBanner] = useState<string | null>(null);

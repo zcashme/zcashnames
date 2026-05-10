@@ -3,7 +3,24 @@
 import { useState, useRef, useCallback } from "react";
 import { resolveName } from "@/lib/zns/resolve";
 import { normalizeUsername, isValidUsername, formatUsdEquivalent } from "@/lib/zns/utils";
-import type { Network, ResolveName, Action, NameAvailabilityState } from "@/lib/types";
+import { useZns } from "@/components/hooks/useZns";
+import type { ResolveName, NameAvailabilityState } from "@/lib/types";
+
+//
+// Search state machine for the home page name search.
+//
+// Handles the full lifecycle of a name lookup:
+//   1. User types a name → normalised and validated client-side
+//   2. Valid name → resolveName() server action is called
+//   3. Result is prepended to the results list (most recent first)
+//   4. After a purchase, refreshResult() re-resolves that one name
+//   5. Dismiss button removes a result from the list
+//
+// Race condition protection: each search gets a monotonically increasing
+// requestId. When a response arrives, we discard it if a newer request
+// was already made. This prevents a slow response from overwriting a
+// fast one (e.g. typing "al" then "alice" before the first resolves).
+//
 
 interface CardProps {
   availabilityState: NameAvailabilityState;
@@ -27,7 +44,9 @@ interface UseSearchStateReturn {
   buildCardProps: (result: ResolveName) => CardProps;
 }
 
-export function useSearchState(network: Network): UseSearchStateReturn {
+export function useSearchState(): UseSearchStateReturn {
+  const { zns } = useZns();
+  const network = zns.mode === "waitlist" ? "testnet" : zns.mode;
   const [input, setInputState] = useState("");
   const [results, setResults] = useState<ResolveName[]>([]);
   const [searching, setSearching] = useState(false);
@@ -84,7 +103,7 @@ export function useSearchState(network: Network): UseSearchStateReturn {
         setSearching(false);
       }
     }
-  }, [network]);
+  }, [zns.mode]);
 
   const refreshResult = useCallback(async (name: string) => {
     try {
@@ -95,7 +114,7 @@ export function useSearchState(network: Network): UseSearchStateReturn {
     } catch {
       // Leave the stale entry in place.
     }
-  }, [network]);
+  }, [zns.mode]);
 
   const removeResult = useCallback((query: string) => {
     setResults((prev) => prev.filter((item) => item.query !== query));

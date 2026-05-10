@@ -7,6 +7,22 @@ import { useLocalStorage } from "@/components/hooks/useLocalStorage";
 
 const STORAGE_KEY = "zns-pending-transaction-v1";
 
+//
+// Pending transaction tracker — persists transaction state to localStorage
+// so the user can close the tab and come back. Once a transaction enters the
+// "scanning" phase, it polls the mempool watcher every 2 seconds.
+//
+// The mempool watcher (light.zcash.me) tracks ZNS transactions through four
+// stages: pending → resolving → confirmed / rejected. This hook maps those
+// to ScanState values and fires onSuccess when a tx reaches "mined".
+//
+// Usage:
+//   const { pendingTransaction, persistPendingTransaction, clearPendingTransaction } =
+//     usePendingTransaction(() => router.refresh());
+//
+// Zip321Modal calls persistPendingTransaction() when the user sends a tx.
+// PendingTransactionBanner renders the sticky bottom-left tracker.
+//
 export function usePendingTransaction(onSuccess?: (name: string) => void) {
   const [pendingTransaction, setPendingTransaction, removeStorage] =
     useLocalStorage<PendingTransactionState | null>(STORAGE_KEY, null);

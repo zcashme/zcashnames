@@ -2,8 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+// SSR-safe localStorage access. The standalone read/write/remove helpers are
+// for non-reactive call sites (e.g. utility functions, server actions); the
+// `useLocalStorage` hook provides reactive state with the same key contract.
+
 const SSR = typeof window === "undefined";
 
+// Read a key from localStorage, returning defaultValue on SSR or parse failure.
 export function readLocalStorage<T>(key: string, defaultValue: T): T {
   if (SSR) return defaultValue;
   try {
@@ -15,6 +20,7 @@ export function readLocalStorage<T>(key: string, defaultValue: T): T {
   }
 }
 
+// Serializes and writes a value to localStorage. Silently no-ops on SSR or quota errors.
 export function writeLocalStorage<T>(key: string, value: T): void {
   if (SSR) return;
   try {
@@ -24,6 +30,7 @@ export function writeLocalStorage<T>(key: string, value: T): void {
   }
 }
 
+// Removes a key from localStorage. No-ops on SSR or blocked access.
 export function removeLocalStorage(key: string): void {
   if (SSR) return;
   try {
@@ -33,6 +40,8 @@ export function removeLocalStorage(key: string): void {
   }
 }
 
+// Reactive localStorage hook. Supports dynamic keys (syncs on key change) and
+// functional updates. Returns [value, set, remove].
 export function useLocalStorage<T>(
   key: string,
   defaultValue: T,

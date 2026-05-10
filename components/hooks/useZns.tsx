@@ -5,6 +5,23 @@ import { getCurrentBetaStage, switchToNetwork, clearStageCookie } from "@/lib/be
 import { getWaitlistStats } from "@/lib/leaders/leaders";
 import { getHomeStats } from "@/lib/zns/resolve";
 
+//
+// Network mode context — the single source of truth for which "mode" the
+// site is in: waitlist, testnet, or mainnet. This drives:
+//
+//   - The NetworkToggle buttons in the header
+//   - Whether the home page shows the waitlist form or the name search
+//   - Which ZNS indexer (testnet/mainnet) queries hit
+//   - MarketStats — switches between waitlist metrics and on-chain stats
+//
+// Data flow:
+//   1. On mount, check for a beta-stage cookie (zn_beta_stage) — beta testers
+//      can have their network pre-set.
+//   2. When the user clicks a toggle, setMode() updates React state and
+//      persists the choice to a cookie (or clears it for waitlist).
+//   3. On every mode change, stats are re-fetched from the server.
+//
+
 export type WaitlistStatsData = {
   waitlist: number;
   referred: number;

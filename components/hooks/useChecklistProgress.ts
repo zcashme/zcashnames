@@ -39,6 +39,7 @@ function storageKey(testerName: string | null, stage: ChecklistStage): string {
   return `beta:checklist:${testerName ?? "anonymous"}:${stage}`;
 }
 
+// Hydrate from localStorage and strip unknown item ids.
 function loadState(testerName: string | null, stage: ChecklistStage): Record<string, boolean> {
   const raw = readLocalStorage<Record<string, boolean> | null>(
     storageKey(testerName, stage),
@@ -48,12 +49,14 @@ function loadState(testerName: string | null, stage: ChecklistStage): Record<str
   return sanitizeState(raw);
 }
 
+// Guard: keep only keys that map to known checklist item ids.
 function sanitizeState(state: Record<string, boolean>): Record<string, boolean> {
   return Object.fromEntries(
     Object.entries(state).filter(([itemId]) => CHECKLIST_ITEM_IDS.has(itemId)),
   );
 }
 
+// Write-through to localStorage — called synchronously on every toggle.
 function persistState(
   testerName: string | null,
   stage: ChecklistStage,
@@ -153,8 +156,8 @@ export function useChecklistProgress(
     };
   }, [testerName, stage]);
 
-  // Schedule a coalesced flush for an item. Each call resets the per-item
-  // debounce timer; only the latest pending value will be sent.
+  // Coalesced server upsert: resets a per-item debounce so rapid double-clicks
+  // only produce one network call. Uses a ref-held timer map to survive renders.
   const scheduleFlush = useCallback(
     (itemId: string, value: boolean) => {
       pendingValuesRef.current.set(itemId, value);
