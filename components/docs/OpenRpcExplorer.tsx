@@ -579,6 +579,14 @@ className="cursor-pointer rounded border border-gray-300 dark:border-gray-700 px
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
+// Renders a parsed OpenRPC spec document. Displays:
+// - Header with title, version, servers
+// - Method list nav (anchor links)
+// - Per-method sections: parameters table, result schema (recursive SchemaView
+//   with $ref resolution and cycle detection), error codes, examples, and a
+//   "Try it" panel that makes live JSON-RPC POST requests to configurable
+//   endpoints (Testnet, Mainnet beta, Local)
+// - Reusable schemas section at the bottom
 export function OpenRpcExplorer({ spec }: { spec: OpenRpcDoc }) {
   return (
     <div className="my-8 space-y-10">

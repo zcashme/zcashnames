@@ -91,6 +91,9 @@ const SECTIONS: Section[] = [
   },
 ];
 
+// Renders SECTIONS as a responsive 2/3-column grid. Each section groups
+// links under a heading to route different reader personas (new users,
+// integrators, developers, protocol readers) to the most relevant entry point.
 export function WhereToStart() {
   return (
     <div className="not-prose grid gap-x-8 gap-y-10 sm:grid-cols-2 md:grid-cols-3">
