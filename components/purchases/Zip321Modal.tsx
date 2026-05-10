@@ -5,12 +5,39 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ACTION_PHASES, getNetworkConstants } from "@/lib/types";
 import type { Action, Network, Phase, ResolveName, ScanState } from "@/lib/types";
-import { checkUnlockCode, verifyOtp } from "@/lib/zns/actions";
+import {
+  checkUnlockCode,
+  verifyOtp,
+  claimAction,
+  buyAction,
+  updateAction,
+  listAction,
+  delistAction,
+  releaseAction,
+} from "@/lib/zns/actions";
 import { validateAddress } from "@/lib/zns/utils";
 import { generateSessionId, buildZvsMemo } from "@/lib/purchases/memo";
 import { buildZcashUri } from "@/lib/purchases/zip321";
 import { checkMempool } from "@/lib/zns/mempool";
 import { generatePayload } from "@/lib/zns/payload";
+
+// Central purchase/action UX. Renders a portaled modal that walks the user
+// through a sequence of phases defined in ACTION_PHASES (types.ts).
+//
+// Phase pipeline (order varies by action):
+//   unlock → input → otp|sign → confirm → fund → scanning
+//
+// Two auth paths diverge at the auth phase:
+//   - OTP:  send a verification tx, receive a 6-digit code, verify server-side.
+//   - Sign: sign a payload with an Ed25519 private key (sovereign auth for
+//           names that have a registered pubkey).
+//
+// Each phase that calls a server action (claimAction, buyAction, etc.) receives
+// a ZIP-321 payment URI, which is shown as a copyable code block in the
+// confirm/fund phases. The final scanning phase polls checkMempool() every 2s
+// until the transaction is mined or rejected, then fires onSuccess.
+//
+// Portaled to document.body via createPortal to avoid z-index stacking issues.
 
 interface Zip321ModalProps {
   action: Action;
@@ -22,7 +49,7 @@ interface Zip321ModalProps {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helpers — pure utility functions used across phases
 // ---------------------------------------------------------------------------
 
 function parsePrice(raw: string): number | null {
@@ -32,6 +59,7 @@ function parsePrice(raw: string): number | null {
   return Number.isFinite(num) && num >= 0 ? num : null;
 }
 
+// Decodes a URL-safe base64 string to raw bytes (used for Ed25519 key/sig).
 function decodeBase64ToBytes(value: string): Uint8Array | null {
   const normalized = value.trim().replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
   if (!normalized) return null;
@@ -46,11 +74,12 @@ function decodeBase64ToBytes(value: string): Uint8Array | null {
   }
 }
 
+// Converts Uint8Array to a standalone ArrayBuffer for WebCrypto (Ed25519 verify).
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  // Ensure we pass a real ArrayBuffer (not a view over SharedArrayBuffer) to WebCrypto.
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
+// Builds the human-readable description shown in the input phase header.
 function prepareDescription(action: Action, name: string, amount: string): React.ReactNode {
   switch (action) {
     case "BUY":
@@ -80,12 +109,14 @@ export default function Zip321Modal({
   onClose,
   onSuccess,
 }: Zip321ModalProps) {
+  // Derive the phase sequence. Start from ACTION_PHASES[action], then:
+  //   - Prepend "unlock" if claiming a reserved name (requires unlock code).
+  //   - Swap OTP→sign if the name has a registered Ed25519 pubkey (sovereign auth).
   const phases: Phase[] = (() => {
     const base = [...ACTION_PHASES[action]];
     if (action === "CLAIM" && resolveResult.status === "reserved") {
       base.unshift("unlock");
     }
-    // swap otp → sign if owner has a pubkey (sovereign auth)
     if ("registration" in resolveResult && resolveResult.registration.pubkey) {
       const idx = base.indexOf("otp" as Phase);
       if (idx !== -1) base[idx] = "sign";
@@ -114,7 +145,11 @@ export default function Zip321Modal({
     try {
       const result = await checkUnlockCode(name, code);
       if (!result.ok) { setUnlockError(result.error || "Invalid unlock code."); return; }
-      advance({ proof: result.proof });
+
+      // Call server action to build the signed memo
+      const actionResult = await claimAction(name, address ?? "", network, result.proof);
+      if (!actionResult.ok) { setUnlockError(actionResult.error); return; }
+      advance({ uri: actionResult.uri });
     } catch {
       setUnlockError("Something went wrong. Try again.");
     } finally {
@@ -150,10 +185,32 @@ export default function Zip321Modal({
     if (needsPayTaddr) {
       if (!payTaddrInput.trim()) { setInputError("Payout address is required."); return; }
     }
-    advance({
-      address: needsAddress ? addressInput.trim() : undefined,
-      price: needsPrice ? priceInput.trim() : undefined,
-    });
+
+    // Call server action for actions that need it (non-reserved CLAIM, BUY, LIST after input)
+    if (action === "CLAIM") {
+      // Non-reserved CLAIM path — no unlockProof
+      claimAction(name, addressInput.trim(), network, undefined).then((result) => {
+        if (!result.ok) { setInputError(result.error); return; }
+        advance({ address: addressInput.trim(), uri: result.uri });
+      });
+    } else if (action === "BUY") {
+      buyAction(name, addressInput.trim(), network, undefined).then((result) => {
+        if (!result.ok) { setInputError(result.error); return; }
+        advance({ address: addressInput.trim(), uri: result.uri });
+      });
+    } else if (action === "LIST") {
+      const zec = parsePrice(priceInput) ?? 0;
+      const priceZats = Math.round(zec * 1e8);
+      listAction(name, priceZats, payTaddrInput.trim(), network, undefined).then((result) => {
+        if (!result.ok) { setInputError(result.error); return; }
+        advance({ address: addressInput.trim(), price: priceInput.trim(), uri: result.uri });
+      });
+    } else {
+      advance({
+        address: needsAddress ? addressInput.trim() : undefined,
+        price: needsPrice ? priceInput.trim() : undefined,
+      });
+    }
   }
 
   function advance(result?: Record<string, string | undefined>) {
@@ -166,7 +223,9 @@ export default function Zip321Modal({
     setStep((s) => Math.min(s + 1, phases.length - 1));
   }
 
-  // OTP phase
+  // OTP phase — generates a session-id–based memo and ZIP-321 URI on entry.
+  // User sends the tx, clicks "I Sent It!", then enters the 6-digit code
+  // received from the wallet. The code is verified via verifyOtp() server-side.
   const [otpMemo, setOtpMemo] = useState("");
   const [otpUri, setOtpUri] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -208,7 +267,23 @@ export default function Zip321Modal({
         setOtpCode("");
         return;
       }
-      advance({ proof: result.proof });
+
+      // Call server action to build the signed memo
+      let actionResult: { ok: true; uri: string } | { ok: false; error: string };
+      if (action === "UPDATE") {
+        actionResult = await updateAction(name, address ?? "", network, result.proof);
+      } else if (action === "LIST") {
+        actionResult = await listAction(name, Math.round((parsePrice(price ?? "") ?? 0) * 1e8), payTaddrInput ?? "", network, result.proof);
+      } else if (action === "DELIST") {
+        actionResult = await delistAction(name, network, result.proof);
+      } else if (action === "RELEASE") {
+        actionResult = await releaseAction(name, network, result.proof);
+      } else {
+        actionResult = { ok: false, error: "Unknown action." };
+      }
+
+      if (!actionResult.ok) { setOtpError(actionResult.error); setOtpLoading(false); return; }
+      advance({ uri: actionResult.uri });
     } catch {
       setOtpError("Something went wrong. Try again.");
     } finally {
@@ -216,12 +291,17 @@ export default function Zip321Modal({
     }
   }
 
-  // sign phase
+  // Sign phase — sovereign auth path (Ed25519). User signs a deterministic
+  // payload with their private key, pastes the base64 pubkey+signature.
+  // Verification runs client-side via WebCrypto, then the server action
+  // is called with the sig+pubkey to build the final ZIP-321 URI.
   const [signPubkey, setSignPubkey] = useState("");
   const [signSignature, setSignSignature] = useState("");
   const [signError, setSignError] = useState("");
   const [signLoading, setSignLoading] = useState(false);
 
+  // Build the canonical payload the user must sign. Memoized because it's
+  // derived from form state and the nonce from the resolution result.
   const sovereignPayload = useMemo(() => {
     const reg = "registration" in resolveResult ? resolveResult.registration : null;
     return generatePayload(action, name, network, {
@@ -254,7 +334,24 @@ export default function Zip321Modal({
       );
       if (!verified) { setSignError("Signature does not match the payload."); return; }
 
-      advance({ proof: sig });
+      // Call server action with sovereign sig+pubkey to get URI
+      let actionResult: { ok: true; uri: string } | { ok: false; error: string };
+      if (action === "CLAIM") {
+        actionResult = await claimAction(name, address ?? "", network, undefined, sig, pub);
+      } else if (action === "UPDATE") {
+        actionResult = await updateAction(name, address ?? "", network, undefined, sig, pub);
+      } else if (action === "LIST") {
+        actionResult = await listAction(name, parsePrice(price ?? "") ?? 0, payTaddrInput ?? "", network, undefined, sig, pub);
+      } else if (action === "DELIST") {
+        actionResult = await delistAction(name, network, undefined, sig, pub);
+      } else if (action === "RELEASE") {
+        actionResult = await releaseAction(name, network, undefined, sig, pub);
+      } else {
+        actionResult = { ok: false, error: "Unknown action." };
+      }
+
+      if (!actionResult.ok) { setSignError(actionResult.error); return; }
+      advance({ uri: actionResult.uri });
     } catch {
       setSignError("Signature verification failed.");
     } finally {
@@ -262,7 +359,10 @@ export default function Zip321Modal({
     }
   }
 
-  // scanning phase
+  // Scanning phase — polls the mempool/resolver every 2s for the transaction.
+  // State machine: not_detected → in_mempool → confirming → mined|rejected.
+  // Uses a ref to avoid stale closures in the interval; fires onSuccess exactly
+  // once when the tx reaches "mined" status.
   const [scanState, setScanState] = useState<ScanState>("not_detected");
   const scanStateRef = useRef<ScanState>("not_detected");
   const firedSuccessRef = useRef(false);
