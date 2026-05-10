@@ -190,6 +190,17 @@ function shouldShowTocItem(itemNumber: string, activeNumber: string): boolean {
   return activeNumber === rootNumber || activeNumber.startsWith(`${rootNumber}.`);
 }
 
+// Main slide-deck viewer for the influencer/cabal page. Manages:
+// - Arrow-key and touch-swipe slide navigation
+// - Collapsible table of contents with auto-scroll tracking (shouldShowTocItem
+//   shows only sibling slides under the current top-level section)
+// - Markdown slide content rendered via react-markdown with a custom accordion
+//   code-block parser (AccordionCodeBlock / parseAccordionItems)
+// - Two collapsible action panels — Comment (per-slide feedback) and Join Us
+//   (interest form) — both submitted via server actions (submitCabalChat,
+//   submitCabalInterest) with name persisted to localStorage
+// - InfluencerHeaderTitle portals the deck title into the site header element
+// - Progress bar, locked-slide gate, and overview-slide navigation
 export default function InfluencerDeck({
   slides,
   deckTitle,

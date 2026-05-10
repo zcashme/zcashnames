@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { readLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
 
+// Dismissable launch-announcement banner rendered on cabal pages. Visibility
+// is gated on pathname prefix /cabal and a localStorage flag. Dismissing
+// persists the flag and hides the bar permanently for that browser.
+// Links to an external X/Twitter launch video post.
 export default function CabalLaunchBar() {
   const pathname = usePathname();
   const [visible, setVisible] = useState(true);
