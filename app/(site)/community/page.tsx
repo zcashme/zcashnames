@@ -15,6 +15,13 @@ export const metadata: Metadata = {
     "Join the ZcashNames community, beta test releases, become an ambassador, and find partner resources.",
 };
 
+/**
+ * Community hub page — filterable gallery of community resources.
+ * Reads an optional `?section=` query parameter to narrow cards by category
+ * (social, build, governance, blogs). Card data is sourced from the static
+ * COMMUNITY_SECTIONS definition. Each card renders an external link or a
+ * "Share on X" button, with support for "coming soon" / "announcing soon" states.
+ */
 export default async function CommunityPage({
   searchParams,
 }: {

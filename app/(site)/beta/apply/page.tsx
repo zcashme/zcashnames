@@ -29,6 +29,12 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Beta application page — renders a contextual header explaining the current
+ * cohort's focus, then the BetaV2ApplicationForm. This is a client-accessible
+ * route; the form submits to server actions that write to the beta_testers table
+ * and trigger email notifications.
+ */
 export default function BetaApplyPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-10">

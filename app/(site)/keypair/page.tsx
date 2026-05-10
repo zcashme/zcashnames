@@ -1,3 +1,10 @@
+/**
+ * Keypair tool — a purely client-side utility for ZNS sovereign key management.
+ * Three-step wizard: (1) generate or import an Ed25519 keypair, (2) sign a
+ * payload from the signing modal, (3) copy the public key + signature back.
+ * Uses @noble/ed25519 for key derivation and signing, and zcashname-sdk for
+ * payload validation. Suspense-wrapped for useSearchParams.
+ */
 "use client";
 
 import { getPublicKeyAsync, signAsync } from "@noble/ed25519";

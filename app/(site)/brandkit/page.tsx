@@ -1,3 +1,10 @@
+/**
+ * Brand Kit — a filterable asset gallery for ZcashNames brand materials.
+ * Server-rendered page that reads optional URL search params (?type, ?variation,
+ * ?mode, ?background) to filter asset groups (logos, banners, lockups). All
+ * filter state lives in the URL so each filtered view is shareable and
+ * statically cacheable.
+ */
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
 import SiteRouteTitle from "@/components/SiteRouteTitle";

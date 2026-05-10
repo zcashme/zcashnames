@@ -1,3 +1,8 @@
+// Client component: renders parsed roadmap periods as an interactive timeline.
+// Determines which period is "current" based on UTC dates, auto-scrolls to it on
+// mount, and supports expanding/collapsing individual cards to reveal task lists.
+// Each period shows its status badge (complete / pending / apply-now), date range,
+// and task count. A "Current phase" button scrolls to and expands the active period.
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";

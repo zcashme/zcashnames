@@ -28,6 +28,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
 };
 
+/**
+ * Beta info page — a readable brief about the current beta round with a sticky
+ * table-of-contents sidebar for section navigation. No data fetching; all content
+ * is static and defined in the BetaV2Brief component and BETA_V2_SECTIONS constant.
+ */
 export default function BetaPage() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-10">

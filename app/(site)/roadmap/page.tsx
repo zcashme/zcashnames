@@ -1,3 +1,6 @@
+// Server component: reads roadmap.md from content/, parses it into period objects
+// via parseRoadmapMarkdown(), and passes them to the client-side RoadmapTimeline
+// which handles expand/collapse, current-period highlighting, and scroll navigation.
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Metadata } from "next";
