@@ -1,7 +1,7 @@
 "use server";
 
 import crypto from "node:crypto";
-import { ZNS } from "zcashname-sdk";
+import { ZNS, BUY_COMMISSION, LIST_COMMISSION } from "zcashname-sdk";
 import type { Network } from "@/lib/types";
 import { getZns, getVerifiedZns, fetchClaimCost, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
 import { MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
@@ -83,7 +83,7 @@ export async function claimAction(
   unlockProof?: string,
   sovereignSig?: string,
   sovereignPub?: string,
-): Promise<{ ok: true; uri: string; memo: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; uri: string; memo: string; paymentAddress: string; amountZec: string } | { ok: false; error: string }> {
   const n = normalizeUsername(name);
   if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
   const addrResult = validateAddress(address.trim());
@@ -102,8 +102,9 @@ export async function claimAction(
     if (await zns.resolveName(n)) return { ok: false, error: `Name "${n}" is already registered.` };
     const cost = await fetchClaimCost(n, network);
     if (cost == null) return { ok: false, error: "Pricing unavailable - indexer may be down." };
-    const { memo, uri } = completeAction(zns.prepareClaim(n, address, cost), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo };
+    const prepared = zns.prepareClaim(n, address, cost);
+    const { memo, uri } = completeAction(prepared, sovereignSig, sovereignPub);
+    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: (prepared.cost / 1e8).toFixed(8) };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
@@ -118,7 +119,7 @@ export async function buyAction(
   listingPriceZats?: number,
   sovereignSig?: string,
   sovereignPub?: string,
-): Promise<{ ok: true; uri: string; memo: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; uri: string; memo: string; paymentAddress: string; amountZec: string } | { ok: false; error: string }> {
   const n = normalizeUsername(name);
   if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
   const addrResult = validateAddress(address.trim());
@@ -130,7 +131,7 @@ export async function buyAction(
     if (!reg?.listing) return { ok: false, error: `Name "${n}" is not listed for sale.` };
     const price = listingPriceZats ?? reg.listing.price;
     const { memo, uri } = completeAction(zns.prepareBuy(n, address, price), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo };
+    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: (BUY_COMMISSION / 1e8).toFixed(8) };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
@@ -145,7 +146,7 @@ export async function updateAction(
   otpProof?: string,
   sovereignSig?: string,
   sovereignPub?: string,
-): Promise<{ ok: true; uri: string; memo: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; uri: string; memo: string; paymentAddress: string; amountZec: string } | { ok: false; error: string }> {
   const n = normalizeUsername(name);
   if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
   const addrResult = validateAddress(address.trim());
@@ -163,7 +164,7 @@ export async function updateAction(
 
   try {
     const { memo, uri } = completeAction(zns.prepareUpdate(n, address, reg.nonce + 1), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo };
+    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: "" };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
@@ -180,7 +181,7 @@ export async function listAction(
   otpProof?: string,
   sovereignSig?: string,
   sovereignPub?: string,
-): Promise<{ ok: true; uri: string; memo: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; uri: string; memo: string; paymentAddress: string; amountZec: string } | { ok: false; error: string }> {
   const n = normalizeUsername(name);
   if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
 
@@ -205,7 +206,7 @@ export async function listAction(
 
   try {
     const { memo, uri } = completeAction(zns.prepareList(n, priceZats, payTaddr, reg.nonce + 1), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo };
+    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: (LIST_COMMISSION / 1e8).toFixed(8) };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
@@ -219,7 +220,7 @@ export async function delistAction(
   otpProof?: string,
   sovereignSig?: string,
   sovereignPub?: string,
-): Promise<{ ok: true; uri: string; memo: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; uri: string; memo: string; paymentAddress: string; amountZec: string } | { ok: false; error: string }> {
   const n = normalizeUsername(name);
   if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
 
@@ -235,7 +236,7 @@ export async function delistAction(
 
   try {
     const { memo, uri } = completeAction(zns.prepareDelist(n, reg.nonce + 1), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo };
+    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: "" };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
@@ -249,7 +250,7 @@ export async function releaseAction(
   otpProof?: string,
   sovereignSig?: string,
   sovereignPub?: string,
-): Promise<{ ok: true; uri: string; memo: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; uri: string; memo: string; paymentAddress: string; amountZec: string } | { ok: false; error: string }> {
   const n = normalizeUsername(name);
   if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
 
@@ -265,7 +266,7 @@ export async function releaseAction(
 
   try {
     const { memo, uri } = completeAction(zns.prepareRelease(n, reg.nonce + 1), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo };
+    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: "" };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }

@@ -40,9 +40,6 @@ function nextTooltipStep(step: TooltipStep | null): TooltipStep | null {
 
 export default function FeedbackModal({ initialTesterName }: Props) {
   const { zns } = useZns();
-  if (zns.mode === "waitlist") return null;
-
-  const stage = zns.mode;
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isWide, setIsWide] = useState(false);
@@ -50,30 +47,34 @@ export default function FeedbackModal({ initialTesterName }: Props) {
   const [hasShownTooltipSequence, setHasShownTooltipSequence] = useState(false);
 
   useEffect(() => {
+    if (zns.mode === "waitlist") return;
     setMounted(true);
     const mq = window.matchMedia(`(min-width: ${PANEL_BREAKPOINT_PX}px)`);
     setIsWide(mq.matches);
     const handler = (e: MediaQueryListEvent) => setIsWide(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, []);
+  }, [zns.mode]);
 
-  // Tooltip sequence fires once when the panel first opens.
   useEffect(() => {
+    if (zns.mode === "waitlist") return;
     if (!open || hasShownTooltipSequence) return;
     setHasShownTooltipSequence(true);
     setTooltipStep("popout");
-  }, [open, hasShownTooltipSequence]);
+  }, [open, hasShownTooltipSequence, zns.mode]);
 
-  // ESC closes the panel.
   useEffect(() => {
-    if (!open) return;
+    if (zns.mode === "waitlist" || !open) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open]);
+  }, [open, zns.mode]);
+
+  if (zns.mode === "waitlist") return null;
+
+  const stage = zns.mode;
 
   const primaryBtnStyle: React.CSSProperties = {
     background: "var(--home-result-primary-bg)",

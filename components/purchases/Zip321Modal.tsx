@@ -132,6 +132,8 @@ export default function Zip321Modal({
   const [proof, setProof] = useState<string>();
   const [uri, setUri] = useState<string>();
   const [memo, setMemo] = useState<string>();
+  const [paymentAddress, setPaymentAddress] = useState<string>();
+  const [amountZec, setAmountZec] = useState<string>();
 
   // unlock phase
   const [unlockCode, setUnlockCode] = useState("");
@@ -151,7 +153,7 @@ export default function Zip321Modal({
       // Call server action to build the signed memo
       const actionResult = await claimAction(name, address ?? "", network, result.proof);
       if (!actionResult.ok) { setUnlockError(actionResult.error); return; }
-      advance({ uri: actionResult.uri, memo: actionResult.memo });
+      advance({ uri: actionResult.uri, memo: actionResult.memo, paymentAddress: actionResult.paymentAddress, amountZec: actionResult.amountZec });
     } catch {
       setUnlockError("Something went wrong. Try again.");
     } finally {
@@ -194,12 +196,12 @@ export default function Zip321Modal({
       // Non-reserved CLAIM path — no unlockProof
       claimAction(name, addressInput.trim(), network, undefined).then((result) => {
         if (!result.ok) { setInputError(result.error); return; }
-        advance({ address: addressInput.trim(), uri: result.uri, memo: result.memo });
+        advance({ address: addressInput.trim(), uri: result.uri, memo: result.memo, paymentAddress: result.paymentAddress, amountZec: result.amountZec });
       });
     } else if (action === "BUY") {
       buyAction(name, addressInput.trim(), network, undefined).then((result) => {
         if (!result.ok) { setInputError(result.error); return; }
-        advance({ address: addressInput.trim(), uri: result.uri, memo: result.memo });
+        advance({ address: addressInput.trim(), uri: result.uri, memo: result.memo, paymentAddress: result.paymentAddress, amountZec: result.amountZec });
       });
     } else {
       advance({
@@ -216,6 +218,8 @@ export default function Zip321Modal({
       if (result.proof !== undefined) setProof(result.proof);
       if (result.uri !== undefined) setUri(result.uri);
       if (result.memo !== undefined) setMemo(result.memo);
+      if (result.paymentAddress !== undefined) setPaymentAddress(result.paymentAddress);
+      if (result.amountZec !== undefined) setAmountZec(result.amountZec);
     }
     setStep((s) => Math.min(s + 1, phases.length - 1));
   }
@@ -280,7 +284,7 @@ export default function Zip321Modal({
       }
 
       if (!actionResult.ok) { setOtpError(actionResult.error); setOtpLoading(false); return; }
-      advance({ uri: actionResult.uri, memo: actionResult.memo });
+      advance({ uri: actionResult.uri, memo: actionResult.memo, paymentAddress: actionResult.paymentAddress, amountZec: actionResult.amountZec });
     } catch {
       setOtpError("Something went wrong. Try again.");
     } finally {
@@ -348,7 +352,7 @@ export default function Zip321Modal({
       }
 
       if (!actionResult.ok) { setSignError(actionResult.error); return; }
-      advance({ uri: actionResult.uri, memo: actionResult.memo });
+      advance({ uri: actionResult.uri, memo: actionResult.memo, paymentAddress: actionResult.paymentAddress, amountZec: actionResult.amountZec });
     } catch {
       setSignError("Signature verification failed.");
     } finally {
@@ -601,10 +605,10 @@ export default function Zip321Modal({
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               Send exact amount and memo to complete the transaction.
             </p>
-            {uri && address && (
+            {uri && paymentAddress && (
               <QrBlock
-                address={address}
-                amount={price ?? "0"}
+                address={paymentAddress}
+                amount={amountZec ?? "0"}
                 memo={memo ?? ""}
                 size={200}
               />
