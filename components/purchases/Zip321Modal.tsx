@@ -188,7 +188,8 @@ export default function Zip321Modal({
       if (!payTaddrInput.trim()) { setInputError("Payout address is required."); return; }
     }
 
-    // Call server action for actions that need it (non-reserved CLAIM, BUY, LIST after input)
+    // Call server action for actions that need it (non-reserved CLAIM, BUY after input)
+    // LIST/UPDATE/DELIST/RELEASE go through otp phase first — handleVerifyOtp calls the action.
     if (action === "CLAIM") {
       // Non-reserved CLAIM path — no unlockProof
       claimAction(name, addressInput.trim(), network, undefined).then((result) => {
@@ -199,13 +200,6 @@ export default function Zip321Modal({
       buyAction(name, addressInput.trim(), network, undefined).then((result) => {
         if (!result.ok) { setInputError(result.error); return; }
         advance({ address: addressInput.trim(), uri: result.uri, memo: result.memo });
-      });
-    } else if (action === "LIST") {
-      const zec = parsePrice(priceInput) ?? 0;
-      const priceZats = Math.round(zec * 1e8);
-      listAction(name, priceZats, payTaddrInput.trim(), network, undefined).then((result) => {
-        if (!result.ok) { setInputError(result.error); return; }
-        advance({ address: addressInput.trim(), price: priceInput.trim(), uri: result.uri, memo: result.memo });
       });
     } else {
       advance({
