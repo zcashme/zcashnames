@@ -1,3 +1,10 @@
+/**
+ * Scroll-spy table of contents sidebar. Uses IntersectionObserver to track which
+ * section is currently in view, then highlights the corresponding nav link.
+ * Receives section metadata (typically BETA_V2_SECTIONS from BetaV2Brief) via props.
+ * The rootMargin (-80px/-60%) ensures the active state switches before the section
+ * reaches the very top of the viewport.
+ */
 "use client";
 
 import { useEffect, useState } from "react";
