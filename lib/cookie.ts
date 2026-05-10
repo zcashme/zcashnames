@@ -3,6 +3,15 @@ import "server-only";
 import { cookies } from "next/headers";
 import { signHmac, safeEqual } from "@/lib/hmac";
 
+//
+// Signed cookie helpers — server-only utilities for setting, getting, and
+// verifying HMAC-signed cookies. Used by the beta gate (zn_beta), cabal
+// access (zn_cabal), and leader commission tracking (zn_leaders_commission).
+//
+// Every signed cookie follows the format:  <payload>.<hmac-signature>
+// Tampering is detected via timing-safe comparison of the HMAC.
+//
+
 export function cookieOptions(maxAgeSeconds: number) {
   return {
     httpOnly: true as const,
@@ -13,6 +22,7 @@ export function cookieOptions(maxAgeSeconds: number) {
   };
 }
 
+// Build a signed cookie value: payload + "." + HMAC(payload)
 export function buildSignedCookie(
   payload: string,
   secret: string,
@@ -20,6 +30,8 @@ export function buildSignedCookie(
   return `${payload}.${signHmac(secret, payload)}`;
 }
 
+// Parse and verify a signed cookie. Returns null if the signature doesn't
+// match or the payload can't be decoded by the provided parse function.
 export function parseSignedCookie<T>(
   value: string,
   secret: string,

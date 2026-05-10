@@ -1,5 +1,10 @@
 import { ImageResponse } from "next/og";
 
+// OgRenderOptions controls the OG image composition:
+// - backgroundImage: a URL to the full-bleed background
+// - overlay: a CSS gradient/color string for the tint layer
+// - pillText: optional badge text rendered in a green pill at the top
+
 type OgRenderOptions = {
   backgroundImage: string;
   overlay: string;
@@ -11,6 +16,9 @@ export const OG_IMAGE_SIZE = {
   height: 630,
 } as const;
 
+// Renders a 1200×630 social preview image via next/og ImageResponse.
+// Composes a background image, gradient overlay, and optional status pill.
+// Consumed by route handlers (e.g. /og/*) for dynamic OG:image meta tags.
 export function renderOgImage({ backgroundImage, overlay, pillText }: OgRenderOptions): ImageResponse {
   return new ImageResponse(
     (

@@ -1,5 +1,8 @@
 import { COMMUNITIES } from "@/lib/zns/brand";
 
+// CommunityCard represents a single community channel, event, or feature entry.
+// Rendered as cards on the /community page, grouped by CommunitySection.
+
 export type CommunityCard = {
   id: string;
   name: string;
@@ -23,6 +26,9 @@ export type CommunitySection = {
 
 export const ambassadorForm = "https://form.typeform.com/to/oBd1YeoI";
 
+// Static section definitions for the /community page.
+// Cards are organized by category slug: get-involved, social, partners, features, events, blogs.
+// Community channel cards resolve their href/data from the shared COMMUNITIES brand config.
 export const COMMUNITY_SECTIONS: CommunitySection[] = [
   {
     slug: "get-involved",
@@ -283,6 +289,8 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
   },
 ];
 
+// Builds a section-based navigation href for the /community page.
+// The "all" slug maps to the bare /community path (no query param).
 export function communitySectionHref(slug: string): string {
   return slug === "all" ? "/community" : `/community?section=${slug}`;
 }
@@ -291,10 +299,13 @@ export function getCommunitySection(slug: string): CommunitySection | undefined 
   return COMMUNITY_SECTIONS.find((section) => section.slug === slug);
 }
 
+// Determines whether an href points off-site (http/https) for rendering external link indicators.
 export function isExternalHref(href: string): boolean {
   return href.startsWith("http://") || href.startsWith("https://");
 }
 
+// Builds a CommunityCard from a community label, pulling href and metadata from the brand COMMUNITIES config.
+// Used for social channel cards (Discord, Telegram, X, etc.) to avoid duplicating link data.
 function communityCard(
   id: string,
   name: string,

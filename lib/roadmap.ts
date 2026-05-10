@@ -1,5 +1,8 @@
 import { slugify } from "@/lib/url";
 
+// Period represents one phase of the roadmap with status, date range, and task list.
+// Parsed from `# Title \`status\`` markdown headings.
+
 export type RoadmapPeriod = {
   id: string;
   title: string;
@@ -10,6 +13,7 @@ export type RoadmapPeriod = {
   tasks: string[];
 };
 
+// Visual metadata mapped from status pill text, consumed by the roadmap UI component.
 export type RoadmapStatusKind = "complete" | "apply-now" | "tba";
 
 export type RoadmapStatusMeta = {
@@ -24,6 +28,7 @@ const STATUS_PATTERNS: [RegExp, RoadmapStatusMeta][] = [
   [/^tba$/i, { kind: "tba", icon: "dot", animated: false }],
 ];
 
+// Maps a status pill string (e.g. "Complete", "Apply Now", "TBA") to its visual presentation config.
 export function getRoadmapStatusMeta(status: string): RoadmapStatusMeta {
   for (const [pattern, meta] of STATUS_PATTERNS) {
     if (pattern.test(status.trim())) return meta;
@@ -43,6 +48,7 @@ function createUniqueId(base: string, seen: Map<string, number>): string {
   return count === 0 ? base : `${base}-${count + 1}`;
 }
 
+// Validates and returns a YYYY-MM-DD date string, throwing on invalid format or impossible calendar dates.
 function parseDateField(value: string, field: "Start" | "End", title: string): string {
   const trimmed = value.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
@@ -53,6 +59,8 @@ function parseDateField(value: string, field: "Start" | "End", title: string): s
   return trimmed;
 }
 
+// Assembles and validates a RoadmapPeriod from parsed fragments.
+// Enforces that summary, start/end dates, and at least one task are present, and that end >= start.
 function finalizePeriod(
   sectionIds: Map<string, number>,
   title: string,
@@ -93,6 +101,10 @@ function finalizePeriod(
   };
 }
 
+// Parses roadmap markdown into an ordered list of periods.
+// Expected format: `# Title \`status\`` headings followed by a summary paragraph,
+// `Start: YYYY-MM-DD` / `End: YYYY-MM-DD` fields, and `- task` list items.
+// Throws if the document contains no periods.
 export function parseRoadmapMarkdown(markdown: string): RoadmapPeriod[] {
   const lines = normalizeLineEndings(markdown).split("\n");
   const periods: RoadmapPeriod[] = [];
@@ -178,6 +190,7 @@ export function parseRoadmapMarkdown(markdown: string): RoadmapPeriod[] {
   return periods;
 }
 
+// Parses a YYYY-MM-DD string as a UTC Date, with overflow validation (rejects Feb 30, etc.).
 export function parseIsoDateUtc(value: string): Date {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) {
@@ -201,20 +214,25 @@ export function parseIsoDateUtc(value: string): Date {
   return date;
 }
 
+// --- UTC-aware date utilities for roadmap Gantt visualization ---
+
 export function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * DAY_MS);
 }
 
+// Monday-based UTC week start.
 export function startOfUtcWeek(date: Date): Date {
   const day = date.getUTCDay();
   const offset = (day + 6) % 7;
   return addUtcDays(date, -offset);
 }
 
+// Monday-based UTC week end.
 export function endOfUtcWeek(date: Date): Date {
   return addUtcDays(startOfUtcWeek(date), 6);
 }
 
+// Number of full calendar weeks between two dates (Monday-aligned).
 export function diffUtcWeeks(start: Date, end: Date): number {
   return Math.floor((startOfUtcWeek(end).getTime() - startOfUtcWeek(start).getTime()) / (7 * DAY_MS));
 }

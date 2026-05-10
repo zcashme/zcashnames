@@ -1,3 +1,11 @@
+/**
+ * Cached ZEC/USD exchange-rate fetcher.
+ *
+ * Races three providers (Coinbase, CoinGecko, Kraken) in parallel via
+ * Promise.any and returns the first valid positive rate. Results are
+ * cached for 60 seconds. Concurrent calls while a fetch is in-flight
+ * reuse the same promise to avoid thundering-herd requests.
+ */
 "use server";
 
 const CACHE_TTL_MS = 60_000;
