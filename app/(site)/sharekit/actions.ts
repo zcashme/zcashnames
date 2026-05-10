@@ -1,3 +1,6 @@
+// Server action: validates a referral code/link by extracting the code and querying
+// zn_waitlist for a matching name. Called by ShareKitClient on form submit. Returns
+// { ok, referralCode, referralName } or { ok: false }.
 "use server";
 
 import { db } from "@/lib/db";

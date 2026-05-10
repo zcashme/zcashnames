@@ -1,3 +1,7 @@
+// Server component: reads sharekit.md from the content/ directory, parses it into
+// sections via parseShareKitMarkdown(). Optionally accepts ?ref= query param — looks up
+// the referral code in zn_waitlist to resolve the inviter's name, then hydrates
+// ShareKitClient with sections, the resolved referral code/name, and a warning if not found.
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Metadata } from "next";

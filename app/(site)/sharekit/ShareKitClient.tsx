@@ -33,6 +33,12 @@ function replaceResolvedShareUrl(post: string, previousShareUrl: string, nextSha
   return post;
 }
 
+// Client component: receives pre-parsed sections and optionally a resolved referral
+// from the server page. Provides a referral code input that calls the server action
+// lookupShareKitReferral to validate and resolve the owner's name. Builds a share URL
+// from the referral code and substitutes "[your link]" in each draft post. Drafts are
+// editable textareas with copy, reset, and share (X / Telegram / Email / System Share).
+// Section navigation pills scroll to each section.
 export default function ShareKitClient({
   sections,
   initialReferralCode,
