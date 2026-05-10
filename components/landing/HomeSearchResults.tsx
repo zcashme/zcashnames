@@ -24,6 +24,7 @@ export default function HomeSearchResults() {
   const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
 
   if (zns.mode === "waitlist") return null;
+  const mode = zns.mode;
 
   return (
     <>
@@ -38,7 +39,7 @@ export default function HomeSearchResults() {
               <HomeResultCard
                 key={item.query}
                 displayName={displayName}
-                network={zns.mode}
+                network={mode}
                 {...props}
                 isPopularName={isPopular}
                 onAction={(action) => setModalState({ action, resolveResult: item })}

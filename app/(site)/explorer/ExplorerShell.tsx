@@ -62,7 +62,6 @@ interface ExplorerShellProps {
   stats: {
     claimed: number;
     forSale: number;
-    verifiedOnZcashMe: number;
     syncedHeight: number;
     uivk: string;
   };

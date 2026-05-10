@@ -11,9 +11,9 @@ import Hero from "@/components/landing/Hero";
 import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import HomeSearchResults from "@/components/landing/HomeSearchResults";
 import FeedbackModal from "@/components/closedbeta/FeedbackModal";
-import MarketStats from "@/components/landing/MarketStats";
 import FAQ from "@/components/landing/FAQ";
 import HowItWorks from "@/components/landing/HowItWorks";
+import NetworkStats from "@/components/landing/NetworkStats";
 import Link from "next/link";
 import { useZns } from "@/components/hooks/useZns";
 
@@ -56,8 +56,6 @@ export default function HomePage() {
       <WaitlistEntryForm />
       <HomeSearchResults />
 
-      <MarketStats />
-
       <div className="relative z-[2] -mt-4 mb-2 flex justify-center">
         {/* Mode‑dependent action link: leaderboard during waitlist, explorer otherwise. */}
         {zns.mode === "waitlist" ? (
@@ -90,6 +88,7 @@ export default function HomePage() {
         )}
       </div>
 
+      <NetworkStats />
       <HowItWorks />
       <FAQ />
 

@@ -4,7 +4,8 @@
  * across one or both networks depending on ?env. Also resolves a name when ?name is set.
  * All results are passed as props to ExplorerShell for client-side interactivity.
  */
-import { getCurrentRegistrations, getEvents, getListings, getHomeStats, resolveName } from "@/lib/zns/resolve";
+import { getCurrentRegistrations, getEvents, getListings, resolveName } from "@/lib/zns/resolve";
+import { getChainStats } from "@/lib/network-stats";
 import type { Network, ZnsEvent } from "@/lib/types";
 import type { ResolveName } from "@/lib/types";
 import ExplorerShell from "./ExplorerShell";
@@ -98,8 +99,8 @@ export default async function ExplorerPage({
         getCurrentRegistrations(n).then((items) => items.map((r) => ({ ...r, network: n })))
       )
     ),
-    getHomeStats("mainnet"),
-    getHomeStats("testnet"),
+    getChainStats("mainnet"),
+    getChainStats("testnet"),
   ]);
   const stats = effectiveNetwork === "mainnet" ? mainnetStats : testnetStats;
   const uivks = {

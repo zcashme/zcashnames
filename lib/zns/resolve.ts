@@ -125,26 +125,6 @@ export async function resolveName(
   };
 }
 
-export async function getHomeStats(network: Network = "testnet"): Promise<{ claimed: number; forSale: number; verifiedOnZcashMe: number; syncedHeight: number; uivk: string }> {
-  try {
-    const s = await getZns(network).status();
-    return {
-      claimed: s.registered,
-      forSale: s.listed,
-      verifiedOnZcashMe: 0, // placeholder — ZcashMe verification not yet wired
-      syncedHeight: s.syncedHeight,
-      uivk: s.uivk,
-    };
-  } catch {
-    return {
-      claimed: 0,
-      forSale: 0,
-      verifiedOnZcashMe: 0,
-      syncedHeight: 0,
-      uivk: "",
-    };
-  }
-}
 
 export async function getListings(network: Network = "testnet") {
   try {

@@ -266,33 +266,6 @@ export async function getWaitlistCountForName(name: string): Promise<number> {
   }
 }
 
-export async function getWaitlistStats(): Promise<{
-  waitlist: number;
-  referred: number;
-  rewardsPot: number;
-}> {
-  try {
-    const { count: waitlistCount } = await db
-      .from("zn_waitlist")
-      .select("*", { count: "exact", head: true });
-
-    const { count: referredCount } = await db
-      .from("zn_waitlist")
-      .select("*", { count: "exact", head: true })
-      .not("referred_by", "is", null);
-
-    const waitlist = waitlistCount ?? 0;
-    const referred = referredCount ?? 0;
-
-    return {
-      waitlist,
-      referred,
-      rewardsPot: Math.round(referred * 0.05 * 1000) / 1000,
-    };
-  } catch {
-    return { waitlist: 0, referred: 0, rewardsPot: 0 };
-  }
-}
 
 export interface ConfirmWaitlistResult {
   status: "success" | "already" | "invalid";

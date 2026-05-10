@@ -1,12 +1,8 @@
 "use client";
 
-import { useZns, type ZnsMode } from "@/components/hooks/useZns";
+import { useZns } from "@/components/hooks/useZns";
 import { usePathname } from "next/navigation";
 
-const MODES: ZnsMode["mode"][] = ["mainnet", "testnet", "waitlist"];
-
-// Only renders on the home page (pathname === "/"). Cycles between waitlist, testnet, and mainnet
-// network modes via the useZns hook, which hydrates mode state from localStorage on mount.
 export default function NetworkToggle() {
   const pathname = usePathname();
   const { zns, setMode } = useZns();
@@ -15,7 +11,7 @@ export default function NetworkToggle() {
 
   return (
     <div className="flex items-center rounded-full h-8 text-sm font-bold">
-      {MODES.map((mode) => (
+      {(["mainnet", "testnet", "waitlist"] as const).map((mode) => (
         <button
           key={mode}
           type="button"
