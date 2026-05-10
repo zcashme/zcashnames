@@ -1,3 +1,8 @@
+// Cabal invite gate — password-gated access via Supabase RPC (verify_cabal_invite).
+// On success, sets a signed HMAC cookie (zn_cabal, 30-day TTL) for persistent auth.
+// Reads current invite from cookie on every request (readCurrentCabalInvite).
+// Tracks last_used_at per invite for auditing.
+// Pattern mirrors beta/gate.ts: password verify → sign cookie → parse cookie → DB re-validate.
 import "server-only";
 
 import { signHmac, resolveSecret } from "@/lib/hmac";

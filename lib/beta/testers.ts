@@ -1,3 +1,5 @@
+// Beta tester DB layer — consumed exclusively by gate.ts (readCurrentTester).
+// Queries Supabase beta_testers table, returns null if revoked or missing.
 import "server-only";
 
 import { db } from "@/lib/db";

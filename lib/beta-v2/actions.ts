@@ -1,3 +1,7 @@
+// Beta v2 application submission — standalone flow, no cookie auth needed.
+// Validates form fields, generates unique tester_id + invite code (hashed for storage),
+// inserts into beta_testers_v2, emails admin via Resend (sendBetaV2ApplicationNotice).
+// Data flows: FormData → validation → DB insert → email notification
 "use server";
 
 import { createHash, randomBytes } from "crypto";

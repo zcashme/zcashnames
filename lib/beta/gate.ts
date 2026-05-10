@@ -1,3 +1,8 @@
+// Beta gate: two-cookie pattern for beta access control.
+//   zn_beta       → authenticated tester identity (HMAC-signed, 30-day TTL)
+//   zn_beta_stage → user's chosen network stage: testnet | mainnet (30-day TTL)
+// Cookie → parseSignedCookie → testers.ts (findTesterById) → BetaTester or null.
+// Called by actions.ts server actions and middleware for guarded route checks.
 import "server-only";
 
 import { signHmac, safeEqual, resolveSecret } from "@/lib/hmac";

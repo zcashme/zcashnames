@@ -1,3 +1,16 @@
+// Waitlist server actions — the primary entry point for the public waitlist page.
+//
+// submitWaitlist: upsert-like flow. If email exists unverified → update row & re-send
+//   confirmation. If new → insert + generate unique 8-char referral code.
+//   Sends confirmation email with a signed token (confirm-token.ts → email/waitlist.ts).
+//
+// submitSurvey: updates survey fields by referral_code, optionally triggers a follow-up
+//   email if may_contact or want_early_trial is set and email is verified.
+//
+// confirmWaitlistEmail: validates the email confirmation token, marks email_verified=true,
+//   sends welcome email with the referral code.
+//
+// getWaitlistStats: aggregates total signups, referred count, and estimated rewards pot.
 "use server";
 
 import { db } from "@/lib/db";

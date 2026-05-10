@@ -1,3 +1,8 @@
+// Beta server actions — called from client components (Feedback modal, checklist UI).
+// Session: signOut / switchNetwork / getCurrentTesterName all delegate to gate.ts.
+// Feedback: validates payload, uploads screenshots to Supabase Storage (beta-feedback bucket),
+//   inserts row into beta_feedback. On insert failure, best-effort cleans uploaded screenshots.
+// Checklist: upserts to beta_checklist_progress; anonymous testers → no-op (localStorage only on client).
 "use server";
 
 import { cookies, headers } from "next/headers";

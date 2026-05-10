@@ -1,3 +1,7 @@
+// Email confirmation token for waitlist signups.
+// Token format: waitlistId.expiresAt.signature  (signature = HMAC(waitlistId:email:expiresAt))
+// Consumed by waitlist.ts (build → email → parse → validate → confirmWaitlistEmail).
+// Depends on lib/hmac for signHmac/safeEqual.
 import "server-only";
 
 import { safeEqual, signHmac, resolveSecret } from "@/lib/hmac";
