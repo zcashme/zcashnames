@@ -34,6 +34,9 @@ const icons: Record<Theme, React.ReactNode> = {
   ),
 };
 
+// Three-theme switcher (dark / light / monochrome) powered by next-themes.
+// A sliding highlight pill follows the active theme. Before hydration (mounted=false), a hidden
+// placeholder renders to prevent layout shift; after mount, the resolved theme takes over.
 export default function ThemeToggle() {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);

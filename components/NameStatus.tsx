@@ -3,6 +3,8 @@
 import type React from "react";
 import type { Action, NameAvailabilityState } from "@/lib/types";
 
+// Internal badge shell: maps a semantic variant (positive/negative/neutral) to
+// CSS token classes consumed by the theme system.
 function StatusBadge({
   variant,
   label,
@@ -29,6 +31,9 @@ function StatusBadge({
   );
 }
 
+// Maps NameAvailabilityState → visual badge with inline SVG icon.
+// Rendered on name lookup results and the explorer table to show
+// availability at a glance. Each variant uses the shared StatusBadge shell.
 export function NameStatusBadge({ status }: { status: NameAvailabilityState }) {
   if (status === "available") {
     return (
@@ -138,10 +143,16 @@ export function NameStatusBadge({ status }: { status: NameAvailabilityState }) {
   );
 }
 
+// Pure predicate: does this status have an associated price/listing?
+// Used to conditionally show price info in search results and explorer rows.
 export function statusSupportsPrice(status: NameAvailabilityState): boolean {
   return status === "available" || status === "forsale" || status === "reserved";
 }
 
+// Renders the correct set of action buttons for a given name status.
+// Each status maps to a specific set of Actions that bubble up via onAction,
+// which the parent (typically a search result card) dispatches to Zip321Modal.
+// hasPendingBuy disables the DELIST button to prevent double-spend races.
 export function NameStatusButtons({
   status,
   onAction,

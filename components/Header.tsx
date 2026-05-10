@@ -15,6 +15,7 @@ export default function Header() {
             aria-label="ZcashNames"
             className="group type-section-subtitle inline-flex items-center gap-4 whitespace-nowrap text-fg-heading font-bold tracking-tight leading-tight [[data-theme=dark]_&]:hover:opacity-80 [[data-theme=monochrome]_&]:hover:opacity-80 transition-opacity"
           >
+            {/* Logo rotates 90° on parent hover via group-hover:rotate-90 */}
             <ZcashNamesLogoMark
               alt="ZcashNames"
               size={40}
@@ -25,6 +26,7 @@ export default function Header() {
               ZcashNames
             </span>
           </Link>
+          {/* Portal target: SiteRouteTitle renders the current page title into this span */}
           <span id="site-route-title" className="min-w-0" />
         </div>
 

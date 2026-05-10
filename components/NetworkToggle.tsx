@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 
 const MODES: ZnsMode["mode"][] = ["mainnet", "testnet", "waitlist"];
 
+// Only renders on the home page (pathname === "/"). Cycles between waitlist, testnet, and mainnet
+// network modes via the useZns hook, which hydrates mode state from localStorage on mount.
 export default function NetworkToggle() {
   const pathname = usePathname();
   const { zns, setMode } = useZns();

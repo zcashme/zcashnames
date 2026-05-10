@@ -1,5 +1,9 @@
 import type React from "react";
 
+// Generic copy-to-clipboard button with clipboard→checkmark animation.
+// Parent owns clipboard logic and passes `copied` state; this component is
+// purely presentational. Used wherever a copyable value is shown
+// (addresses, URIs, memo fields, etc.).
 export default function CopyIconButton({
   copied,
   disabled = false,
