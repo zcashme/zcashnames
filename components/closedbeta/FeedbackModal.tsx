@@ -1,14 +1,20 @@
+/**
+ * Floating feedback launcher button + slide-out side panel. Rendered via createPortal
+ * at document.body level. Only mounts in non-waitlist mode (testnet/mainnet).
+ * Wraps FeedbackPanelBody in "panel" mode with an onboarding tooltip sequence.
+ * The onboarding fires once when the panel first opens and steps through popout →
+ * report → checkbox → readme → contact → collapse.
+ */
 "use client";
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import FeedbackPanelBody from "./FeedbackPanelBody";
+import { useZns } from "@/components/hooks/useZns";
 
 interface Props {
   /** Optional pre-loaded tester name. Otherwise the panel fetches on first open. */
   initialTesterName?: string | null;
-  /** Active stage from StatusToggle — drives both checklist scoping and the report's stage column. */
-  defaultNetwork: "testnet" | "mainnet";
 }
 
 const PANEL_WIDTH_PX = 440;
@@ -32,7 +38,11 @@ function nextTooltipStep(step: TooltipStep | null): TooltipStep | null {
   }
 }
 
-export default function FeedbackModal({ initialTesterName, defaultNetwork }: Props) {
+export default function FeedbackModal({ initialTesterName }: Props) {
+  const { zns } = useZns();
+  if (zns.mode === "waitlist") return null;
+
+  const stage = zns.mode;
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isWide, setIsWide] = useState(false);
@@ -113,7 +123,7 @@ export default function FeedbackModal({ initialTesterName, defaultNetwork }: Pro
           >
             <FeedbackPanelBody
               mode="panel"
-              stage={defaultNetwork}
+              stage={stage}
               initialTesterName={initialTesterName}
               onClose={() => setOpen(false)}
               tooltipStep={tooltipStep}

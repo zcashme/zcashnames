@@ -1,3 +1,17 @@
+/**
+ * Shared body for both the docked side panel (FeedbackModal, mode="panel") and the
+ * standalone popout window (/closedbeta/feedback, mode="popout"). Contains the
+ * Checklist and Report tabs, a top progress bar, and bottom controls (Read Me,
+ * Contact, sign out).
+ *
+ * State lift: checklist expansion state (sub-lists, nested sections) lives here so
+ * it survives tab switches — the checklist body unmounts when the user switches to
+ * Report, but expansion preference is preserved.
+ *
+ * Tester data: in popout mode, initialTesterName and initialFocus are server-rendered
+ * props. In panel mode they are fetched lazily via getCurrentTesterName/getCurrentTesterFocus
+ * when the panel first opens.
+ */
 "use client";
 
 import { useEffect, useRef, useState } from "react";

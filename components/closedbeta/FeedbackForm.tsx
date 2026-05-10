@@ -1,3 +1,12 @@
+/**
+ * Beta feedback submission form. Collects severity, experience rating, wallet info,
+ * steps/expected/actual behavior, txid, notes, and up to 5 screenshots. Assembles
+ * everything into FormData and calls submitBetaFeedback server action.
+ *
+ * Wallet is persisted to localStorage so it carries across reports and sessions.
+ * On successful submission the form resets (except wallet) and emits onSuccess for
+ * parent callbacks (e.g. clearing the linked checklist item).
+ */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -185,6 +194,11 @@ export default function FeedbackForm({
    * grep-able string so it reads cleanly in the Supabase table editor.
    * Example: "1440x900 dpr=2 form=desktop orient=landscape-primary lang=en-US"
    */
+  /**
+   * One grep-able string capturing viewport, DPR, device form factor, orientation,
+   * and locale at submission time. Written to supabase for support triage.
+   * Example: "1440x900 dpr=2 form=desktop orient=landscape-primary lang=en-US"
+   */
   function captureClientEnv(): string {
     if (typeof window === "undefined") return "";
     try {
@@ -204,6 +218,7 @@ export default function FeedbackForm({
     }
   }
 
+  /** Guards against empty submissions, assembles FormData, and calls submitBetaFeedback. */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submitting) return;
