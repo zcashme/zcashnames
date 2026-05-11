@@ -89,3 +89,11 @@ export async function setStageCookie(stage: "testnet" | "mainnet") {
   const { value } = buildStageCookieValue(stage);
   await setCookie(BETA_STAGE_COOKIE_NAME, value, STAGE_TTL_SECONDS);
 }
+
+export async function setTesterCookie(testerId: string) {
+  const expiresAt = Math.floor(Date.now() / 1000) + COOKIE_TTL_SECONDS;
+  const secret = getSecret();
+  const payload = `${testerId}.${expiresAt}`;
+  const signature = signHmac(secret, payload);
+  await setCookie(BETA_COOKIE_NAME, `${payload}.${signature}`, COOKIE_TTL_SECONDS);
+}

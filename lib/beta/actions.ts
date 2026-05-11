@@ -15,6 +15,7 @@ import {
   readCurrentStage,
   readCurrentTester,
   setStageCookie,
+  setTesterCookie,
 } from "./gate";
 import { cookieOptions } from "@/lib/cookie";
 
@@ -28,18 +29,27 @@ export async function verifyBetaPassword(
   password: string,
   network: "mainnet" | "testnet",
 ): Promise<{ ok: boolean }> {
+  // Global shared password (per-network env var).
   const expected =
     network === "mainnet"
       ? process.env.MAINNET_PASSWORD
       : process.env.TESTNET_PASSWORD;
-  if (!expected || password !== expected) return { ok: false };
+  if (expected && password === expected) {
+    // No per-tester identity; issues an anonymous session.
+    await setTesterCookie(`shared_${network}`);
+    await setStageCookie(network);
+    return { ok: true };
+  }
 
-  const store = await cookies();
-  const ttl = 60 * 60 * 24 * 30;
-  store.set(BETA_COOKIE_NAME, "1", cookieOptions(ttl));
-  await setStageCookie(network);
+  // Invite code — try redeeming it directly.
+  const { redeemBetaInviteCode } = await import("@/lib/beta-v2/actions");
+  const result = await redeemBetaInviteCode(password);
+  if (result.ok) {
+    await setStageCookie(network);
+    return { ok: true };
+  }
 
-  return { ok: true };
+  return { ok: false };
 }
 
 export async function signOutBetaTester(): Promise<{ ok: true }> {
