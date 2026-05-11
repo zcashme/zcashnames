@@ -13,7 +13,6 @@ const meta: MetaRecord = {
   'zns-developer-guide': 'Developer Guide',
   ecosystem: 'Ecosystem',
   terminology: 'Terminology',
-  faq: 'FAQ',
 }
 
 export default meta
