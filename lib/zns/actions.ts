@@ -195,13 +195,13 @@ export async function listAction(
   const [, proofAddress] = parsed.subject.split(":");
   if (proofAddress !== reg.address) return { ok: false, error: "Verification invalid." };
 
+  if (!zns.isValidTransparentAddress(payTaddr.trim())) {
+    return { ok: false, error: "Enter a valid transparent Zcash address (t1, t3, tm, or tn)." };
+  }
   const maxZats = MAX_LIST_FOR_SALE_AMOUNT * 100_000_000;
   const minZats = 100_000;
   if (priceZats < minZats || priceZats > maxZats) {
     return { ok: false, error: `Price must be between 0.001 and ${MAX_LIST_FOR_SALE_AMOUNT.toLocaleString()} ZEC.` };
-  }
-  if (!zns.isValidTransparentAddress(payTaddr.trim())) {
-    return { ok: false, error: "Enter a valid transparent Zcash address (t1, t3, tm, or tn)." };
   }
 
   try {

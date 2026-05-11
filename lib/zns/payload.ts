@@ -18,7 +18,7 @@ export function generatePayload(
   try {
     switch (action) {
       case "CLAIM":   return zns.prepareClaim(name, address, 0).payload;
-      case "BUY":     return zns.prepareBuy(name, address, 0).payload;
+      case "BUY":     return zns.prepareBuy(name, address, priceZats).payload;
       case "UPDATE":  return zns.prepareUpdate(name, address, nonce).payload;
       case "LIST":    return zns.prepareList(name, priceZats, payTaddr, nonce).payload;
       case "DELIST":  return zns.prepareDelist(name, nonce).payload;

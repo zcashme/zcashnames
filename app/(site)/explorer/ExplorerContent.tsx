@@ -259,7 +259,6 @@ export default function ExplorerContent({
                 </tr>
               ) : (
                 visibleListings.map((l) => {
-                  const pending = l.pendingBuy;
                   return (
                   <tr
                     key={`${l.network}:${l.txid}`}
@@ -277,29 +276,12 @@ export default function ExplorerContent({
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-fg-muted sm:px-6">{zatsToZec(l.price)} ZEC</td>
                     <td className="px-4 py-3 sm:px-6">
-                      {pending ? (
-                        <div className="flex flex-col gap-0.5">
-                          <span
-                            className="rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide w-fit"
-                            style={{ background: "var(--home-result-status-forsale-bg)", color: "var(--home-result-status-forsale-fg)" }}
-                          >
-                            Purchase pending
-                          </span>
-                          <span className="text-[0.65rem] text-fg-muted font-mono" title={pending.buyer}>
-                            {pending.buyer.slice(0, 12)}…
-                          </span>
-                          <span className="text-[0.62rem] text-fg-muted">
-                            Expires block {pending.expiresAt.toLocaleString()}
-                          </span>
-                        </div>
-                      ) : (
-                        <span
-                          className="rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-fg-muted"
-                          style={{ background: "var(--market-stats-segment-active-bg)" }}
-                        >
-                          Active
-                        </span>
-                      )}
+                      <span
+                        className="rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-fg-muted"
+                        style={{ background: "var(--market-stats-segment-active-bg)" }}
+                      >
+                        Active
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-fg-muted text-xs sm:px-6">{l.height.toLocaleString()}</td>
                     {environment === "all" && (
