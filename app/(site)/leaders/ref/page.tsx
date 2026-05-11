@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     url: "https://www.zcashnames.com/leaders/ref",
     images: [
       {
-        url: "https://www.zcashnames.com/og/leaders-ref.png",
+        url: "/og/leaders-ref.png",
         width: 1200,
         height: 630,
         alt: "ZcashNames referral dashboard preview",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Referral Dashboard | ZcashNames",
     description: "Your referral dashboard for rewards progress.",
-    images: ["https://www.zcashnames.com/og/leaders-ref.png"],
+    images: ["/og/leaders-ref.png"],
   },
 };
 

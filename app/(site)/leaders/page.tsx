@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     url: "https://www.zcashnames.com/leaders",
     images: [
       {
-        url: "https://www.zcashnames.com/og/leaders.png",
+        url: "/og/leaders.png",
         width: 1200,
         height: 630,
         alt: "ZcashNames leaders leaderboard preview",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Leaderboard | ZcashNames",
     description: "Global referral rankings, growth, and rewards progress.",
-    images: ["https://www.zcashnames.com/og/leaders.png"],
+    images: ["/og/leaders.png"],
   },
 };
 

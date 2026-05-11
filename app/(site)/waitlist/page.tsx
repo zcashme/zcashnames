@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     url: "https://www.zcashnames.com/waitlist",
     images: [
       {
-        url: "https://www.zcashnames.com/og/home.png",
+        url: "/og/home.png",
         width: 1200,
         height: 630,
         alt: "ZcashNames waitlist",

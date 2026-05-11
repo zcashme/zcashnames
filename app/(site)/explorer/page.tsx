@@ -33,7 +33,7 @@ export const metadata = {
     url: "https://www.zcashnames.com/explorer",
     images: [
       {
-        url: "https://www.zcashnames.com/og/explorer.png",
+        url: "/og/explorer.png",
         width: 1200,
         height: 630,
         alt: "ZcashNames explorer preview",
@@ -44,7 +44,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Name Explorer | ZcashNames",
     description: "Browse registered names, event history, and marketplace listings.",
-    images: ["https://www.zcashnames.com/og/explorer.png"],
+    images: ["/og/explorer.png"],
   },
 };
 function parseEnvironment(env: string | undefined): Environment {

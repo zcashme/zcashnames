@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     url: "https://www.zcashnames.com/leaders/terms",
     images: [
       {
-        url: "https://www.zcashnames.com/og/leaders-terms.png",
+        url: "/og/leaders-terms.png",
         width: 1200,
         height: 630,
         alt: "ZcashNames leaders terms preview",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Leaderboard Terms | ZcashNames",
     description: "Referral rewards and early access terms.",
-    images: ["https://www.zcashnames.com/og/leaders-terms.png"],
+    images: ["/og/leaders-terms.png"],
   },
 };
 

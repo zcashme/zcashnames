@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     url: "https://www.zcashnames.com/beta/apply",
     images: [
       {
-        url: "https://www.zcashnames.com/og/beta.png",
+        url: "/og/beta.png",
         width: 1200,
         height: 630,
         alt: "ZcashNames beta invitation preview",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Beta Invitation",
     description: "Apply for the next ZcashNames beta round.",
-    images: ["https://www.zcashnames.com/og/beta.png"],
+    images: ["/og/beta.png"],
   },
   robots: { index: false, follow: false, nocache: true },
 };

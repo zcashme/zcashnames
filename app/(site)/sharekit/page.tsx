@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     url: "https://www.zcashnames.com/sharekit",
     images: [
       {
-        url: "https://www.zcashnames.com/og/sharekit.png",
+        url: "/og/sharekit.png",
         width: 1200,
         height: 630,
         alt: "Share Kit | ZcashNames",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Share Kit | ZcashNames",
     description: "Copy and share prepared draft posts with your waitlist referral link.",
-    images: ["https://www.zcashnames.com/og/sharekit.png"],
+    images: ["/og/sharekit.png"],
   },
 };
 const SHAREKIT_PATH = path.join(process.cwd(), "content", "sharekit.md");
