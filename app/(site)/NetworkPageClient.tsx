@@ -26,7 +26,7 @@ type Props = {
   stats: ChainStats;
 };
 
-export default function MainnetPageClient({ network, stats }: Props) {
+export default function NetworkPageClient({ network, stats }: Props) {
   return (
     <>
       <HomePage

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { parseStageCookieValue, BETA_STAGE_COOKIE_NAME } from "@/lib/beta/gate";
 import { getChainStats } from "@/lib/network-stats";
-import MainnetPageClient from "./MainnetPageClient";
+import NetworkPageClient from "./NetworkPageClient";
 
 export const metadata: Metadata = {
   title: "ZcashNames | Personal names for shielded addresses",
@@ -29,5 +29,5 @@ export default async function HomePage() {
   const network = parsed?.stage ?? "mainnet";
   const stats = await getChainStats(network);
 
-  return <MainnetPageClient network={network} stats={stats} />;
+  return <NetworkPageClient network={network} stats={stats} />;
 }
