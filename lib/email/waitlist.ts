@@ -7,7 +7,6 @@ import ConfirmEmail from "@/components/emails/ConfirmEmail";
 import WaitlistEmail from "@/components/emails/WaitlistEmail";
 import { FROM_EMAIL } from "@/lib/email/constants";
 import { sendEmail } from "@/lib/email/client";
-import { normalizeBaseUrl } from "@/lib/url";
 import { getCommissionPin } from "@/lib/leaders/commission-access";
 
 export async function sendWaitlistConfirmationEmail({
@@ -38,8 +37,7 @@ export async function sendWaitlistWelcomeEmail({
   referralCode: string;
   baseUrl: string;
 }): Promise<void> {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-  const referralUrl = `${normalizedBaseUrl}/?ref=${referralCode}`;
+  const referralUrl = `${baseUrl}/?ref=${referralCode}`;
   const accessPin = getCommissionPin(referralCode);
 
   await sendEmail({

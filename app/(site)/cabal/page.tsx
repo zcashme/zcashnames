@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Metadata } from "next";
-import { slugify } from "@/lib/url";
+import { slugify } from "@/lib/sharekit";
 import CabalAccessGate from "@/components/influencer/CabalAccessGate";
 import InfluencerDeck, { type InfluencerSlide } from "@/components/influencer/InfluencerDeck";
 import { readCurrentCabalInvite } from "@/lib/cabal/access";

@@ -14,7 +14,14 @@ export type ShareKitSection = {
   drafts: ShareKitDraft[];
 };
 
-import { slugify } from "@/lib/url";
+export function slugify(value: string): string {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "item"
+  );
+}
 
 function normalizeLineEndings(markdown: string): string {
   return markdown.replace(/\r\n?/g, "\n");

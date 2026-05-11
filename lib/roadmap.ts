@@ -1,4 +1,4 @@
-import { slugify } from "@/lib/url";
+import { slugify } from "@/lib/sharekit";
 
 // Period represents one phase of the roadmap with status, date range, and task list.
 // Parsed from `# Title \`status\`` markdown headings.

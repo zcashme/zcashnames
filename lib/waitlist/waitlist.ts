@@ -24,7 +24,6 @@ import {
 } from "@/lib/waitlist/confirm-token";
 import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
 import { normalizeUsername } from "@/lib/zns/utils";
-import { resolveBaseUrl } from "@/lib/url-server";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 const MAX_REFERRAL_CODE_RETRIES = 6;
@@ -177,7 +176,7 @@ export async function submitWaitlist(
     waitlistId,
     email: normalizedEmail,
   });
-  const confirmUrl = `${await resolveBaseUrl()}/?token=${encodeURIComponent(confirmToken)}`;
+  const confirmUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/?token=${encodeURIComponent(confirmToken)}`;
 
   try {
     await sendWaitlistConfirmationEmail({
@@ -315,7 +314,7 @@ export async function confirmWaitlistEmail(
       email: row.email,
       name: row.name,
       referralCode: row.referral_code ?? "",
-      baseUrl: await resolveBaseUrl(),
+      baseUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "",
     });
   } catch (emailError) {
     console.error("Waitlist welcome email error:", emailError);

@@ -23,7 +23,6 @@ import {
   type WaitlistReferralRow,
   type ReferralScope,
 } from "@/lib/leaders/referral-dashboard";
-import { resolveBaseUrl } from "@/lib/url-server";
 import { roundZec } from "@/lib/zns/utils";
 
 export type { ReferralScope };
@@ -643,7 +642,7 @@ export async function requestReferralCommissionPin(
       return { ok: true, message: COMMISSION_PIN_RATE_LIMIT_MESSAGE };
     }
 
-    const baseUrl = await resolveBaseUrl();
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
     await sendCommissionPinEmail({
       email: normalizedEmail,
       name: String(data.name || "there"),
