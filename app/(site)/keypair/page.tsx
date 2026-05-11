@@ -1,23 +1,11 @@
-/**
- * Keypair tool — a purely client-side utility for ZNS sovereign key management.
- * Three-step wizard: (1) generate or import an Ed25519 keypair, (2) sign a
- * payload from the signing modal, (3) copy the public key + signature back.
- * Uses @noble/ed25519 for key derivation and signing, and zcashname-sdk for
- * payload validation. Suspense-wrapped for useSearchParams.
- */
+// Client-side Ed25519 signing tool -- no server involvement; private key never leaves the browser.
 "use client";
 
 import { getPublicKeyAsync, signAsync } from "@noble/ed25519";
 import { Suspense, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import { ZNS } from "zcashname-sdk";
-interface PayloadValidationResult {
-  readonly valid: boolean;
-  readonly action: string;
-  readonly message: string;
-  readonly level: "valid" | "invalid" | "unrecognized";
-}
+import { type PayloadValidationResult, ZNS } from "zcashname-sdk";
 import { useCopy } from "@/components/hooks/useCopy";
 
 function bytesToBase64(bytes: ArrayBuffer | Uint8Array): string {
@@ -33,11 +21,12 @@ function tryBase64ToBytes(value: string): Uint8Array | null {
   }
 }
 
-function CopyBtn({ value, label, copied, onCopy }: { value: string; label: string; copied: boolean; onCopy: () => void }) {
+function CopyBtn({ value, label, onCopy }: { value: string; label: string; onCopy?: () => void }) {
+  const { copied, copy } = useCopy();
   return (
     <button
       type="button"
-      onClick={onCopy}
+      onClick={() => { void copy(value); onCopy?.(); }}
       disabled={!value}
       className="self-start rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
       style={{
@@ -56,10 +45,6 @@ function KeypairPageInner() {
   const initialPayload = searchParams.get("payload") ?? "";
   const importFileInputRef = useRef<HTMLInputElement>(null);
 
-  const pubkeyCopy = useCopy();
-  const privkeyCopy = useCopy();
-  const signatureCopy = useCopy();
-
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"generate" | "import">("import");
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -74,15 +59,22 @@ function KeypairPageInner() {
   const [importPrivError, setImportPrivError] = useState("");
   const [generatedPrivateKeySaved, setGeneratedPrivateKeySaved] = useState(false);
 
-  const privkeyB64 = seed ? bytesToBase64(seed) : "";
+  const privkeyB64 = useMemo(() => (seed ? bytesToBase64(seed) : ""), [seed]);
   const zns = useMemo(() => new ZNS({ network: "testnet" }), []);
   const payloadValidation = useMemo((): PayloadValidationResult => {
     if (!payload.trim()) return { valid: false, action: "", message: "No payload yet. Paste the payload from the signing modal.", level: "invalid" };
     return zns.validatePayload(payload);
   }, [payload, zns]);
   const isGeneratedKey = tab === "generate" && !!seed && !!pubkeyB64;
-  const isImportedKey = tab === "import" && !!seed && !!pubkeyB64 && !!importPrivB64.trim() && !importPrivError;
+  const isImportedKey = tab === "import" && !!seed && !!pubkeyB64 && !!importPrivB64.trim();
   const hasActiveKey = isGeneratedKey || isImportedKey;
+
+  const payloadStyle = useMemo(() => {
+    if (!payload.trim()) return { border: "1px solid var(--border-muted)", color: "var(--fg-muted)" };
+    if (payloadValidation.valid) return { border: "1px solid var(--color-accent-green)", color: "var(--color-accent-green)" };
+    if (payloadValidation.level === "unrecognized") return { border: "1px solid #ca8a04", color: "#ca8a04" };
+    return { border: "1px solid var(--accent-red, #e05252)", color: "var(--accent-red, #e05252)" };
+  }, [payload, payloadValidation]);
 
   function clearSignedPayload() {
     setSignatureB64("");
@@ -215,19 +207,6 @@ function KeypairPageInner() {
     setGeneratedPrivateKeySaved(true);
   }
 
-  const borderStyle = (v: PayloadValidationResult) => {
-    if (!payload.trim()) return "1px solid var(--border-muted)";
-    if (v.valid) return "1px solid var(--color-accent-green)";
-    if (v.level === "unrecognized") return "1px solid #ca8a04";
-    return "1px solid var(--accent-red, #e05252)";
-  };
-  const msgColor = (v: PayloadValidationResult) => {
-    if (!payload.trim()) return "var(--fg-muted)";
-    if (v.valid) return "var(--color-accent-green)";
-    if (v.level === "unrecognized") return "#ca8a04";
-    return "var(--accent-red, #e05252)";
-  };
-
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-10">
       <SiteRouteTitle title="Keypair" />
@@ -270,15 +249,6 @@ function KeypairPageInner() {
                 className="underline"
               >
                 keypair tool code
-              </a>{" "}
-              and its{" "}
-              <a
-                href="https://github.com/zcashme/zcashnames/blob/main/tests/keypair.spec.ts"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                test coverage
               </a>
               .
             </p>
@@ -359,11 +329,7 @@ function KeypairPageInner() {
                   <CopyBtn
                     value={privkeyB64}
                     label="Copy Private Key"
-                    copied={privkeyCopy.copied}
-                    onCopy={() => {
-                      privkeyCopy.copy(privkeyB64);
-                      setGeneratedPrivateKeySaved(true);
-                    }}
+                    onCopy={() => setGeneratedPrivateKeySaved(true)}
                   />
                   {isGeneratedKey && (
                     <>
@@ -482,11 +448,11 @@ function KeypairPageInner() {
               className="mt-3 w-full rounded-xl px-3 py-2 text-xs font-mono"
               style={{
                 background: "var(--color-raised)",
-                border: borderStyle(payloadValidation),
+                border: payloadStyle.border,
                 color: "var(--fg-body)",
               }}
             />
-            <p className="mt-2 text-xs" style={{ color: msgColor(payloadValidation) }}>
+            <p className="mt-2 text-xs" style={{ color: payloadStyle.color }}>
               {payloadValidation.message}
             </p>
             <div className="mt-3 flex items-center gap-2">
@@ -499,13 +465,11 @@ function KeypairPageInner() {
                   background: "var(--home-result-primary-bg)",
                   color: "var(--home-result-primary-fg)",
                   boxShadow: "var(--home-result-primary-shadow)",
-                  opacity: signatureB64 ? 0.65 : 1,
-                  cursor: signatureB64 ? "not-allowed" : "pointer",
                 }}
-               >
-                 {signatureB64 ? "(Signed)" : "Sign Payload"}
-               </button>
-             </div>
+              >
+                {signatureB64 ? "(Signed)" : "Sign Payload"}
+              </button>
+            </div>
           </div>
         )}
 
@@ -529,7 +493,7 @@ function KeypairPageInner() {
                 className="w-full rounded-xl px-3 py-2 text-xs font-mono"
                 style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
               />
-                <CopyBtn value={pubkeyB64} label="Copy Public Key" copied={pubkeyCopy.copied} onCopy={() => pubkeyCopy.copy(pubkeyB64)} />
+              <CopyBtn value={pubkeyB64} label="Copy Public Key" />
             </div>
 
             <div className="mt-3 flex flex-col gap-1.5">
@@ -543,7 +507,7 @@ function KeypairPageInner() {
                 className="w-full rounded-xl px-3 py-2 text-xs font-mono"
                 style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
               />
-              <CopyBtn value={signatureB64} label="Copy Signature" copied={signatureCopy.copied} onCopy={() => signatureCopy.copy(signatureB64)} />
+              <CopyBtn value={signatureB64} label="Copy Signature" />
             </div>
           </div>
         )}
