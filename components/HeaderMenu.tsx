@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   COMMUNITY_SECTIONS,
+  communitySectionHref,
   getCommunitySection,
   isExternalHref,
   type CommunityCard,
@@ -28,7 +29,7 @@ const communitySectionLinks: MenuLink[] = COMMUNITY_SECTIONS
   .filter((section) => ["get-involved", "partners", "features", "events"].includes(section.slug))
   .map((section) => ({
     label: section.title,
-    href: "/community",
+    href: communitySectionHref(section.slug),
     displayPath: `/${section.slug}`,
   }));
 
@@ -71,13 +72,13 @@ const menuLinks: MenuLink[] = [
   },
   {
     label: "Social",
-    href: "/community?section=social",
+    href: communitySectionHref("social"),
     displayPath: "/social",
     children: socialLinks,
   },
   {
     label: "Blogs",
-    href: "/community?section=blogs",
+    href: communitySectionHref("blogs"),
     displayPath: "/blogs",
     children: sectionCardMenuLinks("blogs"),
   },

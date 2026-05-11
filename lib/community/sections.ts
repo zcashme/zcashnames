@@ -283,6 +283,10 @@ export function getCommunitySection(slug: string): CommunitySection | undefined 
   return COMMUNITY_SECTIONS.find((section) => section.slug === slug);
 }
 
+export function communitySectionHref(slug: string): string {
+  return `/community#${slug}`;
+}
+
 export function isExternalHref(href: string): boolean {
   return href.startsWith("http://") || href.startsWith("https://");
 }

@@ -3,6 +3,7 @@ import SiteRouteTitle from "@/components/SiteRouteTitle";
 import { BRAND } from "@/lib/zns/brand";
 import {
   COMMUNITY_SECTIONS,
+  communitySectionHref,
   isExternalHref,
   type CommunityCard,
   type CommunitySection,
@@ -28,19 +29,53 @@ export default async function CommunityPage() {
           </p>
         </div>
 
+        <SectionPills />
+
         {COMMUNITY_SECTIONS.map((section) => (
           <CommunitySectionGroup key={section.slug} section={section} />
         ))}
+
+        <div className="flex justify-end">
+          <a
+            href="#top"
+            className="inline-flex items-center gap-2 rounded-md border border-border-muted bg-[var(--color-raised)] px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading scroll-mt-4"
+          >
+            Back to top
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+          </a>
+        </div>
       </section>
     </main>
   );
 }
 
+function SectionPills() {
+  return (
+    <nav className="flex flex-wrap gap-2" aria-label="Community sections">
+      {COMMUNITY_SECTIONS.map((section) => (
+        <a
+          key={section.slug}
+          href={communitySectionHref(section.slug)}
+          className="rounded-md border border-border-muted bg-[var(--color-raised)] px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+        >
+          {section.title}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 function CommunitySectionGroup({ section }: { section: CommunitySection }) {
   return (
-    <div className="flex flex-col gap-6">
+    <div id={section.slug} className="flex flex-col gap-6 scroll-mt-24">
       <div className="flex items-center gap-4">
-        <h2 className="text-xl font-bold text-fg-heading">{section.title}</h2>
+        <h2 className="text-xl font-bold text-fg-heading">
+          <a href={communitySectionHref(section.slug)} className="hover:underline">
+            {section.title}
+          </a>
+        </h2>
         <div className="h-px flex-1 bg-border-muted" />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
