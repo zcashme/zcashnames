@@ -3,6 +3,8 @@
 import Link from "next/link";
 import HomePage from "@/components/landing/HomePage";
 import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
+import { VerifiedModal } from "@/components/landing/VerifiedModal";
+import { useWaitlistVerification } from "@/components/hooks/useWaitlistVerification";
 import type { NetworkStats as Stats } from "@/lib/network-stats";
 
 const leaderboardLink = (
@@ -22,11 +24,62 @@ const leaderboardLink = (
 );
 
 export default function WaitlistPageClient({ stats }: { stats: Stats }) {
+  const { status, banner, clearBanner, closeSuccessModal } = useWaitlistVerification();
+
   return (
-    <HomePage
-      form={<WaitlistEntryForm />}
-      actionLink={leaderboardLink}
-      stats={stats}
-    />
+    <>
+      {banner && (
+        <div className="relative z-20 mx-auto max-w-xl px-4 pt-2">
+          <div
+            className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm font-semibold"
+            style={{
+              background: "var(--home-error-bg, rgba(255,116,116,0.12))",
+              borderColor: "var(--home-error-border, rgba(255,116,116,0.4))",
+              color: "var(--home-error-text, #ffc0c0)",
+            }}
+          >
+            <span>{banner}</span>
+            <button
+              type="button"
+              onClick={clearBanner}
+              className="shrink-0 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {status.type === "confirming" && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
+        >
+          <div className="flex flex-col items-center gap-3">
+            <div
+              className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent"
+              style={{ color: "var(--fg-heading)" }}
+            />
+            <p className="text-sm font-medium" style={{ color: "var(--fg-heading)" }}>
+              Confirming your email…
+            </p>
+          </div>
+        </div>
+      )}
+
+      <HomePage
+        form={<WaitlistEntryForm />}
+        actionLink={leaderboardLink}
+        stats={stats}
+      />
+
+      <VerifiedModal
+        isOpen={status.type === "success"}
+        name={status.type === "success" ? status.name : ""}
+        ref={status.type === "success" ? status.ref : ""}
+        onClose={closeSuccessModal}
+      />
+    </>
   );
 }
