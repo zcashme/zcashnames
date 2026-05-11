@@ -10,6 +10,7 @@
  * Primary exports: tab parsing, pagination helpers, search filtering, event scoping.
  */
 import type { Network, Listing, Registration, ZnsEvent } from "@/lib/types";
+import { validateAddress } from "@/lib/zns/utils";
 
 export type ExplorerTab = "all" | "registered" | "forsale" | "admin" | "CLAIM" | "BUY" | "LIST" | "DELIST" | "UPDATE" | "RELEASE";
 export type TabCounts = Record<string, { filtered: number; total: number }>;
@@ -64,9 +65,11 @@ export function filterListings(listings: TaggedListing[], searchQuery: string): 
 export function filterRegistrations(registrations: TaggedRegistration[], searchQuery: string): TaggedRegistration[] {
   const q = normalizeExplorerQuery(searchQuery);
   if (!q) return registrations;
+  const isUAddress = validateAddress(q).status === "unified";
   return registrations.filter((registration) =>
     registration.name.toLowerCase().includes(q) ||
-    registration.address.toLowerCase().includes(q)
+    (!isUAddress && registration.address.toLowerCase().includes(q)) ||
+    (isUAddress && registration.address.toLowerCase() === q)
   );
 }
 
