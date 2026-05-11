@@ -1,11 +1,11 @@
 # Buying & Selling Names
 
-ZNS has a non-custodial marketplace. Anyone who owns a name can list it for sale. A sale is a two-transaction protocol — the buyer pays the seller directly via transparent ZEC, the indexer enforces the rest.
+ZNS has a non-custodial marketplace. Anyone who owns a name can list it for sale. A sale is a two-transaction protocol: the buyer pays the seller directly via transparent ZEC, the indexer enforces the rest.
 
 ## How it works
 
 1. **Seller lists** with a transparent address (`pay_taddr`) where they want to receive payment.
-2. **Buyer claims** the listing with a signed shielded memo — this locks the listing for ~2 hours.
+2. **Buyer claims** the listing with a signed shielded memo, which locks the listing for ~2 hours.
 3. **Buyer pays** the listing price directly to the seller's `pay_taddr` via transparent transaction.
 4. **Indexer detects** the payment and finalizes the name transfer to the buyer.
 
@@ -19,7 +19,7 @@ ZNS has a non-custodial marketplace. Anyone who owns a name can list it for sale
 
 Memo format: `ZNS:LIST:{name}:{price}:{pay_taddr}:{nonce}:{sig}`
 
-The note value must include a **0.01 ZEC listing commission** — this is non-refundable and covers the lock slot for any buyer.
+The note value must include a **0.01 ZEC listing commission** (non-refundable; covers the lock slot for any buyer).
 
 ### Changing the price
 
@@ -27,14 +27,14 @@ List again with a new price. The indexer uses `INSERT OR REPLACE` on the listing
 
 ## Buying a listed name
 
-The buy flow has two steps — you must complete both.
+The buy flow has two steps. You must complete both.
 
 ### Step 1: Claim the listing
 
 1. Search for a name that shows as **For Sale**.
 2. Enter your Zcash unified address.
 3. The app generates a ZIP-321 payment URI for the listing price with a memo: `ZNS:BUY:{name}:{buyer_ua}:{price}:{sig}`.
-4. The note value includes a **0.0001 ZEC dust commission** — this is non-refundable.
+4. The note value includes a **0.0001 ZEC dust commission** (non-refundable).
 
 The BUY claim locks the listing for approximately **2 hours** (144 blocks). If you do not complete Step 2 within that window, the lock expires and the name returns to the listing.
 
@@ -47,19 +47,9 @@ After your BUY claim confirms and the indexer registers the pending buy:
 
 The indexer monitors for a transparent output to the seller's `pay_taddr` that meets or exceeds the listing price. The first qualifying payment wins. After confirmation, the name transfers to your address and the listing is removed.
 
-## Price limits
-
-| | Zats | ZEC |
-|-|------|-----|
-| Protocol minimum | 1 | 0.00000001 |
-| Web UI minimum | 100,000 | 0.001 |
-| Protocol maximum | 2,100,000,000,000,000 | 21,000,000 (Zcash supply cap) |
-
-The web UI is deliberately more conservative than the protocol.
-
 ## Finding listings
 
-The easiest way to browse the marketplace is the [Explorer](/explorer) — switch to the **For Sale** tab to see every active listing across networks, with the seller and price in one view.
+The easiest way to browse the marketplace is the [Explorer](/explorer). Switch to the **For Sale** tab to see every active listing across networks, with the seller and price in one view.
 
 Programmatically, call `listings` to get active listings with pagination support. Results are ordered newest first:
 
@@ -112,22 +102,22 @@ Memo: `ZNS:DELIST:{name}:{nonce}:{sig}`
 
 | Action | Amount | Who pays | Refundable? |
 |--------|--------|----------|-------------|
-| LIST | 0.01 ZEC | Seller | No — burned even if the listing never sells |
-| BUY | 0.0001 ZEC | Buyer | No — burned even if buyer never pays |
+| LIST | 0.01 ZEC | Seller | No (burned even if the listing never sells) |
+| BUY | 0.0001 ZEC | Buyer | No (burned even if buyer never pays) |
 
 The commissions prevent spam and fund the lock slots. Both are prepaid as note values on the respective memos.
 
-## Gotchas
+## Notes
 
 - **BUY is a two-step process.** You must claim first (shielded memo), then pay second (transparent tx to the seller's `pay_taddr`). Skipping steps means the indexer won't finalize the sale.
-- **The payment must go to the seller's `pay_taddr`** — not the registry, not the indexer. The indexer watches for transparent outputs to that address.
+- **The payment must go to the seller's `pay_taddr`**, not the registry, not the indexer. The indexer watches for transparent outputs to that address.
 - **Buying does not refund overpayment.** If the listing is 1 ZEC and you send 1.5, you pay 1.5. The app should always use the exact listing price.
 - **If the lock expires before you pay, you must start over.** The BUY claim locks the listing for ~2 hours (144 blocks). After that, the name is available to any buyer again.
-- **Overlapping BUY claims in the same block** — the first processed wins. The indexer enforces first-claim-wins via a unique constraint on the listing key.
+- **Overlapping BUY claims in the same block:** the first processed wins. The indexer enforces first-claim-wins via a unique constraint on the listing key.
 - **There is no escrow.** Funds go directly from buyer to seller. The indexer only monitors for the payment; it never holds funds.
 
 ## Next
 
-- [Managing Names](/docs/use/managing) — update, release.
-- [OTP Verification](/docs/use/otp-verification) — how address ownership is proven.
-- [Name Lifecycle](/docs/learn/name-lifecycle) — the state transitions in detail.
+- [Managing Names](/docs/use/managing): update, release.
+- [OTP Verification](/docs/use/otp-verification): how address ownership is proven.
+- [Name Lifecycle](/docs/learn/name-lifecycle): the state transitions in detail.
