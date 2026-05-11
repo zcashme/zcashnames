@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useZns } from "@/components/hooks/useZns";
+import { useZns, type ZnsMode } from "@/components/hooks/useZns";
 import { verifyBetaPassword, switchToNetwork } from "@/lib/beta/actions";
 import BetaPasswordModal from "@/components/beta/BetaPasswordModal";
+
+const MODES: ZnsMode[] = ["mainnet", "testnet", "waitlist"];
 
 export default function NetworkToggle() {
   const pathname = usePathname();
@@ -17,10 +19,11 @@ export default function NetworkToggle() {
 
   if (!onWaitlist && !onHome) return null;
 
-  function handleClick(mode: "waitlist" | "mainnet" | "testnet") {
+  const activeMode: ZnsMode = onWaitlist ? "waitlist" : zns.mode;
+  function handleClick(mode: ZnsMode) {
     if (onWaitlist) {
       if (mode === "waitlist") return;
-      setPendingTarget(mode);
+      setPendingTarget(mode as "mainnet" | "testnet");
       return;
     }
     if (mode === "waitlist") {
@@ -43,24 +46,36 @@ export default function NetworkToggle() {
 
   return (
     <>
-      <div className="flex items-center rounded-full h-8 text-sm font-bold">
-        {(["mainnet", "testnet", "waitlist"] as const).map((mode) => {
-          const active = onWaitlist ? mode === "waitlist" : zns.mode === mode;
-          return (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => handleClick(mode)}
-              className={`h-full px-3 rounded-full transition-all ${
-                active
-                  ? "bg-[var(--color-raised)] shadow-[0_0_0_2px_var(--fg-heading)]"
-                  : "text-muted"
-              }`}
-            >
-              {mode.charAt(0).toUpperCase() + mode.slice(1)}
-            </button>
-          );
-        })}
+      <div
+        className="relative flex items-center rounded-full h-8 text-sm font-bold tracking-tight leading-none"
+        style={{ "--i": MODES.indexOf(activeMode), isolation: "isolate", background: "var(--color-raised)" }}
+      >
+        <span
+          className="absolute inset-y-0 rounded-full pointer-events-none"
+          style={{
+            left: 0,
+            width: `${100 / MODES.length}%`,
+            transform: "translateX(calc(var(--i) * 100%))",
+            transition: "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
+            background: "var(--color-raised)",
+            boxShadow: "0 0 0 2px var(--fg-heading)",
+            zIndex: 0,
+          }}
+          aria-hidden="true"
+        />
+
+        {MODES.map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            className="relative z-10 flex items-center justify-center h-full px-2.5 rounded-full whitespace-nowrap transition-opacity duration-200 cursor-pointer"
+            style={{ width: `${100 / MODES.length}%`, opacity: activeMode === mode ? 1 : 0.4 }}
+            aria-pressed={activeMode === mode}
+            onClick={() => handleClick(mode)}
+          >
+            {mode.charAt(0).toUpperCase() + mode.slice(1)}
+          </button>
+        ))}
       </div>
 
       {pendingTarget && (

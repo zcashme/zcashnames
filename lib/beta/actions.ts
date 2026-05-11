@@ -28,7 +28,10 @@ export async function verifyBetaPassword(
   password: string,
   network: "mainnet" | "testnet",
 ): Promise<{ ok: boolean }> {
-  const expected = process.env.BETA_PASSWORD;
+  const expected =
+    network === "mainnet"
+      ? process.env.MAINNET_PASSWORD
+      : process.env.TESTNET_PASSWORD;
   if (!expected || password !== expected) return { ok: false };
 
   const store = await cookies();
