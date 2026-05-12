@@ -18,6 +18,15 @@ import {
   type ReferralDashboardData,
   type WaitlistReferralRow,
 } from "@/lib/leaders/referral-dashboard";
+import {
+  buildDailyRankingsFromRows,
+  buildWeeklyRankingsFromRows,
+  type DailyRow,
+  type RankingEntry,
+  type WeeklyRow,
+} from "@/lib/leaders/rankings";
+
+export type { DailyRow, RankingEntry, WeeklyRow } from "@/lib/leaders/rankings";
 
 export interface TimeSeriesPoint {
   date: string;
@@ -40,29 +49,19 @@ export interface LeaderboardEntry {
   indirectReferrals: number;
   attributedReferrals: number;
   recent: number;
+  recentGrowthPct: number;
+  weeklyRecent: number;
+  weeklyGrowthPct: number;
   potential_rewards: number;
   streak: boolean;
   topRecent: boolean;
-}
-
-export interface RankingEntry {
-  referral_code: string;
-  name: string;
-  count: number;
-  payout: number;
-}
-
-export interface DailyRow {
-  date: string;
-  daily: [RankingEntry?, RankingEntry?, RankingEntry?];
-  allTime: [RankingEntry?, RankingEntry?, RankingEntry?];
-  topBadge?: "red" | "blue" | null;
 }
 
 export interface LeadersData {
   timeSeries: TimeSeriesPoint[];
   leaderboard: LeaderboardEntry[];
   dailyRankings: DailyRow[];
+  weeklyRankings: WeeklyRow[];
   stats: { waitlist: number; referred: number; rewardsPot: number };
 }
 
@@ -96,6 +95,12 @@ const COMMISSION_PIN_SENT_MESSAGE = "If the email matches, we will send the code
 const COMMISSION_PIN_RATE_LIMIT_MESSAGE = "We already sent you a code today";
 const COMMISSION_PIN_RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
 const WAITLIST_PAGE_SIZE = 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function calculateGrowthPct(current: number, previous: number): number {
+  if (previous === 0) return current === 0 ? 0 : Number.POSITIVE_INFINITY;
+  return Math.round(((current - previous) / previous) * 100);
+}
 
 function toWaitlistReferralRows(data: Record<string, unknown>[]): WaitlistReferralRow[] {
   return data
@@ -151,26 +156,6 @@ function resolveTopReferrer(
   entries.sort(([, a], [, b]) => b - a);
   const [code, count] = entries[0];
   return { name: nameMap[code] || code, count, streak: code === previousTopCode, code };
-}
-
-function buildTopThreeEntries(
-  counts: Record<string, number>,
-  nameMap: Record<string, string>,
-): [RankingEntry?, RankingEntry?, RankingEntry?] {
-  const ranked = Object.entries(counts)
-    .sort(([codeA, countA], [codeB, countB]) => {
-      if (countB !== countA) return countB - countA;
-      return codeA.localeCompare(codeB);
-    })
-    .slice(0, 3)
-    .map(([code, count]) => ({
-      referral_code: code,
-      name: nameMap[code] || code,
-      count,
-      payout: Math.round(count * 0.05 * 1000) / 1000,
-    }));
-
-  return [ranked[0], ranked[1], ranked[2]];
 }
 
 function isNextDay(previousDate: string, nextDate: string): boolean {
@@ -341,10 +326,17 @@ export async function getLeaderboard(
     const now = new Date();
     const today = now.toISOString().slice(0, 10);
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const cutoff = now.getTime() - 24 * 60 * 60 * 1000;
+    const nowMs = now.getTime();
+    const recentCutoff = nowMs - DAY_MS;
+    const previousRecentCutoff = nowMs - 2 * DAY_MS;
+    const weeklyCutoff = nowMs - 7 * DAY_MS;
+    const previousWeeklyCutoff = nowMs - 14 * DAY_MS;
 
     const counts: Record<string, number> = {};
     const recentCounts: Record<string, number> = {};
+    const previousRecentCounts: Record<string, number> = {};
+    const weeklyCounts: Record<string, number> = {};
+    const previousWeeklyCounts: Record<string, number> = {};
     const todayCounts: Record<string, number> = {};
     const yesterdayCounts: Record<string, number> = {};
 
@@ -357,8 +349,18 @@ export async function getLeaderboard(
 
       counts[code] = (counts[code] || 0) + 1;
 
-      if (new Date(row.created_at).getTime() >= cutoff) {
+      const createdAtMs = new Date(row.created_at).getTime();
+
+      if (createdAtMs >= recentCutoff) {
         recentCounts[code] = (recentCounts[code] || 0) + 1;
+      } else if (createdAtMs >= previousRecentCutoff) {
+        previousRecentCounts[code] = (previousRecentCounts[code] || 0) + 1;
+      }
+
+      if (createdAtMs >= weeklyCutoff) {
+        weeklyCounts[code] = (weeklyCounts[code] || 0) + 1;
+      } else if (createdAtMs >= previousWeeklyCutoff) {
+        previousWeeklyCounts[code] = (previousWeeklyCounts[code] || 0) + 1;
       }
 
       if (date === today) todayCounts[code] = (todayCounts[code] || 0) + 1;
@@ -383,6 +385,15 @@ export async function getLeaderboard(
           indirectReferrals,
           attributedReferrals: displayedReferrals,
           recent: recentCounts[referral_code] || 0,
+          recentGrowthPct: calculateGrowthPct(
+            recentCounts[referral_code] || 0,
+            previousRecentCounts[referral_code] || 0,
+          ),
+          weeklyRecent: weeklyCounts[referral_code] || 0,
+          weeklyGrowthPct: calculateGrowthPct(
+            weeklyCounts[referral_code] || 0,
+            previousWeeklyCounts[referral_code] || 0,
+          ),
           potential_rewards: summary?.potentialRewards ?? roundZec(referrals * 0.05),
           streak: referral_code === streakCode,
           topRecent: referral_code === topRecentCode && referral_code !== streakCode,
@@ -406,64 +417,29 @@ export async function getDailyRankings(scope: ReferralScope = "all"): Promise<Da
     const data = await fetchAllWaitlistRows();
     if (!data || data.length === 0) return [];
 
-    const nameMap: Record<string, string> = {};
-    const dailyCountsByDate: Record<string, Record<string, number>> = {};
-    const dates: string[] = [];
-    const seenDates = new Set<string>();
+    return buildDailyRankingsFromRows(toWaitlistReferralRows(data), scope);
+  } catch {
+    return [];
+  }
+}
 
-    for (const row of data) {
-      const date = (row.created_at as string).slice(0, 10);
+export async function getWeeklyRankings(scope: ReferralScope = "all"): Promise<WeeklyRow[]> {
+  try {
+    const data = await fetchAllWaitlistRows();
+    if (!data || data.length === 0) return [];
 
-      if (!seenDates.has(date)) {
-        seenDates.add(date);
-        dates.push(date);
-      }
-
-      const code = row.referral_code as string | null;
-      const name = row.name as string | null;
-      if (code && name && !nameMap[code]) {
-        nameMap[code] = name;
-      }
-
-      const referredBy = row.referred_by as string | null;
-      if (!referredBy) continue;
-      if (scope === "confirmed" && !row.email_verified) continue;
-
-      if (!dailyCountsByDate[date]) dailyCountsByDate[date] = {};
-      dailyCountsByDate[date][referredBy] = (dailyCountsByDate[date][referredBy] || 0) + 1;
-    }
-
-    const cumulativeCounts: Record<string, number> = {};
-    const rows: DailyRow[] = [];
-
-    for (const date of dates) {
-      const dailyCounts = dailyCountsByDate[date] || {};
-      const dailyTop = buildTopThreeEntries(dailyCounts, nameMap);
-
-      for (const [code, count] of Object.entries(dailyCounts)) {
-        cumulativeCounts[code] = (cumulativeCounts[code] || 0) + count;
-      }
-
-      const allTimeTop = buildTopThreeEntries(cumulativeCounts, nameMap);
-
-      rows.push({
-        date,
-        daily: dailyTop,
-        allTime: allTimeTop,
-      });
-    }
-
-    return rows;
+    return buildWeeklyRankingsFromRows(toWaitlistReferralRows(data), scope);
   } catch {
     return [];
   }
 }
 
 export async function getLeadersData(scope: ReferralScope = "all"): Promise<LeadersData> {
-  const [timeSeries, leaderboard, rows, stats] = await Promise.all([
+  const [timeSeries, leaderboard, rows, weeklyRankings, stats] = await Promise.all([
     getLeadersTimeSeries(scope),
     getLeaderboard(scope),
     getDailyRankings(scope),
+    getWeeklyRankings(scope),
     getWaitlistStats(scope),
   ]);
 
@@ -495,7 +471,7 @@ export async function getLeadersData(scope: ReferralScope = "all"): Promise<Lead
     previousTopCode = topEntry.referral_code;
   }
 
-  return { timeSeries, leaderboard, dailyRankings, stats };
+  return { timeSeries, leaderboard, dailyRankings, weeklyRankings, stats };
 }
 
 export async function getDailyNewNames(date: string): Promise<DailyNewNameEntry[]> {
