@@ -42,6 +42,32 @@ export const ACTION_LABELS = {
   RELEASE: "Release",
 } as const satisfies Record<Action, string>;
 
+// Used in copy: "Your {noun} is in the mempool" / "hasn't been detected yet".
+// Lowercased and reads naturally inline — `ACTION_LABELS[action].toLowerCase()`
+// would give "buy" / "update", which sound clipped in running prose.
+export const ACTION_NOUNS = {
+  CLAIM: "claim",
+  BUY: "purchase",
+  UPDATE: "address update",
+  LIST: "listing",
+  DELIST: "delist",
+  RELEASE: "release",
+} as const satisfies Record<Action, string>;
+
+// Auth shape for the zns server actions. Two orthogonal axes:
+//   - `owner`: proof of ownership over the name (none / otp / sign).
+//   - `reservedUnlock`: only meaningful when CLAIMing a reserved name. A
+//     reserved sovereign claim sends both in one dispatch.
+export type NameOwnership =
+  | { kind: "none" }
+  | { kind: "otp"; token: string }
+  | { kind: "sign"; signature: string; pubkey: string };
+
+export interface ActionAuth {
+  reservedUnlock?: string;
+  owner: NameOwnership;
+}
+
 export const ACTION_COLORS = {
   CLAIM: { bg: "var(--color-accent-green-light)", text: "var(--color-accent-green)" },
   BUY:   { bg: "rgba(59,130,246,0.15)", text: "var(--color-brand-blue, #3b82f6)" },

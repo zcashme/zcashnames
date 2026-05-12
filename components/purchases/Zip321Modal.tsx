@@ -1,11 +1,11 @@
 "use client";
 
 import type React from "react";
-import { useMemo, useReducer, useRef, useEffect } from "react";
+import { useMemo, useReducer, useEffect } from "react";
 import { usePoll } from "@/components/hooks/usePoll";
 import { createPortal } from "react-dom";
-import { ACTION_CAPS, getNetworkConstants, phasesFor } from "@/lib/types";
-import type { Action as ZnsAction, Network, Phase, ResolveName, ScanState } from "@/lib/types";
+import { ACTION_CAPS, ACTION_LABELS, getNetworkConstants, phasesFor } from "@/lib/types";
+import type { Action as ZnsAction, ActionAuth, Network, Phase, ResolveName, ScanState } from "@/lib/types";
 import { readLocalStorage, removeLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
 
 // Resume: the modal writes its full reducer state to localStorage on every
@@ -63,18 +63,31 @@ function prepareDescription(action: ZnsAction, name: string, amount: string): Re
   }
 }
 
+const ACTION_NOUN: Record<ZnsAction, string> = {
+  CLAIM: "claim",
+  BUY: "purchase",
+  UPDATE: "address update",
+  LIST: "listing",
+  DELIST: "delist",
+  RELEASE: "release",
+};
+
+function minedMessage(action: ZnsAction, displayName: string): string {
+  switch (action) {
+    case "CLAIM":   return `${displayName} is yours. Claim confirmed on-chain.`;
+    case "BUY":     return `${displayName} is now yours. Purchase confirmed on-chain.`;
+    case "UPDATE":  return `Address updated. ${displayName} now resolves to your new address.`;
+    case "LIST":    return `${displayName} is now listed for sale.`;
+    case "DELIST":  return `${displayName} has been delisted.`;
+    case "RELEASE": return `${displayName} has been released.`;
+  }
+}
+
 // ---- Auth dispatch ---------------------------------------------------------
 //
-// The six server actions share a structure: name + network + a per-action data
-// shape + an "I'm authorized to do this" proof. Collapsing the call sites
-// behind one helper kills the parameter-position bugs (e.g. the LIST units
-// divergence between the OTP and sovereign paths) and shrinks the modal.
-
-type AuthInput =
-  | { kind: "none" }
-  | { kind: "unlock"; token: string }
-  | { kind: "otp"; token: string }
-  | { kind: "sign"; signature: string; pubkey: string };
+// NameOwnership / ActionAuth live in lib/types.ts (next to Action, Network,
+// Phase). The two-axis split — name-ownership proof vs. reserved-claim
+// unlock — is a domain concept, not a modal-local one.
 
 interface ActionData {
   address: string;     // CLAIM/BUY/UPDATE
@@ -91,14 +104,13 @@ async function dispatchAction(
   name: string,
   network: Network,
   data: ActionData,
-  auth: AuthInput,
+  auth: ActionAuth,
 ): Promise<ServerReply> {
-  const sig = auth.kind === "sign" ? auth.signature : undefined;
-  const pub = auth.kind === "sign" ? auth.pubkey : undefined;
-  const unlock = auth.kind === "unlock" ? auth.token : undefined;
-  const otp = auth.kind === "otp" ? auth.token : undefined;
+  const sig = auth.owner.kind === "sign" ? auth.owner.signature : undefined;
+  const pub = auth.owner.kind === "sign" ? auth.owner.pubkey : undefined;
+  const otp = auth.owner.kind === "otp" ? auth.owner.token : undefined;
   switch (action) {
-    case "CLAIM":   return claimAction(name, data.address, network, unlock, sig, pub);
+    case "CLAIM":   return claimAction(name, data.address, network, auth.reservedUnlock, sig, pub);
     case "BUY":     return buyAction(name, data.address, network, undefined, sig, pub);
     case "UPDATE":  return updateAction(name, data.address, network, otp, sig, pub);
     case "LIST":    return listAction(name, data.priceZats, data.payTaddr, network, otp, sig, pub);
@@ -145,6 +157,7 @@ type S = {
   sovereign: boolean;
   // scanning phase
   scanState: ScanState;
+  successFired: boolean;
 };
 
 type Msg =
@@ -162,14 +175,37 @@ const INIT: S = {
   sovereign: false,
   signPubkey: "", signSignature: "", signError: "", signLoading: false,
   scanState: "not_detected",
+  successFired: false,
 };
 
-function reducer(state: S, msg: Msg): S {
+function purchaseReducer(state: S, msg: Msg): S {
   switch (msg.type) {
     case "SET": return { ...state, ...msg.payload };
     case "ADVANCE": return { ...state, ...(msg.patch ?? {}), step: state.step + 1 };
   }
 }
+
+// Each phase declares the fields it OWNS — when the user backs past a phase,
+// those fields get cleared. Keeping this as a table (not procedural code)
+// means adding a new phase = adding one row, not editing goto().
+//
+//   unlock:   proof itself survives (one-shot, can't be re-generated)
+//   input:    user inputs survive (they typed them; don't make them retype)
+//   otp:      memo/uri/sent/attempts survive (paid for the OTP session)
+//   sign:     pubkey survives (identity, not payload-bound)
+//   confirm:  server-dispatched URI fields are owned here — back-nav clears
+//   fund:     nothing local (UTXO state is on-chain)
+//   scanning: scanState is reset on entry anyway, but owning it makes the
+//             back-nav semantics explicit.
+const PHASE_OWNS: Record<Phase, ReadonlyArray<keyof S>> = {
+  unlock:   ["unlockCode", "unlockError"],
+  input:    [],
+  otp:      ["otpCode", "otpError"],
+  sign:     ["signSignature", "signError"],
+  confirm:  ["uri", "memo", "paymentAddress", "amountZec"],
+  fund:     [],
+  scanning: ["scanState", "successFired"],
+};
 
 // ---- Component -------------------------------------------------------------
 
@@ -190,7 +226,7 @@ export default function Zip321Modal({
   onClose,
   onSuccess,
 }: Zip321ModalProps) {
-  const [s, dispatch] = useReducer(reducer, INIT, (init): S => {
+  const [s, dispatch] = useReducer(purchaseReducer, INIT, (init): S => {
     const stored = readLocalStorage<StoredResume | null>(RESUME_KEY, null);
     if (!stored || stored.action !== action || stored.name !== name || stored.network !== network) {
       return init;
@@ -218,26 +254,17 @@ export default function Zip321Modal({
   function set(payload: Partial<S>) { dispatch({ type: "SET", payload }); }
   function advance(patch?: Partial<S>) { dispatch({ type: "ADVANCE", patch }); }
 
-  // Backward navigation. Always clears server-dispatched URI fields and
-  // scanState so the next forward step re-dispatches cleanly. Clears the
-  // sovereign signature if the jump crosses the sign step (payload may
-  // change). Clears the OTP code but preserves the paid-for OTP session
-  // (memo/uri/otpSent/otpAttempts) — see handleInputContinue's `!s.otpMemo`
-  // guard for the matching forward-path protection.
+  // Backward navigation: for each phase the user is stepping past, clear the
+  // fields that phase owns (see PHASE_OWNS). Forward sequencing of dispatches
+  // ensures the next forward step re-populates whatever got cleared.
   function goto(targetStep: number) {
     if (targetStep >= s.step) return;
-    const crossed = phases.slice(targetStep + 1, s.step + 1);
-    const patch: Partial<S> = {
-      uri: "", memo: "", paymentAddress: "", amountZec: "",
-      scanState: "not_detected",
-    };
-    if (crossed.includes("sign")) {
-      patch.signSignature = "";
-      patch.signError = "";
-    }
-    if (crossed.includes("otp")) {
-      patch.otpCode = "";
-      patch.otpError = "";
+    const patch: Partial<S> = {};
+    for (const crossed of phases.slice(targetStep + 1, s.step + 1)) {
+      for (const field of PHASE_OWNS[crossed]) {
+        // Reset to the field's INIT value so types stay sound across keys.
+        (patch as Record<string, unknown>)[field] = INIT[field];
+      }
     }
     set({ ...patch, step: targetStep });
   }
@@ -279,6 +306,8 @@ export default function Zip321Modal({
   const needsAddress = action === "CLAIM" || action === "BUY" || action === "UPDATE";
   const needsPrice = action === "LIST";
   const needsPayTaddr = action === "LIST";
+  const isOwnerAction = action === "UPDATE" || action === "LIST" || action === "DELIST" || action === "RELEASE";
+  const ownerCommittedPubkey = "registration" in resolveResult ? resolveResult.registration.pubkey : null;
 
   async function handleInputContinue() {
     set({ inputError: "" });
@@ -302,14 +331,14 @@ export default function Zip321Modal({
     // for a session and is re-advancing into otp after a back-nav, preserve it.
     const otpPatch = nextPhase === "otp" && !s.otpMemo ? buildOtpPatch() : {};
 
-    if (action === "CLAIM" || action === "BUY") {
+    // Defer the server dispatch when an auth phase (sign/otp) comes next —
+    // that phase needs to be the one to call the server with both the unlock
+    // proof (if any) AND the owner-auth proof in the same request.
+    if ((action === "CLAIM" || action === "BUY") && nextPhase === "confirm") {
       const addr = s.addressInput.trim();
-      const auth: AuthInput = action === "CLAIM" && s.unlockProof
-        ? { kind: "unlock", token: s.unlockProof }
-        : { kind: "none" };
       const ar = await dispatchAction(action, name, network,
         { address: addr, priceZats: 0, payTaddr: "" },
-        auth);
+        { reservedUnlock: action === "CLAIM" ? s.unlockProof || undefined : undefined, owner: { kind: "none" } });
       if (!ar.ok) { set({ inputError: ar.error }); return; }
       advance({ address: addr, uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", ...otpPatch });
     } else {
@@ -339,11 +368,12 @@ export default function Zip321Modal({
         return;
       }
 
+      // OTP is owner-action only — unlock proof never applies here.
       const ar: ServerReply = await dispatchAction(action, name, network, {
         address: s.address,
         priceZats: Math.round((parsePrice(s.price) ?? 0) * 1e8),
         payTaddr: s.payTaddrInput,
-      }, { kind: "otp", token: result.proof });
+      }, { owner: { kind: "otp", token: result.proof } });
 
       if (!ar.ok) { set({ otpError: ar.error, otpLoading: false }); return; }
       advance({ uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", otpLoading: false });
@@ -384,13 +414,15 @@ export default function Zip321Modal({
       );
       if (!verified) { set({ signError: "Signature does not match the payload.", signLoading: false }); return; }
 
-      // priceZats here is the unit fix: the old sign-path call passed raw ZEC,
-      // diverging from the OTP path. dispatchAction collapses that.
+      // For a reserved-name sovereign claim, both proofs go in the same call.
       const ar: ServerReply = await dispatchAction(action, name, network, {
         address: s.address,
         priceZats: Math.round((parsePrice(s.price) ?? 0) * 1e8),
         payTaddr: s.payTaddrInput,
-      }, { kind: "sign", signature: sig, pubkey: pub });
+      }, {
+        reservedUnlock: action === "CLAIM" ? s.unlockProof || undefined : undefined,
+        owner: { kind: "sign", signature: sig, pubkey: pub },
+      });
 
       if (!ar.ok) { set({ signError: ar.error, signLoading: false }); return; }
       advance({ uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", signLoading: false });
@@ -399,14 +431,9 @@ export default function Zip321Modal({
     }
   }
 
-  // -- Scanning: reset state on entry, then poll watcher until mined/rejected --
-  const firedSuccessRef = useRef(false);
-  useEffect(() => {
-    if (phase !== "scanning") return;
-    firedSuccessRef.current = false;
-    set({ scanState: "not_detected" });
-  }, [phase]);
-
+  // -- Scanning: poll watcher until mined/rejected. Entry-state reset is
+  // handled by PHASE_OWNS on back-nav; forward entry inherits "not_detected"
+  // from INIT or from the prior back-nav reset.
   const scanActive = phase === "scanning" && s.scanState !== "mined" && s.scanState !== "rejected";
   usePoll(scanActive, async () => {
     const result = await checkMempool(name, network);
@@ -418,8 +445,12 @@ export default function Zip321Modal({
     if (status === "pending") set({ scanState: "in_mempool" });
     else if (status === "resolving") set({ scanState: "confirming" });
     else if (status === "confirmed") {
-      set({ scanState: "mined" });
-      if (!firedSuccessRef.current) { firedSuccessRef.current = true; onSuccess?.(name); }
+      if (!s.successFired) {
+        set({ scanState: "mined", successFired: true });
+        onSuccess?.(name);
+      } else {
+        set({ scanState: "mined" });
+      }
     } else if (status === "rejected") set({ scanState: "rejected" });
   }, 2000);
 
@@ -561,6 +592,41 @@ export default function Zip321Modal({
                   style={{ background: "var(--color-raised)", border: "1.5px solid var(--faq-border)", color: "var(--fg-heading)" }} />
               </div>
             )}
+            {isOwnerAction ? (
+              <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
+                Changes to this name are authorized by{" "}
+                <strong style={{ color: "var(--fg-heading)" }}>
+                  {ownerCommittedPubkey ? "keypairs" : "passcodes"}
+                </strong>
+              </p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                  Changes to this name will be authorized by
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    ["Passcodes", false],
+                    ["Keypairs", true],
+                  ] as const).map(([label, sov]) => {
+                    const selected = s.sovereign === sov;
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => set({ sovereign: sov, inputError: "", signError: "" })}
+                        className="rounded-xl px-3 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+                        style={selected
+                          ? { background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }
+                          : { background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {s.inputError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{s.inputError}</p>}
             <div className="flex gap-3 justify-end">
               <button type="button" onClick={onClose}
@@ -569,7 +635,7 @@ export default function Zip321Modal({
               <button type="button" onClick={handleInputContinue}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold"
                 style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-                Continue
+                {s.sovereign ? "Continue to Sign" : "Continue"}
               </button>
             </div>
           </div>
