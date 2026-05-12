@@ -4,6 +4,14 @@ type OgRenderOptions = {
   backgroundImage: string;
   overlay: string;
   pillText?: string;
+  pillBackground?: string;
+  pillColor?: string;
+  pillBorder?: string;
+  pillFontSize?: number;
+  pillFontWeight?: number;
+  pillLetterSpacing?: string;
+  pillPadding?: string;
+  pillTextTransform?: "none" | "uppercase";
 };
 
 export const OG_IMAGE_SIZE = {
@@ -11,7 +19,19 @@ export const OG_IMAGE_SIZE = {
   height: 630,
 } as const;
 
-export function renderOgImage({ backgroundImage, overlay, pillText }: OgRenderOptions): ImageResponse {
+export function renderOgImage({
+  backgroundImage,
+  overlay,
+  pillText,
+  pillBackground = "rgba(16, 185, 129, 0.92)",
+  pillColor = "#ecfdf5",
+  pillBorder = "rgba(236, 253, 245, 0.4)",
+  pillFontSize = 34,
+  pillFontWeight = 700,
+  pillLetterSpacing = "-0.01em",
+  pillPadding = "10px 20px",
+  pillTextTransform = "none",
+}: OgRenderOptions): ImageResponse {
   return new ImageResponse(
     (
       <div
@@ -54,16 +74,17 @@ export function renderOgImage({ backgroundImage, overlay, pillText }: OgRenderOp
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "rgba(16, 185, 129, 0.92)",
-              color: "#ecfdf5",
-              border: "1px solid rgba(236, 253, 245, 0.4)",
+              background: pillBackground,
+              color: pillColor,
+              border: `1px solid ${pillBorder}`,
               borderRadius: 9999,
-              padding: "10px 20px",
+              padding: pillPadding,
               fontFamily: "Arial, sans-serif",
-              fontSize: 34,
-              fontWeight: 700,
-              letterSpacing: "-0.01em",
+              fontSize: pillFontSize,
+              fontWeight: pillFontWeight,
+              letterSpacing: pillLetterSpacing,
               textAlign: "center",
+              textTransform: pillTextTransform,
               whiteSpace: "nowrap",
               maxWidth: 1040,
             }}
