@@ -3,16 +3,17 @@
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useZns, type ZnsMode } from "@/components/hooks/useZns";
-import { verifyBetaPassword, switchToNetwork } from "@/lib/beta/actions";
+import { verifyBetaPassword } from "@/lib/beta/actions";
 import BetaPasswordModal from "@/components/beta/BetaPasswordModal";
 
 const MODES: ZnsMode[] = ["mainnet", "testnet", "waitlist"];
+type BetaMode = Exclude<ZnsMode, "waitlist">;
 
 export default function NetworkToggle() {
   const pathname = usePathname();
   const router = useRouter();
   const { zns, hasBeta, setMode } = useZns();
-  const [pendingTarget, setPendingTarget] = useState<"mainnet" | "testnet" | null>(null);
+  const [pendingTarget, setPendingTarget] = useState<BetaMode | null>(null);
 
   const onWaitlist = pathname === "/waitlist";
   const onHome = pathname === "/";
@@ -20,32 +21,32 @@ export default function NetworkToggle() {
   if (!onWaitlist && !onHome) return null;
 
   const activeMode: ZnsMode = onWaitlist ? "waitlist" : zns.mode;
+
+  function switchTo(mode: BetaMode) {
+    setMode(mode);
+    if (onWaitlist) router.push("/");
+  }
+
   function handleClick(mode: ZnsMode) {
+    if (mode === activeMode) return;
     if (mode === "waitlist") {
-      if (onWaitlist) return;
       router.push("/waitlist");
       return;
     }
-    if (onWaitlist) {
-      if (hasBeta) {
-        switchToNetwork(mode);
-        router.push("/");
-        return;
-      }
+    if (onWaitlist && !hasBeta) {
       setPendingTarget(mode);
       return;
     }
-    setMode(mode);
+    switchTo(mode);
   }
 
   async function handlePasswordSubmit(password: string): Promise<boolean> {
     if (!pendingTarget) return false;
     const result = await verifyBetaPassword(password, pendingTarget);
-    if (result.ok) {
-      setPendingTarget(null);
-      router.push("/");
-    }
-    return result.ok;
+    if (!result.ok) return false;
+    switchTo(pendingTarget);
+    setPendingTarget(null);
+    return true;
   }
 
   return (
