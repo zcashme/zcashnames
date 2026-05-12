@@ -2,7 +2,7 @@
  * ExplorerToolbar — the filter bar for the explorer page.
  * Renders a search input (delegated to ToolbarSearchInput), a network selector
  * (Mainnet / Testnet), and a sort dropdown (by height / name / type).
- * All state is lifted to ExplorerShell; this component only receives callbacks.
+ * All state is lifted to ExplorerView; this component only receives callbacks.
  */
 "use client";
 

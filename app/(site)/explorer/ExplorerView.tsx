@@ -1,5 +1,5 @@
 /**
- * ExplorerShell — the client-side orchestrator for the explorer page.
+ * ExplorerView — the client-side orchestrator for the explorer page.
  * URL is the single source of truth for navigation state (env, tab, page, name).
  * useSearchParams is read directly; handlers call router.push() to update the URL.
  * Server components own data fetching; this component handles interactivity only.
@@ -9,31 +9,102 @@
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ExplorerToolbar, { type SortBy } from "./ExplorerToolbar";
-import ExplorerContent from "./ExplorerContent";
 import {
   EXPLORER_PAGE_SIZE,
-  filterEvents,
-  filterListings,
+  clampPage,
   filterRegistrations,
-  getTabCountLabel,
   getTabEvents,
+  getTotalPages,
   normalizeExplorerQuery,
+  paginateRows,
   parseExplorerPage,
   parseExplorerTab,
   type ExplorerTab,
-  type TabCounts,
 } from "./explorerFilters";
 import ExplorerNameDetail from "./ExplorerNameDetail";
 import Zip321Modal from "@/components/purchases/Zip321Modal";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
+import ActionBadge from "@/components/ActionBadge";
 
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 import CopyIconButton from "@/components/CopyIconButton";
+import { zatsToZec } from "@/lib/zns/utils";
 import type { Listing, Network, Registration, ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import { ACTIONS, ACTION_LABELS } from "@/lib/types";
+
+function sortEvents(events: ZnsEvent[], sortBy: SortBy): ZnsEvent[] {
+  return [...events].sort((a, b) => {
+    if (sortBy === "height") return b.height - a.height;
+    if (sortBy === "name") return a.name.localeCompare(b.name) || b.height - a.height;
+    return a.action.localeCompare(b.action) || b.height - a.height;
+  });
+}
+
+function sortListings(listings: Listing[], sortBy: SortBy): Listing[] {
+  return [...listings].sort((a, b) => {
+    if (sortBy === "height") return b.height - a.height;
+    if (sortBy === "name") return a.name.localeCompare(b.name) || b.height - a.height;
+    return b.height - a.height;
+  });
+}
+
+function sortRegistrations(registrations: Registration[], sortBy: SortBy): Registration[] {
+  return [...registrations].sort((a, b) => {
+    if (sortBy === "height") return b.height - a.height || a.name.localeCompare(b.name);
+    if (sortBy === "name") return a.name.localeCompare(b.name) || b.height - a.height;
+    const aStatus = a.listing ? "listed" : "registered";
+    const bStatus = b.listing ? "listed" : "registered";
+    return aStatus.localeCompare(bStatus) || b.height - a.height || a.name.localeCompare(b.name);
+  });
+}
+
+function PaginationControls({
+  page,
+  totalItems,
+  pageSize,
+  onPageChange,
+}: {
+  page: number;
+  totalItems: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalItems <= 0) return null;
+  const totalPages = getTotalPages(totalItems, pageSize);
+  const canGoPrev = page > 1;
+  const canGoNext = page < totalPages;
+
+  return (
+    <div
+      className="border-t px-5 py-3 flex items-center justify-between gap-3"
+      style={{ borderColor: "var(--leaders-card-border)" }}
+      data-testid="explorer-pagination"
+    >
+      <button
+        type="button"
+        onClick={() => onPageChange(page - 1)}
+        disabled={!canGoPrev}
+        className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Previous
+      </button>
+      <span className="text-[0.76rem] font-semibold uppercase tracking-[0.08em] text-fg-muted tabular-nums">
+        Page {page} of {totalPages}
+      </span>
+      <button
+        type="button"
+        onClick={() => onPageChange(page + 1)}
+        disabled={!canGoNext}
+        className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Next
+      </button>
+    </div>
+  );
+}
 
 const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "all", label: "All" },
@@ -46,7 +117,7 @@ const MORE_TABS: { key: ExplorerTab; label: string }[] = [
   ...ACTIONS.map(a => ({ key: a, label: ACTION_LABELS[a] })),
 ];
 
-interface ExplorerShellProps {
+interface ExplorerViewProps {
   initialEvents: ZnsEvent[];
   initialEventsTotal: number;
   initialListings: Listing[];
@@ -67,7 +138,7 @@ interface ExplorerShellProps {
   nameEvents: ZnsEvent[];
 }
 
-export default function ExplorerShell({
+export default function ExplorerView({
   initialEvents,
   initialEventsTotal,
   initialListings,
@@ -78,7 +149,7 @@ export default function ExplorerShell({
   nameQuery,
   nameResult,
   nameEvents,
-}: ExplorerShellProps) {
+}: ExplorerViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -108,36 +179,45 @@ export default function ExplorerShell({
   const showNameDetail = !!selectedName;
   const nameDataReady = !!nameResult;
 
-  // ── Tab counts (client-side filtering on server data) ───────────────────
+  // ── Tab counts (authoritative server totals; null where unknowable) ─────
   const hasSearchFilter = normalizeExplorerQuery(searchQuery).length > 0;
-  const tabCounts = useMemo(() => {
-    const counts: TabCounts = {
-      all: {
-        filtered: filterEvents(getTabEvents("all", initialEvents), searchQuery).length,
-        total: getTabEvents("all", initialEvents).length,
-      },
-      forsale: {
-        filtered: filterListings(initialListings, searchQuery).length,
-        total: initialListings.length,
-      },
-      registered: {
-        filtered: filterRegistrations(initialRegistrations, searchQuery).length,
-        total: initialRegistrations.length,
-      },
-      admin: {
-        filtered: filterEvents(getTabEvents("admin", initialEvents), searchQuery).length,
-        total: getTabEvents("admin", initialEvents).length,
-      },
-    };
-    for (const action of ACTIONS) {
-      const tabEvents = getTabEvents(action, initialEvents);
-      counts[action] = {
-        filtered: filterEvents(tabEvents, searchQuery).length,
-        total: tabEvents.length,
-      };
+  const filteredRegistrations = useMemo(
+    () => sortRegistrations(filterRegistrations(initialRegistrations, searchQuery), sortBy),
+    [initialRegistrations, searchQuery, sortBy],
+  );
+  const sortedListings = useMemo(
+    () => sortListings(initialListings, sortBy),
+    [initialListings, sortBy],
+  );
+  const sortedEvents = useMemo(
+    () => sortEvents(getTabEvents(tab, initialEvents), sortBy),
+    [tab, initialEvents, sortBy],
+  );
+
+  function getTabCount(key: ExplorerTab): number | null {
+    if (key === "registered") {
+      return hasSearchFilter ? filteredRegistrations.length : stats.claimed;
     }
-    return counts;
-  }, [initialEvents, initialListings, initialRegistrations, searchQuery]);
+    if (key === "forsale") return stats.forSale;
+    // Events-style tabs: only the active tab has a known total from the server.
+    if (key === tab) return initialEventsTotal;
+    return null;
+  }
+
+  // ── Active-tab pagination ────────────────────────────────────────────────
+  const totalItems =
+    tab === "registered" ? filteredRegistrations.length
+    : tab === "forsale" ? sortedListings.length
+    : initialEventsTotal;
+  const safePage = clampPage(page, totalItems, EXPLORER_PAGE_SIZE);
+  const visibleRegistrations = useMemo(
+    () => paginateRows(filteredRegistrations, safePage, EXPLORER_PAGE_SIZE),
+    [filteredRegistrations, safePage],
+  );
+  const visibleListings = useMemo(
+    () => paginateRows(sortedListings, safePage, EXPLORER_PAGE_SIZE),
+    [sortedListings, safePage],
+  );
 
   const isMoreTabActive = MORE_TABS.some((t) => t.key === tab);
   const activeMoreLabel = MORE_TABS.find((t) => t.key === tab)?.label;
@@ -179,7 +259,13 @@ export default function ExplorerShell({
   }
 
   function handleSearchChange(nextQuery: string) {
+    const wasEmpty = !searchQuery;
     setSearchQuery(nextQuery);
+    if (nextQuery && wasEmpty && (tab !== "registered" || page !== 1)) {
+      startTransition(() => {
+        router.push(buildUrl({ tab: "registered", page: 1 }));
+      });
+    }
   }
 
   function handleNameClick(name: string) {
@@ -312,7 +398,7 @@ export default function ExplorerShell({
         style={{ borderColor: "var(--leaders-card-border)" }}
       >
         {PRIMARY_TABS.map((t) => {
-          const count = tabCounts?.[t.key];
+          const count = getTabCount(t.key);
           return (
             <button
               key={t.key}
@@ -325,7 +411,7 @@ export default function ExplorerShell({
               {count != null && (
                 <>
                   {" "}
-                  <span className="ml-1 tabular-nums">({getTabCountLabel(count, hasSearchFilter)})</span>
+                  <span className="ml-1 tabular-nums">({count})</span>
                 </>
               )}
               {tab === t.key && (
@@ -369,7 +455,7 @@ export default function ExplorerShell({
                 }}
               >
                 {MORE_TABS.map((t) => {
-                  const count = tabCounts?.[t.key];
+                  const count = getTabCount(t.key);
                   return (
                     <button
                       key={t.key}
@@ -386,7 +472,7 @@ export default function ExplorerShell({
                     >
                       <span>{t.label}</span>
                       {count != null && (
-                        <span className="ml-2 tabular-nums text-fg-dim">({getTabCountLabel(count, hasSearchFilter)})</span>
+                        <span className="ml-2 tabular-nums text-fg-dim">({count})</span>
                       )}
                     </button>
                   );
@@ -409,23 +495,180 @@ export default function ExplorerShell({
         />
       )}
 
-      {/* Content (hidden while name detail is showing) */}
+      {/* Tab tables (hidden while name detail is showing) */}
       <div className={showNameDetail ? "hidden" : ""}>
         <div className={isPending && !showNameDetail ? "opacity-60 pointer-events-none transition-opacity" : "transition-opacity"}>
-          <ExplorerContent
-            tab={tab}
-            sortBy={sortBy}
-            searchQuery={searchQuery}
-            currentPage={page}
-            pageSize={EXPLORER_PAGE_SIZE}
-            onPageChange={handlePageChange}
-            onNameClick={handleNameClick}
-
-            initialEvents={initialEvents}
-            initialEventsTotal={initialEventsTotal}
-            initialListings={initialListings}
-            initialRegistrations={initialRegistrations}
-          />
+          <div className="overflow-hidden rounded-2xl border" style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)" }}>
+            <div className="overflow-x-auto">
+              {tab === "registered" ? (
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr
+                      className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
+                      style={{ borderColor: "var(--leaders-card-border)" }}
+                    >
+                      <th className="px-4 py-3 sm:px-6">Name</th>
+                      <th className="px-4 py-3 sm:px-6">Status</th>
+                      <th className="hidden sm:table-cell px-4 py-3 sm:px-6">Address</th>
+                      <th className="px-4 py-3 text-right sm:px-6">Block</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleRegistrations.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
+                          No registered names found.
+                        </td>
+                      </tr>
+                    ) : (
+                      visibleRegistrations.map((r) => (
+                        <tr
+                          key={`${r.name}:${r.txid}`}
+                          className="border-b last:border-b-0 transition-colors"
+                          style={{ borderColor: "var(--leaders-card-border)" }}
+                        >
+                          <td className="px-4 py-3 sm:px-6">
+                            <button
+                              type="button"
+                              onClick={() => handleNameClick(r.name)}
+                              className="font-semibold text-fg-heading hover:underline cursor-pointer"
+                            >
+                              {r.name}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3 sm:px-6">
+                            <span
+                              className="rounded px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
+                              style={{ background: "var(--market-stats-segment-active-bg)" }}
+                            >
+                              {r.listing ? "Listed" : "Registered"}
+                            </span>
+                          </td>
+                          <td className="hidden sm:table-cell px-4 py-3 sm:px-6">
+                            <span className="font-mono text-fg-muted text-xs truncate max-w-[14rem] inline-block align-middle">{r.address}</span>
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums text-fg-muted text-xs sm:px-6">{r.height.toLocaleString()}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              ) : tab === "forsale" ? (
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr
+                      className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
+                      style={{ borderColor: "var(--leaders-card-border)" }}
+                    >
+                      <th className="px-4 py-3 sm:px-6">Name</th>
+                      <th className="px-4 py-3 text-right sm:px-6">Price</th>
+                      <th className="px-4 py-3 sm:px-6">Status</th>
+                      <th className="px-4 py-3 text-right sm:px-6">Block</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleListings.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
+                          No names listed for sale.
+                        </td>
+                      </tr>
+                    ) : (
+                      visibleListings.map((l) => (
+                        <tr
+                          key={l.txid}
+                          className="border-b last:border-b-0 transition-colors"
+                          style={{ borderColor: "var(--leaders-card-border)" }}
+                        >
+                          <td className="px-4 py-3 sm:px-6">
+                            <button
+                              type="button"
+                              onClick={() => handleNameClick(l.name)}
+                              className="font-semibold text-fg-heading hover:underline cursor-pointer"
+                            >
+                              {l.name}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums text-fg-muted sm:px-6">{zatsToZec(l.price)} ZEC</td>
+                          <td className="px-4 py-3 sm:px-6">
+                            <span
+                              className="rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-fg-muted"
+                              style={{ background: "var(--market-stats-segment-active-bg)" }}
+                            >
+                              Active
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums text-fg-muted text-xs sm:px-6">{l.height.toLocaleString()}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr
+                      className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
+                      style={{ borderColor: "var(--leaders-card-border)" }}
+                    >
+                      <th className="px-4 py-3 sm:px-6">Action</th>
+                      <th className="px-4 py-3 sm:px-6">Name</th>
+                      <th className="hidden sm:table-cell px-4 py-3 sm:px-6">Address</th>
+                      <th className="px-4 py-3 text-right sm:px-6">Block</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedEvents.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
+                          No events found.
+                        </td>
+                      </tr>
+                    ) : (
+                      sortedEvents.map((ev) => (
+                        <tr
+                          key={ev.id}
+                          className="border-b last:border-b-0 transition-colors"
+                          style={{ borderColor: "var(--leaders-card-border)" }}
+                        >
+                          <td className="px-4 py-3 sm:px-6">
+                            <ActionBadge action={ev.action} />
+                          </td>
+                          <td className="px-4 py-3 sm:px-6">
+                            {ev.name ? (
+                              <button
+                                type="button"
+                                onClick={() => handleNameClick(ev.name)}
+                                className="font-semibold text-fg-heading hover:underline cursor-pointer"
+                              >
+                                {ev.name}
+                              </button>
+                            ) : (
+                              <span className="text-fg-muted">(admin)</span>
+                            )}
+                          </td>
+                          <td className="hidden sm:table-cell px-4 py-3 sm:px-6">
+                            {ev.ua ? (
+                              <span className="font-mono text-fg-muted text-xs truncate max-w-[14rem] inline-block align-middle">{ev.ua}</span>
+                            ) : (
+                              <span className="text-fg-muted">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums text-fg-muted text-xs sm:px-6">{ev.height.toLocaleString()}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <PaginationControls
+              page={safePage}
+              totalItems={totalItems}
+              pageSize={EXPLORER_PAGE_SIZE}
+              onPageChange={handlePageChange}
+            />
+          </div>
         </div>
       </div>
 

@@ -1,15 +1,14 @@
 /**
- * Explorer filter utilities — pure functions shared between page.tsx (server),
- * ExplorerShell.tsx, and ExplorerContent.tsx. ExplorerTab is the union of
- * primary tabs ("all", "registered", "forsale", "admin") plus ZNS action types
- * ("CLAIM", "BUY", "LIST", …).
+ * Explorer filter utilities — pure functions shared between page.tsx (server)
+ * and ExplorerView.tsx. ExplorerTab is the union of primary tabs ("all",
+ * "registered", "forsale", "admin") plus ZNS action types ("CLAIM", "BUY",
+ * "LIST", …).
  */
-import type { Network, Listing, Registration, ZnsEvent, Action } from "@/lib/types";
+import type { Network, Registration, ZnsEvent, Action } from "@/lib/types";
 import { ACTIONS } from "@/lib/types";
 import { validateAddress } from "@/lib/zns/utils";
 
 export type ExplorerTab = "all" | "registered" | "forsale" | "admin" | Action;
-export type TabCounts = Record<string, { filtered: number; total: number }>;
 
 export const EXPLORER_PAGE_SIZE = 25;
 
@@ -43,21 +42,6 @@ export function getTabEvents(tab: ExplorerTab, events: ZnsEvent[]): ZnsEvent[] {
   return events;
 }
 
-export function filterEvents(events: ZnsEvent[], searchQuery: string): ZnsEvent[] {
-  const q = normalizeExplorerQuery(searchQuery);
-  if (!q) return events;
-  return events.filter((ev) =>
-    ev.name.toLowerCase().includes(q) ||
-    ev.action.toLowerCase().includes(q)
-  );
-}
-
-export function filterListings(listings: Listing[], searchQuery: string): Listing[] {
-  const q = normalizeExplorerQuery(searchQuery);
-  if (!q) return listings;
-  return listings.filter((listing) => listing.name.toLowerCase().includes(q));
-}
-
 export function filterRegistrations(registrations: Registration[], searchQuery: string): Registration[] {
   const q = normalizeExplorerQuery(searchQuery);
   if (!q) return registrations;
@@ -67,10 +51,6 @@ export function filterRegistrations(registrations: Registration[], searchQuery: 
     (!isUAddress && registration.address.toLowerCase().includes(q)) ||
     (isUAddress && registration.address.toLowerCase() === q)
   );
-}
-
-export function getTabCountLabel(count: { filtered: number; total: number }, hasSearchFilter: boolean): string {
-  return hasSearchFilter ? `${count.filtered}/${count.total}` : `${count.total}`;
 }
 
 export function getPaginationOffset(page: number, pageSize: number = EXPLORER_PAGE_SIZE): number {

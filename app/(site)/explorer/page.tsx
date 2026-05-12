@@ -2,14 +2,14 @@
  * Server-side explorer page — the single data-fetching entry point.
  * Fires 5 parallel fetches (events, listings, registrations, mainnet stats, testnet stats)
  * for the selected ?env (mainnet | testnet). Also resolves a name when ?name is set.
- * All results are passed as props to ExplorerShell for client-side interactivity.
+ * All results are passed as props to ExplorerView for client-side interactivity.
  */
 import { getCurrentRegistrations, getEvents, getListings, resolveName } from "@/lib/zns/resolve";
 import { getChainStats } from "@/lib/network-stats";
 import type { Action } from "@/lib/types";
 import { ACTIONS } from "@/lib/types";
 import type { ResolveName } from "@/lib/types";
-import ExplorerShell from "./ExplorerShell";
+import ExplorerView from "./ExplorerView";
 import {
   EXPLORER_PAGE_SIZE,
   getPaginationOffset,
@@ -106,7 +106,7 @@ export default async function ExplorerPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-4 sm:px-6">
-      <ExplorerShell
+      <ExplorerView
         initialEvents={initialEvents}
         initialEventsTotal={initialEventsTotal}
         initialListings={listings}
