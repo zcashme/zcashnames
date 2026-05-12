@@ -3,7 +3,7 @@
 import crypto from "node:crypto";
 import { ZNS, BUY_COMMISSION, LIST_COMMISSION } from "zcashname-sdk";
 import type { Network } from "@/lib/types";
-import { getZns, getVerifiedZns, fetchClaimCost, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
+import { getZns, fetchClaimCost, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
 import { MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import { getReservedName, verifyUnlockCode } from "@/lib/zns/reserved";
 import { verifyProof, verifyProofKind, issueProof, parseProofSubject } from "@/lib/zns/proof";
@@ -98,7 +98,7 @@ export async function claimAction(
   }
 
   try {
-    const zns = await getVerifiedZns(network);
+    const zns = getZns(network);
     if (await zns.resolveName(n)) return { ok: false, error: `Name "${n}" is already registered.` };
     const cost = await fetchClaimCost(n, network);
     if (cost == null) return { ok: false, error: "Pricing unavailable - indexer may be down." };
@@ -126,7 +126,7 @@ export async function buyAction(
   if (addrResult.status !== "unified") return { ok: false, error: addrResult.warning || "Unified address required." };
 
   try {
-    const zns = await getVerifiedZns(network);
+    const zns = getZns(network);
     const reg = await zns.resolveName(n);
     if (!reg?.listing) return { ok: false, error: `Name "${n}" is not listed for sale.` };
     const price = listingPriceZats ?? reg.listing.price;

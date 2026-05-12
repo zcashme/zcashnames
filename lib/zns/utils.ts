@@ -1,41 +1,12 @@
 import { ZNS } from "zcashname-sdk";
 import type { Network } from "@/lib/types";
 
-//
-// ZNS SDK instance cache.
-//
-// The SDK wraps the ZNS JSON-RPC indexer (light.zcash.me). Every call to
-// getZns() returns the same singleton per network so we don't re-create
-// connections. getVerifiedZns() additionally fetches and caches the indexer's
-// admin public key — required before building any signed transaction.
-//
-
-const ZNS_RPC_URLS: Record<Network, string> = {
-  testnet: process.env.ZNS_TESTNET_RPC_URL ?? "https://light.zcash.me/zns-testnet",
-  mainnet: process.env.ZNS_MAINNET_RPC_URL ?? "https://light.zcash.me/zns-mainnet",
+const instances: Record<Network, ZNS> = {
+  testnet: new ZNS({ network: "testnet", url: process.env.ZNS_TESTNET_RPC_URL }),
+  mainnet: new ZNS({ network: "mainnet", url: process.env.ZNS_MAINNET_RPC_URL }),
 };
 
-const instances = new Map<Network, ZNS>();
-const verified = new Set<Network>();
-
-export function getZns(network: Network): ZNS {
-  const cached = instances.get(network);
-  if (cached) return cached;
-  const zns = new ZNS({ network, url: ZNS_RPC_URLS[network] });
-  instances.set(network, zns);
-  return zns;
-}
-
-// Signing transactions requires the admin public key, which we fetch once
-// per network via zns.verify() and cache indefinitely.
-export async function getVerifiedZns(network: Network): Promise<ZNS> {
-  const zns = getZns(network);
-  if (!verified.has(network)) {
-    await zns.verify();
-    verified.add(network);
-  }
-  return zns;
-}
+export const getZns = (network: Network): ZNS => instances[network];
 
 //
 // Claim cost lookup. Pricing is based on name length — shorter names cost more.
