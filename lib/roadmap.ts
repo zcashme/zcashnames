@@ -1,45 +1,28 @@
-import { slugify } from "@/lib/sharekit";
-
-// Period represents one phase of the roadmap with status, date range, and task list.
-// Parsed from `# Title \`status\`` markdown headings.
-
 export type RoadmapPeriod = {
   id: string;
+  sectionTitle?: string;
   title: string;
-  status: string;
+  badgeLabel?: string;
+  badgeHref?: string;
   summary: string;
   startDate: string;
   endDate: string;
   tasks: string[];
 };
 
-// Visual metadata mapped from status pill text, consumed by the roadmap UI component.
-export type RoadmapStatusKind = "complete" | "apply-now" | "tba";
-
-export type RoadmapStatusMeta = {
-  kind: RoadmapStatusKind;
-  icon: "check" | "checkbox" | "dot";
-  animated: boolean;
-};
-
-const STATUS_PATTERNS: [RegExp, RoadmapStatusMeta][] = [
-  [/^complete$/i, { kind: "complete", icon: "check", animated: false }],
-  [/^apply\s*now$/i, { kind: "apply-now", icon: "checkbox", animated: true }],
-  [/^tba$/i, { kind: "tba", icon: "dot", animated: false }],
-];
-
-// Maps a status pill string (e.g. "Complete", "Apply Now", "TBA") to its visual presentation config.
-export function getRoadmapStatusMeta(status: string): RoadmapStatusMeta {
-  for (const [pattern, meta] of STATUS_PATTERNS) {
-    if (pattern.test(status.trim())) return meta;
-  }
-  return { kind: "tba", icon: "dot", animated: false };
-}
-
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function normalizeLineEndings(markdown: string): string {
   return markdown.replace(/\r\n?/g, "\n");
+}
+
+function slugify(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug || "period";
 }
 
 function createUniqueId(base: string, seen: Map<string, number>): string {
@@ -48,28 +31,66 @@ function createUniqueId(base: string, seen: Map<string, number>): string {
   return count === 0 ? base : `${base}-${count + 1}`;
 }
 
-// Validates and returns a YYYY-MM-DD date string, throwing on invalid format or impossible calendar dates.
+function stripInlineCode(value: string): string {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^`(.+)`$/);
+  return match ? match[1].trim() : trimmed;
+}
+
+function parseHeading(rawHeading: string): Pick<RoadmapPeriod, "title" | "badgeLabel" | "badgeHref"> {
+  const trimmed = rawHeading.trim();
+  const badgeMatch = trimmed.match(/^(.*?)\s+\[([^\]]+)\]\(([^)]+)\)\s*$/);
+
+  if (badgeMatch) {
+    const title = badgeMatch[1].trim();
+    const badgeLabel = stripInlineCode(badgeMatch[2]);
+    const badgeHref = badgeMatch[3].trim();
+
+    return {
+      title: title || trimmed,
+      badgeLabel: badgeLabel || undefined,
+      badgeHref: badgeHref || undefined,
+    };
+  }
+
+  const inlineBadgeMatch = trimmed.match(/^(.*?)\s+`([^`]+)`\s*$/);
+  if (inlineBadgeMatch) {
+    const title = inlineBadgeMatch[1].trim();
+    const badgeLabel = inlineBadgeMatch[2].trim();
+
+    return {
+      title: title || trimmed,
+      badgeLabel: badgeLabel || undefined,
+    };
+  }
+
+  return { title: trimmed };
+}
+
 function parseDateField(value: string, field: "Start" | "End", title: string): string {
   const trimmed = value.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
     throw new Error(`Roadmap period "${title}" has an invalid ${field.toLowerCase()} date: "${value}".`);
   }
 
-  parseIsoDateUtc(trimmed);
+  try {
+    parseIsoDateUtc(trimmed);
+  } catch {
+    throw new Error(`Roadmap period "${title}" has an invalid ${field.toLowerCase()} date: "${value}".`);
+  }
   return trimmed;
 }
 
-// Assembles and validates a RoadmapPeriod from parsed fragments.
-// Enforces that summary, start/end dates, and at least one task are present, and that end >= start.
 function finalizePeriod(
   sectionIds: Map<string, number>,
-  title: string,
-  status: string,
+  sectionTitle: string | undefined,
+  heading: Pick<RoadmapPeriod, "title" | "badgeLabel" | "badgeHref">,
   summaryLines: string[],
   startDate: string | null,
   endDate: string | null,
   tasks: string[],
 ): RoadmapPeriod {
+  const { title, badgeLabel, badgeHref } = heading;
   const summary = summaryLines.join(" ").replace(/\s+/g, " ").trim();
   if (!summary) {
     throw new Error(`Roadmap period "${title}" is missing a summary paragraph.`);
@@ -92,8 +113,10 @@ function finalizePeriod(
 
   return {
     id: createUniqueId(slugify(title), sectionIds),
+    sectionTitle,
     title,
-    status,
+    badgeLabel,
+    badgeHref,
     summary,
     startDate,
     endDate,
@@ -101,19 +124,23 @@ function finalizePeriod(
   };
 }
 
-// Parses roadmap markdown into an ordered list of periods.
-// Expected format: `# Title \`status\`` headings followed by a summary paragraph,
-// `Start: YYYY-MM-DD` / `End: YYYY-MM-DD` fields, and `- task` list items.
-// Throws if the document contains no periods.
 export function parseRoadmapMarkdown(markdown: string): RoadmapPeriod[] {
   const lines = normalizeLineEndings(markdown).split("\n");
   const periods: RoadmapPeriod[] = [];
   const sectionIds = new Map<string, number>();
+  let currentSectionTitle: string | undefined;
   let index = 0;
 
   while (index < lines.length) {
     const current = lines[index].trim();
     if (!current) {
+      index += 1;
+      continue;
+    }
+
+    const sectionMatch = current.match(/^---\s+(.+)$/);
+    if (sectionMatch) {
+      currentSectionTitle = sectionMatch[1].trim() || undefined;
       index += 1;
       continue;
     }
@@ -124,16 +151,7 @@ export function parseRoadmapMarkdown(markdown: string): RoadmapPeriod[] {
       continue;
     }
 
-    let rawTitle = headingMatch[1].trim();
-    let status = "TBA";
-
-    const pillMatch = rawTitle.match(/^(.+)\s+`([^`]+)`\s*$/);
-    if (pillMatch) {
-      rawTitle = pillMatch[1].trim();
-      status = pillMatch[2].trim();
-    }
-
-    const title = rawTitle;
+    const heading = parseHeading(headingMatch[1]);
     const summaryLines: string[] = [];
     const tasks: string[] = [];
     let startDate: string | null = null;
@@ -149,18 +167,18 @@ export function parseRoadmapMarkdown(markdown: string): RoadmapPeriod[] {
         continue;
       }
 
-      if (/^#\s+/.test(trimmed)) break;
+      if (/^#\s+/.test(trimmed) || /^---\s+/.test(trimmed)) break;
 
       const startMatch = trimmed.match(/^Start:\s*(.+)$/i);
       if (startMatch) {
-        startDate = parseDateField(startMatch[1], "Start", title);
+        startDate = parseDateField(startMatch[1], "Start", heading.title);
         index += 1;
         continue;
       }
 
       const endMatch = trimmed.match(/^End:\s*(.+)$/i);
       if (endMatch) {
-        endDate = parseDateField(endMatch[1], "End", title);
+        endDate = parseDateField(endMatch[1], "End", heading.title);
         index += 1;
         continue;
       }
@@ -173,14 +191,14 @@ export function parseRoadmapMarkdown(markdown: string): RoadmapPeriod[] {
       }
 
       if (tasks.length > 0) {
-        throw new Error(`Roadmap period "${title}" contains unsupported content after its task list.`);
+        throw new Error(`Roadmap period "${heading.title}" contains unsupported content after its task list.`);
       }
 
       summaryLines.push(trimmed);
       index += 1;
     }
 
-    periods.push(finalizePeriod(sectionIds, title, status, summaryLines, startDate, endDate, tasks));
+    periods.push(finalizePeriod(sectionIds, currentSectionTitle, heading, summaryLines, startDate, endDate, tasks));
   }
 
   if (periods.length === 0) {
@@ -190,7 +208,6 @@ export function parseRoadmapMarkdown(markdown: string): RoadmapPeriod[] {
   return periods;
 }
 
-// Parses a YYYY-MM-DD string as a UTC Date, with overflow validation (rejects Feb 30, etc.).
 export function parseIsoDateUtc(value: string): Date {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) {
@@ -214,25 +231,20 @@ export function parseIsoDateUtc(value: string): Date {
   return date;
 }
 
-// --- UTC-aware date utilities for roadmap Gantt visualization ---
-
 export function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * DAY_MS);
 }
 
-// Monday-based UTC week start.
 export function startOfUtcWeek(date: Date): Date {
   const day = date.getUTCDay();
   const offset = (day + 6) % 7;
   return addUtcDays(date, -offset);
 }
 
-// Monday-based UTC week end.
 export function endOfUtcWeek(date: Date): Date {
   return addUtcDays(startOfUtcWeek(date), 6);
 }
 
-// Number of full calendar weeks between two dates (Monday-aligned).
 export function diffUtcWeeks(start: Date, end: Date): number {
   return Math.floor((startOfUtcWeek(end).getTime() - startOfUtcWeek(start).getTime()) / (7 * DAY_MS));
 }

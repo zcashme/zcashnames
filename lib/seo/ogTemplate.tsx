@@ -4,6 +4,14 @@ type OgRenderOptions = {
   backgroundImage: string;
   overlay: string;
   pillText?: string;
+  pillBackground?: string;
+  pillColor?: string;
+  pillBorder?: string;
+  pillFontSize?: number;
+  pillFontWeight?: number;
+  pillLetterSpacing?: string;
+  pillPadding?: string;
+  pillTextTransform?: "uppercase" | "lowercase" | "none";
 };
 
 const BASE = "https://www.zcashnames.com/brandkit";
@@ -20,7 +28,19 @@ export const OG_VARIANTS: Record<string, Omit<OgRenderOptions, "pillText"> & { p
   sharekit:      { backgroundImage: BG.dark,  overlay: "linear-gradient(115deg, rgba(8, 12, 20, 0.78), rgba(20, 41, 26, 0.58))" },
   leaders:       { backgroundImage: BG.dark,  overlay: "linear-gradient(115deg, rgba(8, 12, 20, 0.78), rgba(34, 22, 5, 0.60))" },
   "leaders-ref": { backgroundImage: BG.dark,  overlay: "linear-gradient(115deg, rgba(8, 13, 20, 0.80), rgba(8, 34, 30, 0.68))" },
-  roadmap:       { backgroundImage: BG.mono,  overlay: "linear-gradient(115deg, rgba(7, 16, 14, 0.82), rgba(18, 46, 35, 0.70))" },
+  roadmap:       {
+    backgroundImage: BG.mono,
+    overlay: "linear-gradient(115deg, rgba(7, 16, 14, 0.82), rgba(18, 46, 35, 0.70))",
+    pillText: "Roadmap",
+    pillBackground: "transparent",
+    pillColor: "#9bbc0f",
+    pillBorder: "#9bbc0f",
+    pillFontSize: 26,
+    pillFontWeight: 600,
+    pillLetterSpacing: "0.12em",
+    pillPadding: "10px 18px",
+    pillTextTransform: "uppercase",
+  },
   "leaders-terms": { backgroundImage: BG.mono, overlay: "linear-gradient(115deg, rgba(9, 19, 15, 0.80), rgba(16, 30, 23, 0.72))" },
 };
 
@@ -32,7 +52,19 @@ export const OG_IMAGE_SIZE = {
 // Renders a 1200×630 social preview image via next/og ImageResponse.
 // Composes a background image, gradient overlay, and optional status pill.
 // Consumed by route handlers (e.g. /og/*) for dynamic OG:image meta tags.
-export function renderOgImage({ backgroundImage, overlay, pillText }: OgRenderOptions): ImageResponse {
+export function renderOgImage({
+  backgroundImage,
+  overlay,
+  pillText,
+  pillBackground,
+  pillColor,
+  pillBorder,
+  pillFontSize,
+  pillFontWeight,
+  pillLetterSpacing,
+  pillPadding,
+  pillTextTransform,
+}: OgRenderOptions): ImageResponse {
   return new ImageResponse(
     (
       <div
@@ -75,15 +107,16 @@ export function renderOgImage({ backgroundImage, overlay, pillText }: OgRenderOp
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "rgba(16, 185, 129, 0.92)",
-              color: "#ecfdf5",
-              border: "1px solid rgba(236, 253, 245, 0.4)",
+              background: pillBackground ?? "rgba(16, 185, 129, 0.92)",
+              color: pillColor ?? "#ecfdf5",
+              border: `1px solid ${pillBorder ?? "rgba(236, 253, 245, 0.4)"}`,
               borderRadius: 9999,
-              padding: "10px 20px",
+              padding: pillPadding ?? "10px 20px",
               fontFamily: "Arial, sans-serif",
-              fontSize: 34,
-              fontWeight: 700,
-              letterSpacing: "-0.01em",
+              fontSize: pillFontSize ?? 34,
+              fontWeight: pillFontWeight ?? 700,
+              letterSpacing: pillLetterSpacing ?? "-0.01em",
+              textTransform: pillTextTransform ?? "none",
               textAlign: "center",
               whiteSpace: "nowrap",
               maxWidth: 1040,
