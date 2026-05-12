@@ -30,6 +30,9 @@ export const ACTIONS = [
 ] as const;
 export type Action = (typeof ACTIONS)[number];
 
+/** All actions that appear in the event log -- user actions plus admin SETPRICE. */
+export type EventAction = Action | "SETPRICE";
+
 export const ACTION_LABELS = {
   CLAIM: "Claim",
   BUY: "Buy",
@@ -59,17 +62,65 @@ export type Phase =
   | "fund"
   | "scanning";
 
-// Which phases each action walks through. CLAIM is the simplest (no OTP needed
-// since nobody owns the name yet). BUY adds a "fund" step for explicit payment.
-// Every mutating action ends in "scanning" where the client polls the mempool.
-export const ACTION_PHASES: Record<Action, Phase[]> = {
-  CLAIM:  ["input", "confirm", "scanning"],
-  BUY:    ["input", "confirm", "fund", "scanning"],
-  UPDATE: ["input", "otp", "confirm", "scanning"],
-  LIST:   ["input", "otp", "confirm", "scanning"],
-  DELIST: ["otp", "confirm", "scanning"],
-  RELEASE:["otp", "confirm", "scanning"],
+// Capability table per action. The phase list is *derived* from this plus the
+// runtime (resolve status, sovereign opt-in), so there's no second source of
+// truth and no inline phase-array mutation in the modal. See phasesFor().
+//
+//   needsAuth     action requires proof of current control (otp or sig)
+//   allowsCommit  user may attach/rotate the future-control pubkey (sovereign)
+//   fund          BUY-shaped extra payment step (seller payout)
+//   needsInput    has a data-collection screen at the top of the flow
+//
+export interface ActionCaps {
+  needsAuth: boolean;
+  allowsCommit: boolean;
+  fund: boolean;
+  needsInput: boolean;
+}
+export const ACTION_CAPS: Record<Action, ActionCaps> = {
+  CLAIM:   { needsAuth: false, allowsCommit: true,  fund: false, needsInput: true  },
+  BUY:     { needsAuth: false, allowsCommit: true,  fund: true,  needsInput: true  },
+  UPDATE:  { needsAuth: true,  allowsCommit: true,  fund: false, needsInput: true  },
+  LIST:    { needsAuth: true,  allowsCommit: true,  fund: false, needsInput: true  },
+  DELIST:  { needsAuth: true,  allowsCommit: false, fund: false, needsInput: false },
+  RELEASE: { needsAuth: true,  allowsCommit: false, fund: false, needsInput: false },
 };
+
+/**
+ * Derive the linear phase list for an action given the runtime context.
+ *
+ * Rules:
+ *   - Reserved CLAIM prepends `unlock`.
+ *   - `input` appears if the action collects user data.
+ *   - The auth phase appears if `needsAuth` (owner actions) or `allowsCommit && sovereign`
+ *     (user-opted sovereign CLAIM/BUY). It's `sign` when the registration has a
+ *     committed pubkey, or when the user opted into sovereign mode; otherwise `otp`.
+ *   - `confirm` always appears.
+ *   - BUY appends `fund` for the seller payment.
+ *   - All flows end in `scanning`.
+ */
+export function phasesFor(
+  action: Action,
+  resolve: ResolveName,
+  sovereign: boolean,
+): Phase[] {
+  const caps = ACTION_CAPS[action];
+  const phases: Phase[] = [];
+
+  if (action === "CLAIM" && resolve.status === "reserved") phases.push("unlock");
+  if (caps.needsInput) phases.push("input");
+
+  if (caps.needsAuth || (caps.allowsCommit && sovereign)) {
+    const hasPubkey = (resolve.status === "registered" || resolve.status === "listed")
+      && !!resolve.registration.pubkey;
+    phases.push(hasPubkey || sovereign ? "sign" : "otp");
+  }
+
+  phases.push("confirm");
+  if (caps.fund) phases.push("fund");
+  phases.push("scanning");
+  return phases;
+}
 
 /* ── Name Availability ────────────────────────────────────────────────── */
 
@@ -127,7 +178,7 @@ export interface Registration {
 export interface ZnsEvent {
   id: number;
   name: string;
-  action: string;
+  action: EventAction;
   txid: string;
   height: number;
   ua: string | null;
