@@ -12,7 +12,7 @@ import type { Network } from "@/lib/types";
 
 const ZNS_RPC_URLS: Record<Network, string> = {
   testnet: process.env.ZNS_TESTNET_RPC_URL ?? "https://light.zcash.me/zns-testnet",
-  mainnet: process.env.ZNS_MAINNET_RPC_URL ?? "https://light.zcash.me/zns-mainnet-test",
+  mainnet: process.env.ZNS_MAINNET_RPC_URL ?? "https://light.zcash.me/zns-mainnet",
 };
 
 const instances = new Map<Network, ZNS>();
