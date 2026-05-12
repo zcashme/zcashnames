@@ -11,7 +11,7 @@ const MODES: ZnsMode[] = ["mainnet", "testnet", "waitlist"];
 export default function NetworkToggle() {
   const pathname = usePathname();
   const router = useRouter();
-  const { zns, setMode } = useZns();
+  const { zns, hasBeta, setMode } = useZns();
   const [pendingTarget, setPendingTarget] = useState<"mainnet" | "testnet" | null>(null);
 
   const onWaitlist = pathname === "/waitlist";
@@ -21,17 +21,21 @@ export default function NetworkToggle() {
 
   const activeMode: ZnsMode = onWaitlist ? "waitlist" : zns.mode;
   function handleClick(mode: ZnsMode) {
-    if (onWaitlist) {
-      if (mode === "waitlist") return;
-      setPendingTarget(mode as "mainnet" | "testnet");
-      return;
-    }
     if (mode === "waitlist") {
+      if (onWaitlist) return;
       router.push("/waitlist");
       return;
     }
+    if (onWaitlist) {
+      if (hasBeta) {
+        switchToNetwork(mode);
+        router.push("/");
+        return;
+      }
+      setPendingTarget(mode);
+      return;
+    }
     setMode(mode);
-    switchToNetwork(mode);
   }
 
   async function handlePasswordSubmit(password: string): Promise<boolean> {

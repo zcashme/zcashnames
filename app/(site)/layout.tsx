@@ -15,7 +15,9 @@
 import type { Metadata } from "next";
 import { Manrope, Dancing_Script, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { cookies } from "next/headers";
 import { NetworkProvider } from "@/components/hooks/useZns";
+import { BETA_COOKIE_NAME, readCurrentStage } from "@/lib/beta/gate";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CabalLaunchBar from "@/components/influencer/CabalLaunchBar";
@@ -86,6 +88,11 @@ export const metadata: Metadata = {
 /* ── Layout ─────────────────────────────────────────────────────────── */
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const hasBeta = !!cookieStore.get(BETA_COOKIE_NAME)?.value;
+  const stage = await readCurrentStage();
+  const initialMode = stage ?? "waitlist";
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -118,7 +125,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           defaultTheme="dark"
           themes={["dark", "light", "monochrome"]}
         >
-        <NetworkProvider>
+        <NetworkProvider initialMode={initialMode} hasBeta={hasBeta}>
 
         <CabalLaunchBar />
         <Header />

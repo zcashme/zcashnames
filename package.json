@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && pagefind --site .next/server/app --output-path public/_pagefind",
-    "test:referral-dashboard": "node --experimental-strip-types --test lib/leaders/referral-dashboard.test.ts",
     "start": "next start"
   },
   "dependencies": {

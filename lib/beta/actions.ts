@@ -29,13 +29,12 @@ export async function verifyBetaPassword(
   password: string,
   network: "mainnet" | "testnet",
 ): Promise<{ ok: boolean }> {
-  // Global shared password (per-network env var).
   const expected =
     network === "mainnet"
       ? process.env.MAINNET_PASSWORD
       : process.env.TESTNET_PASSWORD;
   if (expected && password === expected) {
-    // No per-tester identity; issues an anonymous session.
+    // Network-specific access password — no per-tester identity.
     await setTesterCookie(`shared_${network}`);
     await setStageCookie(network);
     return { ok: true };
@@ -61,11 +60,6 @@ export async function signOutBetaTester(): Promise<{ ok: true }> {
 
 export async function switchToNetwork(network: Network): Promise<void> {
   await setStageCookie(network);
-}
-
-export async function clearStageCookie(): Promise<void> {
-  const store = await cookies();
-  store.set(BETA_STAGE_COOKIE_NAME, "", cookieOptions(0));
 }
 
 export async function getCurrentTesterName(): Promise<string | null> {

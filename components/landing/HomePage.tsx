@@ -38,15 +38,43 @@ type Props = {
   form: React.ReactNode;
   actionLink: React.ReactNode;
   stats: Stats;
+  subtitle?: React.ReactNode;
 };
 
-export default function HomePage({ form, actionLink, stats }: Props) {
+export default function HomePage({ form, actionLink, stats, subtitle }: Props) {
   return (
     <div className="home-theme-scope">
       <Hero rightPanel={<PhoneStage embedded />} />
 
-      <div className="w-full px-4 flex flex-col items-center">
+      <div className="w-full px-4 flex flex-col items-center gap-3">
         {form}
+        {subtitle && (
+          <p
+            className="type-section-subtitle text-center"
+            style={{ color: "var(--fg-body)", letterSpacing: "-0.01em" }}
+          >
+            {subtitle}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              style={{
+                display: "inline-block",
+                verticalAlign: "0.25em",
+                width: "1.2em",
+                height: "1.2em",
+                marginLeft: "0.25em",
+              }}
+            >
+              <path d="M1 16 C10 16 14 10 14 2 M8 8 L14 2 L20 8" />
+            </svg>
+          </p>
+        )}
       </div>
 
       <MarketStats stats={stats} />

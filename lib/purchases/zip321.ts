@@ -41,19 +41,11 @@ function fromBase64Url(encoded: string): string {
   }
 }
 
-export type Zip321UriResult = {
-  uri: string;
-  address: string;
-  amount: string;
-  memo: string;
-  memoEncoded: string;
-};
-
 export function zip321Uri(
   address: string,
   amount: string = "0",
   memo: string = "",
-): Zip321UriResult {
+) {
   const memoEncoded = memo ? toBase64Url(memo) : "";
   const params: string[] = [];
   if (amount && Number(amount) > 0) params.push(`amount=${amount}`);

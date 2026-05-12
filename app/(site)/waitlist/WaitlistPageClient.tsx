@@ -72,6 +72,7 @@ export default function WaitlistPageClient({ stats }: { stats: Stats }) {
         form={<WaitlistEntryForm />}
         actionLink={leaderboardLink}
         stats={stats}
+        subtitle="Be first to claim a name you can use, hold, or sell."
       />
 
       <VerifiedModal
