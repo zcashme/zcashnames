@@ -12,6 +12,9 @@ import ExplorerToolbar from "./ExplorerToolbar";
 import { PAGE_SIZE, parseExplorerTab, type ExplorerTab } from "./tabs";
 import ExplorerNameDetail from "./ExplorerNameDetail";
 import Zip321Modal from "@/components/purchases/Zip321Modal";
+import ResumeBanner from "@/components/purchases/ResumeBanner";
+import { usePurchaseResume } from "@/components/hooks/usePurchaseResume";
+import { resolveName } from "@/lib/zns/resolve";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import ActionBadge from "@/components/ActionBadge";
@@ -165,6 +168,13 @@ export default function ExplorerView({
   const [uivkOpen, setUivkOpen] = useState(false);
   const [copied, setCopied] = useState<"mainnet" | "testnet" | null>(null);
   const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
+  const { snapshot: resumeSnap, visible: resumeVisible, dismiss: resumeDismiss } = usePurchaseResume();
+
+  async function handleResume() {
+    if (!resumeSnap) return;
+    const fresh = await resolveName(resumeSnap.name, resumeSnap.network);
+    setModalState({ action: resumeSnap.action, resolveResult: fresh });
+  }
 
   const showNameDetail = !!selectedName;
   const nameDataReady = !!nameResult;
@@ -728,6 +738,9 @@ export default function ExplorerView({
           onClose={() => setModalState(null)}
           onSuccess={() => router.refresh()}
         />
+      )}
+      {resumeVisible && resumeSnap && (
+        <ResumeBanner snapshot={resumeSnap} onResume={handleResume} onDismiss={resumeDismiss} />
       )}
     </div>
   );

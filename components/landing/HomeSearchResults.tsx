@@ -6,6 +6,9 @@ import { buildCardProps } from "@/lib/zns/utils";
 import HomeResultCard from "./HomeResultCard";
 import SearchForm from "@/components/search/SearchForm";
 import Zip321Modal from "@/components/purchases/Zip321Modal";
+import ResumeBanner from "@/components/purchases/ResumeBanner";
+import { usePurchaseResume } from "@/components/hooks/usePurchaseResume";
+import { resolveName } from "@/lib/zns/resolve";
 import type { Action, ResolveName } from "@/lib/types";
 
 const POPULAR_NAMES = new Set([
@@ -17,8 +20,17 @@ const POPULAR_NAMES = new Set([
 export default function HomeSearchResults({ network }: { network: "mainnet" | "testnet" }) {
   const { input, results, searching, searchError, setInput, handleSearch, refreshResult, removeResult } = useSearchState();
   const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
+  const { snapshot, visible, dismiss } = usePurchaseResume();
 
   const mode = network;
+
+  async function handleResume() {
+    if (!snapshot) return;
+    // Refetch the latest registration state so the modal opens with truth,
+    // not a stale resolveResult from when the user first started the flow.
+    const fresh = await resolveName(snapshot.name, snapshot.network);
+    setModalState({ action: snapshot.action, resolveResult: fresh });
+  }
 
   return (
     <>
@@ -55,6 +67,9 @@ export default function HomeSearchResults({ network }: { network: "mainnet" | "t
           onClose={() => setModalState(null)}
           onSuccess={() => refreshResult(modalState.resolveResult.query)}
         />
+      )}
+      {visible && snapshot && (
+        <ResumeBanner snapshot={snapshot} onResume={handleResume} onDismiss={dismiss} />
       )}
     </>
   );

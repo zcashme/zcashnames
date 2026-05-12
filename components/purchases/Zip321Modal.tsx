@@ -6,14 +6,15 @@ import { usePoll } from "@/components/hooks/usePoll";
 import { createPortal } from "react-dom";
 import { ACTION_CAPS, ACTION_LABELS, getNetworkConstants, phasesFor } from "@/lib/types";
 import type { Action as ZnsAction, ActionAuth, Network, Phase, ResolveName, ScanState } from "@/lib/types";
-import { readLocalStorage, removeLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
+import { readLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
+import { RESUME_KEY, clearResume, notifyResumeChanged, type ResumeSnapshot } from "@/lib/purchases/resume";
 
 // Resume: the modal writes its full reducer state to localStorage on every
 // dispatch, keyed by {action,name,network}. Reopening the modal for the same
 // target rehydrates the reducer so the user picks up where they left off.
-// Cleared when the user clicks Done after a successful tx.
-const RESUME_KEY = "zns-modal-resume-v1";
-type StoredResume = { action: ZnsAction; name: string; network: Network; state: S };
+// The serialized `phase` is for outside readers (banner) — the modal itself
+// recomputes phase from state.step. Cleared on Done after a successful tx.
+type StoredResume = ResumeSnapshot<S>;
 import {
   checkUnlockCode, verifyOtp, claimAction, buyAction,
   updateAction, listAction, delistAction, releaseAction,
@@ -248,7 +249,11 @@ export default function Zip321Modal({
 
   // Persist on every state change. One effect; no wrapper hook.
   useEffect(() => {
-    writeLocalStorage<StoredResume>(RESUME_KEY, { action, name, network, state: s });
+    writeLocalStorage<StoredResume>(RESUME_KEY, {
+      action, name, network,
+      phase, scanState: s.scanState, state: s,
+    });
+    notifyResumeChanged();
   }, [s, action, name, network]);
 
   function set(payload: Partial<S>) { dispatch({ type: "SET", payload }); }
@@ -557,19 +562,39 @@ export default function Zip321Modal({
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               {prepareDescription(action, name, "")}
             </p>
-            {needsAddress && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
-                  {action === "UPDATE" ? "New Zcash Address" : "Your Zcash Address"}
-                </label>
-                <input type="text" value={s.addressInput} autoFocus
-                  onChange={(e) => set({ addressInput: e.target.value, inputError: "" })}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleInputContinue(); }}
-                  placeholder="u1…"
-                  className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-                  style={{ background: "var(--color-raised)", border: "1.5px solid var(--faq-border)", color: "var(--fg-heading)" }} />
-              </div>
-            )}
+            {needsAddress && (() => {
+              const trimmed = s.addressInput.trim();
+              const v = trimmed ? validateAddress(trimmed) : { status: "invalid" as const, warning: "" };
+              const borderColor = !trimmed
+                ? "var(--faq-border)"
+                : v.status === "viewkey" || v.status === "tex" || v.status === "invalid"
+                  ? "var(--accent-red, #e05252)"
+                  : v.status === "unified"
+                    ? "#22c55e"
+                    : "#ca8a04";
+              const showWarning =
+                trimmed &&
+                v.warning &&
+                v.status !== "viewkey" &&
+                v.status !== "tex" &&
+                v.status !== "invalid";
+              return (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                    {action === "UPDATE" ? "New Zcash Address" : "Your Zcash Address"}
+                  </label>
+                  <input type="text" value={s.addressInput} autoFocus
+                    onChange={(e) => set({ addressInput: e.target.value, inputError: "" })}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleInputContinue(); }}
+                    placeholder="u1…"
+                    className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+                    style={{ background: "var(--color-raised)", border: `1.5px solid ${borderColor}`, color: "var(--fg-heading)" }} />
+                  {showWarning && (
+                    <p className="text-xs" style={{ color: "#ca8a04" }}>{v.warning}</p>
+                  )}
+                </div>
+              );
+            })()}
             {needsPrice && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Price (ZEC)</label>
@@ -808,10 +833,10 @@ export default function Zip321Modal({
                 border: `1.5px solid ${s.scanState === "in_mempool" || s.scanState === "confirming" ? "#ca8a04" : s.scanState === "rejected" ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`,
               }}>
               <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-                {s.scanState === "not_detected" && "Transaction not detected yet."}
-                {s.scanState === "in_mempool" && "Transaction is in the mempool. Waiting to be mined."}
-                {s.scanState === "confirming" && "Confirming transaction. Hang tight."}
-                {s.scanState === "rejected" && "Transaction not found."}
+                {s.scanState === "not_detected" && <>Your {ACTION_NOUN[action]} hasn&rsquo;t been detected yet.</>}
+                {s.scanState === "in_mempool" && <>Your {ACTION_NOUN[action]} is in the mempool. Waiting to be mined.</>}
+                {s.scanState === "confirming" && <>Your {ACTION_NOUN[action]} is being mined. Hang tight &mdash; this should only take a moment.</>}
+                {s.scanState === "rejected" && <>Your {ACTION_NOUN[action]} was not found.</>}
               </p>
             </div>
             <button type="button" onClick={onClose}
@@ -824,17 +849,25 @@ export default function Zip321Modal({
         {phase === "scanning" && s.scanState === "mined" && (
           <div className="flex flex-col items-center gap-5 text-center">
             <div className="text-5xl">🎉</div>
-            <h2 className="text-2xl font-bold" style={{ color: "var(--fg-heading)" }}>
-              {name}.zcash is yours
-            </h2>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              Your name is registered on-chain and ready to use.
+              {minedMessage(action, `${name}.zcash`)}
             </p>
-            <button type="button" onClick={() => { removeLocalStorage(RESUME_KEY); onClose(); }}
-              className="px-6 py-3 rounded-full text-sm font-semibold"
-              style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-              Done
-            </button>
+            <div className="flex gap-3">
+              <a
+                href={network === "testnet" ? `/explorer?env=testnet&name=${encodeURIComponent(name)}` : `/explorer?name=${encodeURIComponent(name)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-5 py-2.5 rounded-full text-sm font-semibold transition-opacity hover:opacity-80"
+                style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)", textDecoration: "none" }}
+              >
+                View on Explorer
+              </a>
+              <button type="button" onClick={() => { clearResume(); onClose(); }}
+                className="px-6 py-3 rounded-full text-sm font-semibold"
+                style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
+                Done
+              </button>
+            </div>
           </div>
         )}
       </div>
