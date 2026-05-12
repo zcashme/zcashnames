@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSearchState } from "@/components/hooks/useSearchState";
+import { buildCardProps } from "@/lib/zns/utils";
 import HomeResultCard from "./HomeResultCard";
 import SearchForm from "@/components/search/SearchForm";
 import Zip321Modal from "@/components/purchases/Zip321Modal";
@@ -14,7 +15,7 @@ const POPULAR_NAMES = new Set([
 ]);
 
 export default function HomeSearchResults({ network }: { network: "mainnet" | "testnet" }) {
-  const { input, results, searching, searchError, setInput, handleSearch, refreshResult, removeResult, buildCardProps } = useSearchState();
+  const { input, results, searching, searchError, setInput, handleSearch, refreshResult, removeResult } = useSearchState();
   const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
 
   const mode = network;

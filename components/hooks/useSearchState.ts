@@ -2,9 +2,9 @@
 
 import { useState, useRef, useCallback } from "react";
 import { resolveName } from "@/lib/zns/resolve";
-import { normalizeUsername, isValidUsername, formatUsdEquivalent } from "@/lib/zns/utils";
+import { normalizeUsername, isValidUsername } from "@/lib/zns/utils";
 import { useZns } from "@/components/hooks/useZns";
-import type { ResolveName, NameAvailabilityState } from "@/lib/types";
+import type { ResolveName } from "@/lib/types";
 
 //
 // Search state machine for the home page name search.
@@ -22,12 +22,6 @@ import type { ResolveName, NameAvailabilityState } from "@/lib/types";
 // fast one (e.g. typing "al" then "alice" before the first resolves).
 //
 
-interface CardProps {
-  availabilityState: NameAvailabilityState;
-  priceLabel?: string;
-  usdLabel?: string;
-}
-
 interface UseSearchStateReturn {
   // State
   input: string;
@@ -40,8 +34,6 @@ interface UseSearchStateReturn {
   refreshResult: (name: string) => Promise<void>;
   removeResult: (query: string) => void;
   reset: () => void;
-  // Domain helpers
-  buildCardProps: (result: ResolveName) => CardProps;
 }
 
 export function useSearchState(): UseSearchStateReturn {
@@ -120,35 +112,6 @@ export function useSearchState(): UseSearchStateReturn {
     setResults((prev) => prev.filter((item) => item.query !== query));
   }, []);
 
-  // ── Domain helpers ────────────────────────────────────────────────────────
-
-  function buildCardProps(result: ResolveName): CardProps {
-    switch (result.status) {
-      case "available":
-      case "reserved": {
-        const zec = result.claimCost.zec;
-        return {
-          availabilityState: result.status,
-          priceLabel: `~${zec.toFixed(6)} ZEC`,
-          usdLabel: formatUsdEquivalent(zec, null),
-        };
-      }
-      case "listed":
-        return {
-          availabilityState: "forsale",
-          priceLabel: `${result.listingPrice.zec} ZEC`,
-          usdLabel: formatUsdEquivalent(result.listingPrice.zec, null),
-        };
-      case "registered":
-        return {
-          availabilityState: "unavailable",
-        };
-      case "blocked":
-        return { availabilityState: "blocked" };
-    }
-  }
-
-
   return {
     input,
     results,
@@ -159,6 +122,5 @@ export function useSearchState(): UseSearchStateReturn {
     refreshResult,
     removeResult,
     reset,
-    buildCardProps,
   };
 }

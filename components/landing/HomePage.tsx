@@ -46,7 +46,7 @@ export default function HomePage({ form, actionLink, stats, subtitle }: Props) {
     <div className="home-theme-scope">
       <Hero rightPanel={<PhoneStage embedded />} />
 
-      <div className="w-full px-4 flex flex-col items-center gap-3">
+      <div className="w-full px-4 pb-8 sm:pb-10 flex flex-col items-center gap-3">
         {form}
         {subtitle && (
           <p

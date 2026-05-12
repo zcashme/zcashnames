@@ -1,5 +1,5 @@
 import { ZNS } from "zcashname-sdk";
-import type { Network, Registration } from "@/lib/types";
+import type { Network, Registration, ResolveName, NameAvailabilityState } from "@/lib/types";
 
 const instances: Record<Network, ZNS> = {
   testnet: new ZNS({ network: "testnet", url: process.env.ZNS_TESTNET_RPC_URL }),
@@ -7,24 +7,6 @@ const instances: Record<Network, ZNS> = {
 };
 
 export const getZns = (network: Network): ZNS => instances[network];
-
-//
-// Claim cost lookup. Pricing is based on name length — shorter names cost more.
-// Fetches the indexer's current pricing table, then asks the SDK for the cost.
-//
-export async function fetchClaimCost(
-  name: string,
-  network: Network = "testnet",
-): Promise<number | null> {
-  try {
-    const zns = getZns(network);
-    const s = await zns.status();
-    if (!s.pricing) return null;
-    return zns.claimCost(name.length, s.pricing);
-  } catch {
-    return null;
-  }
-}
 
 //
 // Zcash address classification. Only unified addresses (u1… / utest1…) are
@@ -120,4 +102,34 @@ export function formatUsdEquivalent(
   if (usdPerZec == null) return "";
   const usd = zecAmount * usdPerZec;
   return `$${usd.toFixed(2)} USD`;
+}
+
+export interface CardProps {
+  availabilityState: NameAvailabilityState;
+  priceLabel?: string;
+  usdLabel?: string;
+}
+
+export function buildCardProps(result: ResolveName): CardProps {
+  switch (result.status) {
+    case "available":
+    case "reserved": {
+      const zec = result.claimCost.zec;
+      return {
+        availabilityState: result.status,
+        priceLabel: `~${zec.toFixed(6)} ZEC`,
+        usdLabel: formatUsdEquivalent(zec, null),
+      };
+    }
+    case "listed":
+      return {
+        availabilityState: "forsale",
+        priceLabel: `${result.listingPrice.zec} ZEC`,
+        usdLabel: formatUsdEquivalent(result.listingPrice.zec, null),
+      };
+    case "registered":
+      return { availabilityState: "unavailable" };
+    case "blocked":
+      return { availabilityState: "blocked" };
+  }
 }

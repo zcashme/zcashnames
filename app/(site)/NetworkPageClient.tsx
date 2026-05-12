@@ -33,6 +33,7 @@ export default function NetworkPageClient({ network, stats }: Props) {
         form={<HomeSearchResults network={network} />}
         actionLink={explorerLink(network)}
         stats={stats}
+        subtitle="Powered by Zcash. Claim your name"
       />
       <FeedbackModal network={network} />
     </>
