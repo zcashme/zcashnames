@@ -1,19 +1,13 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useReducer, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ACTION_PHASES, getNetworkConstants } from "@/lib/types";
-import type { Action, Network, Phase, ResolveName, ScanState } from "@/lib/types";
+import type { Action as ZnsAction, Network, Phase, ResolveName, ScanState } from "@/lib/types";
 import {
-  checkUnlockCode,
-  verifyOtp,
-  claimAction,
-  buyAction,
-  updateAction,
-  listAction,
-  delistAction,
-  releaseAction,
+  checkUnlockCode, verifyOtp, claimAction, buyAction,
+  updateAction, listAction, delistAction, releaseAction,
 } from "@/lib/zns/actions";
 import { validateAddress } from "@/lib/zns/utils";
 import { generateSessionId, buildZvsMemo } from "@/lib/purchases/memo";
@@ -22,36 +16,7 @@ import { checkMempool, checkUtxo } from "@/lib/zns/mempool";
 import { generatePayload } from "@/lib/zns/payload";
 import { QrBlock } from "@/components/ui/QrBlock";
 
-// Central purchase/action UX. Renders a portaled modal that walks the user
-// through a sequence of phases defined in ACTION_PHASES (types.ts).
-//
-// Phase pipeline (order varies by action):
-//   unlock → input → otp|sign → confirm → fund → scanning
-//
-// Two auth paths diverge at the auth phase:
-//   - OTP:  send a verification tx, receive a 6-digit code, verify server-side.
-//   - Sign: sign a payload with an Ed25519 private key (sovereign auth for
-//           names that have a registered pubkey).
-//
-// Each phase that calls a server action (claimAction, buyAction, etc.) receives
-// a ZIP-321 payment URI, which is shown as a copyable code block in the
-// confirm/fund phases. The final scanning phase polls checkMempool() every 2s
-// until the transaction is mined or rejected, then fires onSuccess.
-//
-// Portaled to document.body via createPortal to avoid z-index stacking issues.
-
-interface Zip321ModalProps {
-  action: Action;
-  name: string;
-  network: Network;
-  resolveResult: ResolveName;
-  onClose: () => void;
-  onSuccess?: (name: string) => void;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers — pure utility functions used across phases
-// ---------------------------------------------------------------------------
+// ---- Helpers ---------------------------------------------------------------
 
 function parsePrice(raw: string): number | null {
   const n = raw.replace(/,/g, "").trim();
@@ -60,7 +25,6 @@ function parsePrice(raw: string): number | null {
   return Number.isFinite(num) && num >= 0 ? num : null;
 }
 
-// Decodes a URL-safe base64 string to raw bytes (used for Ed25519 key/sig).
 function decodeBase64ToBytes(value: string): Uint8Array | null {
   const normalized = value.trim().replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
   if (!normalized) return null;
@@ -75,32 +39,91 @@ function decodeBase64ToBytes(value: string): Uint8Array | null {
   }
 }
 
-// Converts Uint8Array to a standalone ArrayBuffer for WebCrypto (Ed25519 verify).
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
-// Builds the human-readable description shown in the input phase header.
-function prepareDescription(action: Action, name: string, amount: string): React.ReactNode {
+function prepareDescription(action: ZnsAction, name: string, amount: string): React.ReactNode {
   switch (action) {
-    case "BUY":
-      return <>Purchase for <strong>{amount}</strong>.</>;
-    case "DELIST":
-      return <>Remove from sale.</>;
-    case "RELEASE":
-      return <>Allowing others to claim it.</>;
-    case "UPDATE":
-      return <>Set a new address.</>;
-    case "LIST":
-      return <>Set a price for <strong>{name}</strong>.</>;
-    case "CLAIM":
-      return <><strong>{name}</strong></>;
+    case "BUY": return <>Purchase for <strong>{amount}</strong>.</>;
+    case "DELIST": return <>Remove from sale.</>;
+    case "RELEASE": return <>Allowing others to claim it.</>;
+    case "UPDATE": return <>Set a new address.</>;
+    case "LIST": return <>Set a price for <strong>{name}</strong>.</>;
+    case "CLAIM": return <><strong>{name}</strong></>;
   }
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+// ---- Reducer ---------------------------------------------------------------
+
+type S = {
+  step: number;
+  // accumulated across phases
+  address: string;
+  price: string;
+  payTaddrInput: string;
+  uri: string;
+  memo: string;
+  paymentAddress: string;
+  amountZec: string;
+  // unlock phase
+  unlockCode: string;
+  unlockError: string;
+  unlockLoading: boolean;
+  // input phase
+  addressInput: string;
+  priceInput: string;
+  inputError: string;
+  // otp phase
+  otpMemo: string;
+  otpUri: string;
+  otpCode: string;
+  otpError: string;
+  otpLoading: boolean;
+  otpSent: boolean;
+  otpAttempts: number;
+  // sign phase
+  signPubkey: string;
+  signSignature: string;
+  signError: string;
+  signLoading: boolean;
+  // scanning phase
+  scanState: ScanState;
+};
+
+type Msg =
+  | { type: "SET"; payload: Partial<S> }
+  | { type: "ADVANCE"; patch?: Partial<S> };
+
+const INIT: S = {
+  step: 0,
+  address: "", price: "", payTaddrInput: "",
+  uri: "", memo: "", paymentAddress: "", amountZec: "",
+  unlockCode: "", unlockError: "", unlockLoading: false,
+  addressInput: "", priceInput: "", inputError: "",
+  otpMemo: "", otpUri: "", otpCode: "", otpError: "",
+  otpLoading: false, otpSent: false, otpAttempts: 0,
+  signPubkey: "", signSignature: "", signError: "", signLoading: false,
+  scanState: "not_detected",
+};
+
+function reducer(state: S, msg: Msg): S {
+  switch (msg.type) {
+    case "SET": return { ...state, ...msg.payload };
+    case "ADVANCE": return { ...state, ...(msg.patch ?? {}), step: state.step + 1 };
+  }
+}
+
+// ---- Component -------------------------------------------------------------
+
+interface Zip321ModalProps {
+  action: ZnsAction;
+  name: string;
+  network: Network;
+  resolveResult: ResolveName;
+  onClose: () => void;
+  onSuccess?: (name: string) => void;
+}
 
 export default function Zip321Modal({
   action,
@@ -110,265 +133,179 @@ export default function Zip321Modal({
   onClose,
   onSuccess,
 }: Zip321ModalProps) {
-  // Derive the phase sequence. Start from ACTION_PHASES[action], then:
-  //   - Prepend "unlock" if claiming a reserved name (requires unlock code).
-  //   - Swap OTP→sign if the name has a registered Ed25519 pubkey (sovereign auth).
   const phases: Phase[] = (() => {
     const base = [...ACTION_PHASES[action]];
-    if (action === "CLAIM" && resolveResult.status === "reserved") {
-      base.unshift("unlock");
-    }
+    if (action === "CLAIM" && resolveResult.status === "reserved") base.unshift("unlock");
     if ("registration" in resolveResult && resolveResult.registration.pubkey) {
       const idx = base.indexOf("otp" as Phase);
       if (idx !== -1) base[idx] = "sign";
     }
     return base;
   })();
-  const [step, setStep] = useState(0);
-  const phase = phases[step] ?? phases[phases.length - 1];
 
-  const [address, setAddress] = useState<string>();
-  const [price, setPrice] = useState<string>();
-  const [proof, setProof] = useState<string>();
-  const [uri, setUri] = useState<string>();
-  const [memo, setMemo] = useState<string>();
-  const [paymentAddress, setPaymentAddress] = useState<string>();
-  const [amountZec, setAmountZec] = useState<string>();
+  const [s, dispatch] = useReducer(reducer, INIT);
+  const phase = phases[s.step] ?? phases[phases.length - 1];
 
-  // unlock phase
-  const [unlockCode, setUnlockCode] = useState("");
-  const [unlockError, setUnlockError] = useState("");
-  const [unlockLoading, setUnlockLoading] = useState(false);
+  function set(payload: Partial<S>) { dispatch({ type: "SET", payload }); }
+  function advance(patch?: Partial<S>) { dispatch({ type: "ADVANCE", patch }); }
+
+  // Builds the OTP memo/uri needed when advancing into the otp phase.
+  function buildOtpPatch() {
+    const regAddr = "registration" in resolveResult ? resolveResult.registration.address : "";
+    const sid = generateSessionId();
+    const memo = buildZvsMemo(sid, regAddr);
+    const { OTP_SIGNIN_ADDR, OTP_AMOUNT } = getNetworkConstants(network);
+    return {
+      otpMemo: memo,
+      otpUri: zip321Uri(OTP_SIGNIN_ADDR, OTP_AMOUNT, memo).uri,
+      otpCode: "", otpError: "", otpSent: false, otpAttempts: 0,
+    };
+  }
+
+  // -- Unlock phase --
 
   async function handleUnlock() {
-    if (unlockLoading) return;
-    const code = unlockCode.trim();
-    if (!code) { setUnlockError("Enter your unlock code."); return; }
-    setUnlockError("");
-    setUnlockLoading(true);
+    if (s.unlockLoading) return;
+    const code = s.unlockCode.trim();
+    if (!code) { set({ unlockError: "Enter your unlock code." }); return; }
+    set({ unlockError: "", unlockLoading: true });
     try {
       const result = await checkUnlockCode(name, code);
-      if (!result.ok) { setUnlockError(result.error || "Invalid unlock code."); return; }
-
-      // Call server action to build the signed memo
-      const actionResult = await claimAction(name, address ?? "", network, result.proof);
-      if (!actionResult.ok) { setUnlockError(actionResult.error); return; }
-      advance({ uri: actionResult.uri, memo: actionResult.memo, paymentAddress: actionResult.paymentAddress, amountZec: actionResult.amountZec });
+      if (!result.ok) { set({ unlockError: result.error || "Invalid unlock code.", unlockLoading: false }); return; }
+      const ar = await claimAction(name, s.address, network, result.proof);
+      if (!ar.ok) { set({ unlockError: ar.error, unlockLoading: false }); return; }
+      advance({ uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", unlockLoading: false });
     } catch {
-      setUnlockError("Something went wrong. Try again.");
-    } finally {
-      setUnlockLoading(false);
+      set({ unlockError: "Something went wrong. Try again.", unlockLoading: false });
     }
   }
 
-  // input phase
-  const [addressInput, setAddressInput] = useState("");
-  const [priceInput, setPriceInput] = useState("");
-  const [payTaddrInput, setPayTaddrInput] = useState("");
-  const [inputError, setInputError] = useState("");
+  // -- Input phase --
 
   const needsAddress = action === "CLAIM" || action === "BUY" || action === "UPDATE";
   const needsPrice = action === "LIST";
   const needsPayTaddr = action === "LIST";
 
-  function handleInputContinue() {
-    setInputError("");
+  async function handleInputContinue() {
+    set({ inputError: "" });
     if (needsAddress) {
-      const addr = addressInput.trim();
-      if (!addr) { setInputError("Address is required."); return; }
+      const addr = s.addressInput.trim();
+      if (!addr) { set({ inputError: "Address is required." }); return; }
       const v = validateAddress(addr);
       if (v.status === "viewkey" || v.status === "tex" || v.status === "invalid") {
-        setInputError(v.warning || "Invalid address format."); return;
+        set({ inputError: v.warning || "Invalid address format." }); return;
       }
     }
     if (needsPrice) {
-      const zec = parsePrice(priceInput);
-      if (zec === null) { setInputError("Enter a valid price."); return; }
-      if (zec < 0 || zec > 21_000_000) { setInputError("Price must be between 0 and 21,000,000 ZEC."); return; }
+      const zec = parsePrice(s.priceInput);
+      if (zec === null) { set({ inputError: "Enter a valid price." }); return; }
+      if (zec < 0 || zec > 21_000_000) { set({ inputError: "Price must be between 0 and 21,000,000 ZEC." }); return; }
     }
-    if (needsPayTaddr) {
-      if (!payTaddrInput.trim()) { setInputError("Payout address is required."); return; }
-    }
+    if (needsPayTaddr && !s.payTaddrInput.trim()) { set({ inputError: "Payout address is required." }); return; }
 
-    // Call server action for actions that need it (non-reserved CLAIM, BUY after input)
-    // LIST/UPDATE/DELIST/RELEASE go through otp phase first — handleVerifyOtp calls the action.
+    const nextPhase = phases[s.step + 1];
+    const otpPatch = nextPhase === "otp" ? buildOtpPatch() : {};
+
     if (action === "CLAIM") {
-      // Non-reserved CLAIM path — no unlockProof
-      claimAction(name, addressInput.trim(), network, undefined).then((result) => {
-        if (!result.ok) { setInputError(result.error); return; }
-        advance({ address: addressInput.trim(), uri: result.uri, memo: result.memo, paymentAddress: result.paymentAddress, amountZec: result.amountZec });
-      });
+      const ar = await claimAction(name, s.addressInput.trim(), network, undefined);
+      if (!ar.ok) { set({ inputError: ar.error }); return; }
+      advance({ address: s.addressInput.trim(), uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", ...otpPatch });
     } else if (action === "BUY") {
-      buyAction(name, addressInput.trim(), network, undefined).then((result) => {
-        if (!result.ok) { setInputError(result.error); return; }
-        advance({ address: addressInput.trim(), uri: result.uri, memo: result.memo, paymentAddress: result.paymentAddress, amountZec: result.amountZec });
-      });
+      const ar = await buyAction(name, s.addressInput.trim(), network, undefined);
+      if (!ar.ok) { set({ inputError: ar.error }); return; }
+      advance({ address: s.addressInput.trim(), uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", ...otpPatch });
     } else {
       advance({
-        address: needsAddress ? addressInput.trim() : undefined,
-        price: needsPrice ? priceInput.trim() : undefined,
+        ...(needsAddress ? { address: s.addressInput.trim() } : {}),
+        ...(needsPrice ? { price: s.priceInput.trim() } : {}),
+        ...otpPatch,
       });
     }
   }
 
-  function advance(result?: Record<string, string | undefined>) {
-    if (result) {
-      if (result.address !== undefined) setAddress(result.address);
-      if (result.price !== undefined) setPrice(result.price);
-      if (result.proof !== undefined) setProof(result.proof);
-      if (result.uri !== undefined) setUri(result.uri);
-      if (result.memo !== undefined) setMemo(result.memo);
-      if (result.paymentAddress !== undefined) setPaymentAddress(result.paymentAddress);
-      if (result.amountZec !== undefined) setAmountZec(result.amountZec);
-    }
-    setStep((s) => Math.min(s + 1, phases.length - 1));
-  }
-
-  // OTP phase — generates a session-id–based memo and ZIP-321 URI on entry.
-  // User sends the tx, clicks "I Sent It!", then enters the 6-digit code
-  // received from the wallet. The code is verified via verifyOtp() server-side.
-  const [otpMemo, setOtpMemo] = useState("");
-  const [otpUri, setOtpUri] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpAttempts, setOtpAttempts] = useState(0);
-
-  // Initialize OTP on entering the phase
-  useEffect(() => {
-    if (phase !== "otp") return;
-    const regAddr = "registration" in resolveResult ? resolveResult.registration.address : "";
-    const sid = generateSessionId();
-    const memo = buildZvsMemo(sid, regAddr);
-    const { OTP_SIGNIN_ADDR, OTP_AMOUNT } = getNetworkConstants(network);
-    setOtpMemo(memo);
-    setOtpUri(zip321Uri(OTP_SIGNIN_ADDR, OTP_AMOUNT, memo).uri);
-    setOtpCode("");
-    setOtpError("");
-    setOtpSent(false);
-    setOtpAttempts(0);
-  }, [phase, resolveResult, network]);
+  // -- OTP phase --
 
   async function handleVerifyOtp() {
-    if (otpLoading) return;
-    if (!otpSent) { setOtpError("Send the verification transaction first."); return; }
-    const code = otpCode.trim();
-    if (!/^\d{6}$/.test(code)) { setOtpError("Enter the 6-digit code from your wallet."); return; }
+    if (s.otpLoading) return;
+    if (!s.otpSent) { set({ otpError: "Send the verification transaction first." }); return; }
+    const code = s.otpCode.trim();
+    if (!/^\d{6}$/.test(code)) { set({ otpError: "Enter the 6-digit code from your wallet." }); return; }
     const { OTP_MAX_ATTEMPTS } = getNetworkConstants(network);
-    if (otpAttempts >= OTP_MAX_ATTEMPTS) { setOtpError("Max attempts reached."); return; }
-    setOtpError("");
-    setOtpLoading(true);
+    if (s.otpAttempts >= OTP_MAX_ATTEMPTS) { set({ otpError: "Max attempts reached." }); return; }
+    set({ otpError: "", otpLoading: true });
     try {
       const regAddr = "registration" in resolveResult ? resolveResult.registration.address : "";
-      const result = await verifyOtp(otpMemo, code, regAddr);
+      const result = await verifyOtp(s.otpMemo, code, regAddr);
       if (!result.ok) {
-        setOtpAttempts((a) => a + 1);
-        setOtpError(result.error);
-        setOtpCode("");
+        set({ otpAttempts: s.otpAttempts + 1, otpError: result.error, otpCode: "", otpLoading: false });
         return;
       }
 
-      // Call server action to build the signed memo
-      let actionResult: { ok: true; uri: string; memo: string; paymentAddress?: string; amountZec?: string } | { ok: false; error: string };
-      if (action === "UPDATE") {
-        actionResult = await updateAction(name, address ?? "", network, result.proof);
-      } else if (action === "LIST") {
-        actionResult = await listAction(name, Math.round((parsePrice(price ?? "") ?? 0) * 1e8), payTaddrInput ?? "", network, result.proof);
-      } else if (action === "DELIST") {
-        actionResult = await delistAction(name, network, result.proof);
-      } else if (action === "RELEASE") {
-        actionResult = await releaseAction(name, network, result.proof);
-      } else {
-        actionResult = { ok: false, error: "Unknown action." };
-      }
+      let ar: { ok: true; uri: string; memo: string; paymentAddress?: string; amountZec?: string } | { ok: false; error: string };
+      if (action === "UPDATE") ar = await updateAction(name, s.address, network, result.proof);
+      else if (action === "LIST") ar = await listAction(name, Math.round((parsePrice(s.price) ?? 0) * 1e8), s.payTaddrInput, network, result.proof);
+      else if (action === "DELIST") ar = await delistAction(name, network, result.proof);
+      else if (action === "RELEASE") ar = await releaseAction(name, network, result.proof);
+      else ar = { ok: false, error: "Unknown action." };
 
-      if (!actionResult.ok) { setOtpError(actionResult.error); setOtpLoading(false); return; }
-      advance({ uri: actionResult.uri, memo: actionResult.memo, paymentAddress: actionResult.paymentAddress, amountZec: actionResult.amountZec });
+      if (!ar.ok) { set({ otpError: ar.error, otpLoading: false }); return; }
+      advance({ uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", otpLoading: false });
     } catch {
-      setOtpError("Something went wrong. Try again.");
-    } finally {
-      setOtpLoading(false);
+      set({ otpError: "Something went wrong. Try again.", otpLoading: false });
     }
   }
 
-  // Sign phase — sovereign auth path (Ed25519). User signs a deterministic
-  // payload with their private key, pastes the base64 pubkey+signature.
-  // Verification runs client-side via WebCrypto, then the server action
-  // is called with the sig+pubkey to build the final ZIP-321 URI.
-  const [signPubkey, setSignPubkey] = useState("");
-  const [signSignature, setSignSignature] = useState("");
-  const [signError, setSignError] = useState("");
-  const [signLoading, setSignLoading] = useState(false);
+  // -- Sign phase --
 
-  // Build the canonical payload the user must sign. Memoized because it's
-  // derived from form state and the nonce from the resolution result.
   const sovereignPayload = useMemo(() => {
     const reg = "registration" in resolveResult ? resolveResult.registration : null;
     return generatePayload(action, name, network, {
-      address: address ?? "",
-      priceZats: price ? Math.round((parsePrice(price) ?? 0) * 1e8) : 0,
-      payTaddr: payTaddrInput || (resolveResult.status === "listed" ? resolveResult.payTaddr : ""),
+      address: s.address,
+      priceZats: s.price ? Math.round((parsePrice(s.price) ?? 0) * 1e8) : 0,
+      payTaddr: s.payTaddrInput || (resolveResult.status === "listed" ? resolveResult.payTaddr : ""),
       nonce: (reg?.nonce ?? 0) + 1,
     });
-  }, [action, name, network, address, price, payTaddrInput, resolveResult]);
+  }, [action, name, network, s.address, s.price, s.payTaddrInput, resolveResult]);
 
   async function handleVerifySign() {
-    if (signLoading || !signSignature.trim()) return;
-    const pub = (signPubkey || ("registration" in resolveResult ? resolveResult.registration.pubkey ?? "" : "")).trim();
-    if (!pub) { setSignError("Public key is required."); return; }
-    setSignError("");
-    setSignLoading(true);
+    if (s.signLoading || !s.signSignature.trim()) return;
+    const pub = (s.signPubkey || ("registration" in resolveResult ? resolveResult.registration.pubkey ?? "" : "")).trim();
+    if (!pub) { set({ signError: "Public key is required." }); return; }
+    set({ signError: "", signLoading: true });
     try {
-      const sig = signSignature.trim();
+      const sig = s.signSignature.trim();
       const pubBytes = decodeBase64ToBytes(pub);
-      if (!pubBytes || pubBytes.length !== 32) { setSignError("Invalid public key (need 32 bytes base64)."); return; }
+      if (!pubBytes || pubBytes.length !== 32) { set({ signError: "Invalid public key (need 32 bytes base64).", signLoading: false }); return; }
       const sigBytes = decodeBase64ToBytes(sig);
-      if (!sigBytes || sigBytes.length !== 64) { setSignError("Invalid signature (need 64 bytes base64)."); return; }
+      if (!sigBytes || sigBytes.length !== 64) { set({ signError: "Invalid signature (need 64 bytes base64).", signLoading: false }); return; }
 
       const importedKey = await window.crypto.subtle.importKey(
         "raw", toArrayBuffer(pubBytes), { name: "Ed25519" }, false, ["verify"],
       );
-      const payloadBytes = new TextEncoder().encode(sovereignPayload);
       const verified = await window.crypto.subtle.verify(
-        "Ed25519", importedKey, toArrayBuffer(sigBytes), payloadBytes,
+        "Ed25519", importedKey, toArrayBuffer(sigBytes), new TextEncoder().encode(sovereignPayload),
       );
-      if (!verified) { setSignError("Signature does not match the payload."); return; }
+      if (!verified) { set({ signError: "Signature does not match the payload.", signLoading: false }); return; }
 
-      // Call server action with sovereign sig+pubkey to get URI
-      let actionResult: { ok: true; uri: string; memo: string; paymentAddress?: string; amountZec?: string } | { ok: false; error: string };
-      if (action === "CLAIM") {
-        actionResult = await claimAction(name, address ?? "", network, undefined, sig, pub);
-      } else if (action === "UPDATE") {
-        actionResult = await updateAction(name, address ?? "", network, undefined, sig, pub);
-      } else if (action === "LIST") {
-        actionResult = await listAction(name, parsePrice(price ?? "") ?? 0, payTaddrInput ?? "", network, undefined, sig, pub);
-      } else if (action === "DELIST") {
-        actionResult = await delistAction(name, network, undefined, sig, pub);
-      } else if (action === "RELEASE") {
-        actionResult = await releaseAction(name, network, undefined, sig, pub);
-      } else {
-        actionResult = { ok: false, error: "Unknown action." };
-      }
+      let ar: { ok: true; uri: string; memo: string; paymentAddress?: string; amountZec?: string } | { ok: false; error: string };
+      if (action === "CLAIM") ar = await claimAction(name, s.address, network, undefined, sig, pub);
+      else if (action === "UPDATE") ar = await updateAction(name, s.address, network, undefined, sig, pub);
+      else if (action === "LIST") ar = await listAction(name, parsePrice(s.price) ?? 0, s.payTaddrInput, network, undefined, sig, pub);
+      else if (action === "DELIST") ar = await delistAction(name, network, undefined, sig, pub);
+      else if (action === "RELEASE") ar = await releaseAction(name, network, undefined, sig, pub);
+      else ar = { ok: false, error: "Unknown action." };
 
-      if (!actionResult.ok) { setSignError(actionResult.error); return; }
-      advance({ uri: actionResult.uri, memo: actionResult.memo, paymentAddress: actionResult.paymentAddress, amountZec: actionResult.amountZec });
+      if (!ar.ok) { set({ signError: ar.error, signLoading: false }); return; }
+      advance({ uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", signLoading: false });
     } catch {
-      setSignError("Signature verification failed.");
-    } finally {
-      setSignLoading(false);
+      set({ signError: "Signature verification failed.", signLoading: false });
     }
   }
 
-  // Scanning phase — polls the mempool/resolver every 2s for the transaction.
-  // State machine: not_detected → in_mempool → confirming → mined|rejected.
-  // Uses a ref to avoid stale closures in the interval; fires onSuccess exactly
-  // once when the tx reaches "mined" status.
-  const [scanState, setScanState] = useState<ScanState>("not_detected");
+  // -- Scanning effect (real side effect: mempool polling) --
   const scanStateRef = useRef<ScanState>("not_detected");
   const firedSuccessRef = useRef(false);
-
-  useEffect(() => { scanStateRef.current = scanState; }, [scanState]);
+  useEffect(() => { scanStateRef.current = s.scanState; }, [s.scanState]);
 
   useEffect(() => {
     if (phase !== "scanning") return;
@@ -377,53 +314,32 @@ export default function Zip321Modal({
     async function poll() {
       const result = await checkMempool(name, network);
       if (cancelled) return;
-
       if (!result.found || !result.response) {
-        setScanState("not_detected");
+        set({ scanState: "not_detected" });
       } else {
-        const { state } = result.response;
-        switch (state.status) {
-          case "pending":
-            setScanState("in_mempool");
-            break;
-          case "resolving":
-            setScanState("confirming");
-            break;
-          case "confirmed":
-            setScanState("mined");
-            if (!firedSuccessRef.current) {
-              firedSuccessRef.current = true;
-              onSuccess?.(name);
-            }
-            break;
-          case "rejected":
-            setScanState("rejected");
-            break;
-        }
+        const { status } = result.response.state;
+        if (status === "pending") set({ scanState: "in_mempool" });
+        else if (status === "resolving") set({ scanState: "confirming" });
+        else if (status === "confirmed") {
+          set({ scanState: "mined" });
+          if (!firedSuccessRef.current) { firedSuccessRef.current = true; onSuccess?.(name); }
+        } else if (status === "rejected") set({ scanState: "rejected" });
       }
     }
 
     firedSuccessRef.current = false;
-    setScanState("not_detected");
+    set({ scanState: "not_detected" });
     poll();
     const id = setInterval(() => {
-      if (scanStateRef.current === "mined" || scanStateRef.current === "rejected") {
-        clearInterval(id);
-        return;
-      }
+      if (scanStateRef.current === "mined" || scanStateRef.current === "rejected") { clearInterval(id); return; }
       poll();
     }, 2000);
-
     return () => { cancelled = true; clearInterval(id); };
   }, [phase, name, network, onSuccess]);
 
-  // Fund phase polling — for BUY, poll checkUtxo every 3s against the seller's
-  // t-address and auto-advance once their payment is detected on-chain.
-  const [fundDetected, setFundDetected] = useState(false);
-
+  // -- Fund polling effect: advance directly on detection, no intermediate state --
   useEffect(() => {
-    if (phase !== "fund" || action !== "BUY") return;
-    if (resolveResult.status !== "listed") return;
+    if (phase !== "fund" || action !== "BUY" || resolveResult.status !== "listed") return;
     const { payTaddr, listingPrice } = resolveResult;
     let cancelled = false;
 
@@ -431,20 +347,16 @@ export default function Zip321Modal({
       const result = await checkUtxo(payTaddr, network);
       if (cancelled) return;
       if (result.found && result.response && result.response.total_received_zats >= listingPrice.zats) {
-        setFundDetected(true);
+        advance();
       }
     }
 
-    setFundDetected(false);
     poll();
     const id = setInterval(poll, 3000);
     return () => { cancelled = true; clearInterval(id); };
   }, [phase, action, resolveResult, network]);
 
-  useEffect(() => {
-    if (fundDetected) advance();
-  }, [fundDetected]);
-
+  // -- Keyboard --
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handler);
@@ -473,21 +385,21 @@ export default function Zip321Modal({
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               <strong>{name}.zcash</strong> is reserved. Enter your unlock code to continue.
             </p>
-            <input type="text" value={unlockCode} autoFocus
-              onChange={(e) => { setUnlockCode(e.target.value.toUpperCase()); setUnlockError(""); }}
+            <input type="text" value={s.unlockCode} autoFocus
+              onChange={(e) => set({ unlockCode: e.target.value.toUpperCase(), unlockError: "" })}
               onKeyDown={(e) => { if (e.key === "Enter") handleUnlock(); }}
               placeholder="XXXX-XXXX-XXXX"
               className="w-full rounded-xl px-4 py-3 text-sm font-mono tracking-[0.15em] outline-none text-center"
-              style={{ background: "var(--color-raised)", border: `1.5px solid ${unlockError ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`, color: "var(--fg-heading)" }} />
-            {unlockError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{unlockError}</p>}
+              style={{ background: "var(--color-raised)", border: `1.5px solid ${s.unlockError ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`, color: "var(--fg-heading)" }} />
+            {s.unlockError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{s.unlockError}</p>}
             <div className="flex gap-3 justify-end">
               <button type="button" onClick={onClose}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold"
                 style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>Cancel</button>
-              <button type="button" onClick={handleUnlock} disabled={unlockLoading}
+              <button type="button" onClick={handleUnlock} disabled={s.unlockLoading}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold disabled:opacity-50"
                 style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-                {unlockLoading ? "Verifying…" : "Unlock"}
+                {s.unlockLoading ? "Verifying…" : "Unlock"}
               </button>
             </div>
           </div>
@@ -502,8 +414,8 @@ export default function Zip321Modal({
                 <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
                   {action === "UPDATE" ? "New Zcash Address" : "Your Zcash Address"}
                 </label>
-                <input type="text" value={addressInput} autoFocus
-                  onChange={(e) => { setAddressInput(e.target.value); setInputError(""); }}
+                <input type="text" value={s.addressInput} autoFocus
+                  onChange={(e) => set({ addressInput: e.target.value, inputError: "" })}
                   onKeyDown={(e) => { if (e.key === "Enter") handleInputContinue(); }}
                   placeholder="u1…"
                   className="w-full rounded-xl px-4 py-3 text-sm outline-none"
@@ -513,8 +425,8 @@ export default function Zip321Modal({
             {needsPrice && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Price (ZEC)</label>
-                <input type="text" inputMode="decimal" value={priceInput}
-                  onChange={(e) => { setPriceInput(e.target.value); setInputError(""); }}
+                <input type="text" inputMode="decimal" value={s.priceInput}
+                  onChange={(e) => set({ priceInput: e.target.value, inputError: "" })}
                   onKeyDown={(e) => { if (e.key === "Enter") handleInputContinue(); }}
                   placeholder="0.00"
                   className="w-full rounded-xl px-4 py-3 text-sm outline-none"
@@ -524,15 +436,15 @@ export default function Zip321Modal({
             {needsPayTaddr && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Payout Address (t-address)</label>
-                <input type="text" value={payTaddrInput}
-                  onChange={(e) => { setPayTaddrInput(e.target.value); setInputError(""); }}
+                <input type="text" value={s.payTaddrInput}
+                  onChange={(e) => set({ payTaddrInput: e.target.value, inputError: "" })}
                   onKeyDown={(e) => { if (e.key === "Enter") handleInputContinue(); }}
                   placeholder="t1…"
                   className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                   style={{ background: "var(--color-raised)", border: "1.5px solid var(--faq-border)", color: "var(--fg-heading)" }} />
               </div>
             )}
-            {inputError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{inputError}</p>}
+            {s.inputError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{s.inputError}</p>}
             <div className="flex gap-3 justify-end">
               <button type="button" onClick={onClose}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold"
@@ -560,26 +472,26 @@ export default function Zip321Modal({
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Public Key (base64)</label>
-              <input type="text" value={signPubkey}
-                onChange={(e) => { setSignPubkey(e.target.value.trim()); setSignError(""); }}
+              <input type="text" value={s.signPubkey}
+                onChange={(e) => set({ signPubkey: e.target.value.trim(), signError: "" })}
                 placeholder="Paste your Ed25519 public key"
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono"
                 style={{ background: "var(--color-raised)", border: "1.5px solid var(--faq-border)", color: "var(--fg-heading)" }} />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Signature (base64)</label>
-              <textarea value={signSignature}
-                onChange={(e) => { setSignSignature(e.target.value.trim()); setSignError(""); }}
+              <textarea value={s.signSignature}
+                onChange={(e) => set({ signSignature: e.target.value.trim(), signError: "" })}
                 rows={3} placeholder="Paste signed payload"
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none font-mono resize-none"
                 style={{ background: "var(--color-raised)", border: "1.5px solid var(--faq-border)", color: "var(--fg-heading)" }} />
             </div>
-            {signError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{signError}</p>}
+            {s.signError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{s.signError}</p>}
             <div className="flex gap-3 justify-end">
-              <button type="button" onClick={() => advance()}
-                className="px-5 py-2.5 rounded-full text-sm font-semibold"
+              <button type="button" onClick={handleVerifySign} disabled={s.signLoading}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold disabled:opacity-50"
                 style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-                {signLoading ? "Verifying…" : "Use Signature"}
+                {s.signLoading ? "Verifying…" : "Use Signature"}
               </button>
             </div>
           </div>
@@ -590,39 +502,39 @@ export default function Zip321Modal({
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               Send exact amount and memo to the address below to request a verification code.
             </p>
-            {otpMemo && (
+            {s.otpMemo && (
               <QrBlock
                 address={getNetworkConstants(network).OTP_SIGNIN_ADDR}
                 amount={getNetworkConstants(network).OTP_AMOUNT}
-                memo={otpMemo}
+                memo={s.otpMemo}
                 size={180}
               />
             )}
-            {!otpSent ? (
-              <button type="button" onClick={() => { setOtpSent(true); setOtpError(""); }}
+            {!s.otpSent ? (
+              <button type="button" onClick={() => set({ otpSent: true, otpError: "" })}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold"
                 style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>
                 I Sent It!
               </button>
             ) : (
               <>
-                <input type="text" inputMode="numeric" maxLength={6} value={otpCode}
-                  onChange={(e) => { setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6)); setOtpError(""); }}
+                <input type="text" inputMode="numeric" maxLength={6} value={s.otpCode}
+                  onChange={(e) => set({ otpCode: e.target.value.replace(/\D/g, "").slice(0, 6), otpError: "" })}
                   onKeyDown={(e) => { if (e.key === "Enter") handleVerifyOtp(); }}
                   placeholder="000000" autoFocus
                   className="w-full rounded-xl px-4 py-3 text-sm outline-none text-center tracking-[0.3em] font-mono"
-                  style={{ background: "var(--color-raised)", border: `1.5px solid ${otpError ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`, color: "var(--fg-heading)" }} />
-                <button type="button" onClick={handleVerifyOtp} disabled={!otpCode.trim() || otpLoading}
+                  style={{ background: "var(--color-raised)", border: `1.5px solid ${s.otpError ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`, color: "var(--fg-heading)" }} />
+                <button type="button" onClick={handleVerifyOtp} disabled={!s.otpCode.trim() || s.otpLoading}
                   className="px-5 py-2.5 rounded-full text-sm font-semibold disabled:opacity-50"
                   style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-                  {otpLoading ? "Verifying…" : "Verify Code"}
+                  {s.otpLoading ? "Verifying…" : "Verify Code"}
                 </button>
               </>
             )}
-            {otpError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{otpError}</p>}
-            {otpAttempts > 0 && (
+            {s.otpError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{s.otpError}</p>}
+            {s.otpAttempts > 0 && (
               <p className="text-xs" style={{ color: "var(--fg-muted)" }}>
-                Attempt {otpAttempts} of {getNetworkConstants(network).OTP_MAX_ATTEMPTS}
+                Attempt {s.otpAttempts} of {getNetworkConstants(network).OTP_MAX_ATTEMPTS}
               </p>
             )}
           </div>
@@ -633,11 +545,11 @@ export default function Zip321Modal({
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               Send exact amount and memo to complete the transaction.
             </p>
-            {uri && paymentAddress && (
+            {s.uri && s.paymentAddress && (
               <QrBlock
-                address={paymentAddress}
-                amount={amountZec ?? "0"}
-                memo={memo ?? ""}
+                address={s.paymentAddress}
+                amount={s.amountZec}
+                memo={s.memo}
                 size={200}
               />
             )}
@@ -684,7 +596,7 @@ export default function Zip321Modal({
             )}
           </div>
         )}
-        {phase === "scanning" && scanState !== "mined" && (
+        {phase === "scanning" && s.scanState !== "mined" && (
           <div className="flex flex-col items-center gap-4 text-center">
             <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Scanning</h2>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
@@ -693,13 +605,13 @@ export default function Zip321Modal({
             <div className="w-full rounded-xl p-5 flex flex-col items-center gap-3"
               style={{
                 background: "var(--color-raised)",
-                border: `1.5px solid ${scanState === "in_mempool" || scanState === "confirming" ? "#ca8a04" : scanState === "rejected" ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`,
+                border: `1.5px solid ${s.scanState === "in_mempool" || s.scanState === "confirming" ? "#ca8a04" : s.scanState === "rejected" ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`,
               }}>
               <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-                {scanState === "not_detected" && "Transaction not detected yet."}
-                {scanState === "in_mempool" && "Transaction is in the mempool. Waiting to be mined."}
-                {scanState === "confirming" && "Confirming transaction. Hang tight."}
-                {scanState === "rejected" && "Transaction not found."}
+                {s.scanState === "not_detected" && "Transaction not detected yet."}
+                {s.scanState === "in_mempool" && "Transaction is in the mempool. Waiting to be mined."}
+                {s.scanState === "confirming" && "Confirming transaction. Hang tight."}
+                {s.scanState === "rejected" && "Transaction not found."}
               </p>
             </div>
             <button type="button" onClick={onClose}
@@ -709,7 +621,7 @@ export default function Zip321Modal({
             </button>
           </div>
         )}
-        {phase === "scanning" && scanState === "mined" && (
+        {phase === "scanning" && s.scanState === "mined" && (
           <div className="flex flex-col items-center gap-5 text-center">
             <div className="text-5xl">🎉</div>
             <h2 className="text-2xl font-bold" style={{ color: "var(--fg-heading)" }}>
