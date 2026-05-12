@@ -55,8 +55,8 @@ export interface MempoolEntry {
   nonce?: number;
   /** Base64 Ed25519 pubkey if sovereign, otherwise undefined. */
   user_pubkey?: string;
-  /** Total ZEC in zats from transparent outputs in this tx. */
-  zec_amount: number;
+  /** Orchard note value in zatoshis. */
+  value_zats: number;
   /** Unix timestamp when first seen in mempool. */
   seen_at: number;
 }

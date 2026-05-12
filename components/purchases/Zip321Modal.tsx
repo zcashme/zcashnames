@@ -18,7 +18,7 @@ import {
 import { validateAddress } from "@/lib/zns/utils";
 import { generateSessionId, buildZvsMemo } from "@/lib/purchases/memo";
 import { zip321Uri } from "@/lib/purchases/zip321";
-import { checkMempool } from "@/lib/zns/mempool";
+import { checkMempool, checkUtxo } from "@/lib/zns/mempool";
 import { generatePayload } from "@/lib/zns/payload";
 import { QrBlock } from "@/components/ui/QrBlock";
 
@@ -417,6 +417,34 @@ export default function Zip321Modal({
     return () => { cancelled = true; clearInterval(id); };
   }, [phase, name, network, onSuccess]);
 
+  // Fund phase polling — for BUY, poll checkUtxo every 3s against the seller's
+  // t-address and auto-advance once their payment is detected on-chain.
+  const [fundDetected, setFundDetected] = useState(false);
+
+  useEffect(() => {
+    if (phase !== "fund" || action !== "BUY") return;
+    if (resolveResult.status !== "listed") return;
+    const { payTaddr, listingPrice } = resolveResult;
+    let cancelled = false;
+
+    async function poll() {
+      const result = await checkUtxo(payTaddr, network);
+      if (cancelled) return;
+      if (result.found && result.response && result.response.total_received_zats >= listingPrice.zats) {
+        setFundDetected(true);
+      }
+    }
+
+    setFundDetected(false);
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [phase, action, resolveResult, network]);
+
+  useEffect(() => {
+    if (fundDetected) advance();
+  }, [fundDetected]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handler);
@@ -643,14 +671,20 @@ export default function Zip321Modal({
                 </code>
               </div>
             </div>
-            <button type="button" onClick={() => advance()}
-              className="px-5 py-2.5 rounded-full text-sm font-semibold"
-              style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-              I&rsquo;ve Sent the Payment
-            </button>
+            {action === "BUY" && network === "mainnet" ? (
+              <p className="text-sm" style={{ color: "var(--fg-muted)" }}>
+                Waiting for payment detection...
+              </p>
+            ) : (
+              <button type="button" onClick={() => advance()}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold"
+                style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
+                I&rsquo;ve Sent the Payment
+              </button>
+            )}
           </div>
         )}
-        {phase === "scanning" && (
+        {phase === "scanning" && scanState !== "mined" && (
           <div className="flex flex-col items-center gap-4 text-center">
             <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Scanning</h2>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
@@ -659,18 +693,33 @@ export default function Zip321Modal({
             <div className="w-full rounded-xl p-5 flex flex-col items-center gap-3"
               style={{
                 background: "var(--color-raised)",
-                border: `1.5px solid ${scanState === "mined" ? "#22c55e" : scanState === "in_mempool" || scanState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
+                border: `1.5px solid ${scanState === "in_mempool" || scanState === "confirming" ? "#ca8a04" : scanState === "rejected" ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`,
               }}>
               <p className="text-sm" style={{ color: "var(--fg-body)" }}>
                 {scanState === "not_detected" && "Transaction not detected yet."}
                 {scanState === "in_mempool" && "Transaction is in the mempool. Waiting to be mined."}
                 {scanState === "confirming" && "Confirming transaction. Hang tight."}
-                {scanState === "mined" && "Transaction confirmed on-chain."}
                 {scanState === "rejected" && "Transaction not found."}
               </p>
             </div>
             <button type="button" onClick={onClose}
               className="px-5 py-2.5 rounded-full text-sm font-semibold"
+              style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>
+              Close
+            </button>
+          </div>
+        )}
+        {phase === "scanning" && scanState === "mined" && (
+          <div className="flex flex-col items-center gap-5 text-center">
+            <div className="text-5xl">🎉</div>
+            <h2 className="text-2xl font-bold" style={{ color: "var(--fg-heading)" }}>
+              {name}.zcash is yours
+            </h2>
+            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+              Your name is registered on-chain and ready to use.
+            </p>
+            <button type="button" onClick={onClose}
+              className="px-6 py-3 rounded-full text-sm font-semibold"
               style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
               Done
             </button>
