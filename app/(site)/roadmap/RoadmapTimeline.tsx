@@ -83,6 +83,7 @@ function buildSectionGroups(periods: RoadmapPeriodLayout[]): RoadmapSectionGroup
 
 export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] }) {
   const { resolvedTheme } = useTheme();
+  const monochrome = resolvedTheme === "monochrome";
   const today = toLocalUtcDate(new Date());
   const timelineStart = periodsStart(periods);
   const timelineEnd = periodsLastStart(periods);
@@ -159,7 +160,9 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
             <button
               type="button"
               onClick={expandCurrentPeriods}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted bg-[var(--color-raised)] px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+              className={`inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading ${
+                monochrome ? "bg-transparent" : "bg-[var(--color-raised)]"
+              }`}
             >
               <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-green)]" aria-hidden="true" />
               Current phase
@@ -168,13 +171,13 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
         ) : null}
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border border-border-muted bg-[var(--color-raised)] p-4">
+          <div className={`rounded-lg border border-border-muted p-4 ${monochrome ? "bg-transparent" : "bg-[var(--color-raised)]"}`}>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Outlook</p>
             <p className="mt-2 text-base font-semibold text-fg-heading">
               {monthFormatter.format(timelineStart)} to {monthFormatter.format(timelineEnd)}
             </p>
           </div>
-          <div className="rounded-lg border border-border-muted bg-[var(--color-raised)] p-4">
+          <div className={`rounded-lg border border-border-muted p-4 ${monochrome ? "bg-transparent" : "bg-[var(--color-raised)]"}`}>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Current focus</p>
             <button
               type="button"
@@ -190,7 +193,7 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
               {currentPeriod.title}
             </button>
           </div>
-          <div className="rounded-lg border border-border-muted bg-[var(--color-raised)] p-4">
+          <div className={`rounded-lg border border-border-muted p-4 ${monochrome ? "bg-transparent" : "bg-[var(--color-raised)]"}`}>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Phases</p>
             <p className="mt-2 text-base font-semibold text-fg-heading">
               {completedCount} of {periods.length} complete
@@ -215,7 +218,7 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
                   period={period}
                   expanded={expandedIds.includes(period.id)}
                   onExpand={() => togglePeriod(period.id)}
-                  monochrome={resolvedTheme === "monochrome"}
+                  monochrome={monochrome}
                 />
               ))}
             </div>
@@ -243,9 +246,11 @@ function ListRoadmapCard({
   const buttonId = `${period.id}-toggle`;
   const isHighlighted = period.isCurrent || period.isUpcoming;
   const highlightColor = period.isCurrent ? "var(--color-accent-green)" : "var(--color-accent-yellow)";
-  const highlightBackground = period.isCurrent
-    ? "color-mix(in srgb, var(--color-card) 92%, var(--color-accent-green-light))"
-    : "color-mix(in srgb, var(--color-card) 90%, var(--color-accent-yellow-light))";
+  const highlightBackground = monochrome
+    ? "transparent"
+    : period.isCurrent
+      ? "color-mix(in srgb, var(--color-card) 92%, var(--color-accent-green-light))"
+      : "color-mix(in srgb, var(--color-card) 90%, var(--color-accent-yellow-light))";
   const highlightBoxShadow = period.isCurrent
     ? "0 0 0 1px color-mix(in srgb, var(--color-accent-green) 28%, transparent), 0 18px 40px rgba(0,0,0,0.14)"
     : "0 0 0 1px color-mix(in srgb, var(--color-accent-yellow) 28%, transparent), 0 18px 40px rgba(0,0,0,0.14)";
@@ -282,7 +287,7 @@ function ListRoadmapCard({
         if (currentMarkerRef) currentMarkerRef.current = node;
       }}
       className={`rounded-lg border p-4 transition-colors sm:p-5 ${
-        isHighlighted ? "" : "border-border-muted bg-[var(--color-card)]"
+        isHighlighted ? "" : monochrome ? "border-border-muted bg-transparent" : "border-border-muted bg-[var(--color-card)]"
       }`}
       style={{
         borderColor: isHighlighted ? highlightColor : undefined,
@@ -342,8 +347,8 @@ function ListRoadmapCard({
               </span>
             )}
           </div>
-          <p className="mt-2 text-sm leading-6 text-fg-body sm:text-base">{period.summary}</p>
-          <div className="mt-3 flex flex-wrap gap-2 text-sm text-fg-body">
+          <p className="mt-3 text-sm leading-6 text-fg-body sm:text-base">{period.summary}</p>
+          <div className="mt-4 flex flex-wrap gap-2 text-sm text-fg-body">
             <span className="inline-flex rounded-full border border-border-muted px-3 py-1.5 font-semibold">
               {formatRange(period.startDate, period.endDate)}
             </span>
@@ -353,7 +358,9 @@ function ListRoadmapCard({
           </div>
         </div>
         <span
-          className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border-muted bg-[var(--color-raised)] text-lg font-black text-fg-heading"
+          className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border-muted text-lg font-black text-fg-heading ${
+            monochrome ? "bg-transparent" : "bg-[var(--color-raised)]"
+          } transition-colors duration-200 ease-out`}
           style={{
             boxShadow: "none",
           }}
@@ -363,29 +370,35 @@ function ListRoadmapCard({
         </span>
       </button>
 
-      {expanded && (
-        <div
-          id={panelId}
-          role="region"
-          aria-labelledby={buttonId}
-          className="mt-4 rounded-lg border border-border-muted bg-[var(--color-raised)] p-4"
-        >
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">
-            In this phase
-          </p>
-          <ul className="mt-3 grid gap-3">
-            {period.tasks.map((task) => (
-              <li
-                key={task}
-                className="flex items-start gap-3 rounded-2xl border border-border-muted bg-[var(--color-card)] px-3 py-3 text-sm leading-6 text-fg-body"
-              >
-                <span className={taskMarkerClassName} aria-hidden="true" />
-                <span>{task}</span>
-              </li>
-            ))}
-          </ul>
+      <div
+        className={`grid transition-all duration-300 ease-out ${
+          expanded ? "mt-5 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div
+            id={panelId}
+            role="region"
+            aria-labelledby={buttonId}
+            aria-hidden={!expanded}
+            className={`rounded-lg bg-transparent transition-all duration-300 ease-out ${
+              expanded ? "translate-y-0 pt-0" : "-translate-y-1 pt-0"
+            }`}
+          >
+            <ul className="grid gap-3">
+              {period.tasks.map((task) => (
+                <li
+                  key={task}
+                  className="flex items-start gap-3 rounded-2xl border border-border-muted bg-transparent px-3 py-3 text-sm leading-6 text-fg-body"
+                >
+                  <span className={taskMarkerClassName} aria-hidden="true" />
+                  <span>{task}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-      )}
+      </div>
     </article>
   );
 }
