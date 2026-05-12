@@ -36,6 +36,8 @@
   --color-accent-green: #22c55e;
   --color-accent-green-light: rgba(34, 197, 94, 0.15);
   --color-accent-green-dark: #16a34a;
+  --color-accent-yellow: #f4b728;
+  --color-accent-yellow-light: rgba(244, 183, 40, 0.18);
   --waitlist-indicator-bg: #f4b728;
   --checkbox-accent: #f4b728;
   --checkbox-check-color: #1a1a1a;
@@ -254,6 +256,8 @@
   --color-accent-green: #16a34a;
   --color-accent-green-light: #dcfce7;
   --color-accent-green-dark: #15803d;
+  --color-accent-yellow: #c8921a;
+  --color-accent-yellow-light: #fef3c7;
   --waitlist-indicator-bg: #f4b728;
   --checkbox-accent: #2b8feb;
   --checkbox-check-color: #ffffff;
@@ -418,6 +422,8 @@
   --color-accent-green: var(--mono-3);
   --color-accent-green-light: rgba(139, 172, 15, 0.2);
   --color-accent-green-dark: var(--mono-2);
+  --color-accent-yellow: var(--mono-3);
+  --color-accent-yellow-light: rgba(139, 172, 15, 0.2);
   --waitlist-indicator-bg: var(--mono-3);
   --checkbox-accent: var(--mono-3);
   --checkbox-check-color: var(--mono-0);
