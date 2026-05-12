@@ -84,6 +84,8 @@ function buildSectionGroups(periods: RoadmapPeriodLayout[]): RoadmapSectionGroup
 export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] }) {
   const { resolvedTheme } = useTheme();
   const monochrome = resolvedTheme === "monochrome";
+  const light = resolvedTheme === "light";
+  const flattenedSurfaceMode = monochrome || light;
   const today = toLocalUtcDate(new Date());
   const timelineStart = periodsStart(periods);
   const timelineEnd = periodsLastStart(periods);
@@ -161,7 +163,7 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
               type="button"
               onClick={expandCurrentPeriods}
               className={`inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading ${
-                monochrome ? "bg-transparent" : "bg-[var(--color-raised)]"
+                flattenedSurfaceMode ? "bg-transparent" : "bg-[var(--color-raised)]"
               }`}
             >
               <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-green)]" aria-hidden="true" />
@@ -171,13 +173,13 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
         ) : null}
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className={`rounded-lg border border-border-muted p-4 ${monochrome ? "bg-transparent" : "bg-[var(--color-raised)]"}`}>
+          <div className={`rounded-lg border border-border-muted p-4 ${flattenedSurfaceMode ? "bg-transparent" : "bg-[var(--color-raised)]"}`}>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Outlook</p>
             <p className="mt-2 text-base font-semibold text-fg-heading">
               {monthFormatter.format(timelineStart)} to {monthFormatter.format(timelineEnd)}
             </p>
           </div>
-          <div className={`rounded-lg border border-border-muted p-4 ${monochrome ? "bg-transparent" : "bg-[var(--color-raised)]"}`}>
+          <div className={`rounded-lg border border-border-muted p-4 ${flattenedSurfaceMode ? "bg-transparent" : "bg-[var(--color-raised)]"}`}>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Current focus</p>
             <button
               type="button"
@@ -193,7 +195,7 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
               {currentPeriod.title}
             </button>
           </div>
-          <div className={`rounded-lg border border-border-muted p-4 ${monochrome ? "bg-transparent" : "bg-[var(--color-raised)]"}`}>
+          <div className={`rounded-lg border border-border-muted p-4 ${flattenedSurfaceMode ? "bg-transparent" : "bg-[var(--color-raised)]"}`}>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Phases</p>
             <p className="mt-2 text-base font-semibold text-fg-heading">
               {completedCount} of {periods.length} complete
@@ -219,6 +221,7 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
                   expanded={expandedIds.includes(period.id)}
                   onExpand={() => togglePeriod(period.id)}
                   monochrome={monochrome}
+                  light={light}
                 />
               ))}
             </div>
@@ -235,18 +238,21 @@ function ListRoadmapCard({
   onExpand,
   currentMarkerRef,
   monochrome,
+  light,
 }: {
   period: RoadmapPeriodLayout;
   expanded: boolean;
   onExpand: () => void;
   currentMarkerRef?: RefObject<HTMLElement | null>;
   monochrome: boolean;
+  light: boolean;
 }) {
   const panelId = `${period.id}-tasks`;
   const buttonId = `${period.id}-toggle`;
+  const flattenedSurfaceMode = monochrome || light;
   const isHighlighted = period.isCurrent || period.isUpcoming;
   const highlightColor = period.isCurrent ? "var(--color-accent-green)" : "var(--color-accent-yellow)";
-  const highlightBackground = monochrome
+  const highlightBackground = flattenedSurfaceMode
     ? "transparent"
     : period.isCurrent
       ? "color-mix(in srgb, var(--color-card) 92%, var(--color-accent-green-light))"
@@ -287,7 +293,7 @@ function ListRoadmapCard({
         if (currentMarkerRef) currentMarkerRef.current = node;
       }}
       className={`rounded-lg border p-4 transition-colors sm:p-5 ${
-        isHighlighted ? "" : monochrome ? "border-border-muted bg-transparent" : "border-border-muted bg-[var(--color-card)]"
+        isHighlighted ? "" : flattenedSurfaceMode ? "border-border-muted bg-transparent" : "border-border-muted bg-[var(--color-card)]"
       }`}
       style={{
         borderColor: isHighlighted ? highlightColor : undefined,
@@ -352,14 +358,18 @@ function ListRoadmapCard({
             <span className="inline-flex rounded-full border border-border-muted px-3 py-1.5 font-semibold">
               {formatRange(period.startDate, period.endDate)}
             </span>
-            <span className="inline-flex rounded-full border border-border-muted bg-[var(--color-raised)] px-3 py-1.5 font-semibold">
+            <span
+              className={`inline-flex rounded-full border border-border-muted px-3 py-1.5 font-semibold ${
+                flattenedSurfaceMode ? "bg-transparent" : "bg-[var(--color-raised)]"
+              }`}
+            >
               {period.tasks.length} tasks
             </span>
           </div>
         </div>
         <span
           className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border-muted text-lg font-black text-fg-heading ${
-            monochrome ? "bg-transparent" : "bg-[var(--color-raised)]"
+            flattenedSurfaceMode ? "bg-transparent" : "bg-[var(--color-raised)]"
           } transition-colors duration-200 ease-out`}
           style={{
             boxShadow: "none",

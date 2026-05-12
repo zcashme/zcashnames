@@ -26,7 +26,6 @@ End: 2026-06-09
 - Marketplace can transfer names through non-custodial transactions.
 - The personal dashboard shows all names associated with an address. 
 - Mempool feedback improves transaction transparency.
-- Release notes and status page are provided.
 
 # Beta v2  `TBA`
 Beta testers can unlock reserved names, claim names with emojis, and test how renewal and expiry rules respond to activity.
@@ -44,6 +43,7 @@ End: 2026-07-20
 - Subdomains allow multiple addresses under one name.
 - Auction pricing introduced.
 - The SDK can verify name records using Merkle proofs.
+- Release notes and status page are provided.
 
 --- III. Launch
 
