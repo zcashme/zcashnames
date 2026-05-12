@@ -80,7 +80,8 @@ function MenuItem({
   icon: ReactNode;
   label: string;
 }) {
-  const className = "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold text-fg-heading transition-colors hover:bg-[var(--color-raised)]";
+  const className =
+    "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold text-fg-heading transition-colors hover:bg-[var(--color-raised)]";
 
   if (href) {
     return (
@@ -109,9 +110,16 @@ export default function ShareDropdown({
   showTriggerIcon = true,
 }: ShareDropdownProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [open, setOpen] = useState(false);
-  const [shareStatus, setShareStatus] = useState("");
   const copyState = useCopy();
+
+  function clearCloseTimeout() {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -136,28 +144,32 @@ export default function ShareDropdown({
     };
   }, [open]);
 
+  useEffect(() => {
+    return () => clearCloseTimeout();
+  }, []);
+
   async function handleCopy() {
+    clearCloseTimeout();
     await copyState.copy(message);
-    setShareStatus("Copied share message.");
-    setOpen(false);
+    setOpen(true);
+    closeTimeoutRef.current = setTimeout(() => {
+      setOpen(false);
+      closeTimeoutRef.current = null;
+    }, 1800);
   }
 
   async function handleSystemShare() {
     if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
-      setShareStatus("System share is not available on this device.");
       return;
     }
 
     try {
       await navigator.share({ text: message, url: shareUrl });
-      setShareStatus("");
       setOpen(false);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
-        setShareStatus("");
         return;
       }
-      setShareStatus("System share was canceled or unavailable.");
     }
   }
 
@@ -166,36 +178,39 @@ export default function ShareDropdown({
     "inline-flex min-h-11 items-center gap-2 rounded-md border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading";
   const menuPositionClassName = menuAlign === "left" ? "left-0" : "right-0";
   const rootAlignmentClassName = menuAlign === "left" ? "items-start" : "items-end";
+  const triggerRowClassName = menuAlign === "left" ? "items-start" : "items-end";
 
   return (
     <div ref={rootRef} className={`relative flex flex-col gap-2 ${rootAlignmentClassName}`}>
-      <div className="flex items-center gap-3">
+      <div className={`flex flex-col gap-2 ${triggerRowClassName}`}>
         <button
           type="button"
-          onClick={() => setOpen((current) => !current)}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        className={triggerClassName}
-      >
-        {showTriggerIcon ? <TriggerIcon /> : null}
-        <span>{label}</span>
-      </button>
-
-        {shareStatus && <p className="text-xs text-fg-muted">{shareStatus}</p>}
+          onClick={() => {
+            clearCloseTimeout();
+            setOpen((current) => !current);
+          }}
+          aria-expanded={open}
+          aria-haspopup="menu"
+          className={triggerClassName}
+        >
+          {showTriggerIcon ? <TriggerIcon /> : null}
+          <span>{label}</span>
+        </button>
       </div>
 
-      {open && (
-        <div
-          className={`absolute top-full z-20 mt-2 flex min-w-[220px] flex-col rounded-lg border border-border-muted bg-[var(--color-card)] p-2 shadow-lg ${menuPositionClassName}`}
-          role="menu"
-        >
-          <MenuItem onClick={() => void handleCopy()} icon={<CopyIcon />} label={copyState.copied ? "Copied!" : "Copy Link"} />
-          <MenuItem href={buildEmailShareHref(emailSubject, message)} icon={<EmailIcon />} label="Email" />
-          <MenuItem href={buildTelegramShareHref(message)} icon={<TelegramIcon />} label="Telegram" />
-          <MenuItem href={buildXShareHref(message)} icon={<XIcon />} label="X" />
-          <MenuItem onClick={() => void handleSystemShare()} icon={<MoreIcon />} label="More ways" />
-        </div>
-      )}
+      <div
+        className={`absolute top-full z-20 mt-2 flex min-w-[220px] flex-col rounded-lg border border-border-muted bg-[var(--color-card)] p-2 shadow-lg transition-all duration-200 ease-out ${menuPositionClassName} ${
+          open ? "visible translate-y-0 opacity-100" : "pointer-events-none invisible -translate-y-1 opacity-0"
+        }`}
+        role="menu"
+        aria-hidden={!open}
+      >
+        <MenuItem onClick={() => void handleCopy()} icon={<CopyIcon />} label={copyState.copied ? "Copied!" : "Copy Link"} />
+        <MenuItem href={buildEmailShareHref(emailSubject, message)} icon={<EmailIcon />} label="Email" />
+        <MenuItem href={buildTelegramShareHref(message)} icon={<TelegramIcon />} label="Telegram" />
+        <MenuItem href={buildXShareHref(message)} icon={<XIcon />} label="X" />
+        <MenuItem onClick={() => void handleSystemShare()} icon={<MoreIcon />} label="More ways" />
+      </div>
     </div>
   );
 }

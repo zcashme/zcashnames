@@ -136,38 +136,36 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
   }, []);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex justify-start">
-        <ShareDropdown
-          label="Share"
-          message={shareMessage}
-          shareUrl={ROADMAP_SHARE_URL}
-          emailSubject="ZcashNames Roadmap"
-          menuAlign="left"
-          buttonClassName="inline-flex min-h-11 items-center gap-2 rounded-md border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-        />
-      </div>
-      <section className="rounded-lg border border-border-muted bg-[var(--color-card)] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.14)] sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
+    <div className="flex flex-col gap-14 sm:gap-16">
+      <section>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
             <h1 className="text-4xl font-bold leading-tight text-fg-heading sm:text-5xl">
               Launch Sequence
             </h1>
           </div>
-
-          {showCurrentPhaseButton ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={expandCurrentPeriods}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted bg-[var(--color-raised)] px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
-              >
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-green)]" aria-hidden="true" />
-                Current phase
-              </button>
-            </div>
-          ) : null}
+          <ShareDropdown
+            label="Share"
+            message={shareMessage}
+            shareUrl={ROADMAP_SHARE_URL}
+            emailSubject="ZcashNames Roadmap"
+            menuAlign="right"
+            buttonClassName="inline-flex min-h-11 items-center gap-2 rounded-md border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+          />
         </div>
+
+        {showCurrentPhaseButton ? (
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={expandCurrentPeriods}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted bg-[var(--color-raised)] px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+            >
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-green)]" aria-hidden="true" />
+              Current phase
+            </button>
+          </div>
+        ) : null}
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <div className="rounded-lg border border-border-muted bg-[var(--color-raised)] p-4">
@@ -181,8 +179,14 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
             <button
               type="button"
               onClick={focusCurrentPeriod}
-              className="mt-2 text-left text-base font-semibold text-fg-heading transition-colors hover:text-[var(--color-brand-blue)]"
+              className="mt-2 inline-flex items-center gap-2 text-left text-base font-semibold text-fg-heading transition-colors hover:text-[var(--color-brand-blue)]"
             >
+              {!activePeriods.length && upcomingPeriod ? (
+                <span
+                  className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-yellow)]"
+                  aria-hidden="true"
+                />
+              ) : null}
               {currentPeriod.title}
             </button>
           </div>
@@ -195,11 +199,11 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
         </div>
       </section>
 
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-14 sm:gap-16">
         {sectionGroups.map((group) => (
-          <section key={group.title ?? group.periods[0].id} className="flex flex-col gap-3">
+          <section key={group.title ?? group.periods[0].id} className="flex flex-col gap-5 sm:gap-6">
             {group.title ? (
-              <p className="text-lg font-bold uppercase tracking-[0.08em] text-fg-heading sm:text-xl">
+              <p className="text-3xl font-bold leading-tight text-fg-heading sm:text-[2rem]">
                 {group.title}
               </p>
             ) : null}
