@@ -9,18 +9,7 @@
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ExplorerToolbar from "./ExplorerToolbar";
-import {
-  EXPLORER_PAGE_SIZE,
-  clampPage,
-  filterRegistrations,
-  getTabEvents,
-  getTotalPages,
-  normalizeExplorerQuery,
-  paginateRows,
-  parseExplorerPage,
-  parseExplorerTab,
-  type ExplorerTab,
-} from "./explorerFilters";
+import { PAGE_SIZE, parseExplorerTab, type ExplorerTab } from "./tabs";
 import ExplorerNameDetail from "./ExplorerNameDetail";
 import Zip321Modal from "@/components/purchases/Zip321Modal";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
@@ -30,24 +19,21 @@ import ActionBadge from "@/components/ActionBadge";
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 import CopyIconButton from "@/components/CopyIconButton";
-import { zatsToZec } from "@/lib/zns/utils";
+import { filterRegistrations, zatsToZec } from "@/lib/zns/utils";
 import type { Listing, Network, Registration, ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import { ACTIONS, ACTION_LABELS } from "@/lib/types";
 
 function PaginationControls({
   page,
-  totalItems,
-  pageSize,
+  totalPages,
   onPageChange,
 }: {
   page: number;
-  totalItems: number;
-  pageSize: number;
+  totalPages: number;
   onPageChange: (page: number) => void;
 }) {
-  if (totalItems <= 0) return null;
-  const totalPages = getTotalPages(totalItems, pageSize);
+  if (totalPages <= 1) return null;
   const canGoPrev = page > 1;
   const canGoNext = page < totalPages;
 
@@ -116,10 +102,10 @@ const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "forsale", label: "For Sale" },
 ];
 
-const MORE_TABS: { key: ExplorerTab; label: string }[] = [
-  { key: "admin", label: "Admin" },
-  ...ACTIONS.map(a => ({ key: a, label: ACTION_LABELS[a] })),
-];
+const MORE_TABS: { key: ExplorerTab; label: string }[] = ACTIONS.map((a) => ({
+  key: a,
+  label: ACTION_LABELS[a],
+}));
 
 interface ExplorerViewProps {
   initialEvents: ZnsEvent[];
@@ -169,7 +155,8 @@ export default function ExplorerView({
 
   // ── URL-derived state (single source of truth) ────────────────────────────
   const tab = parseExplorerTab(searchParams.get("tab") ?? undefined);
-  const page = parseExplorerPage(searchParams.get("page") ?? undefined);
+  const rawPage = Number.parseInt(searchParams.get("page") ?? "", 10);
+  const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
   const selectedName = searchParams.get("name");
 
   // ── Local UI state (not URL-driven) ──────────────────────────────────────
@@ -183,7 +170,7 @@ export default function ExplorerView({
   const nameDataReady = !!nameResult;
 
   // ── Tab counts (authoritative server totals; null where unknowable) ─────
-  const hasSearchFilter = normalizeExplorerQuery(searchQuery).length > 0;
+  const hasSearchFilter = searchQuery.trim().length > 0;
   const filteredRegistrations = useMemo(
     () => filterRegistrations(initialRegistrations, searchQuery),
     [initialRegistrations, searchQuery],
@@ -191,10 +178,6 @@ export default function ExplorerView({
   const sortedListings = useMemo(
     () => [...initialListings].sort((a, b) => b.height - a.height),
     [initialListings],
-  );
-  const sortedEvents = useMemo(
-    () => getTabEvents(tab, initialEvents),
-    [tab, initialEvents],
   );
 
   function getTabCount(key: ExplorerTab): number | null {
@@ -212,14 +195,16 @@ export default function ExplorerView({
     tab === "registered" ? filteredRegistrations.length
     : tab === "forsale" ? sortedListings.length
     : initialEventsTotal;
-  const safePage = clampPage(page, totalItems, EXPLORER_PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const sliceStart = (safePage - 1) * PAGE_SIZE;
   const visibleRegistrations = useMemo(
-    () => paginateRows(filteredRegistrations, safePage, EXPLORER_PAGE_SIZE),
-    [filteredRegistrations, safePage],
+    () => filteredRegistrations.slice(sliceStart, sliceStart + PAGE_SIZE),
+    [filteredRegistrations, sliceStart],
   );
   const visibleListings = useMemo(
-    () => paginateRows(sortedListings, safePage, EXPLORER_PAGE_SIZE),
-    [sortedListings, safePage],
+    () => sortedListings.slice(sliceStart, sliceStart + PAGE_SIZE),
+    [sortedListings, sliceStart],
   );
 
   const isMoreTabActive = MORE_TABS.some((t) => t.key === tab);
@@ -610,14 +595,14 @@ export default function ExplorerView({
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedEvents.length === 0 ? (
+                    {initialEvents.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
                           No events found.
                         </td>
                       </tr>
                     ) : (
-                      sortedEvents.map((ev) => (
+                      initialEvents.map((ev) => (
                         <tr
                           key={ev.id}
                           className="border-b last:border-b-0 transition-colors"
@@ -636,7 +621,7 @@ export default function ExplorerView({
                                 {ev.name}
                               </button>
                             ) : (
-                              <span className="text-fg-muted">(admin)</span>
+                              <span className="text-fg-muted">-</span>
                             )}
                           </td>
                           <td className="hidden sm:table-cell px-4 py-3 sm:px-6">
@@ -656,8 +641,7 @@ export default function ExplorerView({
             </div>
             <PaginationControls
               page={safePage}
-              totalItems={totalItems}
-              pageSize={EXPLORER_PAGE_SIZE}
+              totalPages={totalPages}
               onPageChange={handlePageChange}
             />
           </div>

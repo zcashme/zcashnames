@@ -6,19 +6,11 @@
  */
 import { getCurrentRegistrations, getEvents, getListings, resolveName } from "@/lib/zns/resolve";
 import { getChainStats } from "@/lib/network-stats";
-import type { Action } from "@/lib/types";
+import type { Action, Network } from "@/lib/types";
 import { ACTIONS } from "@/lib/types";
 import type { ResolveName } from "@/lib/types";
 import ExplorerView from "./ExplorerView";
-import {
-  EXPLORER_PAGE_SIZE,
-  getPaginationOffset,
-  paginateRows,
-  parseNetwork,
-  parseExplorerPage,
-  parseExplorerTab,
-  type ExplorerTab,
-} from "./explorerFilters";
+import { PAGE_SIZE, parseExplorerTab, type ExplorerTab } from "./tabs";
 
 export const metadata = {
   title: "Explorer - ZcashNames",
@@ -57,19 +49,15 @@ export default async function ExplorerPage({
   searchParams: Promise<{ env?: string; name?: string; tab?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const network = parseNetwork(params.env);
+  const network: Network = params.env === "testnet" ? "testnet" : "mainnet";
   const tab = parseExplorerTab(params.tab);
-  const page = parseExplorerPage(params.page);
+  const rawPage = Number.parseInt(params.page ?? "", 10);
+  const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
   const nameQuery = params.name ?? "";
   const action = getEventActionFilter(tab);
 
-  // Admin tab filters events client-side (name === ""), so overscan from the server.
-  const clientPaginateEvents = tab === "admin";
-  const eventLimit = clientPaginateEvents ? EXPLORER_PAGE_SIZE * page : EXPLORER_PAGE_SIZE;
-  const eventOffset = clientPaginateEvents ? 0 : getPaginationOffset(page, EXPLORER_PAGE_SIZE);
-
   const [eventsResult, listings, registrations, mainnetStats, testnetStats] = await Promise.all([
-    getEvents({ action, limit: eventLimit, offset: eventOffset }, network),
+    getEvents({ action, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }, network),
     getListings(network),
     getCurrentRegistrations(network),
     getChainStats("mainnet"),
@@ -81,13 +69,8 @@ export default async function ExplorerPage({
     testnet: { value: testnetStats.uivk, verified: testnetStats.uivkVerified },
   };
 
-  const scopedEvents = tab === "admin"
-    ? eventsResult.events.filter((ev) => ev.name === "")
-    : eventsResult.events;
-  const initialEvents = clientPaginateEvents
-    ? paginateRows(scopedEvents, page, EXPLORER_PAGE_SIZE)
-    : scopedEvents;
-  const initialEventsTotal = tab === "admin" ? scopedEvents.length : eventsResult.total;
+  const initialEvents = eventsResult.events;
+  const initialEventsTotal = eventsResult.total;
 
   let nameResult: ResolveName | null = null;
   let nameEvents: typeof initialEvents = [];

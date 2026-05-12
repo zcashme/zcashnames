@@ -1,5 +1,5 @@
 import { ZNS } from "zcashname-sdk";
-import type { Network } from "@/lib/types";
+import type { Network, Registration } from "@/lib/types";
 
 const instances: Record<Network, ZNS> = {
   testnet: new ZNS({ network: "testnet", url: process.env.ZNS_TESTNET_RPC_URL }),
@@ -76,6 +76,23 @@ export function normalizeUsername(raw: string): string {
 
 export function isValidUsername(name: string): boolean {
   return NAME_RE.test(name);
+}
+
+// Filter a registration list by name substring, or by exact-match for unified
+// addresses (transparent/sapling substrings still match against the address
+// column). Case-insensitive.
+export function filterRegistrations(
+  registrations: Registration[],
+  searchQuery: string,
+): Registration[] {
+  const q = searchQuery.toLowerCase().trim();
+  if (!q) return registrations;
+  const isUAddress = validateAddress(q).status === "unified";
+  return registrations.filter((registration) =>
+    registration.name.toLowerCase().includes(q) ||
+    (!isUAddress && registration.address.toLowerCase().includes(q)) ||
+    (isUAddress && registration.address.toLowerCase() === q)
+  );
 }
 
 // Quick tri-state check from the SDK registration object. Does NOT look up
