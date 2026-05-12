@@ -1,5 +1,6 @@
 "use server";
 
+import { NETWORKS } from "zcashname-sdk";
 import { getZns } from "@/lib/zns/utils";
 import { db } from "@/lib/db";
 
@@ -16,6 +17,7 @@ export type ChainStats = {
   forSale: number;
   syncedHeight: number;
   uivk: string;
+  uivkVerified: boolean;
 };
 
 export type NetworkStats = WaitlistStats | ChainStats;
@@ -29,9 +31,10 @@ export async function getChainStats(mode: "mainnet" | "testnet"): Promise<ChainS
       forSale: s.listed,
       syncedHeight: s.syncedHeight,
       uivk: s.uivk,
+      uivkVerified: s.uivk === NETWORKS[mode].uivk,
     };
   } catch {
-    return { mode, claimed: 0, forSale: 0, syncedHeight: 0, uivk: "" };
+    return { mode, claimed: 0, forSale: 0, syncedHeight: 0, uivk: "", uivkVerified: false };
   }
 }
 

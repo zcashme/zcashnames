@@ -77,8 +77,8 @@ export default async function ExplorerPage({
   ]);
   const stats = network === "mainnet" ? mainnetStats : testnetStats;
   const uivks = {
-    mainnet: mainnetStats.uivk,
-    testnet: testnetStats.uivk,
+    mainnet: { value: mainnetStats.uivk, verified: mainnetStats.uivkVerified },
+    testnet: { value: testnetStats.uivk, verified: testnetStats.uivkVerified },
   };
 
   const scopedEvents = tab === "admin"

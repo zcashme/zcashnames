@@ -80,6 +80,36 @@ function PaginationControls({
   );
 }
 
+function UivkVerifiedBadge({ value, verified }: { value: string; verified: boolean }) {
+  if (!value) return null;
+  if (verified) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.08em]"
+        style={{ background: "rgba(34,197,94,0.15)", color: "rgb(34,197,94)" }}
+        title="Matches the UIVK baked into the SDK for this network"
+      >
+        <svg viewBox="0 0 16 16" fill="none" className="h-2.5 w-2.5" aria-hidden="true">
+          <path d="M3 8.5l3 3 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        Verified
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.08em]"
+      style={{ background: "rgba(239,68,68,0.15)", color: "rgb(239,68,68)" }}
+      title="Indexer returned a UIVK that does not match the SDK's known value for this network"
+    >
+      <svg viewBox="0 0 16 16" fill="none" className="h-2.5 w-2.5" aria-hidden="true">
+        <path d="M8 3v6M8 12v.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      </svg>
+      Unverified
+    </span>
+  );
+}
+
 const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "all", label: "All" },
   { key: "registered", label: "Registered" },
@@ -103,8 +133,8 @@ interface ExplorerViewProps {
     uivk: string;
   };
   uivks: {
-    mainnet: string;
-    testnet: string;
+    mainnet: { value: string; verified: boolean };
+    testnet: { value: string; verified: boolean };
   };
   network: Network;
   nameQuery: string;
@@ -278,7 +308,7 @@ export default function ExplorerView({
   }
 
   function copyUivk(network: "mainnet" | "testnet") {
-    const value = uivks[network];
+    const { value } = uivks[network];
     if (!value) return;
     navigator.clipboard.writeText(value);
     setCopied(network);
@@ -323,7 +353,7 @@ export default function ExplorerView({
                 />
               </svg>
           </button>
-          {(uivks.mainnet || uivks.testnet) && (
+          {(uivks.mainnet.value || uivks.testnet.value) && (
             <button
               type="button"
               onClick={() => setUivkOpen(true)}
@@ -667,32 +697,38 @@ export default function ExplorerView({
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Mainnet</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Mainnet</div>
+                    <UivkVerifiedBadge value={uivks.mainnet.value} verified={uivks.mainnet.verified} />
+                  </div>
                   <CopyIconButton
                     onClick={() => copyUivk("mainnet")}
                     ariaLabel="Copy mainnet UIVK"
                     title={copied === "mainnet" ? "Copied!" : "Copy mainnet UIVK"}
                     copied={copied === "mainnet"}
-                    disabled={!uivks.mainnet}
+                    disabled={!uivks.mainnet.value}
                   />
                 </div>
-                <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{uivks.mainnet || "Unavailable"}</p>
+                <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{uivks.mainnet.value || "Unavailable"}</p>
               </div>
 
               <div className="h-px w-full bg-[var(--leaders-card-border)]" />
 
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Testnet</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Testnet</div>
+                    <UivkVerifiedBadge value={uivks.testnet.value} verified={uivks.testnet.verified} />
+                  </div>
                   <CopyIconButton
                     onClick={() => copyUivk("testnet")}
                     ariaLabel="Copy testnet UIVK"
                     title={copied === "testnet" ? "Copied!" : "Copy testnet UIVK"}
                     copied={copied === "testnet"}
-                    disabled={!uivks.testnet}
+                    disabled={!uivks.testnet.value}
                   />
                 </div>
-                <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{uivks.testnet || "Unavailable"}</p>
+                <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{uivks.testnet.value || "Unavailable"}</p>
               </div>
             </div>
           </div>
