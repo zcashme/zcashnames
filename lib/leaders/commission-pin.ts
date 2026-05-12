@@ -1,5 +1,7 @@
 import { createHmac } from "crypto";
 
+// Deterministic 6-digit commission PIN from HMAC-SHA256(referralCode).
+// Consumed by commission-access for PIN verification and cookie gating.
 export function normalizeCommissionReferralCode(referralCode: string): string {
   return referralCode.trim().toLowerCase();
 }

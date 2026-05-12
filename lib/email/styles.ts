@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+// Shared React email style tokens: dark-themed container with Zcash gold (#F4B728) CTAs.
+// Imported by React email components under /components/emails/.
 export const body: CSSProperties = {
   margin: 0,
   padding: 0,

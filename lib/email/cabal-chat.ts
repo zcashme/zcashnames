@@ -1,7 +1,9 @@
 import "server-only";
 
+// Internal notifications for cabal deck interactions: comments (chat)
+// and interest submissions. Both are plain-text emails to partner@zcash.me.
 import { FROM_EMAIL, TO_EMAIL } from "@/lib/email/constants";
-import { getResend } from "@/lib/email/client";
+import { sendEmail } from "@/lib/email/client";
 
 export type CabalChatNotice = {
   name: string;
@@ -25,7 +27,6 @@ export type CabalInterestNotice = {
 };
 
 export async function sendCabalChatNotice(notice: CabalChatNotice): Promise<void> {
-  const resend = getResend();
   const typedName = notice.name.trim();
   const sender = typedName || notice.accessName.trim() || "Anonymous";
   const body = [
@@ -41,7 +42,7 @@ export async function sendCabalChatNotice(notice: CabalChatNotice): Promise<void
     notice.message,
   ].join("\n");
 
-  await resend.emails.send({
+  await sendEmail({
     from: FROM_EMAIL,
     to: TO_EMAIL,
     subject: `Cabal deck comment: ${notice.slideNumber} ${notice.slideTitle}`,
@@ -50,7 +51,6 @@ export async function sendCabalChatNotice(notice: CabalChatNotice): Promise<void
 }
 
 export async function sendCabalInterestNotice(notice: CabalInterestNotice): Promise<void> {
-  const resend = getResend();
   const typedName = notice.name.trim();
   const sender = typedName || notice.accessName.trim() || "Anonymous";
   const body = [
@@ -67,7 +67,7 @@ export async function sendCabalInterestNotice(notice: CabalInterestNotice): Prom
     notice.note.trim() || "(none)",
   ].join("\n");
 
-  await resend.emails.send({
+  await sendEmail({
     from: FROM_EMAIL,
     to: TO_EMAIL,
     subject: `Cabal interest: ${sender}`,

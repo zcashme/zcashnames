@@ -275,6 +275,9 @@ const SNIPPETS: Snippets = {
   monochrome: buildSnippet("monochrome"),
 };
 
+// Gallery card for the header's status and theme toggle pills. The live preview
+// renders both toggles with interactive state (StatusToggle + ThemeToggle);
+// the snippet hard-codes the waitlist+dark defaults as a standalone HTML file.
 export default function HeaderClusterCard() {
   return (
     <GalleryCard

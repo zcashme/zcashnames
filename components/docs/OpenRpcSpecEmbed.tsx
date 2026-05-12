@@ -5,6 +5,10 @@ import { OpenRpcExplorer } from "./OpenRpcExplorer";
 
 type OpenRpcSpec = Parameters<typeof OpenRpcExplorer>[0]["spec"];
 
+// Thin loader component rendered inside MDX docs pages. Fetches the
+// OpenRPC spec JSON from the GitHub master branch at runtime and passes
+// it to OpenRpcExplorer. Shows loading/error states while the fetch is
+// in-flight; includes a cancellation flag to avoid state updates on unmount.
 export default function OpenRpcSpecEmbed() {
   const [spec, setSpec] = useState<OpenRpcSpec | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -1,3 +1,12 @@
+// Client-side canvas composer: renders a 1080×1080 PNG preview
+// with an optional user-uploaded image (center-cropped to square),
+// an editable name + "ADDRESS ME BY MY NAME" tagline, a color
+// picker, a logo variation selector, and a font selector.
+//
+// Exports the result via download (<a> click with data URL) or the
+// Web Share API when the browser supports sharing PNG files.
+// Font families are resolved from CSS custom properties set by the
+// parent layout (namepost/layout.tsx).
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

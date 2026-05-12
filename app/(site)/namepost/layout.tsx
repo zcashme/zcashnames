@@ -1,3 +1,7 @@
+// Layout loads five display fonts (Anton, Bebas Neue, Oswald,
+// Space Grotesk, Playfair Display) as CSS custom properties so
+// the AddressMeComposer canvas can resolve them at runtime via
+// getComputedStyle, enabling font selection in the PNG generator.
 import type { ReactNode } from "react";
 import { Anton, Bebas_Neue, Oswald, Playfair_Display, Space_Grotesk } from "next/font/google";
 

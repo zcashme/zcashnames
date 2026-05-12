@@ -1,3 +1,10 @@
+// Client component: renders a single daily snapshot page at /leaders/[date].
+// Fetches daily rankings, full time series, and new names for the given date.
+// Layout is a 16:9 card (SVG-exportable via cloneWithInlineStylesAsync) containing:
+//   - Background time series chart (non-interactive, decorative)
+//   - 24h rankings, all-time rankings, and aggregate stats (waitlist/referred/rewards)
+// Below it, a 1:1 grid of new names with copy/hide controls and its own SVG export.
+// Toggles between "all" and "confirmed" (email-verified) referral scopes.
 "use client";
 
 import Link from "next/link";

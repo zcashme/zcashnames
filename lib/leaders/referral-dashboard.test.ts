@@ -1,3 +1,6 @@
+// Unit tests for referral tree algorithms and commission PIN derivation.
+// Verifies depth counting, cycle protection, confirmed-scope filtering,
+// decay reward arithmetic, commission rate tiers, and PIN determinism.
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -10,8 +13,8 @@ import {
   fixedRewardForDepth,
   getNameLengthBucket,
   type WaitlistReferralRow,
-} from "./referral-dashboard.ts";
-import { deriveCommissionPin, normalizeCommissionReferralCode } from "./commission-pin.ts";
+} from "./referral-dashboard";
+import { deriveCommissionPin, normalizeCommissionReferralCode } from "./commission-pin";
 
 let rowIndex = 0;
 

@@ -1,6 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
+// Server actions powering the /leaders dashboard: time series aggregation,
+// leaderboard rankings, daily rankings, waitlist stats, referral dashboard,
+// and commission PIN email sending with daily rate limiting.
+// Fetches raw waitlist rows from Supabase and delegates tree algorithms
+// to referral-dashboard.ts and cookie gating to commission-access.ts.
 import { db } from "@/lib/db";
 import { sendCommissionPinEmail } from "@/lib/email/commission-pin";
 import {
@@ -17,7 +21,11 @@ import {
   buildReferralDashboard,
   type ReferralDashboardData,
   type WaitlistReferralRow,
+  type ReferralScope,
 } from "@/lib/leaders/referral-dashboard";
+import { roundZec } from "@/lib/zns/utils";
+
+export type { ReferralScope };
 
 export interface TimeSeriesPoint {
   date: string;
@@ -74,8 +82,6 @@ export interface DailyNewNameEntry {
   email_verified: boolean;
 }
 
-export type ReferralScope = "all" | "confirmed";
-
 type ReferralCommissionUnlockResult =
   | { ok: true }
   | { ok: false; error: string };
@@ -109,19 +115,6 @@ function toWaitlistReferralRows(data: Record<string, unknown>[]): WaitlistReferr
     .filter((row) => Boolean(row.referral_code));
 }
 
-function roundZec(value: number): number {
-  return Math.round(value * 10000) / 10000;
-}
-
-function resolveBaseUrl(headerStore: { get(name: string): string | null }): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
-
-  const proto = headerStore.get("x-forwarded-proto") || "https";
-  const host = headerStore.get("x-forwarded-host") || headerStore.get("host");
-  if (host) return `${proto}://${host}`;
-  return "https://zcashnames.com";
-}
 
 function wasCommissionPinSentToday(value: unknown): boolean {
   if (typeof value !== "string" || !value) return false;
@@ -649,13 +642,13 @@ export async function requestReferralCommissionPin(
       return { ok: true, message: COMMISSION_PIN_RATE_LIMIT_MESSAGE };
     }
 
-    const headerStore = await headers();
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
     await sendCommissionPinEmail({
       email: normalizedEmail,
       name: String(data.name || "there"),
       pin: getCommissionPin(String(data.referral_code)),
       referralCode: String(data.referral_code),
-      baseUrl: resolveBaseUrl(headerStore),
+      baseUrl,
     });
 
     const { error: updateError } = await db

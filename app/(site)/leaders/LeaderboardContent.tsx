@@ -1,3 +1,10 @@
+// Client component: the main leaderboard view. Fetches time series, rankings, and
+// stats from @/lib/leaders/leaders on mount. Data flows down into three visual sections:
+//   1. Stacked area chart (waitlist + referred) with a rewards line overlay
+//   2. Stat cards (waitlist/referred/rewards) with expandable help text
+//   3. Ranked all-time table (with streak/top24h badges & copy-reflink) and daily rankings
+// Links out to per-refcode dashboards (/leaders/ref/[code]), snapshots (/leaders/[date]),
+// the share kit, and the terms page.
 "use client";
 
 import Link from "next/link";
@@ -10,9 +17,6 @@ import {
   Line,
   ResponsiveContainer,
   Tooltip,
-  usePlotArea,
-  useXAxisScale,
-  useYAxisScale,
   XAxis,
   YAxis,
 } from "recharts";
@@ -30,86 +34,6 @@ import {
 import CopyIconButton from "@/components/CopyIconButton";
 
 const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
-type AxisSide = "left" | "right";
-
-interface EndpointGuideLine {
-  yAxisId: string;
-  value: number;
-  color: string;
-  side: AxisSide;
-}
-
-function getActiveChartPoint<T extends { date: string }>(state: unknown, data: T[]): T | null {
-  const chartState = state as
-    | { activeTooltipIndex?: number | string; tooltipIndex?: number | string; activeLabel?: string }
-    | null;
-  const rawIndex = chartState?.activeTooltipIndex ?? chartState?.tooltipIndex;
-  const index = rawIndex === undefined ? NaN : Number(rawIndex);
-
-  if (Number.isInteger(index) && index >= 0 && index < data.length) {
-    return data[index];
-  }
-
-  if (chartState?.activeLabel) {
-    return data.find((point) => point.date === chartState.activeLabel) ?? null;
-  }
-
-  return null;
-}
-
-function AxisEndpointGuideLines({
-  point,
-  lines,
-}: {
-  point: { date: string } | null;
-  lines: EndpointGuideLine[];
-}) {
-  const plotArea = usePlotArea();
-  const xScale = useXAxisScale();
-
-  if (!point || !plotArea || !xScale) return null;
-
-  const x = xScale(point.date, { position: "middle" });
-  if (x === undefined) return null;
-
-  return (
-    <g pointerEvents="none">
-      {lines.map((line) => (
-        <AxisEndpointGuideLine key={`${line.yAxisId}-${line.color}`} x={x} plotArea={plotArea} line={line} />
-      ))}
-    </g>
-  );
-}
-
-function AxisEndpointGuideLine({
-  x,
-  plotArea,
-  line,
-}: {
-  x: number;
-  plotArea: { x: number; width: number };
-  line: EndpointGuideLine;
-}) {
-  const yScale = useYAxisScale(line.yAxisId);
-  const y = yScale?.(line.value);
-
-  if (y === undefined) return null;
-
-  const axisX = line.side === "left" ? plotArea.x : plotArea.x + plotArea.width;
-
-  return (
-    <line
-      x1={x}
-      x2={axisX}
-      y1={y}
-      y2={y}
-      stroke={line.color}
-      strokeDasharray="4 4"
-      strokeWidth={1}
-      opacity={0.35}
-    />
-  );
-}
 
 function ZecSymbol({ className }: { className?: string }) {
   return (
@@ -306,7 +230,6 @@ export default function LeaderboardContent() {
   const [stats, setStats] = useState({ waitlist: 0, referred: 0, rewardsPot: 0 });
   const [loading, setLoading] = useState(true);
   const [activeStatKey, setActiveStatKey] = useState<"waitlist" | "referred" | "rewards" | null>(null);
-  const [activeChartPoint, setActiveChartPoint] = useState<TimeSeriesPoint | null>(null);
   const [copiedReferralCode, setCopiedReferralCode] = useState<string | null>(null);
   const copiedResetTimeoutRef = useRef<number | null>(null);
 
@@ -324,8 +247,6 @@ export default function LeaderboardContent() {
     () => leaderboard.slice(0, visibleLeaderboardRows),
     [leaderboard, visibleLeaderboardRows],
   );
-  const chartGuidePoint = activeChartPoint ?? timeSeries[timeSeries.length - 1] ?? null;
-  const chartGuideWaitlist = chartGuidePoint ? chartGuidePoint.referred + chartGuidePoint.nonReferred : 0;
 
   const canShowMoreLeaderboardRows = visibleLeaderboardRows < leaderboard.length;
   const canHideLeaderboardRows = visibleLeaderboardRows > 10;
@@ -486,8 +407,6 @@ export default function LeaderboardContent() {
             <AreaChart
               data={timeSeries}
               margin={{ top: 4, right: -12, bottom: 0, left: -12 }}
-              onMouseMove={(state) => setActiveChartPoint(getActiveChartPoint(state, timeSeries))}
-              onMouseLeave={() => setActiveChartPoint(null)}
             >
               <defs>
                 <linearGradient id="gradReferred" x1="0" y1="0" x2="0" y2="1">
@@ -548,24 +467,6 @@ export default function LeaderboardContent() {
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4, fill: REWARDS_CHART_COLOR }}
-              />
-              <AxisEndpointGuideLines
-                point={chartGuidePoint}
-                lines={[
-                  { yAxisId: "rewards", value: chartGuidePoint?.rewardsPot ?? 0, color: REWARDS_CHART_COLOR, side: "left" },
-                  {
-                    yAxisId: "waitlist",
-                    value: chartGuideWaitlist,
-                    color: "var(--leaders-area-non-referred)",
-                    side: "right",
-                  },
-                  {
-                    yAxisId: "waitlist",
-                    value: chartGuidePoint?.referred ?? 0,
-                    color: "var(--leaders-area-referred)",
-                    side: "right",
-                  },
-                ]}
               />
             </AreaChart>
           </ResponsiveContainer>

@@ -1,94 +1,89 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { checkScannerState } from "@/lib/zns/resolve";
+import { useCallback, useEffect, useRef } from "react";
 import { checkMempool } from "@/lib/zns/mempool";
-import type { ModalTarget, PendingTransactionState } from "@/lib/types";
+import type { PendingTransactionState } from "@/lib/types";
+import { useLocalStorage } from "@/components/hooks/useLocalStorage";
 
 const STORAGE_KEY = "zns-pending-transaction-v1";
 
-function loadPendingTransaction(): PendingTransactionState | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as PendingTransactionState;
-  } catch {
-    return null;
-  }
-}
-
+//
+// Pending transaction tracker — persists transaction state to localStorage
+// so the user can close the tab and come back. Once a transaction enters the
+// "scanning" phase, it polls the mempool watcher every 2 seconds.
+//
+// The mempool watcher (light.zcash.me) tracks ZNS transactions through four
+// stages: pending → resolving → confirmed / rejected. This hook maps those
+// to ScanState values and fires onSuccess when a tx reaches "mined".
+//
+// Usage:
+//   const { pendingTransaction, persistPendingTransaction, clearPendingTransaction } =
+//     usePendingTransaction(() => router.refresh());
+//
+// Zip321Modal calls persistPendingTransaction() when the user sends a tx.
+// PendingTransactionBanner renders the sticky bottom-left tracker.
+//
 export function usePendingTransaction(onSuccess?: (name: string) => void) {
-  const [pendingTransaction, setPendingTransaction] = useState<PendingTransactionState | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  const [pendingTransaction, setPendingTransaction, removeStorage] =
+    useLocalStorage<PendingTransactionState | null>(STORAGE_KEY, null);
   const notifiedSuccessRef = useRef<string | null>(null);
 
   const clearPendingTransaction = useCallback(() => {
-    setPendingTransaction(null);
+    removeStorage();
     notifiedSuccessRef.current = null;
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Ignore blocked storage.
-    }
-  }, []);
+  }, [removeStorage]);
 
-  const persistPendingTransaction = useCallback((next: PendingTransactionState) => {
-    setPendingTransaction(next);
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Ignore blocked storage.
-    }
-  }, []);
+  const persistPendingTransaction = useCallback(
+    (next: PendingTransactionState) => setPendingTransaction(next),
+    [setPendingTransaction],
+  );
 
   useEffect(() => {
-    setPendingTransaction(loadPendingTransaction());
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!pendingTransaction || pendingTransaction.phase !== "scanning" || pendingTransaction.scanState === "mined") {
+    if (
+      !pendingTransaction ||
+      pendingTransaction.phase !== "scanning" ||
+      pendingTransaction.scanState === "mined" ||
+      pendingTransaction.scanState === "rejected"
+    ) {
       return;
     }
 
     const current = pendingTransaction;
     let cancelled = false;
-    const expected = {
-      address: current.addressInput.trim() || undefined,
-      priceZats: current.priceInput.trim()
-        ? Math.round(Number(current.priceInput.replace(/,/g, "").trim()) * 1e8)
-        : undefined,
-    };
 
     async function poll() {
-      const [mempool, resolver] = await Promise.all([
-        checkMempool(current.target.name, current.target.network),
-        checkScannerState(
-          current.target.name,
-          current.target.network,
-          current.target.action,
-          expected,
-        ),
-      ]);
+      const result = await checkMempool(current.target.name, current.target.network);
       if (cancelled) return;
 
       let nextScanState = current.scanState;
-      if (resolver === "success") nextScanState = "mined";
-      else if (mempool.found) nextScanState = "in_mempool";
-      else if (
-        current.scanState === "in_mempool" ||
-        current.scanState === "being_mined"
-      ) nextScanState = "being_mined";
-      else nextScanState = "not_detected";
+      let nextTxid: string | undefined = current.txid;
 
-      if (nextScanState !== current.scanState) {
-        persistPendingTransaction({
+      if (!result.found || !result.response) {
+        nextScanState = "not_detected";
+      } else {
+        const { state, entry } = result.response;
+        switch (state.status) {
+          case "pending":
+            nextScanState = "in_mempool";
+            break;
+          case "resolving":
+            nextScanState = "confirming";
+            break;
+          case "confirmed":
+            nextScanState = "mined";
+            break;
+          case "rejected":
+            nextScanState = "rejected";
+            break;
+        }
+        if (entry.txid) nextTxid = entry.txid;
+      }
+
+      if (nextScanState !== current.scanState || nextTxid !== current.txid) {
+        setPendingTransaction({
           ...current,
           scanState: nextScanState,
+          txid: nextTxid,
           updatedAt: Date.now(),
         });
       }
@@ -107,21 +102,12 @@ export function usePendingTransaction(onSuccess?: (name: string) => void) {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [onSuccess, pendingTransaction, persistPendingTransaction]);
-
-  const resumeTarget = useMemo<ModalTarget | null>(() => {
-    if (!pendingTransaction) return null;
-    return {
-      ...pendingTransaction.target,
-      networkPassword: "",
-    };
-  }, [pendingTransaction]);
+  }, [onSuccess, pendingTransaction, setPendingTransaction]);
 
   return {
-    hydrated,
+    hydrated: true,
     pendingTransaction,
     persistPendingTransaction,
     clearPendingTransaction,
-    resumeTarget,
   };
 }

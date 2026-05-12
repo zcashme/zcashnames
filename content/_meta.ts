@@ -1,5 +1,7 @@
 import type { MetaRecord } from 'nextra'
 
+// Nextra page map metadata — defines the docs sidebar navigation structure.
+// Keys are page route slugs under /content/; values are display labels.
 const meta: MetaRecord = {
   index: 'Welcome',
   learn: 'Introduction',
@@ -11,7 +13,6 @@ const meta: MetaRecord = {
   'zns-developer-guide': 'Developer Guide',
   ecosystem: 'Ecosystem',
   terminology: 'Terminology',
-  faq: 'FAQ',
 }
 
 export default meta

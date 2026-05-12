@@ -1,3 +1,6 @@
+// Shared email identity and social link constants.
+// FROM_EMAIL is the sender for all transactional emails;
+// TO_EMAIL is the internal notification recipient (partner@zcash.me).
 export const FROM_EMAIL = "zechariah@updates.zcashnames.com";
 export const TO_EMAIL = "partner@zcash.me";
 

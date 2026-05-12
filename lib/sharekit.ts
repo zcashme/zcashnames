@@ -1,3 +1,6 @@
+// Structured output of the share kit markdown parser.
+// Sections group shareable draft posts by topic/category.
+
 export type ShareKitDraft = {
   id: string;
   label: string;
@@ -11,6 +14,15 @@ export type ShareKitSection = {
   drafts: ShareKitDraft[];
 };
 
+export function slugify(value: string): string {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "item"
+  );
+}
+
 function normalizeLineEndings(markdown: string): string {
   return markdown.replace(/\r\n?/g, "\n");
 }
@@ -19,21 +31,17 @@ function isRule(line: string): boolean {
   return /^\s*---+\s*$/.test(line);
 }
 
-function slugify(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return slug || "item";
-}
-
+// Generates a collision-resistant ID from a slug base, appending a counter suffix on duplicates.
 function createUniqueId(base: string, seen: Map<string, number>): string {
   const count = seen.get(base) ?? 0;
   seen.set(base, count + 1);
   return count === 0 ? base : `${base}-${count + 1}`;
 }
 
+// Parses share kit markdown into structured sections and drafts.
+// Expected format: `# Section Title` headings with description paragraphs, each containing `## Draft Label` posts.
+// IDs are derived from slugified headings with collision counters for duplicate titles.
+// Throws if a section lacks a description or has zero drafts.
 export function parseShareKitMarkdown(markdown: string): ShareKitSection[] {
   const lines = normalizeLineEndings(markdown).split("\n");
   const sections: ShareKitSection[] = [];

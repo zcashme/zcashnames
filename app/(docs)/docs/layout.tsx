@@ -42,6 +42,12 @@ const footer = (
   <Footer>MIT {new Date().getFullYear()} © ZcashMe</Footer>
 );
 
+/**
+ * Nextra docs layout: renders the full documentation chrome — Navbar with logo
+ * and GitHub link, sidebar page map resolved from /docs, and Footer.
+ * Theme is isolated from the main site via a dedicated "zns-docs-theme" storage key.
+ * MDX pages rendered as children are sourced from content/docs.
+ */
 export default async function DocsLayout({
   children,
 }: {

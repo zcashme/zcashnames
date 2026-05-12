@@ -1,3 +1,4 @@
+// Sidebar navigation for the Use ZNS (user guide) docs section.
 import type { MetaRecord } from 'nextra'
 
 const meta: MetaRecord = {

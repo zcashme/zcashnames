@@ -8,6 +8,12 @@ const uiSans = Manrope({
   display: "swap",
 });
 
+/**
+ * Root HTML shell for the (docs) route group. Injects the Nextra <Head> component
+ * (which sets meta, favicon, and theme-color based on light/dark) and loads only
+ * the Manrope font. All other Nextra chrome (Navbar, Sidebar, TOC) is provided by
+ * the inner DocsLayout one level down.
+ */
 export default function DocsRootLayout({
   children,
 }: {

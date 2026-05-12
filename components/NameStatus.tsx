@@ -1,10 +1,10 @@
 "use client";
 
 import type React from "react";
-import type { Action } from "@/lib/types";
+import type { Action, NameAvailabilityState } from "@/lib/types";
 
-export type NameAvailabilityState = "available" | "forsale" | "unavailable" | "reserved" | "blocked";
-
+// Internal badge shell: maps a semantic variant (positive/negative/neutral) to
+// CSS token classes consumed by the theme system.
 function StatusBadge({
   variant,
   label,
@@ -31,6 +31,9 @@ function StatusBadge({
   );
 }
 
+// Maps NameAvailabilityState → visual badge with inline SVG icon.
+// Rendered on name lookup results and the explorer table to show
+// availability at a glance. Each variant uses the shared StatusBadge shell.
 export function NameStatusBadge({ status }: { status: NameAvailabilityState }) {
   if (status === "available") {
     return (
@@ -140,18 +143,26 @@ export function NameStatusBadge({ status }: { status: NameAvailabilityState }) {
   );
 }
 
+// Pure predicate: does this status have an associated price/listing?
+// Used to conditionally show price info in search results and explorer rows.
 export function statusSupportsPrice(status: NameAvailabilityState): boolean {
   return status === "available" || status === "forsale" || status === "reserved";
 }
 
+// Renders the correct set of action buttons for a given name status.
+// Each status maps to a specific set of Actions that bubble up via onAction,
+// which the parent (typically a search result card) dispatches to Zip321Modal.
+// hasPendingBuy disables the DELIST button to prevent double-spend races.
 export function NameStatusButtons({
   status,
   onAction,
   align = "start",
+  hasPendingBuy = false,
 }: {
   status: NameAvailabilityState;
   onAction: (action: Action) => void;
   align?: "start" | "center";
+  hasPendingBuy?: boolean;
 }) {
   const justifyClass = align === "center" ? "justify-center" : "justify-start";
 
@@ -161,7 +172,7 @@ export function NameStatusButtons({
         <button
           type="button"
           className="home-result-action is-primary"
-          onClick={() => onAction("claim")}
+          onClick={() => onAction("CLAIM")}
         >
           Claim Name
         </button>
@@ -175,21 +186,23 @@ export function NameStatusButtons({
         <button
           type="button"
           className="home-result-action is-primary"
-          onClick={() => onAction("buy")}
+          onClick={() => onAction("BUY")}
         >
           Buy Now
         </button>
         <button
           type="button"
           className="home-result-action is-secondary"
-          onClick={() => onAction("delist")}
+          onClick={() => onAction("DELIST")}
+                        disabled={hasPendingBuy}
+                        title={hasPendingBuy ? "Cannot delist while a purchase is pending" : "Remove this name from the marketplace"}
         >
           Delist from Sale
         </button>
         <button
           type="button"
           className="home-result-action is-secondary"
-          onClick={() => onAction("release")}
+          onClick={() => onAction("RELEASE")}
         >
           Release Name
         </button>
@@ -203,21 +216,21 @@ export function NameStatusButtons({
         <button
           type="button"
           className="home-result-action is-secondary"
-          onClick={() => onAction("update")}
+          onClick={() => onAction("UPDATE")}
         >
           Update Address
         </button>
         <button
           type="button"
           className="home-result-action is-secondary"
-          onClick={() => onAction("list")}
+          onClick={() => onAction("LIST")}
         >
           List for Sale
         </button>
         <button
           type="button"
           className="home-result-action is-secondary"
-          onClick={() => onAction("release")}
+          onClick={() => onAction("RELEASE")}
         >
           Release Name
         </button>
@@ -231,7 +244,7 @@ export function NameStatusButtons({
         <button
           type="button"
           className="home-result-action is-primary"
-          onClick={() => onAction("claim")}
+          onClick={() => onAction("CLAIM")}
         >
           Claim Name
         </button>

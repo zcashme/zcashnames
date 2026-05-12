@@ -1,8 +1,20 @@
-import type { Network, Event, Registration, Listing } from "@/lib/zns/client";
+/**
+ * Explorer filter utilities — pure functions shared between page.tsx (server),
+ * ExplorerShell.tsx, and ExplorerContent.tsx.
+ *
+ * Types:  ExplorerTab is the union of primary tabs ("all", "registered", "forsale",
+ *         "admin") plus ZNS action types ("CLAIM", "BUY", "LIST", …).
+ *         TaggedEvent/Listing/Registration extend their base types with a `network`
+ *         field so "all" mode can merge mainnet+testnet rows.
+ *
+ * Primary exports: tab parsing, pagination helpers, search filtering, event scoping.
+ */
+import type { Network, Listing, Registration, ZnsEvent } from "@/lib/types";
+import { validateAddress } from "@/lib/zns/utils";
 
 export type ExplorerTab = "all" | "registered" | "forsale" | "admin" | "CLAIM" | "BUY" | "LIST" | "DELIST" | "UPDATE" | "RELEASE";
 export type TabCounts = Record<string, { filtered: number; total: number }>;
-export type TaggedEvent = Event & { network: Network };
+export type TaggedEvent = ZnsEvent & { network: Network };
 export type TaggedListing = Listing & { network: Network };
 export type TaggedRegistration = Registration & { network: Network };
 
@@ -53,9 +65,11 @@ export function filterListings(listings: TaggedListing[], searchQuery: string): 
 export function filterRegistrations(registrations: TaggedRegistration[], searchQuery: string): TaggedRegistration[] {
   const q = normalizeExplorerQuery(searchQuery);
   if (!q) return registrations;
+  const isUAddress = validateAddress(q).status === "unified";
   return registrations.filter((registration) =>
     registration.name.toLowerCase().includes(q) ||
-    registration.address.toLowerCase().includes(q)
+    (!isUAddress && registration.address.toLowerCase().includes(q)) ||
+    (isUAddress && registration.address.toLowerCase() === q)
   );
 }
 

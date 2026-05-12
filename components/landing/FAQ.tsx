@@ -1,3 +1,7 @@
+// FAQ accordion with grouped questions (basics, privacy, access, community).
+// Questions/answers are static data defined as a constant array — no API calls.
+// Single openKey state enforces one-open-at-a-time.
+// Expand/collapse uses max-height + opacity transitions; active item gets a left border accent.
 "use client";
 
 import { useState } from "react";
@@ -13,6 +17,7 @@ type FAQGroup = {
   items: FAQItem[];
 };
 
+// Static FAQ content — edits here reflect immediately on the landing page.
 const groups: FAQGroup[] = [
   {
     title: "The basics",

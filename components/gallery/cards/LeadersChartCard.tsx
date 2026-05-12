@@ -311,6 +311,10 @@ const SNIPPETS: Snippets = {
   monochrome: buildSnippet("monochrome"),
 };
 
+// Gallery card for the leaders area chart. The live preview uses Recharts
+// with frozen stats; the standalone snippet builds an identical SVG from the
+// same DATA array via buildChartPaths — a hand-rolled path generator that
+// produces stacked areas, a rewards line, axis ticks, and labels.
 export default function LeadersChartCard() {
   return (
     <GalleryCard

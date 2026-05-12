@@ -1,9 +1,13 @@
 "use server";
 
+// Server action for the indexer launch alert signup form.
+// Validates display name, contact methods, and preferred contact;
+// hashes the client IP with SHA-256 before storing in Supabase.
+// Returns typed result (ok/error) consumed by the form component.
 import { createHash } from "crypto";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { CONTACT_KINDS, type ContactKind } from "@/lib/contact-methods";
+import { CONTACT_KINDS, type ContactKind } from "@/lib/types";
 
 const MAX_NAME = 60;
 const MAX_CONTACT = 200;

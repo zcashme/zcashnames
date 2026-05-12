@@ -1,3 +1,17 @@
+/**
+ * Proof token system — server-issued capability tokens for gating write actions.
+ *
+ * Each token is an HMAC-SHA256-signed triple: `kind:base64urlSubject:hexSignature`.
+ * The server holds a secret (ZNS_PROOF_SECRET) and signs the concatenation of the
+ * token kind and the subject. The client stores the token and presents it as a proof
+ * when calling write-path actions (lib/zns/actions.ts).
+ *
+ * Two kinds:
+ *  - "otp"      Proves the user passed OTP (email / social) verification.
+ *  - "unlock"   Proves the user successfully unlocked a reserved name (via unlock code).
+ *
+ * Verification uses timingSafeEqual to prevent timing side-channel attacks.
+ */
 import "server-only";
 
 import crypto from "node:crypto";

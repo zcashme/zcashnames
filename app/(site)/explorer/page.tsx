@@ -1,5 +1,12 @@
-import { getCurrentRegistrations, getEvents, getListings, getHomeStats, resolveName } from "@/lib/zns/resolve";
-import type { Network, Event } from "@/lib/zns/client";
+/**
+ * Server-side explorer page — the single data-fetching entry point.
+ * Fires 5 parallel fetches (events, listings, registrations, mainnet stats, testnet stats)
+ * across one or both networks depending on ?env. Also resolves a name when ?name is set.
+ * All results are passed as props to ExplorerShell for client-side interactivity.
+ */
+import { getCurrentRegistrations, getEvents, getListings, resolveName } from "@/lib/zns/resolve";
+import { getChainStats } from "@/lib/network-stats";
+import type { Network, ZnsEvent } from "@/lib/types";
 import type { ResolveName } from "@/lib/types";
 import ExplorerShell from "./ExplorerShell";
 import {
@@ -26,7 +33,7 @@ export const metadata = {
     url: "https://www.zcashnames.com/explorer",
     images: [
       {
-        url: "https://www.zcashnames.com/og/explorer.png",
+        url: "/og/explorer.png",
         width: 1200,
         height: 630,
         alt: "ZcashNames explorer preview",
@@ -37,7 +44,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Name Explorer | ZcashNames",
     description: "Browse registered names, event history, and marketplace listings.",
-    images: ["https://www.zcashnames.com/og/explorer.png"],
+    images: ["/og/explorer.png"],
   },
 };
 function parseEnvironment(env: string | undefined): Environment {
@@ -50,9 +57,9 @@ function getNetworks(env: Environment): Network[] {
   return [env];
 }
 
-function getEventActionFilter(tab: ExplorerTab): Event["action"] | undefined {
+function getEventActionFilter(tab: ExplorerTab): ZnsEvent["action"] | undefined {
   return ACTION_TYPES.includes(tab as typeof ACTION_TYPES[number])
-    ? (tab as Event["action"])
+    ? (tab as ZnsEvent["action"])
     : undefined;
 }
 
@@ -77,7 +84,7 @@ export default async function ExplorerPage({
     Promise.all(
       networks.map((n) =>
         getEvents({ action, limit: eventLimit, offset: eventOffset }, n).then((r) => ({
-          events: r.events.map((ev: Event) => ({ ...ev, network: n })),
+          events: r.events.map((ev: ZnsEvent) => ({ ...ev, network: n })),
           total: r.total,
         }))
       )
@@ -92,8 +99,8 @@ export default async function ExplorerPage({
         getCurrentRegistrations(n).then((items) => items.map((r) => ({ ...r, network: n })))
       )
     ),
-    getHomeStats("mainnet"),
-    getHomeStats("testnet"),
+    getChainStats("mainnet"),
+    getChainStats("testnet"),
   ]);
   const stats = effectiveNetwork === "mainnet" ? mainnetStats : testnetStats;
   const uivks = {
@@ -121,7 +128,7 @@ export default async function ExplorerPage({
         getEvents({ name: nameQuery, limit: 20 }, effectiveNetwork),
       ]);
       nameResult = resolved;
-      nameEvents = evResult.events.map((ev: Event) => ({ ...ev, network: effectiveNetwork }));
+      nameEvents = evResult.events.map((ev: ZnsEvent) => ({ ...ev, network: effectiveNetwork }));
     } catch {
       // name resolution failed (invalid name, indexer down, etc.)
     }

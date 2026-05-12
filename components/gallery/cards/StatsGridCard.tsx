@@ -186,6 +186,10 @@ const SNIPPETS: Snippets = {
   monochrome: buildSnippet("monochrome"),
 };
 
+// Gallery card for the 3-column stats grid on the leaders page. Manages an
+// active-tab state so clicking a stat card toggles it "pressed" and reveals
+// an expandable help panel below the grid with the card's description.
+// Frozen to snapshot counts from STATS.
 export default function StatsGridCard() {
   const [active, setActive] = useState<"waitlist" | "referred" | "rewards" | null>(null);
 

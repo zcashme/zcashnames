@@ -1,30 +1,34 @@
+// Fixed bottom-left banner tracking a pending on-chain ZNS transaction through
+// its lifecycle: not_detected → in_mempool → confirming → mined.
+//
+// Reads PendingTransactionState to determine phase (payment vs watch) and
+// available actions:
+//   - Payment phase (confirm): Abandon (two-step confirm) | Resume
+//   - Watch phase:             Ignore (two-step confirm)   | Watch
+//   - Complete (mined):        View on Explorer            | Dismiss
+//
+// Does NOT initiate transactions — only reflects state and offers resume/dismiss.
 "use client";
 
 import { useState } from "react";
 import type { PendingTransactionState } from "@/lib/types";
 
-const ACTION_LABEL = {
-  claim: "Claim",
-  buy: "Buy",
-  update: "Update",
-  list: "List",
-  delist: "Delist",
-  release: "Release",
-} as const;
+import { ACTION_LABELS } from "@/lib/types";
 
+// Derives a human-readable status label from the scan state.
 function describePending(state: PendingTransactionState): string {
-  if (state.phase === "payment") return "Ready to send";
+  if (state.phase === "confirm") return "Ready to send";
   switch (state.scanState) {
-    case "loading":
-      return "Checking status";
     case "not_detected":
       return "Waiting for detection";
     case "in_mempool":
       return "In mempool";
-    case "being_mined":
-      return "Being mined";
+    case "confirming":
+      return "Confirming";
     case "mined":
       return "Confirmed";
+    case "rejected":
+      return "Not found";
   }
 }
 
@@ -44,10 +48,10 @@ export default function PendingTransactionBanner({
   onDismiss: () => void;
 }) {
   const [confirmingClear, setConfirmingClear] = useState(false);
-  const label = ACTION_LABEL[pendingTransaction.target.action];
+  const label = ACTION_LABELS[pendingTransaction.target.action];
   const status = describePending(pendingTransaction);
   const isComplete = pendingTransaction.scanState === "mined";
-  const isPaymentPhase = pendingTransaction.phase === "payment";
+  const isPaymentPhase = pendingTransaction.phase === "confirm";
   const secondaryText = isComplete ? "This transaction is confirmed on-chain." : null;
   const clearWarning = isPaymentPhase
     ? "Removes this prepared request. Sent payments cannot be undone."

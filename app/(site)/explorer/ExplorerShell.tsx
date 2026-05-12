@@ -1,3 +1,11 @@
+/**
+ * ExplorerShell — the client-side orchestrator for the explorer page.
+ * Owns URL-derived state (environment, tab, page, search name) and uses
+ * optimistic URL updates via startTransition for snappy navigation.
+ * Delegates rendering to ExplorerToolbar (filters), ExplorerContent (tables),
+ * and ExplorerNameDetail (name lookup panel). Also hosts the UIVK modal,
+ * Zip321Modal for purchases, and the pending-transaction banner.
+ */
 "use client";
 
 import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
@@ -23,16 +31,17 @@ import {
   type TaggedRegistration,
 } from "./explorerFilters";
 import ExplorerNameDetail from "./ExplorerNameDetail";
-import Zip321Modal, { type ModalTarget } from "@/components/landing/Zip321Modal";
+import Zip321Modal from "@/components/purchases/Zip321Modal";
 import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import { useNetwork } from "@/components/hooks/useNetwork";
+
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 import CopyIconButton from "@/components/CopyIconButton";
-import type { ResolveName } from "@/lib/types";
+import type { ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
-import type { Event, Network } from "@/lib/zns/client";
+import type { Network } from "@/lib/types";
+import { ACTIONS, ACTION_LABELS } from "@/lib/types";
 
 const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "all", label: "All" },
@@ -42,12 +51,7 @@ const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
 
 const MORE_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "admin", label: "Admin" },
-  { key: "CLAIM", label: "Claim" },
-  { key: "BUY", label: "Buy" },
-  { key: "LIST", label: "List" },
-  { key: "DELIST", label: "Delist" },
-  { key: "UPDATE", label: "Update" },
-  { key: "RELEASE", label: "Release" },
+  ...ACTIONS.map(a => ({ key: a, label: ACTION_LABELS[a] })),
 ];
 
 interface ExplorerShellProps {
@@ -58,7 +62,6 @@ interface ExplorerShellProps {
   stats: {
     claimed: number;
     forSale: number;
-    verifiedOnZcashMe: number;
     syncedHeight: number;
     uivk: string;
   };
@@ -71,7 +74,7 @@ interface ExplorerShellProps {
   initialPage: number;
   nameQuery: string;
   nameResult: ResolveName | null;
-  nameEvents: (Event & { network: string })[];
+  nameEvents: (ZnsEvent & { network: string })[];
 }
 
 export default function ExplorerShell({
@@ -89,7 +92,7 @@ export default function ExplorerShell({
   nameEvents,
 }: ExplorerShellProps) {
   const router = useRouter();
-  const { networkPassword } = useNetwork();
+  
   const usdPerZec = useUsdPrice();
   const [isPending, startTransition] = useTransition();
   const [optimisticEnv, setOptimisticEnv] = useOptimistic(environment);
@@ -98,7 +101,6 @@ export default function ExplorerShell({
     pendingTransaction,
     persistPendingTransaction,
     clearPendingTransaction,
-    resumeTarget,
   } = usePendingTransaction(() => router.refresh());
 
   const [activeTab, setActiveTab] = useState<ExplorerTab>(initialTab);
@@ -107,10 +109,10 @@ export default function ExplorerShell({
   const [searchQuery, setSearchQuery] = useState(nameQuery || "");
   const [selectedName, setSelectedName] = useState(nameQuery || "");
   const [isClientMounted, setIsClientMounted] = useState(false);
-  const [modalTarget, setModalTarget] = useState<ModalTarget | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [uivkOpen, setUivkOpen] = useState(false);
   const [copied, setCopied] = useState<"mainnet" | "testnet" | null>(null);
+  const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
 
   useEffect(() => {
     setIsClientMounted(true);
@@ -279,23 +281,7 @@ export default function ExplorerShell({
 
   function handleDetailAction(action: Action) {
     if (!nameDataReady || !nameResult) return;
-
-    const target: ModalTarget = {
-      name: nameResult.query,
-      action,
-      network: detailNetwork,
-      networkPassword,
-      isReserved: nameResult.status === "reserved",
-    };
-
-    if (nameResult.status === "registered" || nameResult.status === "listed") {
-      target.registrationAddress = nameResult.registration.address;
-      target.registrationNonce = nameResult.registration.nonce;
-      target.registrationPubkey = nameResult.registration.pubkey ?? null;
-      target.listingPriceZec = nameResult.status === "listed" ? nameResult.listingPrice.zec : undefined;
-    }
-
-    setModalTarget(target);
+    setModalState({ action, resolveResult: nameResult });
   }
 
   function handleRefresh() {
@@ -375,12 +361,10 @@ export default function ExplorerShell({
         onSortChange={handleSortChange}
       />
 
-      {pendingHydrated && pendingTransaction && !modalTarget && (
+      {pendingHydrated && pendingTransaction && (
         <PendingTransactionBanner
           pendingTransaction={pendingTransaction}
-          onResume={() => {
-            if (resumeTarget) setModalTarget({ ...resumeTarget, networkPassword });
-          }}
+          onResume={() => {}}
           onDismiss={clearPendingTransaction}
         />
       )}
@@ -574,14 +558,14 @@ export default function ExplorerShell({
         </div>
       )}
 
-      {isClientMounted && modalTarget && (
+      {isClientMounted && modalState && (
         <Zip321Modal
-          target={modalTarget}
-          onClose={() => setModalTarget(null)}
+          action={modalState.action}
+          name={modalState.resolveResult.query}
+          network={detailNetwork}
+          resolveResult={modalState.resolveResult}
+          onClose={() => setModalState(null)}
           onSuccess={() => router.refresh()}
-          resumeState={pendingTransaction}
-          onPersistState={persistPendingTransaction}
-          onClearState={clearPendingTransaction}
         />
       )}
     </div>

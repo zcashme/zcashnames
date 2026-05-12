@@ -1,17 +1,23 @@
+/**
+ * ExplorerNameDetail — the name resolution panel that appears when a user
+ * searches for a specific name in the explorer. Displays the resolved status
+ * (available / registered / listed / reserved), ownership details (address,
+ * block, txid), a link to ZcashMe, listing info (payout, pending buyer), and
+ * an event history table. Accepts an onAction callback that opens Zip321Modal
+ * for buy/claim flows.
+ */
 "use client";
 
 import { useState } from "react";
 import Image from "next/image";
-import type { ResolveName } from "@/lib/types";
+import type { ResolveName, ZnsEvent, NameAvailabilityState } from "@/lib/types";
 import type { Action } from "@/lib/types";
-import type { Event } from "@/lib/zns/client";
-import { formatUsdEquivalent } from "@/lib/zns/client";
+import { formatUsdEquivalent, zatsToZec } from "@/lib/zns/utils";
 import ActionBadge from "@/components/ActionBadge";
 import CopyIconButton from "@/components/CopyIconButton";
 import {
   NameStatusBadge,
   NameStatusButtons,
-  type NameAvailabilityState,
   statusSupportsPrice,
 } from "@/components/NameStatus";
 
@@ -33,7 +39,7 @@ export default function ExplorerNameDetail({
 }: {
   query: string;
   result: ResolveName | null;
-  events: Event[];
+  events: ZnsEvent[];
   isPending: boolean;
   usdPerZec: number | null;
   onAction: (action: Action) => void;
@@ -54,7 +60,6 @@ export default function ExplorerNameDetail({
 
   const listed = result?.status === "listed" ? result : null;
   const available = result?.status === "available" ? result : null;
-  const resultWithChips = result && "firstBucket" in result ? result : null;
   const availabilityState = result ? toAvailabilityState(result) : null;
   const encodedName = encodeURIComponent(result?.query ?? query);
   const zcashMeUrl = `https://zcash.me/${encodedName}`;
@@ -96,11 +101,6 @@ export default function ExplorerNameDetail({
                   <span className="home-result-feature-chip">
                     {result.query.length} characters
                   </span>
-                  {resultWithChips?.firstBucket && (
-                    <span className="home-result-feature-chip">
-                      First {resultWithChips.firstBucket}
-                    </span>
-                  )}
                 </div>
               </div>
               <div
@@ -123,6 +123,7 @@ export default function ExplorerNameDetail({
                   status={availabilityState}
                   onAction={onAction}
                   align="center"
+                  hasPendingBuy={!!listed?.pendingBuy}
                 />
               )}
               <div
@@ -188,6 +189,67 @@ export default function ExplorerNameDetail({
                   <span className="inline-flex items-center leading-none">View on ZcashMe</span>
                 </a>
               </div>
+
+          {listed && (
+            <div className="flex flex-col gap-1.5 text-sm">
+              <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
+                <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                  Payout
+                </span>
+                <span className="min-w-0 flex-1 font-mono text-fg-muted break-all">
+                  {listed.payTaddr}
+                </span>
+                <CopyIconButton
+                  onClick={() => copyValue(listed.payTaddr)}
+                  ariaLabel="Copy payout address"
+                  title={copiedValue === listed.payTaddr ? "Copied!" : "Copy payout address"}
+                  copied={copiedValue === listed.payTaddr}
+                />
+              </div>
+              {listed.pendingBuy && (
+                <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
+                  <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                    Buyer
+                  </span>
+                  <span className="min-w-0 flex-1 font-mono text-fg-muted break-all">
+                    {listed.pendingBuy.buyer}
+                  </span>
+                  <CopyIconButton
+                    onClick={() => copyValue(listed.pendingBuy!.buyer)}
+                    ariaLabel="Copy buyer address"
+                    title={copiedValue === listed.pendingBuy!.buyer ? "Copied!" : "Copy buyer address"}
+                    copied={copiedValue === listed.pendingBuy!.buyer}
+                  />
+                </div>
+              )}
+              {listed.pendingBuy && (
+                <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
+                  <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                    Price
+                  </span>
+                  <span className="text-fg-muted">
+                    {zatsToZec(listed.pendingBuy.price)} ZEC
+                  </span>
+                </div>
+              )}
+              {listed.pendingBuy && (
+                <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
+                  <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                    Expires
+                  </span>
+                  <span className="text-fg-muted">
+                    Block {listed.pendingBuy.expiresAt.toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          {listed && (
+            <div
+              className="h-px w-full"
+              style={{ background: "var(--leaders-card-border)" }}
+            />
+          )}
             </div>
           )}
 

@@ -1,5 +1,7 @@
 import { BRAND } from "@/lib/zns/brand";
 
+// Extracts a referral code from a URL (via `ref` query param) or raw string.
+// Falls back to the raw trimmed value when no URL structure is detected.
 export function extractReferralCode(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return "";
@@ -17,6 +19,8 @@ export function extractReferralCode(value: string): string {
   return trimmed;
 }
 
+// Builds the rewards landing page URL using BRAND.url as the base, appending the ref query param.
+// Returns the bare BRAND.url when no valid referral code is provided.
 export function buildReferralUrl(referralCode?: string | null): string {
   const normalized = extractReferralCode(referralCode ?? "");
   return normalized ? `${BRAND.url}/?ref=${encodeURIComponent(normalized)}` : BRAND.url;

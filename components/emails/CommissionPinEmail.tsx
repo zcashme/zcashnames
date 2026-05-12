@@ -1,3 +1,8 @@
+/**
+ * React Email template: sends the commission/referral dashboard PIN.
+ * Displays the 6-digit access code prominently in large type with the
+ * dashboard URL below it. Sent when a user requests their PIN reminder.
+ */
 import { Section, Text } from "@react-email/components";
 import { EmailLayout } from "./EmailLayout";
 import { content, paragraph } from "@/lib/email/styles";

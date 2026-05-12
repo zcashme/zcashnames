@@ -15,22 +15,11 @@ export const metadata: Metadata = {
     "Join the ZcashNames community, beta test releases, become an ambassador, and find partner resources.",
 };
 
-export default async function CommunityPage({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const params = (await searchParams) ?? {};
-  const selectedSection = normalizeSection(firstParam(params.section));
-  const visibleSections =
-    selectedSection === "all"
-      ? COMMUNITY_SECTIONS
-      : COMMUNITY_SECTIONS.filter((section) => section.slug === selectedSection);
-
+export default async function CommunityPage() {
   return (
     <main className="w-full">
       <SiteRouteTitle title="Community" />
-      <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
+      <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-16 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
         <div className="flex max-w-3xl flex-col gap-4">
           <h1 className="text-4xl font-bold leading-tight text-fg-heading sm:text-5xl">
             Join the movement
@@ -40,180 +29,119 @@ export default async function CommunityPage({
           </p>
         </div>
 
-        <SectionPills selectedSection={selectedSection} />
+        <SectionPills />
 
-        {visibleSections.map((section) => (
-          <CommunityCardSection key={section.title} section={section} />
+        {COMMUNITY_SECTIONS.map((section) => (
+          <CommunitySectionGroup key={section.slug} section={section} />
         ))}
+
+        <div className="flex justify-end">
+          <a
+            href="#top"
+            className="inline-flex items-center gap-2 rounded-md border border-border-muted bg-[var(--color-raised)] px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading scroll-mt-4"
+          >
+            Back to top
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+          </a>
+        </div>
       </section>
     </main>
   );
 }
 
-function firstParam(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
-
-function normalizeSection(value: string | undefined): string {
-  if (!value) return "all";
-  if (value === "community-pages") return "social";
-  if (COMMUNITY_SECTIONS.some((section) => section.slug === value)) return value;
-  return "all";
-}
-
-function SectionPills({ selectedSection }: { selectedSection: string }) {
-  const options = [
-    { slug: "all", title: "All" },
-    ...COMMUNITY_SECTIONS.map((section) => ({ slug: section.slug, title: section.title })),
-  ];
-
+function SectionPills() {
   return (
-    <nav className="flex flex-col gap-3" aria-label="Community sections">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Browse sections</p>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => {
-          const active = selectedSection === option.slug;
-          return (
-            <a
-              key={option.slug}
-              href={communitySectionHref(option.slug)}
-              aria-current={active ? "page" : undefined}
-              className={`rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors ${
-                active
-                  ? "border-fg-heading bg-[var(--fg-heading)] text-[var(--color-background)]"
-                  : "border-border-muted text-fg-body hover:border-fg-heading hover:text-fg-heading"
-              }`}
-            >
-              {option.title}
-            </a>
-          );
-        })}
-      </div>
+    <nav className="flex flex-wrap gap-2" aria-label="Community sections">
+      {COMMUNITY_SECTIONS.map((section) => (
+        <a
+          key={section.slug}
+          href={communitySectionHref(section.slug)}
+          className="rounded-md border border-border-muted bg-[var(--color-raised)] px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+        >
+          {section.title}
+        </a>
+      ))}
     </nav>
   );
 }
 
-function CommunityCardSection({ section }: { section: CommunitySection }) {
+function CommunitySectionGroup({ section }: { section: CommunitySection }) {
   return (
-    <section className="flex flex-col gap-5">
-      <div className="max-w-3xl">
-        <h2 className="flex flex-wrap items-center gap-3 text-2xl font-bold text-fg-heading">
-          <span>{section.title}</span>
-          {section.slug === "blogs" && <ComingSoonBadge />}
+    <div id={section.slug} className="flex flex-col gap-6 scroll-mt-24">
+      <div className="flex items-center gap-4">
+        <h2 className="text-xl font-bold text-fg-heading">
+          <a href={communitySectionHref(section.slug)} className="hover:underline">
+            {section.title}
+          </a>
         </h2>
-        <p className="mt-2 text-sm leading-6 text-fg-body">{section.description}</p>
+        <div className="h-px flex-1 bg-border-muted" />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {section.cards.map((card) => (
-          <CommunityActionCard key={card.id} card={card} />
+          <CommunityCard key={card.id} card={card} />
         ))}
       </div>
-    </section>
+    </div>
   );
 }
 
-function ComingSoonBadge() {
-  return (
-    <span className="inline-flex rounded-md border border-border-muted px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-fg-muted">
-      Coming soon
-    </span>
-  );
-}
-
-function CommunityActionCard({ card }: { card: CommunityCard }) {
-  const announcingSoon = card.announcingSoon === true;
-  const actionBadge = card.actionBadge ?? (announcingSoon ? "Announcing soon" : undefined);
+function CommunityCard({ card }: { card: CommunityCard }) {
   const shareUrl = `${BRAND.url}/community#${card.id}`;
+  const external = isExternalHref(card.href);
 
   return (
     <article
       id={card.id}
-      aria-label={actionBadge ? `${card.name} ${actionBadge.toLowerCase()}` : undefined}
-      className="scroll-mt-24 overflow-hidden rounded-lg border border-border-muted bg-[var(--color-card)]"
+      className="community-card group relative flex flex-col gap-4 rounded-2xl border border-[var(--partner-card-border)] bg-[var(--partner-card-bg)] px-5 py-5 shadow-[var(--partner-card-shadow)] transition-all duration-200 hover:border-[var(--partner-card-border-hover)] hover:shadow-[var(--partner-card-shadow-hover)]"
     >
-      <div className="flex aspect-[16/9] items-center justify-center border-b border-border-muted bg-[var(--color-raised)] p-5">
-        <div className="flex h-24 w-24 items-center justify-center rounded-lg border border-border-muted bg-[var(--color-background)] p-5">
+      <div className="flex items-start gap-4">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[var(--color-raised)] border border-border-muted overflow-hidden">
           {card.iconSrc ? (
-            <span
-              className="h-full w-full text-fg-heading"
-              style={{
-                backgroundColor: "currentColor",
-                maskImage: `url(${card.iconSrc})`,
-                maskPosition: "center",
-                maskRepeat: "no-repeat",
-                maskSize: "contain",
-                WebkitMaskImage: `url(${card.iconSrc})`,
-                WebkitMaskPosition: "center",
-                WebkitMaskRepeat: "no-repeat",
-                WebkitMaskSize: "contain",
-              }}
-              aria-hidden="true"
-            />
+            <img src={card.iconSrc} alt="" className="h-10 w-10 object-contain" aria-hidden="true" />
           ) : (
-            <span className="text-3xl font-bold text-fg-heading">
-              {card.initials}
-            </span>
+            <span className="text-lg font-bold text-fg-heading">{card.initials}</span>
           )}
+        </div>
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-fg-muted">{card.label}</p>
+          <h3 className="text-base font-bold text-fg-heading leading-tight">{card.name}</h3>
         </div>
       </div>
-      <div className="flex min-h-[220px] flex-col gap-4 p-4">
-        <div className="flex-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">{card.label}</p>
-          <h3 className="mt-2 text-base font-bold text-fg-heading">
-            {announcingSoon ? <BlurredCopy text={card.name} /> : card.name}
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-fg-body">
-            {announcingSoon ? <BlurredCopy text={card.description} /> : card.description}
-          </p>
-          <p className="mt-3 text-xs leading-5 text-fg-muted">{card.detail}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {actionBadge ? (
-            <>
-              <span className="inline-flex w-fit items-center rounded-md border border-border-muted bg-[var(--color-raised)] px-3 py-2 text-sm font-semibold text-fg-muted">
-                {actionBadge}
-              </span>
-              <a
-                href={shareHref(card.shareText, shareUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-              >
-                Share
-              </a>
-            </>
-          ) : (
-            <>
-              <a
-                href={card.href}
-                target={isExternalHref(card.href) ? "_blank" : undefined}
-                rel={isExternalHref(card.href) ? "noopener noreferrer" : undefined}
-                className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-              >
-                Open
-              </a>
-              <a
-                href={shareHref(card.shareText, shareUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-              >
-                Share
-              </a>
-            </>
-          )}
+
+      <p className="text-sm leading-relaxed text-fg-body">{card.description}</p>
+
+      <div className="mt-auto flex items-center justify-between gap-3">
+        <span className="text-xs text-fg-muted truncate">{card.detail}</span>
+        <div className="flex gap-2 shrink-0">
+          <a
+            href={shareHref(card.shareText, shareUrl)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border-muted bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-fg-body transition-colors hover:border-[var(--partner-card-border-hover)] hover:text-fg-heading"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+            Share
+          </a>
+          <a
+            href={card.href}
+            target={external ? "_blank" : undefined}
+            rel={external ? "noopener noreferrer" : undefined}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent-green)] px-3 py-1.5 text-xs font-semibold text-[var(--color-background)] transition-colors hover:bg-[var(--color-accent-green-dark)]"
+          >
+            Open
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M7 17L17 7M17 7H7M17 7v10" />
+            </svg>
+          </a>
         </div>
       </div>
     </article>
-  );
-}
-
-function BlurredCopy({ text }: { text: string }) {
-  return (
-    <span aria-hidden="true" className="inline-block select-none blur-[4px]">
-      {text}
-    </span>
   );
 }
 

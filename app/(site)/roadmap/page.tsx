@@ -1,3 +1,6 @@
+// Server component: reads roadmap.md from content/, parses it into period objects
+// via parseRoadmapMarkdown(), and passes them to the client-side RoadmapTimeline
+// which handles expand/collapse, current-period highlighting, and scroll navigation.
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Metadata } from "next";
@@ -17,7 +20,7 @@ export const metadata: Metadata = {
     url: "https://www.zcashnames.com/roadmap",
     images: [
       {
-        url: "https://www.zcashnames.com/og/roadmap.png",
+        url: "/og/roadmap.png",
         width: 1200,
         height: 630,
         alt: "Roadmap | ZcashNames",
@@ -28,7 +31,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Roadmap | ZcashNames",
     description: "Calendar roadmap for the next ZcashNames product phases and tasks.",
-    images: ["https://www.zcashnames.com/og/roadmap.png"],
+    images: ["/og/roadmap.png"],
   },
 };
 

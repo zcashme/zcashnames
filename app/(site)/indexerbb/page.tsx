@@ -1,3 +1,8 @@
+/**
+ * Indexer Bug Bounty — a placeholder landing page for a forthcoming bug bounty
+ * program targeting the ZNS indexer. Static server component that explains the
+ * program scope and collects emails via IndexerLaunchAlertForm.
+ */
 import type { Metadata } from "next";
 import Link from "next/link";
 import SiteRouteTitle from "@/components/SiteRouteTitle";

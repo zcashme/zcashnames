@@ -1,8 +1,14 @@
+/**
+ * ExplorerContent — renders one of three tabbed table views from the initial
+ * server-fetched data: Registered names, For Sale listings, and Events (with
+ * action-badge sub-tabs like CLAIM, BUY, etc.). All filtering, sorting, and
+ * pagination happen client-side via explorerFilters utilities.
+ */
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { zatsToZec } from "@/lib/zns/client";
-import type { Network } from "@/lib/zns/client";
+import { zatsToZec } from "@/lib/zns/utils";
+import type { Network } from "@/lib/types";
 import type { Environment, SortBy } from "./ExplorerToolbar";
 import {
   clampPage,
@@ -227,7 +233,6 @@ export default function ExplorerContent({
       </div>
     );
   }
-
   if (tab === "forsale") {
     return (
       <div className="overflow-hidden rounded-2xl border" style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)" }}>
@@ -240,6 +245,7 @@ export default function ExplorerContent({
               >
                 <th className="px-4 py-3 sm:px-6">Name</th>
                 <th className="px-4 py-3 text-right sm:px-6">Price</th>
+                <th className="px-4 py-3 sm:px-6">Status</th>
                 <th className="px-4 py-3 text-right sm:px-6">Block</th>
                 {environment === "all" && <th className="px-4 py-3 text-right sm:px-6">Net</th>}
               </tr>
@@ -247,12 +253,13 @@ export default function ExplorerContent({
             <tbody>
               {visibleListings.length === 0 ? (
                 <tr>
-                  <td colSpan={environment === "all" ? 4 : 3} className="px-4 py-12 text-center text-fg-muted">
+                  <td colSpan={environment === "all" ? 5 : 4} className="px-4 py-12 text-center text-fg-muted">
                     No names listed for sale.
                   </td>
                 </tr>
               ) : (
-                visibleListings.map((l) => (
+                visibleListings.map((l) => {
+                  return (
                   <tr
                     key={`${l.network}:${l.txid}`}
                     className="border-b last:border-b-0 transition-colors"
@@ -268,6 +275,14 @@ export default function ExplorerContent({
                       </button>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-fg-muted sm:px-6">{zatsToZec(l.price)} ZEC</td>
+                    <td className="px-4 py-3 sm:px-6">
+                      <span
+                        className="rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-fg-muted"
+                        style={{ background: "var(--market-stats-segment-active-bg)" }}
+                      >
+                        Active
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-right tabular-nums text-fg-muted text-xs sm:px-6">{l.height.toLocaleString()}</td>
                     {environment === "all" && (
                       <td className="px-4 py-3 text-right sm:px-6">
@@ -280,7 +295,8 @@ export default function ExplorerContent({
                       </td>
                     )}
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

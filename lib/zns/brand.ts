@@ -1,3 +1,10 @@
+//
+// Single source of truth for brand metadata. Used by:
+//   - Root layout (metadata, JSON-LD, social links)
+//   - OpenGraph image generators (app/og/*.png/)
+//   - Footer (social icon links)
+//   - Referral URL builder (lib/referral-code.ts)
+//
 export const BRAND = {
   name: "ZcashNames",
   title: "ZcashNames",

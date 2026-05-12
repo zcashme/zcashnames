@@ -1,15 +1,13 @@
 import "server-only";
 
-import { Resend } from "resend";
+// Waitlist lifecycle emails: confirmation (with verification link) and welcome
+// (with referral URL and commission PIN). The welcome email derives the PIN
+// via commission-access so it matches the cookie-gated dashboard.
 import ConfirmEmail from "@/components/emails/ConfirmEmail";
 import WaitlistEmail from "@/components/emails/WaitlistEmail";
 import { FROM_EMAIL } from "@/lib/email/constants";
-import { getResend } from "@/lib/email/client";
+import { sendEmail } from "@/lib/email/client";
 import { getCommissionPin } from "@/lib/leaders/commission-access";
-
-function normalizeBaseUrl(baseUrl: string): string {
-  return baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-}
 
 export async function sendWaitlistConfirmationEmail({
   email,
@@ -20,8 +18,7 @@ export async function sendWaitlistConfirmationEmail({
   name: string;
   confirmUrl: string;
 }): Promise<void> {
-  const resend = getResend();
-  await resend.emails.send({
+  await sendEmail({
     from: FROM_EMAIL,
     to: email,
     subject: "Confirm your email",
@@ -40,12 +37,10 @@ export async function sendWaitlistWelcomeEmail({
   referralCode: string;
   baseUrl: string;
 }): Promise<void> {
-  const resend = getResend();
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-  const referralUrl = `${normalizedBaseUrl}/?ref=${referralCode}`;
+  const referralUrl = `${baseUrl}/?ref=${referralCode}`;
   const accessPin = getCommissionPin(referralCode);
 
-  await resend.emails.send({
+  await sendEmail({
     from: FROM_EMAIL,
     to: email,
     subject: "Early access to ZcashNames",

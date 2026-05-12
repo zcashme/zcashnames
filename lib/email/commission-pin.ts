@@ -1,12 +1,10 @@
 import "server-only";
 
-import CommissionPinEmail from "@/components/emails/CommissionPinEmail";
+// Commission PIN email with a deep link to the user's referral dashboard.
+// Called from leaders.ts after PIN rate-limit checks pass.
 import { FROM_EMAIL } from "@/lib/email/constants";
-import { getResend } from "@/lib/email/client";
-
-function normalizeBaseUrl(baseUrl: string): string {
-  return baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-}
+import { sendEmail } from "@/lib/email/client";
+import CommissionPinEmail from "@/components/emails/CommissionPinEmail";
 
 export async function sendCommissionPinEmail({
   email,
@@ -21,10 +19,9 @@ export async function sendCommissionPinEmail({
   referralCode: string;
   baseUrl: string;
 }): Promise<void> {
-  const resend = getResend();
-  const dashboardUrl = `${normalizeBaseUrl(baseUrl)}/leaders/ref/${encodeURIComponent(referralCode)}`;
+  const dashboardUrl = `${baseUrl}/leaders/ref/${encodeURIComponent(referralCode)}`;
 
-  await resend.emails.send({
+  await sendEmail({
     from: FROM_EMAIL,
     to: email,
     subject: "Your access code",

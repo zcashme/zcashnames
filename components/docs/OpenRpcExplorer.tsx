@@ -1,15 +1,5 @@
 "use client";
 
-/**
- * OpenRPC Explorer - lightweight, zero-dependency renderer for an OpenRPC 1.x
- * document. Renders method list, parameters, result, schema tree (with $ref
- * resolution), worked examples, and an interactive Try-It panel.
- *
- * Built as a custom component rather than using @open-rpc/docs-react because
- * that package peer-pins React 18.3.1 + MUI 6, which conflicts with this
- * project's React 19 + Tailwind stack.
- */
-
 import { useMemo, useState } from "react";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -589,6 +579,14 @@ className="cursor-pointer rounded border border-gray-300 dark:border-gray-700 px
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
+// Renders a parsed OpenRPC spec document. Displays:
+// - Header with title, version, servers
+// - Method list nav (anchor links)
+// - Per-method sections: parameters table, result schema (recursive SchemaView
+//   with $ref resolution and cycle detection), error codes, examples, and a
+//   "Try it" panel that makes live JSON-RPC POST requests to configurable
+//   endpoints (Testnet, Mainnet beta, Local)
+// - Reusable schemas section at the bottom
 export function OpenRpcExplorer({ spec }: { spec: OpenRpcDoc }) {
   return (
     <div className="my-8 space-y-10">

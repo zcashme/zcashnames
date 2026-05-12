@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { submitSurvey } from "@/lib/waitlist/waitlist";
 
+// Post-waitlist survey form. Collects four data points: use-case preferences
+// (multi-select chips), early-access interest, free-text questions, and contact
+// consent. On submit, serializes to submitSurvey() server action and calls
+// onComplete(shouldContact) so the parent waitlist flow can advance or redirect.
+
 const USE_CASE_OPTIONS = [
   "Send ZEC more easily",
   "Receive ZEC more easily",

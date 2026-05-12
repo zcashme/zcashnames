@@ -1,10 +1,23 @@
+/*
+ * Marketing site layout — the root layout for the public-facing (site) route group.
+ *
+ * Fonts (Manrope, Dancing Script, Inter) are loaded into CSS variables here and
+ * applied on the <body> so every page below inherits them.  The <html> element
+ * lives in this file because Next.js App Router layouts must own the root shell.
+ *
+ * Providers (ThemeProvider → NetworkProvider) wrap all children so the entire
+ * marketing site shares theme state and ZNS network context.
+ *
+ * Header, Footer, and CabalLaunchBar are site‑wide chrome rendered on every
+ * marketing page.  SEO metadata (OpenGraph, Twitter, JSON‑LD) is defined
+ * alongside the layout so it applies globally.
+ */
 import type { Metadata } from "next";
 import { Manrope, Dancing_Script, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
-import { NetworkProvider } from "@/components/NetworkToggle";
+import { NetworkProvider } from "@/components/hooks/useZns";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import BetaApplyBar from "@/components/closedbeta/BetaApplyBar";
 import CabalLaunchBar from "@/components/influencer/CabalLaunchBar";
 import { Analytics } from "@vercel/analytics/next";
 import { BRAND } from "@/lib/zns/brand";
@@ -107,7 +120,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         >
         <NetworkProvider>
 
-        <BetaApplyBar />
         <CabalLaunchBar />
         <Header />
         {children}

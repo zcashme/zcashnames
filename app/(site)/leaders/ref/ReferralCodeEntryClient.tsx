@@ -1,3 +1,6 @@
+// Client component: form that accepts a raw referral code or full referral link,
+// extracts the code via extractReferralCode(), and navigates to the per-code
+// dashboard at /leaders/ref/[code]. Also links to the terms page.
 "use client";
 
 import Link from "next/link";

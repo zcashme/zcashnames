@@ -186,6 +186,9 @@ const SNIPPETS: Snippets = {
   monochrome: buildSnippet("monochrome"),
 };
 
+// Gallery card for the post-submit "check your email" modal shown in the waitlist
+// flow. The live view renders the modal against a dimmed backdrop; the exported
+// snippet includes the full overlay + modal structure.
 export default function CheckEmailModalCard() {
   return (
     <GalleryCard

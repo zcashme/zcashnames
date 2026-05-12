@@ -1,3 +1,13 @@
+/**
+ * Cabal server actions ("use server").
+ *
+ * Three operations, each guarded by cabal cookie/session checks:
+ *   1. unlockCabal    — password-auth flow: verify password → set cookie → email notice → redirect
+ *   2. submitCabalChat — per-slide comment: validates access, sends email to admins
+ *   3. submitCabalInterest — per-slide "Join Us" interest: sends email + updates cabal_invites row
+ *
+ * Form data flows from the client → server action → email (Resend) + DB (Supabase).
+ */
 "use server";
 
 import { redirect } from "next/navigation";

@@ -2,26 +2,51 @@
 
 import { useState, useRef, useCallback } from "react";
 import { resolveName } from "@/lib/zns/resolve";
-import { normalizeUsername, isValidUsername } from "@/lib/zns/client";
-import type { ResolveName } from "@/lib/types";
-import type { Network } from "@/lib/zns/client";
+import { normalizeUsername, isValidUsername, formatUsdEquivalent } from "@/lib/zns/utils";
+import { useZns } from "@/components/hooks/useZns";
+import type { ResolveName, NameAvailabilityState } from "@/lib/types";
 
-interface SearchState {
+//
+// Search state machine for the home page name search.
+//
+// Handles the full lifecycle of a name lookup:
+//   1. User types a name → normalised and validated client-side
+//   2. Valid name → resolveName() server action is called
+//   3. Result is prepended to the results list (most recent first)
+//   4. After a purchase, refreshResult() re-resolves that one name
+//   5. Dismiss button removes a result from the list
+//
+// Race condition protection: each search gets a monotonically increasing
+// requestId. When a response arrives, we discard it if a newer request
+// was already made. This prevents a slow response from overwriting a
+// fast one (e.g. typing "al" then "alice" before the first resolves).
+//
+
+interface CardProps {
+  availabilityState: NameAvailabilityState;
+  priceLabel?: string;
+  usdLabel?: string;
+}
+
+interface UseSearchStateReturn {
+  // State
   input: string;
   results: ResolveName[];
   searching: boolean;
   searchError: string | null;
-}
-
-interface UseSearchStateReturn extends SearchState {
   setInput: (value: string) => void;
+  // Actions
   handleSearch: (nameValue: string) => Promise<void>;
   refreshResult: (name: string) => Promise<void>;
   removeResult: (query: string) => void;
   reset: () => void;
+  // Domain helpers
+  buildCardProps: (result: ResolveName) => CardProps;
 }
 
-export function useSearchState(network: Network): UseSearchStateReturn {
+export function useSearchState(): UseSearchStateReturn {
+  const { zns } = useZns();
+  const network = zns.mode === "waitlist" ? "testnet" : zns.mode;
   const [input, setInputState] = useState("");
   const [results, setResults] = useState<ResolveName[]>([]);
   const [searching, setSearching] = useState(false);
@@ -78,7 +103,7 @@ export function useSearchState(network: Network): UseSearchStateReturn {
         setSearching(false);
       }
     }
-  }, [network]);
+  }, [zns.mode]);
 
   const refreshResult = useCallback(async (name: string) => {
     try {
@@ -89,11 +114,40 @@ export function useSearchState(network: Network): UseSearchStateReturn {
     } catch {
       // Leave the stale entry in place.
     }
-  }, [network]);
+  }, [zns.mode]);
 
   const removeResult = useCallback((query: string) => {
     setResults((prev) => prev.filter((item) => item.query !== query));
   }, []);
+
+  // ── Domain helpers ────────────────────────────────────────────────────────
+
+  function buildCardProps(result: ResolveName): CardProps {
+    switch (result.status) {
+      case "available":
+      case "reserved": {
+        const zec = result.claimCost.zec;
+        return {
+          availabilityState: result.status,
+          priceLabel: `~${zec.toFixed(6)} ZEC`,
+          usdLabel: formatUsdEquivalent(zec, null),
+        };
+      }
+      case "listed":
+        return {
+          availabilityState: "forsale",
+          priceLabel: `${result.listingPrice.zec} ZEC`,
+          usdLabel: formatUsdEquivalent(result.listingPrice.zec, null),
+        };
+      case "registered":
+        return {
+          availabilityState: "unavailable",
+        };
+      case "blocked":
+        return { availabilityState: "blocked" };
+    }
+  }
+
 
   return {
     input,
@@ -105,5 +159,6 @@ export function useSearchState(network: Network): UseSearchStateReturn {
     refreshResult,
     removeResult,
     reset,
+    buildCardProps,
   };
 }

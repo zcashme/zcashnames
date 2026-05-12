@@ -324,6 +324,10 @@ const SNIPPETS: Snippets = {
   monochrome: buildSnippet("monochrome"),
 };
 
+// Gallery card for the all-time leaderboard table. Shows 5 frozen rows with
+// rank circles (gold/silver/bronze for top 3), ZcashName + referral code with
+// copy button, Refs, 24h delta, and Rewards. buildSnippet generates the table
+// body via rowsHtml() so the standalone HTML stays in sync with ROWS data.
 export default function LeaderboardTableCard() {
   return (
     <GalleryCard

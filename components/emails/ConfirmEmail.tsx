@@ -1,3 +1,8 @@
+/**
+ * React Email template: "Confirm your email" with a verification link.
+ * Rendered server-side during waitlist registration to verify ownership of the
+ * provided email address before the user is fully queued.
+ */
 import { Button, Section, Text } from "@react-email/components";
 import { EmailLayout } from "./EmailLayout";
 import { content, paragraph, ctaButton } from "@/lib/email/styles";
