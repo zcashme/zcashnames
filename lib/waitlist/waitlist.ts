@@ -176,7 +176,7 @@ export async function submitWaitlist(
     waitlistId,
     email: normalizedEmail,
   });
-  const confirmUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/?token=${encodeURIComponent(confirmToken)}`;
+  const confirmUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/waitlist?token=${encodeURIComponent(confirmToken)}`;
 
   try {
     await sendWaitlistConfirmationEmail({
