@@ -1,4 +1,4 @@
-import { parseIsoDateUtc, type RoadmapPeriod } from "./roadmap.ts";
+import { parseIsoDateUtc, type RoadmapPeriod } from "./roadmap";
 
 export type RoadmapPeriodLayout = RoadmapPeriod & {
   isCurrent: boolean;
