@@ -144,8 +144,6 @@ export default async function ExplorerPage({
         stats={stats}
         uivks={uivks}
         environment={env}
-        initialTab={tab}
-        initialPage={page}
         nameQuery={nameQuery}
         nameResult={nameResult}
         nameEvents={nameEvents}
