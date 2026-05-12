@@ -123,6 +123,7 @@ type S = {
   unlockCode: string;
   unlockError: string;
   unlockLoading: boolean;
+  unlockProof: string;
   // input phase
   addressInput: string;
   priceInput: string;
@@ -154,7 +155,7 @@ const INIT: S = {
   step: 0,
   address: "", price: "", payTaddrInput: "",
   uri: "", memo: "", paymentAddress: "", amountZec: "",
-  unlockCode: "", unlockError: "", unlockLoading: false,
+  unlockCode: "", unlockError: "", unlockLoading: false, unlockProof: "",
   addressInput: "", priceInput: "", inputError: "",
   otpMemo: "", otpUri: "", otpCode: "", otpError: "",
   otpLoading: false, otpSent: false, otpAttempts: 0,
@@ -217,6 +218,30 @@ export default function Zip321Modal({
   function set(payload: Partial<S>) { dispatch({ type: "SET", payload }); }
   function advance(patch?: Partial<S>) { dispatch({ type: "ADVANCE", patch }); }
 
+  // Backward navigation. Always clears server-dispatched URI fields and
+  // scanState so the next forward step re-dispatches cleanly. Clears the
+  // sovereign signature if the jump crosses the sign step (payload may
+  // change). Clears the OTP code but preserves the paid-for OTP session
+  // (memo/uri/otpSent/otpAttempts) — see handleInputContinue's `!s.otpMemo`
+  // guard for the matching forward-path protection.
+  function goto(targetStep: number) {
+    if (targetStep >= s.step) return;
+    const crossed = phases.slice(targetStep + 1, s.step + 1);
+    const patch: Partial<S> = {
+      uri: "", memo: "", paymentAddress: "", amountZec: "",
+      scanState: "not_detected",
+    };
+    if (crossed.includes("sign")) {
+      patch.signSignature = "";
+      patch.signError = "";
+    }
+    if (crossed.includes("otp")) {
+      patch.otpCode = "";
+      patch.otpError = "";
+    }
+    set({ ...patch, step: targetStep });
+  }
+
   // Builds the OTP memo/uri needed when advancing into the otp phase.
   function buildOtpPatch() {
     const regAddr = "registration" in resolveResult ? resolveResult.registration.address : "";
@@ -240,11 +265,10 @@ export default function Zip321Modal({
     try {
       const result = await checkUnlockCode(name, code);
       if (!result.ok) { set({ unlockError: result.error || "Invalid unlock code.", unlockLoading: false }); return; }
-      const ar = await dispatchAction("CLAIM", name, network,
-        { address: s.address, priceZats: 0, payTaddr: "" },
-        { kind: "unlock", token: result.proof });
-      if (!ar.ok) { set({ unlockError: ar.error, unlockLoading: false }); return; }
-      advance({ uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", unlockLoading: false });
+      // Stash the proof and advance. The actual CLAIM dispatch happens in
+      // handleInputContinue once the user has entered their address — calling
+      // claimAction here would fail server-side address validation.
+      advance({ unlockProof: result.proof, unlockLoading: false });
     } catch {
       set({ unlockError: "Something went wrong. Try again.", unlockLoading: false });
     }
@@ -274,13 +298,18 @@ export default function Zip321Modal({
     if (needsPayTaddr && !s.payTaddrInput.trim()) { set({ inputError: "Payout address is required." }); return; }
 
     const nextPhase = phases[s.step + 1];
-    const otpPatch = nextPhase === "otp" ? buildOtpPatch() : {};
+    // Only build a fresh OTP session on first entry. If the user already paid
+    // for a session and is re-advancing into otp after a back-nav, preserve it.
+    const otpPatch = nextPhase === "otp" && !s.otpMemo ? buildOtpPatch() : {};
 
     if (action === "CLAIM" || action === "BUY") {
       const addr = s.addressInput.trim();
+      const auth: AuthInput = action === "CLAIM" && s.unlockProof
+        ? { kind: "unlock", token: s.unlockProof }
+        : { kind: "none" };
       const ar = await dispatchAction(action, name, network,
         { address: addr, priceZats: 0, payTaddr: "" },
-        { kind: "none" });
+        auth);
       if (!ar.ok) { set({ inputError: ar.error }); return; }
       advance({ address: addr, uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", ...otpPatch });
     } else {
@@ -405,6 +434,44 @@ export default function Zip321Modal({
     }
   }, 3000);
 
+  // -- Progress segments --
+  function progressClipPath(i: number, n: number): string {
+    if (n <= 1) return "polygon(0 0, 100% 0, 100% 100%, 0 100%)";
+    if (i === 0) return "polygon(0 0, calc(100% - 6px) 0, 100% 100%, 0 100%)";
+    if (i === n - 1) return "polygon(0 0, 100% 0, 100% 100%, 6px 100%)";
+    return "polygon(0 0, calc(100% - 6px) 0, 100% 100%, 6px 100%)";
+  }
+  const showProgress = !(phase === "scanning" && s.scanState === "mined");
+  const progressSegments = showProgress ? (
+    <div className="flex w-full justify-center">
+      <div className="flex max-w-full items-center gap-[3px]">
+        {phases.map((step, i) => {
+          const after = i > s.step;
+          const current = i === s.step;
+          const rejected = current && phase === "scanning" && s.scanState === "rejected";
+          // unlock is non-interactive — re-entering re-dispatches CLAIM with a
+          // fresh proof, and there's nothing the user can fix back there.
+          const clickable = i < s.step && step !== "unlock";
+          let background = "var(--fg-heading)";
+          if (after) background = "var(--border-muted)";
+          if (rejected) background = "var(--accent-red, #e05252)";
+          return (
+            <button
+              key={`${step}-${i}`}
+              type="button"
+              aria-label={clickable ? `Back to ${step}` : step}
+              aria-current={current ? "step" : undefined}
+              disabled={!clickable}
+              onClick={clickable ? () => goto(i) : undefined}
+              className={`block h-1.5 w-8 sm:w-[34px] p-0 border-0 ${clickable ? "cursor-pointer" : "cursor-default"}`}
+              style={{ clipPath: progressClipPath(i, phases.length), background }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  ) : null;
+
   // -- Keyboard --
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -428,6 +495,7 @@ export default function Zip321Modal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {progressSegments && <div className="mb-5">{progressSegments}</div>}
         {phase === "unlock" && (
           <div className="flex flex-col gap-4">
             <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Reserved Name</h2>
