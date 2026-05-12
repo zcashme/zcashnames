@@ -1,31 +1,27 @@
 /**
  * Explorer filter utilities — pure functions shared between page.tsx (server),
- * ExplorerShell.tsx, and ExplorerContent.tsx.
- *
- * Types:  ExplorerTab is the union of primary tabs ("all", "registered", "forsale",
- *         "admin") plus ZNS action types ("CLAIM", "BUY", "LIST", …).
- *         TaggedEvent/Listing/Registration extend their base types with a `network`
- *         field so "all" mode can merge mainnet+testnet rows.
- *
- * Primary exports: tab parsing, pagination helpers, search filtering, event scoping.
+ * ExplorerShell.tsx, and ExplorerContent.tsx. ExplorerTab is the union of
+ * primary tabs ("all", "registered", "forsale", "admin") plus ZNS action types
+ * ("CLAIM", "BUY", "LIST", …).
  */
-import type { Network, Listing, Registration, ZnsEvent } from "@/lib/types";
+import type { Network, Listing, Registration, ZnsEvent, Action } from "@/lib/types";
+import { ACTIONS } from "@/lib/types";
 import { validateAddress } from "@/lib/zns/utils";
 
-export type ExplorerTab = "all" | "registered" | "forsale" | "admin" | "CLAIM" | "BUY" | "LIST" | "DELIST" | "UPDATE" | "RELEASE";
+export type ExplorerTab = "all" | "registered" | "forsale" | "admin" | Action;
 export type TabCounts = Record<string, { filtered: number; total: number }>;
-export type TaggedEvent = ZnsEvent & { network: Network };
-export type TaggedListing = Listing & { network: Network };
-export type TaggedRegistration = Registration & { network: Network };
 
-export const ACTION_TYPES = ["CLAIM", "BUY", "LIST", "DELIST", "UPDATE", "RELEASE"] as const;
 export const EXPLORER_PAGE_SIZE = 25;
 
-const ALL_TABS: ExplorerTab[] = ["all", "registered", "forsale", "admin", ...ACTION_TYPES];
+const ALL_TABS: ExplorerTab[] = ["all", "registered", "forsale", "admin", ...ACTIONS];
 
 export function parseExplorerTab(tab: string | undefined): ExplorerTab {
   if (!tab) return "all";
   return ALL_TABS.includes(tab as ExplorerTab) ? (tab as ExplorerTab) : "all";
+}
+
+export function parseNetwork(env: string | undefined): Network {
+  return env === "testnet" ? "testnet" : "mainnet";
 }
 
 export function parseExplorerPage(page: string | undefined): number {
@@ -38,16 +34,16 @@ export function normalizeExplorerQuery(searchQuery: string): string {
   return searchQuery.toLowerCase().trim();
 }
 
-export function getTabEvents(tab: ExplorerTab, events: TaggedEvent[]): TaggedEvent[] {
+export function getTabEvents(tab: ExplorerTab, events: ZnsEvent[]): ZnsEvent[] {
   if (tab === "all") return events;
   if (tab === "admin") return events.filter((ev) => ev.name === "");
-  if (ACTION_TYPES.includes(tab as typeof ACTION_TYPES[number])) {
+  if ((ACTIONS as readonly string[]).includes(tab)) {
     return events.filter((ev) => ev.action === tab);
   }
   return events;
 }
 
-export function filterEvents(events: TaggedEvent[], searchQuery: string): TaggedEvent[] {
+export function filterEvents(events: ZnsEvent[], searchQuery: string): ZnsEvent[] {
   const q = normalizeExplorerQuery(searchQuery);
   if (!q) return events;
   return events.filter((ev) =>
@@ -56,13 +52,13 @@ export function filterEvents(events: TaggedEvent[], searchQuery: string): Tagged
   );
 }
 
-export function filterListings(listings: TaggedListing[], searchQuery: string): TaggedListing[] {
+export function filterListings(listings: Listing[], searchQuery: string): Listing[] {
   const q = normalizeExplorerQuery(searchQuery);
   if (!q) return listings;
   return listings.filter((listing) => listing.name.toLowerCase().includes(q));
 }
 
-export function filterRegistrations(registrations: TaggedRegistration[], searchQuery: string): TaggedRegistration[] {
+export function filterRegistrations(registrations: Registration[], searchQuery: string): Registration[] {
   const q = normalizeExplorerQuery(searchQuery);
   if (!q) return registrations;
   const isUAddress = validateAddress(q).status === "unified";

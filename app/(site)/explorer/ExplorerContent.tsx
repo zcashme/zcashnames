@@ -6,10 +6,10 @@
  */
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { zatsToZec } from "@/lib/zns/utils";
-import type { Network } from "@/lib/types";
-import type { Environment, SortBy } from "./ExplorerToolbar";
+import type { Listing, Registration, ZnsEvent } from "@/lib/types";
+import type { SortBy } from "./ExplorerToolbar";
 import {
   clampPage,
   filterEvents,
@@ -20,13 +20,10 @@ import {
   normalizeExplorerQuery,
   paginateRows,
   type ExplorerTab,
-  type TaggedEvent,
-  type TaggedListing,
-  type TaggedRegistration,
 } from "./explorerFilters";
 import ActionBadge from "@/components/ActionBadge";
 
-function sortEvents(events: TaggedEvent[], sortBy: SortBy): TaggedEvent[] {
+function sortEvents(events: ZnsEvent[], sortBy: SortBy): ZnsEvent[] {
   return [...events].sort((a, b) => {
     if (sortBy === "height") return b.height - a.height;
     if (sortBy === "name") return a.name.localeCompare(b.name) || b.height - a.height;
@@ -34,7 +31,7 @@ function sortEvents(events: TaggedEvent[], sortBy: SortBy): TaggedEvent[] {
   });
 }
 
-function sortListings(listings: TaggedListing[], sortBy: SortBy): TaggedListing[] {
+function sortListings(listings: Listing[], sortBy: SortBy): Listing[] {
   return [...listings].sort((a, b) => {
     if (sortBy === "height") return b.height - a.height;
     if (sortBy === "name") return a.name.localeCompare(b.name) || b.height - a.height;
@@ -42,7 +39,7 @@ function sortListings(listings: TaggedListing[], sortBy: SortBy): TaggedListing[
   });
 }
 
-function sortRegistrations(registrations: TaggedRegistration[], sortBy: SortBy): TaggedRegistration[] {
+function sortRegistrations(registrations: Registration[], sortBy: SortBy): Registration[] {
   return [...registrations].sort((a, b) => {
     if (sortBy === "height") return b.height - a.height || a.name.localeCompare(b.name);
     if (sortBy === "name") return a.name.localeCompare(b.name) || b.height - a.height;
@@ -99,7 +96,6 @@ function PaginationControls({
 
 export default function ExplorerContent({
   tab,
-  environment,
   sortBy,
   searchQuery,
   currentPage,
@@ -112,17 +108,16 @@ export default function ExplorerContent({
   initialRegistrations,
 }: {
   tab: ExplorerTab;
-  environment: Environment;
   sortBy: SortBy;
   searchQuery: string;
   currentPage: number;
   pageSize: number;
   onPageChange: (page: number) => void;
-  onNameClick: (name: string, network?: Network) => void;
-  initialEvents: TaggedEvent[];
+  onNameClick: (name: string) => void;
+  initialEvents: ZnsEvent[];
   initialEventsTotal: number;
-  initialListings: TaggedListing[];
-  initialRegistrations: TaggedRegistration[];
+  initialListings: Listing[];
+  initialRegistrations: Registration[];
 }) {
   const hasSearchFilter = normalizeExplorerQuery(searchQuery).length > 0;
   const activeEvents = useMemo(() => getTabEvents(tab, initialEvents), [tab, initialEvents]);
@@ -146,10 +141,6 @@ export default function ExplorerContent({
   }, [tab, filteredRegistrations.length, filteredListings.length, filteredEvents.length, hasSearchFilter, initialEventsTotal]);
 
   const safePage = clampPage(currentPage, totalItems, pageSize);
-
-  useEffect(() => {
-    if (safePage !== currentPage) onPageChange(safePage);
-  }, [safePage, currentPage, onPageChange]);
 
   const visibleRegistrations = useMemo(
     () => paginateRows(filteredRegistrations, safePage, pageSize),
@@ -175,27 +166,26 @@ export default function ExplorerContent({
                 <th className="px-4 py-3 sm:px-6">Status</th>
                 <th className="hidden sm:table-cell px-4 py-3 sm:px-6">Address</th>
                 <th className="px-4 py-3 text-right sm:px-6">Block</th>
-                {environment === "all" && <th className="px-4 py-3 text-right sm:px-6">Net</th>}
               </tr>
             </thead>
             <tbody>
               {visibleRegistrations.length === 0 ? (
                 <tr>
-                  <td colSpan={environment === "all" ? 5 : 4} className="px-4 py-12 text-center text-fg-muted">
+                  <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
                     No registered names found.
                   </td>
                 </tr>
               ) : (
                 visibleRegistrations.map((r) => (
                   <tr
-                    key={`${r.network}:${r.name}:${r.txid}`}
+                    key={`${r.name}:${r.txid}`}
                     className="border-b last:border-b-0 transition-colors"
                     style={{ borderColor: "var(--leaders-card-border)" }}
                   >
                     <td className="px-4 py-3 sm:px-6">
                       <button
                         type="button"
-                        onClick={() => onNameClick(r.name, r.network)}
+                        onClick={() => onNameClick(r.name)}
                         className="font-semibold text-fg-heading hover:underline cursor-pointer"
                       >
                         {r.name}
@@ -213,16 +203,6 @@ export default function ExplorerContent({
                       <span className="font-mono text-fg-muted text-xs truncate max-w-[14rem] inline-block align-middle">{r.address}</span>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-fg-muted text-xs sm:px-6">{r.height.toLocaleString()}</td>
-                    {environment === "all" && (
-                      <td className="px-4 py-3 text-right sm:px-6">
-                        <span
-                          className="rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-fg-muted"
-                          style={{ background: "var(--market-stats-segment-active-bg)" }}
-                        >
-                          {r.network === "testnet" ? "T" : "M"}
-                        </span>
-                      </td>
-                    )}
                   </tr>
                 ))
               )}
@@ -247,28 +227,26 @@ export default function ExplorerContent({
                 <th className="px-4 py-3 text-right sm:px-6">Price</th>
                 <th className="px-4 py-3 sm:px-6">Status</th>
                 <th className="px-4 py-3 text-right sm:px-6">Block</th>
-                {environment === "all" && <th className="px-4 py-3 text-right sm:px-6">Net</th>}
               </tr>
             </thead>
             <tbody>
               {visibleListings.length === 0 ? (
                 <tr>
-                  <td colSpan={environment === "all" ? 5 : 4} className="px-4 py-12 text-center text-fg-muted">
+                  <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
                     No names listed for sale.
                   </td>
                 </tr>
               ) : (
-                visibleListings.map((l) => {
-                  return (
+                visibleListings.map((l) => (
                   <tr
-                    key={`${l.network}:${l.txid}`}
+                    key={l.txid}
                     className="border-b last:border-b-0 transition-colors"
                     style={{ borderColor: "var(--leaders-card-border)" }}
                   >
                     <td className="px-4 py-3 sm:px-6">
                       <button
                         type="button"
-                        onClick={() => onNameClick(l.name, l.network)}
+                        onClick={() => onNameClick(l.name)}
                         className="font-semibold text-fg-heading hover:underline cursor-pointer"
                       >
                         {l.name}
@@ -284,19 +262,8 @@ export default function ExplorerContent({
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-fg-muted text-xs sm:px-6">{l.height.toLocaleString()}</td>
-                    {environment === "all" && (
-                      <td className="px-4 py-3 text-right sm:px-6">
-                        <span
-                          className="rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-fg-muted"
-                          style={{ background: "var(--market-stats-segment-active-bg)" }}
-                        >
-                          {l.network === "testnet" ? "T" : "M"}
-                        </span>
-                      </td>
-                    )}
                   </tr>
-                  );
-                })
+                ))
               )}
             </tbody>
           </table>
@@ -319,20 +286,19 @@ export default function ExplorerContent({
               <th className="px-4 py-3 sm:px-6">Name</th>
               <th className="hidden sm:table-cell px-4 py-3 sm:px-6">Address</th>
               <th className="px-4 py-3 text-right sm:px-6">Block</th>
-              {environment === "all" && <th className="px-4 py-3 text-right sm:px-6">Net</th>}
             </tr>
           </thead>
           <tbody>
             {visibleEvents.length === 0 ? (
               <tr>
-                <td colSpan={environment === "all" ? 5 : 4} className="px-4 py-12 text-center text-fg-muted">
+                <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
                   No events found.
                 </td>
               </tr>
             ) : (
               visibleEvents.map((ev) => (
                 <tr
-                  key={`${ev.network}:${ev.id}`}
+                  key={ev.id}
                   className="border-b last:border-b-0 transition-colors"
                   style={{ borderColor: "var(--leaders-card-border)" }}
                 >
@@ -343,7 +309,7 @@ export default function ExplorerContent({
                     {ev.name ? (
                       <button
                         type="button"
-                        onClick={() => onNameClick(ev.name, ev.network)}
+                        onClick={() => onNameClick(ev.name)}
                         className="font-semibold text-fg-heading hover:underline cursor-pointer"
                       >
                         {ev.name}
@@ -360,16 +326,6 @@ export default function ExplorerContent({
                     )}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-fg-muted text-xs sm:px-6">{ev.height.toLocaleString()}</td>
-                  {environment === "all" && (
-                    <td className="px-4 py-3 text-right sm:px-6">
-                      <span
-                        className="rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-fg-muted"
-                        style={{ background: "var(--market-stats-segment-active-bg)" }}
-                      >
-                        {ev.network === "testnet" ? "T" : "M"}
-                      </span>
-                    </td>
-                  )}
                 </tr>
               ))
             )}

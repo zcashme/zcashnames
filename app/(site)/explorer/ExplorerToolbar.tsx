@@ -1,15 +1,15 @@
 /**
  * ExplorerToolbar — the filter bar for the explorer page.
- * Renders a search input (delegated to ToolbarSearchInput), an environment
- * selector (All / Mainnet / Testnet), and a sort dropdown (by height / name / type).
+ * Renders a search input (delegated to ToolbarSearchInput), a network selector
+ * (Mainnet / Testnet), and a sort dropdown (by height / name / type).
  * All state is lifted to ExplorerShell; this component only receives callbacks.
  */
 "use client";
 
 import { useState } from "react";
 import ToolbarSearchInput from "@/components/search/ToolbarSearchInput";
+import type { Network } from "@/lib/types";
 
-export type Environment = "all" | "mainnet" | "testnet";
 export type SortBy = "height" | "name" | "type";
 
 function Dropdown({
@@ -78,8 +78,8 @@ export default function ExplorerToolbar({
   onSearchChange,
   onSearchSubmit,
   onClearSearch,
-  environment,
-  onEnvironmentChange,
+  network,
+  onNetworkChange,
   sortBy,
   onSortChange,
 }: {
@@ -87,8 +87,8 @@ export default function ExplorerToolbar({
   onSearchChange: (q: string) => void;
   onSearchSubmit: () => void;
   onClearSearch: () => void;
-  environment: Environment;
-  onEnvironmentChange: (env: Environment) => void;
+  network: Network;
+  onNetworkChange: (n: Network) => void;
   sortBy: SortBy;
   onSortChange: (s: SortBy) => void;
 }) {
@@ -101,10 +101,9 @@ export default function ExplorerToolbar({
         onClear={onClearSearch}
       />
       <Dropdown
-        value={environment}
-        onChange={(v) => onEnvironmentChange(v as Environment)}
+        value={network}
+        onChange={(v) => onNetworkChange(v as Network)}
         options={[
-          { value: "all", label: "All Environments" },
           { value: "mainnet", label: "Mainnet" },
           { value: "testnet", label: "Testnet" },
         ]}

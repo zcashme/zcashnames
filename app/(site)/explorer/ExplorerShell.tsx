@@ -8,10 +8,9 @@
 
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import ExplorerToolbar, { type Environment, type SortBy } from "./ExplorerToolbar";
+import ExplorerToolbar, { type SortBy } from "./ExplorerToolbar";
 import ExplorerContent from "./ExplorerContent";
 import {
-  ACTION_TYPES,
   EXPLORER_PAGE_SIZE,
   filterEvents,
   filterListings,
@@ -19,14 +18,10 @@ import {
   getTabCountLabel,
   getTabEvents,
   normalizeExplorerQuery,
-  paginateRows,
   parseExplorerPage,
   parseExplorerTab,
   type ExplorerTab,
   type TabCounts,
-  type TaggedEvent,
-  type TaggedListing,
-  type TaggedRegistration,
 } from "./explorerFilters";
 import ExplorerNameDetail from "./ExplorerNameDetail";
 import Zip321Modal from "@/components/purchases/Zip321Modal";
@@ -36,9 +31,8 @@ import SiteRouteTitle from "@/components/SiteRouteTitle";
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 import CopyIconButton from "@/components/CopyIconButton";
-import type { ResolveName, ZnsEvent } from "@/lib/types";
+import type { Listing, Network, Registration, ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
-import type { Network } from "@/lib/types";
 import { ACTIONS, ACTION_LABELS } from "@/lib/types";
 
 const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
@@ -53,10 +47,10 @@ const MORE_TABS: { key: ExplorerTab; label: string }[] = [
 ];
 
 interface ExplorerShellProps {
-  initialEvents: TaggedEvent[];
+  initialEvents: ZnsEvent[];
   initialEventsTotal: number;
-  initialListings: TaggedListing[];
-  initialRegistrations: TaggedRegistration[];
+  initialListings: Listing[];
+  initialRegistrations: Registration[];
   stats: {
     claimed: number;
     forSale: number;
@@ -67,10 +61,10 @@ interface ExplorerShellProps {
     mainnet: string;
     testnet: string;
   };
-  environment: Environment;
+  network: Network;
   nameQuery: string;
   nameResult: ResolveName | null;
-  nameEvents: (ZnsEvent & { network: string })[];
+  nameEvents: ZnsEvent[];
 }
 
 export default function ExplorerShell({
@@ -80,7 +74,7 @@ export default function ExplorerShell({
   initialRegistrations,
   stats,
   uivks,
-  environment,
+  network,
   nameQuery,
   nameResult,
   nameEvents,
@@ -90,7 +84,7 @@ export default function ExplorerShell({
 
   const usdPerZec = useUsdPrice();
   const [isPending, startTransition] = useTransition();
-  const [optimisticEnv, setOptimisticEnv] = useOptimistic(environment);
+  const [optimisticNetwork, setOptimisticNetwork] = useOptimistic(network);
   const {
     hydrated: pendingHydrated,
     pendingTransaction,
@@ -135,7 +129,7 @@ export default function ExplorerShell({
         total: getTabEvents("admin", initialEvents).length,
       },
     };
-    for (const action of ACTION_TYPES) {
+    for (const action of ACTIONS) {
       const tabEvents = getTabEvents(action, initialEvents);
       counts[action] = {
         filtered: filterEvents(tabEvents, searchQuery).length,
@@ -147,21 +141,19 @@ export default function ExplorerShell({
 
   const isMoreTabActive = MORE_TABS.some((t) => t.key === tab);
   const activeMoreLabel = MORE_TABS.find((t) => t.key === tab)?.label;
-  const detailNetwork: Network = optimisticEnv === "all" ? "mainnet" : optimisticEnv;
 
   // ── URL builder ───────────────────────────────────────────────────────────
   function buildUrl(opts: {
-    env?: Environment;
+    network?: Network;
     name?: string | null;
     tab?: ExplorerTab;
     page?: number;
-    forceEnv?: boolean;
   }) {
     const params = new URLSearchParams();
-    const env = opts.env ?? optimisticEnv;
+    const net = opts.network ?? optimisticNetwork;
     const tabParam = opts.tab ?? tab;
     const pageParam = opts.page ?? page;
-    if (env && (env !== "mainnet" || opts.forceEnv)) params.set("env", env);
+    if (net !== "mainnet") params.set("env", net);
     if (tabParam !== "all") params.set("tab", tabParam);
     if (pageParam > 1) params.set("page", String(pageParam));
     const name = opts.name === undefined ? selectedName : opts.name;
@@ -171,10 +163,10 @@ export default function ExplorerShell({
   }
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  function handleEnvironmentChange(env: Environment) {
+  function handleNetworkChange(net: Network) {
     startTransition(() => {
-      setOptimisticEnv(env);
-      router.push(buildUrl({ env, page: 1 }));
+      setOptimisticNetwork(net);
+      router.push(buildUrl({ network: net, page: 1 }));
     });
   }
 
@@ -190,11 +182,9 @@ export default function ExplorerShell({
     setSearchQuery(nextQuery);
   }
 
-  function handleNameClick(name: string, rowNetwork?: Network) {
-    const nextEnv = optimisticEnv === "all" && rowNetwork ? rowNetwork : undefined;
+  function handleNameClick(name: string) {
     startTransition(() => {
-      if (nextEnv) setOptimisticEnv(nextEnv);
-      router.push(buildUrl({ env: nextEnv, name, page: 1, forceEnv: !!nextEnv }));
+      router.push(buildUrl({ name, page: 1 }));
     });
   }
 
@@ -302,8 +292,8 @@ export default function ExplorerShell({
         onSearchChange={handleSearchChange}
         onSearchSubmit={handleSearchSubmit}
         onClearSearch={clearNameDetail}
-        environment={optimisticEnv}
-        onEnvironmentChange={handleEnvironmentChange}
+        network={optimisticNetwork}
+        onNetworkChange={handleNetworkChange}
         sortBy={sortBy}
         onSortChange={handleSortChange}
       />
@@ -424,7 +414,6 @@ export default function ExplorerShell({
         <div className={isPending && !showNameDetail ? "opacity-60 pointer-events-none transition-opacity" : "transition-opacity"}>
           <ExplorerContent
             tab={tab}
-            environment={optimisticEnv}
             sortBy={sortBy}
             searchQuery={searchQuery}
             currentPage={page}
@@ -509,7 +498,7 @@ export default function ExplorerShell({
         <Zip321Modal
           action={modalState.action}
           name={modalState.resolveResult.query}
-          network={detailNetwork}
+          network={optimisticNetwork}
           resolveResult={modalState.resolveResult}
           onClose={() => setModalState(null)}
           onSuccess={() => router.refresh()}
