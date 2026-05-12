@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useTheme } from "next-themes";
 import { useCopy } from "@/components/hooks/useCopy";
 import { buildEmailShareHref, buildTelegramShareHref, buildXShareHref } from "@/lib/share";
 
@@ -74,19 +75,25 @@ function MenuItem({
   onClick,
   icon,
   label,
+  monochrome = false,
 }: {
   href?: string;
   onClick?: () => void;
   icon: ReactNode;
   label: string;
+  monochrome?: boolean;
 }) {
-  const className =
-    "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold text-fg-heading transition-colors hover:bg-[var(--color-raised)]";
+  const className = `flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold text-fg-heading transition-colors ${
+    monochrome
+      ? "hover:bg-[rgba(155,188,15,0.16)] hover:text-[var(--mono-3)]"
+      : "hover:bg-[var(--color-raised)]"
+  }`;
+  const iconClassName = monochrome ? "shrink-0 text-fg-heading" : "shrink-0 text-fg-muted";
 
   if (href) {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" className={className} role="menuitem">
-        <span className="shrink-0 text-fg-muted">{icon}</span>
+        <span className={iconClassName}>{icon}</span>
         <span>{label}</span>
       </a>
     );
@@ -94,7 +101,7 @@ function MenuItem({
 
   return (
     <button type="button" onClick={onClick} className={`cursor-pointer ${className}`} role="menuitem">
-      <span className="shrink-0 text-fg-muted">{icon}</span>
+      <span className={iconClassName}>{icon}</span>
       <span>{label}</span>
     </button>
   );
@@ -109,6 +116,8 @@ export default function ShareDropdown({
   menuAlign = "right",
   showTriggerIcon = true,
 }: ShareDropdownProps) {
+  const { resolvedTheme } = useTheme();
+  const monochrome = resolvedTheme === "monochrome";
   const rootRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [open, setOpen] = useState(false);
@@ -179,6 +188,9 @@ export default function ShareDropdown({
   const menuPositionClassName = menuAlign === "left" ? "left-0" : "right-0";
   const rootAlignmentClassName = menuAlign === "left" ? "items-start" : "items-end";
   const triggerRowClassName = menuAlign === "left" ? "items-start" : "items-end";
+  const menuClassName = monochrome
+    ? "border-[rgba(155,188,15,0.62)] bg-[rgba(15,56,15,0.96)] shadow-[0_18px_40px_rgba(15,56,15,0.62)]"
+    : "border-border-muted bg-[var(--color-card)] shadow-lg";
 
   return (
     <div ref={rootRef} className={`relative flex flex-col gap-2 ${rootAlignmentClassName}`}>
@@ -199,17 +211,17 @@ export default function ShareDropdown({
       </div>
 
       <div
-        className={`absolute top-full z-20 mt-2 flex min-w-[220px] flex-col rounded-lg border border-border-muted bg-[var(--color-card)] p-2 shadow-lg transition-all duration-200 ease-out ${menuPositionClassName} ${
+        className={`absolute top-full z-20 mt-2 flex min-w-[220px] flex-col rounded-lg border p-2 transition-all duration-200 ease-out ${menuPositionClassName} ${menuClassName} ${
           open ? "visible translate-y-0 opacity-100" : "pointer-events-none invisible -translate-y-1 opacity-0"
         }`}
         role="menu"
         aria-hidden={!open}
       >
-        <MenuItem onClick={() => void handleCopy()} icon={<CopyIcon />} label={copyState.copied ? "Copied!" : "Copy Link"} />
-        <MenuItem href={buildEmailShareHref(emailSubject, message)} icon={<EmailIcon />} label="Email" />
-        <MenuItem href={buildTelegramShareHref(message)} icon={<TelegramIcon />} label="Telegram" />
-        <MenuItem href={buildXShareHref(message)} icon={<XIcon />} label="X" />
-        <MenuItem onClick={() => void handleSystemShare()} icon={<MoreIcon />} label="More ways" />
+        <MenuItem onClick={() => void handleCopy()} icon={<CopyIcon />} label={copyState.copied ? "Copied!" : "Copy Link"} monochrome={monochrome} />
+        <MenuItem href={buildEmailShareHref(emailSubject, message)} icon={<EmailIcon />} label="Email" monochrome={monochrome} />
+        <MenuItem href={buildTelegramShareHref(message)} icon={<TelegramIcon />} label="Telegram" monochrome={monochrome} />
+        <MenuItem href={buildXShareHref(message)} icon={<XIcon />} label="X" monochrome={monochrome} />
+        <MenuItem onClick={() => void handleSystemShare()} icon={<MoreIcon />} label="More ways" monochrome={monochrome} />
       </div>
     </div>
   );

@@ -270,7 +270,7 @@ function ListRoadmapCard({
       ? "border-[color-mix(in_srgb,var(--color-accent-green)_40%,transparent)] bg-[var(--color-accent-green-light)] text-[var(--color-accent-green)]"
       : isTbaBadge
         ? monochrome
-          ? "border-border-muted bg-[var(--color-raised)] text-fg-heading"
+          ? "border-[color-mix(in_srgb,var(--color-accent-green)_40%,transparent)] bg-[var(--color-accent-green-light)] text-[var(--color-accent-green)]"
           : "border-[color-mix(in_srgb,#dc2626_36%,transparent)] bg-[rgba(220,38,38,0.12)] text-[#dc2626] [[data-theme=monochrome]_&]:border-border-muted [[data-theme=monochrome]_&]:bg-[var(--color-raised)] [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
         : "border-border-muted bg-[var(--color-raised)] text-fg-heading";
   const applyBadgeClassName =
