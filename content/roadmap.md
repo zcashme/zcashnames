@@ -1,63 +1,63 @@
-# Pre-Private beta onboarding  
-Ensure the product is usable end-to-end for a first group of testers, with clear guidance and minimal blockers.  
-Start: 2026-03-09  
-End: 2026-04-19  
-Users can: load the app, understand what names do, complete a claim, and see it resolve in basic contexts.  
-- Core app, resolver flow, and network-aware home experience are functional.  
-- Initial docs explain how to claim, resolve, and integrate.  
-- Explorer, waitlist, and referral flows are visible and usable.  
-- OTP ownership and reserved-name rules are defined and communicated.  
 
-# Private beta onboarding  
-Work closely with a small group to find where users get stuck, confused, or fail to complete key actions.  
-Start: 2026-04-20  
+--- I. Build
+
+# Alpha v1  `Complete`
+Internal testing of the app to complete claims and perform basic name actions (e.g., update, list, delist, buy, release).
+Start: 2026-03-09
+End: 2026-04-19
+- Claim, update, list, delist, buy, and release functions are available on testnet and mainnet.
+- Docs explain how to claim, resolve, and integrate.
+- Waitlist and referral flows are live.
+
+# Alpha v2  `Complete`
+Find where users get stuck, confused, or unable to complete basic actions.
+Start: 2026-04-20
 End: 2026-05-08
-Users can: attempt real claims, test resolution in wallets, and report issues directly.  
-- Onboarding flow is gated but complete for invited users.  
-- Common failure cases in claiming and resolving are identified and documented.  
-- Mempool feedback improves transparency when transactions will fail.  
-- Wallet resolution gaps are mapped across priority integrations.  
-- Documentation is updated based on real user friction.  
+- Users choose how to authorize changes (one-time passcodes, keypairs).
+- Name Explorer is built on software development kit (SDK). 
+- The SDK is available to developers for review and testing.
 
-# Public Beta v1 (Early Access)  
-Open access to a broader audience with stable core flows and clear instructions for first-time users.  
-Start: 2026-05-04 
-End: 2026-05-18  
-Users can: claim a name, understand ownership, and see it resolve reliably in supported wallets.  
-- Claim, resolve, and OTP flows are simplified and consistent.  
-- Wallet compatibility is validated and communicated clearly.  
-- Public docs and navigation help users complete tasks without assistance.  
-- Reserved names begin unlocking in structured releases.  
-- Early ambassadors and partners bring in new users and feedback.  
+--- II. Test
 
-# Public Beta v2 (Marketplace + Non-custodial sales)  
-Allow users to transact with names directly while maintaining full control of funds and ownership.  
-Start: 2026-05-15  
-End: 2026-05-29  
-Users can: buy and sell names that resolve in wallets, without giving custody to a third party.  
-- Marketplace flows support listing, buying, and transferring names.  
-- Non-custodial sales are executed via NEAR Protocol with clear transaction steps.  
-- Wallets and partners display names correctly during and after transactions.  
-- Integration gaps that affect real usage are prioritized and resolved.  
-- Docs support developers and partners integrating resolution and marketplace features.  
+# Beta v1  [`Apply Now`](https://zcashme.com/beta/apply)
+Beta testers can try names in supported wallets, start a name collection, and sell names in a dedicated marketplace.
+Start: 2026-05-18
+End: 2026-06-09
+- Marketplace can transfer names through non-custodial transactions.
+- The personal dashboard shows all names associated with an address. 
+- Mempool feedback improves transaction transparency.
+- Release notes and status page are provided.
 
-# Public Beta v3 (Ecosystem integrations + subdomains)  
-Expand how names are used across apps, profiles, and structured identity systems.  
-Start: 2026-05-25  
-End: 2026-06-05  
-Users can: create subdomains, link identities, and rely on consistent behavior across apps.  
-- Subdomains allow multiple addresses or use cases under one name.  
-- Profiles integrate with ZcashMe, tracking activity and updates.  
-- Indexer reliability ensures names resolve correctly even during chain changes.  
-- Analytics track how users search, register, and transact.  
-- Infrastructure supports consistent uptime and performance under higher load.  
+# Beta v2  `TBA`
+Beta testers can unlock reserved names, claim names with emojis, and test how renewal and expiry rules respond to activity.
+Start: 2026-06-19
+End: 2026-06-30
+- Reserved names can be claimed with an unlock code.
+- Names containing emojis can be claimed.
+- ZcashNames is integrated with ZcashMe.
+- Name expiration and auto-renewal rules respond to user activity.
 
-# Mainnet Launch (GA)  
-Provide a stable, predictable system that users and partners can rely on without workarounds or manual support.  
-Start: 2026-06-01  
-End: 2026-12-31  
-Users can: register, use, and trade names at scale with consistent performance and support.  
-- Marketplace, resolution, and integrations behave reliably under production conditions.  
-- Systems are hardened against failures, reorgs, and traffic spikes.  
-- Analytics guide ongoing improvements based on real usage.  
-- Support, docs, and community channels handle larger user volumes effectively.  
+# Beta v3  `TBA`
+Beta users can create subdomains, participate in auctions, and access ZcashMe profiles. 
+Start: 2026-07-06
+End: 2026-07-20
+- Subdomains allow multiple addresses under one name.
+- Auction pricing introduced.
+- The SDK can verify name records using Merkle proofs.
+
+--- III. Launch
+
+# Early Access  `TBA`
+Waitlisted users can claim names in ordered waves, with referral activity helping users move up the line.
+Start: 2026-07-31
+End: 2026-08-14
+- Users receive access codes, referral impact, and claim windows.
+- Infrastructure is stress tested for uptime and performance under higher load.
+- A community lead is in place to support users and escalate pre-launch issues.
+
+# Open Registration  `TBA`
+Anyone can register and control names. 
+Start: 2026-08-15
+End: 3000-12-31
+- Marketplace, resolution, and integrations behave reliably under public launch conditions.
+- Systems are hardened against failures, reorgs, abuse, and traffic spikes.
