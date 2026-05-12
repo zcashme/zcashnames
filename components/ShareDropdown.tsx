@@ -10,12 +10,15 @@ type ShareDropdownProps = {
   message: string;
   shareUrl: string;
   emailSubject?: string;
+  copyLabel?: string;
+  copiedLabel?: string;
+  systemShareLabel?: string;
   buttonClassName?: string;
   menuAlign?: "left" | "right";
   showTriggerIcon?: boolean;
 };
 
-function TriggerIcon() {
+export function ShareTriggerIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
       <circle cx="18" cy="5" r="3" />
@@ -52,7 +55,7 @@ function EmailIcon() {
   );
 }
 
-function CopyIcon() {
+export function ShareCopyIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
       <rect x="9" y="9" width="11" height="11" rx="2" />
@@ -112,6 +115,9 @@ export default function ShareDropdown({
   message,
   shareUrl,
   emailSubject = "ZcashNames",
+  copyLabel = "Copy Link",
+  copiedLabel = "Copied!",
+  systemShareLabel = "More ways",
   buttonClassName,
   menuAlign = "right",
   showTriggerIcon = true,
@@ -205,7 +211,7 @@ export default function ShareDropdown({
           aria-haspopup="menu"
           className={triggerClassName}
         >
-          {showTriggerIcon ? <TriggerIcon /> : null}
+          {showTriggerIcon ? <ShareTriggerIcon /> : null}
           <span>{label}</span>
         </button>
       </div>
@@ -217,11 +223,11 @@ export default function ShareDropdown({
         role="menu"
         aria-hidden={!open}
       >
-        <MenuItem onClick={() => void handleCopy()} icon={<CopyIcon />} label={copyState.copied ? "Copied!" : "Copy Link"} monochrome={monochrome} />
+        <MenuItem onClick={() => void handleCopy()} icon={<ShareCopyIcon />} label={copyState.copied ? copiedLabel : copyLabel} monochrome={monochrome} />
         <MenuItem href={buildEmailShareHref(emailSubject, message)} icon={<EmailIcon />} label="Email" monochrome={monochrome} />
         <MenuItem href={buildTelegramShareHref(message)} icon={<TelegramIcon />} label="Telegram" monochrome={monochrome} />
         <MenuItem href={buildXShareHref(message)} icon={<XIcon />} label="X" monochrome={monochrome} />
-        <MenuItem onClick={() => void handleSystemShare()} icon={<MoreIcon />} label="More ways" monochrome={monochrome} />
+        <MenuItem onClick={() => void handleSystemShare()} icon={<MoreIcon />} label={systemShareLabel} monochrome={monochrome} />
       </div>
     </div>
   );
