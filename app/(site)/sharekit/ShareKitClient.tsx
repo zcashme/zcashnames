@@ -2,25 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useCopy } from "@/components/hooks/useCopy";
+import ShareDropdown, { ShareCopyIcon } from "@/components/ShareDropdown";
 import { buildReferralUrl, extractReferralCode } from "@/lib/referral-code";
+import type { ShareKitRecoveryPublicStatus } from "@/lib/sharekit-recovery";
 import type { ShareKitDraft, ShareKitSection } from "@/lib/sharekit";
-import { lookupShareKitReferral } from "./actions";
+import { lookupShareKitReferral, recoverShareKitReferralByEmail } from "./actions";
 
 function replaceYourLink(post: string, shareUrl: string): string {
   return post.replaceAll("[your link]", shareUrl);
-}
-
-function shareToX(post: string): string {
-  return `https://x.com/intent/post?text=${encodeURIComponent(post)}`;
-}
-
-function shareToTelegram(post: string): string {
-  return `https://t.me/share/url?url=${encodeURIComponent(post)}`;
-}
-
-function shareByEmail(post: string): string {
-  return `mailto:?subject=${encodeURIComponent("Zcash Names")}&body=${encodeURIComponent(post)}`;
 }
 
 function replaceResolvedShareUrl(post: string, previousShareUrl: string, nextShareUrl: string): string {
@@ -33,12 +24,6 @@ function replaceResolvedShareUrl(post: string, previousShareUrl: string, nextSha
   return post;
 }
 
-// Client component: receives pre-parsed sections and optionally a resolved referral
-// from the server page. Provides a referral code input that calls the server action
-// lookupShareKitReferral to validate and resolve the owner's name. Builds a share URL
-// from the referral code and substitutes "[your link]" in each draft post. Drafts are
-// editable textareas with copy, reset, and share (X / Telegram / Email / System Share).
-// Section navigation pills scroll to each section.
 export default function ShareKitClient({
   sections,
   initialReferralCode,
@@ -50,6 +35,8 @@ export default function ShareKitClient({
   initialReferralName: string | null;
   initialWarning: string;
 }) {
+  const { resolvedTheme } = useTheme();
+  const monochrome = resolvedTheme === "monochrome";
   const router = useRouter();
   const pathname = usePathname();
   const [referralCode, setReferralCode] = useState(initialReferralCode);
@@ -57,6 +44,11 @@ export default function ShareKitClient({
   const [error, setError] = useState(initialWarning);
   const [referralName, setReferralName] = useState(initialReferralName);
   const [submitting, setSubmitting] = useState(false);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryInput, setRecoveryInput] = useState("");
+  const [recovering, setRecovering] = useState(false);
+  const [recoveryStatus, setRecoveryStatus] = useState<ShareKitRecoveryPublicStatus | null>(null);
+  const [recoveryMessage, setRecoveryMessage] = useState("");
   const previousShareUrlRef = useRef(buildReferralUrl(initialReferralCode));
 
   useEffect(() => {
@@ -141,6 +133,15 @@ export default function ShareKitClient({
     updateUrl("");
   }
 
+  async function recoverReferralCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setRecovering(true);
+    const result = await recoverShareKitReferralByEmail(recoveryInput);
+    setRecovering(false);
+    setRecoveryStatus(result.status);
+    setRecoveryMessage(result.message);
+  }
+
   function updateDraftValue(draftId: string, value: string) {
     setDraftValues((current) => ({ ...current, [draftId]: value }));
   }
@@ -148,6 +149,13 @@ export default function ShareKitClient({
   function resetDraftValue(draftId: string, template: string) {
     setDraftValues((current) => ({ ...current, [draftId]: replaceYourLink(template, shareUrl) }));
   }
+
+  const referralPanelClassName = monochrome
+    ? "bg-transparent"
+    : "bg-[var(--color-raised)]";
+  const referralActionButtonClassName = resolvedTheme === "light"
+    ? "rounded-md border border-border-muted bg-[var(--color-card)] px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading disabled:cursor-not-allowed disabled:opacity-60"
+    : "cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <>
@@ -157,43 +165,102 @@ export default function ShareKitClient({
         </p>
       </div>
 
-
-      <section className="w-full max-w-[36rem] rounded-lg border border-border-muted bg-transparent p-5">
+      <section className={`w-full max-w-[36rem] rounded-lg border border-border-muted p-5 ${referralPanelClassName}`}>
         <form onSubmit={applyReferralCode} className="flex flex-col gap-3">
           <label htmlFor="sharekit-referral-input" className="text-sm font-semibold text-fg-heading">
             {referralCode && referralName
               ? `Posts will be populated with ${referralName}'s referral link`
               : "Referral code or link to populate posts."}
           </label>
-          <input
-            id="sharekit-referral-input"
-            type="text"
-            value={input}
-            onChange={(event) => {
-              setInput(event.target.value);
-              setError("");
-            }}
-            placeholder="zcashnames.com/?ref=your-code"
-            className="min-w-0 rounded-lg border border-border-muted bg-transparent px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
-          />
+          <div className="relative w-full">
+            <input
+              id="sharekit-referral-input"
+              type="text"
+              value={input}
+              onChange={(event) => {
+                setInput(event.target.value);
+                setError("");
+              }}
+              placeholder="zcashnames.com/?ref=your-code"
+              className={`w-full min-w-0 rounded-lg border border-border-muted px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
+                resolvedTheme === "light" ? "bg-[var(--color-card)]" : "bg-transparent"
+              } ${input ? "pr-20" : ""}`}
+            />
+            {input ? (
+              <button
+                type="button"
+                onClick={clearReferralCode}
+                className="absolute right-0 top-0 bottom-0 inline-flex items-center justify-center rounded-r-lg px-4 text-sm font-semibold text-fg-muted transition-colors hover:text-fg-heading"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
               disabled={submitting}
-              className="cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading disabled:cursor-not-allowed disabled:opacity-60"
+              className={referralActionButtonClassName}
             >
               {submitting ? "Checking..." : referralCode ? "Update code" : "Apply code"}
             </button>
             <button
               type="button"
-              onClick={clearReferralCode}
-              className="cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+              onClick={() => {
+                setRecoveryOpen((current) => !current);
+                setRecoveryStatus(null);
+                setRecoveryMessage("");
+              }}
+              className={resolvedTheme === "light"
+                ? "rounded-md border border-border-muted bg-[var(--color-card)] px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+                : "cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"}
+              aria-expanded={recoveryOpen}
+              aria-controls="sharekit-forgot-code"
             >
-              Clear
+              Forgot code?
             </button>
           </div>
           {error && <p className="text-sm text-fg-muted">{error}</p>}
         </form>
+        {recoveryOpen && (
+          <form id="sharekit-forgot-code" onSubmit={recoverReferralCode} className="mt-4 flex flex-col gap-3 border-t border-border-muted pt-4">
+            <label htmlFor="sharekit-recovery-input" className="text-sm font-semibold text-fg-heading">
+              Enter the email address you used to join the waitlist.
+            </label>
+            <input
+              id="sharekit-recovery-input"
+              type="email"
+              value={recoveryInput}
+              onChange={(event) => {
+                setRecoveryInput(event.target.value);
+                setRecoveryStatus(null);
+                setRecoveryMessage("");
+              }}
+              placeholder="you@example.com"
+              className={`min-w-0 rounded-lg border border-border-muted px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
+                resolvedTheme === "light" ? "bg-[var(--color-card)]" : "bg-transparent"
+              }`}
+            />
+            <div className="flex flex-wrap gap-2">
+              <button type="submit" disabled={recovering} className={referralActionButtonClassName}>
+                {recovering ? "Checking..." : "Recover link"}
+              </button>
+            </div>
+            {recoveryMessage ? (
+              <p
+                className={`text-sm ${
+                  recoveryStatus === "accepted"
+                    ? "text-fg-heading"
+                  : recoveryStatus === "error"
+                      ? "text-fg-muted"
+                      : "text-fg-body"
+                }`}
+              >
+                {recoveryMessage}
+              </p>
+            ) : null}
+          </form>
+        )}
       </section>
 
       <section className="flex flex-col gap-5">
@@ -281,38 +348,33 @@ function DraftCard({
   onChange: (value: string) => void;
   onReset: () => void;
 }) {
+  const { resolvedTheme } = useTheme();
+  const monochrome = resolvedTheme === "monochrome";
+  const light = resolvedTheme === "light";
   const copyState = useCopy();
-  const [shareOpen, setShareOpen] = useState(false);
-  const [shareStatus, setShareStatus] = useState("");
   const resetVisible = value !== baselineValue;
   const characterCount = value.length;
-
-  useEffect(() => {
-    setShareOpen(false);
-  }, [value]);
-
-  async function handleSystemShare() {
-    if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
-      setShareStatus("System share is not available on this device.");
-      return;
-    }
-
-    try {
-      await navigator.share({ text: value });
-      setShareStatus("");
-      setShareOpen(false);
-    } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
-        setShareStatus("");
-        return;
-      }
-      setShareStatus("System share was canceled or unavailable.");
-    }
-  }
+  const cardClassName = monochrome
+    ? "border-[rgba(155,188,15,0.45)] bg-[rgba(15,56,15,0.88)] shadow-[0_18px_40px_rgba(15,56,15,0.5)]"
+    : "border-border-muted bg-[var(--color-card)]";
+  const headerClassName = monochrome
+    ? "border-[rgba(155,188,15,0.36)] bg-[rgba(48,98,48,0.34)]"
+    : "border-border-muted bg-[var(--color-raised)]";
+  const textareaClassName = monochrome
+    ? "border-[rgba(155,188,15,0.42)] bg-[rgba(48,98,48,0.22)] text-[var(--mono-3)] placeholder:text-[color:rgba(155,188,15,0.7)] focus:border-[rgba(155,188,15,0.72)] focus:bg-[rgba(48,98,48,0.3)]"
+    : "border-border-muted bg-transparent text-fg-body focus:border-fg-muted";
+  const actionsClassName = monochrome
+    ? "bg-transparent"
+    : light
+      ? "rounded-lg border border-border-muted bg-[var(--color-raised)] p-3"
+      : "";
+  const actionButtonClassName = light
+    ? "rounded-md border border-border-muted bg-[var(--color-card)] px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+    : "cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading";
 
   return (
-    <article className="flex h-full flex-col rounded-lg border border-border-muted bg-[var(--color-card)]">
-      <div className="flex items-center justify-between gap-3 border-b border-border-muted bg-[var(--color-raised)] p-4">
+    <article className={`flex h-full flex-col rounded-lg border ${cardClassName}`}>
+      <div className={`flex items-center justify-between gap-3 border-b p-4 ${headerClassName}`}>
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">{draft.label}</p>
         <p className="text-xs font-medium text-fg-muted/70">{characterCount} chars</p>
       </div>
@@ -320,79 +382,44 @@ function DraftCard({
         <textarea
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="min-h-[320px] w-full flex-1 resize-y rounded-lg border border-border-muted bg-transparent px-3 py-3 text-sm leading-6 text-fg-body outline-none transition-colors focus:border-fg-muted"
+          className={`min-h-[320px] w-full flex-1 resize-y rounded-lg border px-3 py-3 text-sm leading-6 outline-none transition-colors ${textareaClassName}`}
         />
-        <div className="flex flex-wrap gap-2">
+        <div className={`flex flex-wrap gap-2 ${actionsClassName}`}>
           <button
             type="button"
             onClick={() => void copyState.copy(value)}
-            className="cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+            className={`inline-flex items-center gap-2 ${actionButtonClassName}`}
           >
+            <ShareCopyIcon />
             {copyState.copied ? "Copied!" : "Copy"}
           </button>
           {resetVisible && (
             <button
               type="button"
               onClick={onReset}
-              className="cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+              className={actionButtonClassName}
             >
               Reset
             </button>
           )}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShareOpen((current) => !current)}
-              className="cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-              aria-expanded={shareOpen}
-              aria-haspopup="menu"
-            >
-              Share
-            </button>
-            {shareOpen && (
-              <div
-                className="absolute left-0 top-full z-10 mt-2 flex min-w-[180px] flex-col rounded-lg border border-border-muted bg-[var(--color-card)] p-2 shadow-lg"
-                role="menu"
-              >
-                <a
-                  href={shareToX(value)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-md px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:bg-[var(--color-raised)]"
-                  role="menuitem"
-                >
-                  X
-                </a>
-          <a
-            href={shareToTelegram(value)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:bg-[var(--color-raised)]"
-            role="menuitem"
-          >
-                  Telegram
-                </a>
-                <a
-                  href={shareByEmail(value)}
-                  className="rounded-md px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:bg-[var(--color-raised)]"
-                  role="menuitem"
-                >
-                  Email
-                </a>
-                <button
-                  type="button"
-                  onClick={() => void handleSystemShare()}
-                  className="cursor-pointer rounded-md px-3 py-2 text-left text-sm font-semibold text-fg-heading transition-colors hover:bg-[var(--color-raised)]"
-                  role="menuitem"
-                >
-                  Other
-                </button>
-              </div>
-            )}
-          </div>
+          <ShareDropdown
+            label="Share"
+            message={value}
+            shareUrl={shareUrlFromPost(value)}
+            emailSubject="Zcash Names"
+            copyLabel="Copy Text"
+            systemShareLabel="Other"
+            menuAlign="left"
+            showTriggerIcon={true}
+            buttonClassName={`inline-flex items-center gap-2 ${actionButtonClassName}`}
+          />
         </div>
-        {shareStatus && <p className="text-xs text-fg-muted">{shareStatus}</p>}
       </div>
     </article>
   );
+}
+
+function shareUrlFromPost(post: string): string {
+  const match = post.match(/https?:\/\/\S+/);
+  return match?.[0] ?? "";
 }
