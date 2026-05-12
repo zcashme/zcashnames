@@ -1,10 +1,3 @@
-// Client component: the main leaderboard view. Fetches time series, rankings, and
-// stats from @/lib/leaders/leaders on mount. Data flows down into three visual sections:
-//   1. Stacked area chart (waitlist + referred) with a rewards line overlay
-//   2. Stat cards (waitlist/referred/rewards) with expandable help text
-//   3. Ranked all-time table (with streak/top24h badges & copy-reflink) and daily rankings
-// Links out to per-refcode dashboards (/leaders/ref/[code]), snapshots (/leaders/[date]),
-// the share kit, and the terms page.
 "use client";
 
 import Link from "next/link";
@@ -17,6 +10,9 @@ import {
   Line,
   ResponsiveContainer,
   Tooltip,
+  usePlotArea,
+  useXAxisScale,
+  useYAxisScale,
   XAxis,
   YAxis,
 } from "recharts";
@@ -24,16 +20,99 @@ import {
   getDailyRankings,
   getLeaderboard,
   getLeadersTimeSeries,
+  getWeeklyRankings,
   getWaitlistStats,
   type DailyRow,
   type LeaderboardEntry,
   type RankingEntry,
   type ReferralScope,
   type TimeSeriesPoint,
+  type WeeklyRow,
 } from "@/lib/leaders/leaders";
 import CopyIconButton from "@/components/CopyIconButton";
 
 const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
+const PERIOD_COLUMN_STYLE = { width: "11rem", minWidth: "11rem" } as const;
+type AxisSide = "left" | "right";
+
+interface EndpointGuideLine {
+  yAxisId: string;
+  value: number;
+  color: string;
+  side: AxisSide;
+}
+
+function getActiveChartPoint<T extends { date: string }>(state: unknown, data: T[]): T | null {
+  const chartState = state as
+    | { activeTooltipIndex?: number | string; tooltipIndex?: number | string; activeLabel?: string }
+    | null;
+  const rawIndex = chartState?.activeTooltipIndex ?? chartState?.tooltipIndex;
+  const index = rawIndex === undefined ? NaN : Number(rawIndex);
+
+  if (Number.isInteger(index) && index >= 0 && index < data.length) {
+    return data[index];
+  }
+
+  if (chartState?.activeLabel) {
+    return data.find((point) => point.date === chartState.activeLabel) ?? null;
+  }
+
+  return null;
+}
+
+function AxisEndpointGuideLines({
+  point,
+  lines,
+}: {
+  point: { date: string } | null;
+  lines: EndpointGuideLine[];
+}) {
+  const plotArea = usePlotArea();
+  const xScale = useXAxisScale();
+
+  if (!point || !plotArea || !xScale) return null;
+
+  const x = xScale(point.date, { position: "middle" });
+  if (x === undefined) return null;
+
+  return (
+    <g pointerEvents="none">
+      {lines.map((line) => (
+        <AxisEndpointGuideLine key={`${line.yAxisId}-${line.color}`} x={x} plotArea={plotArea} line={line} />
+      ))}
+    </g>
+  );
+}
+
+function AxisEndpointGuideLine({
+  x,
+  plotArea,
+  line,
+}: {
+  x: number;
+  plotArea: { x: number; width: number };
+  line: EndpointGuideLine;
+}) {
+  const yScale = useYAxisScale(line.yAxisId);
+  const y = yScale?.(line.value);
+
+  if (y === undefined) return null;
+
+  const axisX = line.side === "left" ? plotArea.x : plotArea.x + plotArea.width;
+
+  return (
+    <line
+      x1={x}
+      x2={axisX}
+      y1={y}
+      y2={y}
+      stroke={line.color}
+      strokeDasharray="4 4"
+      strokeWidth={1}
+      opacity={0.35}
+    />
+  );
+}
 
 function ZecSymbol({ className }: { className?: string }) {
   return (
@@ -54,6 +133,20 @@ function ZecSymbol({ className }: { className?: string }) {
       <path d="M6 6H14L6 14H14" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
     </svg>
   );
+}
+
+function formatGrowthMetric(count: number, growthPct: number): string {
+  if (count === 0 && growthPct === 0) return "-";
+  if (!Number.isFinite(growthPct)) return `${count} (+∞%)`;
+  const sign = growthPct > 0 ? "+" : "";
+  return `${count} (${sign}${growthPct}%)`;
+}
+
+function formatPositiveGrowthMetric(count: number, growthPct: number): string | null {
+  if (count <= 0) return null;
+  if (!Number.isFinite(growthPct)) return `+${count} (+inf%)`;
+  const sign = growthPct > 0 ? "+" : "";
+  return `+${count} (${sign}${growthPct}%)`;
 }
 
 function EmailConfirmedIcon({ className }: { className?: string }) {
@@ -223,15 +316,29 @@ export default function LeaderboardContent() {
   const [timeSeries, setTimeSeries] = useState<TimeSeriesPoint[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [dailyRows, setDailyRows] = useState<DailyRow[]>([]);
+  const [weeklyRows, setWeeklyRows] = useState<WeeklyRow[]>([]);
+  const [weeklyRankingsMode, setWeeklyRankingsMode] = useState<"weekly" | "allTime">("weekly");
   const [rankingsMode, setRankingsMode] = useState<"daily" | "allTime">("daily");
   const referralScope: ReferralScope = "all";
   const [visibleLeaderboardRows, setVisibleLeaderboardRows] = useState(10);
+  const [visibleWeeklyRows, setVisibleWeeklyRows] = useState(7);
   const [visibleDailyRows, setVisibleDailyRows] = useState(7);
   const [stats, setStats] = useState({ waitlist: 0, referred: 0, rewardsPot: 0 });
   const [loading, setLoading] = useState(true);
   const [activeStatKey, setActiveStatKey] = useState<"waitlist" | "referred" | "rewards" | null>(null);
+  const [activeChartPoint, setActiveChartPoint] = useState<TimeSeriesPoint | null>(null);
   const [copiedReferralCode, setCopiedReferralCode] = useState<string | null>(null);
   const copiedResetTimeoutRef = useRef<number | null>(null);
+
+  const filteredWeeklyRows = useMemo(
+    () => weeklyRows.filter((row) => row.weekStart >= "2026-03-30"),
+    [weeklyRows],
+  );
+
+  const visibleWeeklyRankingRows = useMemo(
+    () => [...filteredWeeklyRows].reverse().slice(0, visibleWeeklyRows),
+    [filteredWeeklyRows, visibleWeeklyRows],
+  );
 
   const filteredDailyRows = useMemo(
     () => dailyRows.filter((row) => row.date >= "2026-03-30"),
@@ -247,15 +354,20 @@ export default function LeaderboardContent() {
     () => leaderboard.slice(0, visibleLeaderboardRows),
     [leaderboard, visibleLeaderboardRows],
   );
+  const chartGuidePoint = activeChartPoint ?? timeSeries[timeSeries.length - 1] ?? null;
+  const chartGuideWaitlist = chartGuidePoint ? chartGuidePoint.referred + chartGuidePoint.nonReferred : 0;
 
   const canShowMoreLeaderboardRows = visibleLeaderboardRows < leaderboard.length;
   const canHideLeaderboardRows = visibleLeaderboardRows > 10;
+
+  const canShowMoreWeeklyRows = visibleWeeklyRows < filteredWeeklyRows.length;
+  const canHideWeeklyRows = visibleWeeklyRows > 7;
 
   const canShowMoreRows = visibleDailyRows < filteredDailyRows.length;
   const canHideRows = visibleDailyRows > 7;
 
   const dailyTopBadgeByKey = useMemo(() => {
-    const badges = new Map<string, "red" | "blue">();
+    const badges = new Map<string, "red">();
     let previousDate: string | null = null;
     let previousTopCode: string | null = null;
     let currentStreak = 0;
@@ -275,7 +387,9 @@ export default function LeaderboardContent() {
         isNextDay(previousDate, row.date);
 
       currentStreak = continuesStreak ? currentStreak + 1 : 1;
-      badges.set(`${row.date}:${topEntry.referral_code}`, currentStreak >= 2 ? "red" : "blue");
+      if (currentStreak >= 2) {
+        badges.set(`${row.date}:${topEntry.referral_code}`, "red");
+      }
 
       previousDate = row.date;
       previousTopCode = topEntry.referral_code;
@@ -283,6 +397,38 @@ export default function LeaderboardContent() {
 
     return badges;
   }, [filteredDailyRows]);
+
+  const weeklyTopBadgeByKey = useMemo(() => {
+    const badges = new Map<string, "red">();
+    let previousWeekStart: string | null = null;
+    let previousTopCode: string | null = null;
+    let currentStreak = 0;
+
+    for (const row of filteredWeeklyRows) {
+      const topEntry = row.weekly[0];
+      if (!topEntry) {
+        previousWeekStart = row.weekStart;
+        previousTopCode = null;
+        currentStreak = 0;
+        continue;
+      }
+
+      const continuesStreak =
+        previousTopCode === topEntry.referral_code &&
+        previousWeekStart !== null &&
+        isNextWeek(previousWeekStart, row.weekStart);
+
+      currentStreak = continuesStreak ? currentStreak + 1 : 1;
+      if (currentStreak >= 2) {
+        badges.set(`${row.weekStart}:${topEntry.referral_code}`, "red");
+      }
+
+      previousWeekStart = row.weekStart;
+      previousTopCode = topEntry.referral_code;
+    }
+
+    return badges;
+  }, [filteredWeeklyRows]);
 
   useEffect(() => {
     setHeaderTitleTarget(document.getElementById("site-route-title"));
@@ -293,10 +439,11 @@ export default function LeaderboardContent() {
 
     (async () => {
       setLoading(true);
-      const [ts, lb, dr, st] = await Promise.all([
+      const [ts, lb, dr, wr, st] = await Promise.all([
         getLeadersTimeSeries(referralScope),
         getLeaderboard(referralScope),
         getDailyRankings(referralScope),
+        getWeeklyRankings(referralScope),
         getWaitlistStats(referralScope),
       ]);
 
@@ -304,6 +451,7 @@ export default function LeaderboardContent() {
         setTimeSeries(ts);
         setLeaderboard(lb);
         setDailyRows(dr);
+        setWeeklyRows(wr);
         setStats(st);
         setLoading(false);
       }
@@ -317,6 +465,10 @@ export default function LeaderboardContent() {
   useEffect(() => {
     setVisibleDailyRows(7);
   }, [filteredDailyRows.length]);
+
+  useEffect(() => {
+    setVisibleWeeklyRows(7);
+  }, [filteredWeeklyRows.length]);
 
   useEffect(() => {
     setVisibleLeaderboardRows(10);
@@ -407,6 +559,8 @@ export default function LeaderboardContent() {
             <AreaChart
               data={timeSeries}
               margin={{ top: 4, right: -12, bottom: 0, left: -12 }}
+              onMouseMove={(state) => setActiveChartPoint(getActiveChartPoint(state, timeSeries))}
+              onMouseLeave={() => setActiveChartPoint(null)}
             >
               <defs>
                 <linearGradient id="gradReferred" x1="0" y1="0" x2="0" y2="1">
@@ -467,6 +621,24 @@ export default function LeaderboardContent() {
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4, fill: REWARDS_CHART_COLOR }}
+              />
+              <AxisEndpointGuideLines
+                point={chartGuidePoint}
+                lines={[
+                  { yAxisId: "rewards", value: chartGuidePoint?.rewardsPot ?? 0, color: REWARDS_CHART_COLOR, side: "left" },
+                  {
+                    yAxisId: "waitlist",
+                    value: chartGuideWaitlist,
+                    color: "var(--leaders-area-non-referred)",
+                    side: "right",
+                  },
+                  {
+                    yAxisId: "waitlist",
+                    value: chartGuidePoint?.referred ?? 0,
+                    color: "var(--leaders-area-referred)",
+                    side: "right",
+                  },
+                ]}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -531,19 +703,31 @@ export default function LeaderboardContent() {
         </div>
       </section>
 
+      <div className="mt-8 flex flex-col gap-8">
       <section
-        className="overflow-hidden rounded-2xl border"
+        className="order-3 overflow-hidden rounded-2xl border"
         style={{
           background: "var(--leaders-card-bg)",
           borderColor: "var(--leaders-card-border)",
         }}
       >
+        <div className="flex items-center justify-between gap-3 px-5 py-4">
+          <h2
+            className="font-semibold"
+            style={{ fontSize: "var(--type-section-subtitle)", color: "var(--fg-heading)" }}
+          >
+            All-time Rankings
+          </h2>
+        </div>
         <div
-          className="overflow-hidden transition-[max-height,opacity] duration-300 ease-out"
-          style={{ maxHeight: `${86 + Math.max(1, visibleLeaderboard.length) * 58}px` }}
+          className="overflow-hidden border-t transition-[max-height,opacity] duration-300 ease-out"
+          style={{
+            borderColor: "var(--leaders-card-border)",
+            maxHeight: `${86 + Math.max(1, visibleLeaderboard.length) * 58}px`,
+          }}
         >
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[760px] text-left text-sm">
               <thead>
               <tr
                 className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
@@ -551,11 +735,12 @@ export default function LeaderboardContent() {
               >
                 <th className="px-4 py-3 sm:px-6">Rank</th>
                 <th className="px-4 py-3 sm:px-6">ZcashName</th>
-                <th className="px-4 py-3 text-right sm:px-6">
+                <th className="px-4 py-3 text-left sm:px-6">
                   <span>Refs</span>
                 </th>
-                <th className="px-4 py-3 text-right sm:px-6">24h</th>
-                <th className="px-4 py-3 text-right sm:px-6">Rewards</th>
+                <th className="px-4 py-3 text-left sm:px-6">24H</th>
+                <th className="px-4 py-3 text-left sm:px-6">1W</th>
+                <th className="px-4 py-3 text-left sm:px-6">Rewards</th>
               </tr>
               </thead>
               <tbody>
@@ -572,20 +757,23 @@ export default function LeaderboardContent() {
                     <td className="px-4 py-3 sm:px-6">
                       <Skeleton w="w-28" />
                     </td>
-                    <td className="px-4 py-3 text-right sm:px-6">
+                    <td className="px-4 py-3 text-left sm:px-6">
                       <Skeleton w="w-8" />
                     </td>
-                    <td className="px-4 py-3 text-right sm:px-6">
-                      <Skeleton w="w-6" />
+                    <td className="px-4 py-3 text-left sm:px-6">
+                      <Skeleton w="w-20" />
                     </td>
-                    <td className="px-4 py-3 text-right sm:px-6">
+                    <td className="px-4 py-3 text-left sm:px-6">
+                      <Skeleton w="w-20" />
+                    </td>
+                    <td className="px-4 py-3 text-left sm:px-6">
                       <Skeleton w="w-14" />
                     </td>
                   </tr>
                 ))
               ) : leaderboard.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-fg-muted">
+                  <td colSpan={6} className="px-4 py-12 text-center text-fg-muted">
                     No referrals yet.
                   </td>
                 </tr>
@@ -660,13 +848,16 @@ export default function LeaderboardContent() {
                         />
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums sm:px-6">
+                    <td className="whitespace-nowrap px-4 py-3 tabular-nums sm:px-6">
                       <span className="font-semibold text-fg-heading">{entry.attributedReferrals}</span>
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-fg-muted sm:px-6">
-                      {entry.recent > 0 ? `+${entry.recent}` : "\u2014"}
+                    <td className="whitespace-nowrap px-4 py-3 tabular-nums text-fg-muted sm:px-6">
+                      {formatGrowthMetric(entry.recent, entry.recentGrowthPct)}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-fg-body sm:px-6">
+                    <td className="whitespace-nowrap px-4 py-3 tabular-nums text-fg-muted sm:px-6">
+                      {formatGrowthMetric(entry.weeklyRecent, entry.weeklyGrowthPct)}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums text-fg-body sm:px-6">
                       <ZecSymbol className="mr-0.5 inline-block" /> {formatZec(entry.potential_rewards)}
                     </td>
                   </tr>
@@ -710,7 +901,178 @@ export default function LeaderboardContent() {
       </section>
 
       <section
-        className="mt-8 overflow-hidden rounded-2xl border"
+        className="order-2 overflow-hidden rounded-2xl border"
+        style={{
+          background: "var(--leaders-card-bg)",
+          borderColor: "var(--leaders-card-border)",
+        }}
+      >
+        <div className="flex items-center justify-between gap-3 px-5 py-4">
+          <h2
+            className="font-semibold"
+            style={{ fontSize: "var(--type-section-subtitle)", color: "var(--fg-heading)" }}
+          >
+            Weekly Rankings
+          </h2>
+          <div
+            className="inline-flex items-center rounded-full border p-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em]"
+            style={{ borderColor: "var(--leaders-card-border)" }}
+          >
+            <button
+              type="button"
+              className="cursor-pointer rounded-full px-3 py-1 transition-colors"
+              style={
+                weeklyRankingsMode === "allTime"
+                  ? { background: "var(--leaders-rank-gold)", color: "var(--leaders-rank-text)" }
+                  : { color: "var(--fg-muted)" }
+              }
+              onClick={() => setWeeklyRankingsMode("allTime")}
+            >
+              All-time
+            </button>
+            <button
+              type="button"
+              className="cursor-pointer rounded-full px-3 py-1 transition-colors"
+              style={
+                weeklyRankingsMode === "weekly"
+                  ? { background: "var(--leaders-rank-gold)", color: "var(--leaders-rank-text)" }
+                  : { color: "var(--fg-muted)" }
+              }
+              onClick={() => setWeeklyRankingsMode("weekly")}
+            >
+              Week
+            </button>
+          </div>
+        </div>
+
+        <div
+          className="overflow-hidden border-t transition-[max-height,opacity] duration-300 ease-out"
+          style={{
+            borderColor: "var(--leaders-card-border)",
+            maxHeight: `${78 + Math.max(1, visibleWeeklyRankingRows.length) * 76}px`,
+          }}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[620px] text-left text-sm">
+              <thead>
+              <tr
+                className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
+                style={{ borderColor: "var(--leaders-card-border)" }}
+              >
+                <th className="px-4 py-2.5 sm:px-6" style={PERIOD_COLUMN_STYLE}>Week</th>
+                <th className="px-4 py-2.5 text-left sm:px-6">ALL</th>
+                <th className="px-4 py-2.5 text-left sm:px-6">1st</th>
+                <th className="px-4 py-2.5 text-left sm:px-6">2nd</th>
+                <th className="px-4 py-2.5 text-left sm:px-6">3rd</th>
+              </tr>
+              </thead>
+              <tbody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr
+                    key={i}
+                    className="border-b last:border-b-0"
+                    style={{ borderColor: "var(--leaders-card-border)" }}
+                  >
+                    <td className="px-4 py-3 tabular-nums sm:px-6">
+                      <Skeleton w="w-44" />
+                    </td>
+                    <td className="px-4 py-3 sm:px-6">
+                      <Skeleton w="w-16" />
+                    </td>
+                    {Array.from({ length: 3 }).map((__, j) => (
+                      <td key={j} className="px-4 py-3 sm:px-6">
+                        <Skeleton w="w-24" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : visibleWeeklyRankingRows.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-12 text-center text-fg-muted">
+                    No weekly ranking data yet.
+                  </td>
+                </tr>
+              ) : (
+                visibleWeeklyRankingRows.map((row) => (
+                  <tr
+                    key={row.week}
+                    className="border-b align-top last:border-b-0"
+                    style={{ borderColor: "var(--leaders-card-border)" }}
+                  >
+                    <td
+                      className="px-4 py-3 font-mono text-[0.78rem] leading-[1.35] text-fg-muted sm:px-6"
+                      style={PERIOD_COLUMN_STYLE}
+                    >
+                      <span className="block">{row.weekStart}</span>
+                      <span className="block">{`to ${row.weekEnd}`}</span>
+                    </td>
+                    <td className="px-4 py-3 tabular-nums text-[0.78rem] text-fg-muted sm:px-6">
+                      {row.totalCount > 0 ? (
+                        `${row.totalCount} (${Number.isFinite(row.totalGrowthPct) ? `${row.totalGrowthPct > 0 ? "+" : ""}${row.totalGrowthPct}%` : "+inf%"})`
+                      ) : (
+                        <span>-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 sm:px-6">
+                      <RankingCell
+                        entry={weeklyRankingsMode === "weekly" ? row.weekly[0] : row.allTime[0]}
+                        badgeType={
+                          weeklyRankingsMode === "weekly" && row.weekly[0]
+                            ? weeklyTopBadgeByKey.get(`${row.weekStart}:${row.weekly[0].referral_code}`) ?? null
+                            : null
+                        }
+                      />
+                    </td>
+                    <td className="px-4 py-3 sm:px-6">
+                      <RankingCell entry={weeklyRankingsMode === "weekly" ? row.weekly[1] : row.allTime[1]} />
+                    </td>
+                    <td className="px-4 py-3 sm:px-6">
+                      <RankingCell entry={weeklyRankingsMode === "weekly" ? row.weekly[2] : row.allTime[2]} />
+                    </td>
+                  </tr>
+                ))
+              )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {filteredWeeklyRows.length > 7 && (
+          <div
+            className="flex items-center justify-between gap-3 border-t px-5 py-3"
+            style={{ borderColor: "var(--leaders-card-border)" }}
+          >
+            {canShowMoreWeeklyRows ? (
+              <button
+                type="button"
+                className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
+                onClick={() => {
+                  setVisibleWeeklyRows((current) => Math.min(current + 7, filteredWeeklyRows.length));
+                }}
+              >
+                Show 7 more
+              </button>
+            ) : (
+              <span aria-hidden="true" />
+            )}
+            {canHideWeeklyRows && (
+              <button
+                type="button"
+                className="ml-auto cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
+                onClick={() => {
+                  setVisibleWeeklyRows((current) => Math.max(7, current - 7));
+                }}
+              >
+                Show 7 less
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section
+        className="order-1 overflow-hidden rounded-2xl border"
         style={{
           background: "var(--leaders-card-bg)",
           borderColor: "var(--leaders-card-border)",
@@ -768,7 +1130,8 @@ export default function LeaderboardContent() {
                 className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
                 style={{ borderColor: "var(--leaders-card-border)" }}
               >
-                <th className="px-4 py-2.5 sm:px-6">Date</th>
+                <th className="px-4 py-2.5 sm:px-6" style={PERIOD_COLUMN_STYLE}>Date</th>
+                <th className="px-4 py-2.5 text-left sm:px-6">ALL</th>
                 <th className="px-4 py-2.5 text-left sm:px-6">1st</th>
                 <th className="px-4 py-2.5 text-left sm:px-6">2nd</th>
                 <th className="px-4 py-2.5 text-left sm:px-6">3rd</th>
@@ -785,6 +1148,9 @@ export default function LeaderboardContent() {
                     <td className="px-4 py-3 tabular-nums sm:px-6">
                       <Skeleton w="w-20" />
                     </td>
+                    <td className="px-4 py-3 sm:px-6">
+                      <Skeleton w="w-16" />
+                    </td>
                     {Array.from({ length: 3 }).map((__, j) => (
                       <td key={j} className="px-4 py-3 sm:px-6">
                         <Skeleton w="w-24" />
@@ -794,7 +1160,7 @@ export default function LeaderboardContent() {
                 ))
               ) : visibleRows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
+                  <td colSpan={5} className="px-4 py-12 text-center text-fg-muted">
                     No daily ranking data yet.
                   </td>
                 </tr>
@@ -805,10 +1171,20 @@ export default function LeaderboardContent() {
                     className="border-b align-top last:border-b-0"
                     style={{ borderColor: "var(--leaders-card-border)" }}
                   >
-                    <td className="px-4 py-3 font-mono text-[0.78rem] sm:px-6">
+                    <td
+                      className="px-4 py-3 font-mono text-[0.78rem] sm:px-6"
+                      style={PERIOD_COLUMN_STYLE}
+                    >
                       <Link href={`/leaders/${row.date}`} className="text-fg-muted underline-offset-2 hover:underline">
                         {row.date}
                       </Link>
+                    </td>
+                    <td className="px-4 py-3 tabular-nums text-[0.78rem] text-fg-muted sm:px-6">
+                      {row.totalCount > 0 ? (
+                        `${row.totalCount} (${Number.isFinite(row.totalGrowthPct) ? `${row.totalGrowthPct > 0 ? "+" : ""}${row.totalGrowthPct}%` : "+inf%"})`
+                      ) : (
+                        <span>-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 sm:px-6">
                       <RankingCell
@@ -867,6 +1243,8 @@ export default function LeaderboardContent() {
         )}
       </section>
 
+      </div>
+
       <HowItWorks />
     </>
   );
@@ -887,12 +1265,7 @@ const HOW_IT_WORKS: { title: string; body: ReactNode }[] = [
         <span className="mt-2 block text-fg-muted">
           <img src="/icons/fire-red.apng" alt="streak" className="mr-1 inline-block h-4 w-4 align-text-bottom" />
           A red fire icon next to a name means that person has had the most referrals for more than
-          one day in a row.
-        </span>
-        <span className="mt-1 block text-fg-muted">
-          <img src="/icons/fire-blue.apng" alt="top 24h" className="mr-1 inline-block h-4 w-4 align-text-bottom" />
-          A blue fire icon next to a name means that person has had the most referrals in the last
-          24 hours.
+          one period in a row.
         </span>
       </>
     ),
@@ -998,9 +1371,9 @@ function RankingCell({
   badgeType = null,
 }: {
   entry?: RankingEntry;
-  badgeType?: "red" | "blue" | null;
+  badgeType?: "red" | null;
 }) {
-  if (!entry) {
+  if (!entry || !entry.referral_code || !entry.name || !Number.isFinite(entry.count) || !Number.isFinite(entry.payout)) {
     return <span className="text-fg-muted">-</span>;
   }
 
@@ -1015,8 +1388,8 @@ function RankingCell({
         </Link>
         {badgeType && (
           <img
-            src={badgeType === "red" ? "/icons/fire-red.apng" : "/icons/fire-blue.apng"}
-            alt={badgeType === "red" ? "streak" : "top 24h"}
+            src="/icons/fire-red.apng"
+            alt="streak"
             className="ml-1 inline-block h-4 w-4 align-text-bottom"
           />
         )}
@@ -1033,6 +1406,12 @@ function isNextDay(previousDate: string, nextDate: string): boolean {
   const previous = new Date(`${previousDate}T00:00:00.000Z`).getTime();
   const next = new Date(`${nextDate}T00:00:00.000Z`).getTime();
   return next - previous === 24 * 60 * 60 * 1000;
+}
+
+function isNextWeek(previousWeekStart: string, nextWeekStart: string): boolean {
+  const previous = new Date(`${previousWeekStart}T00:00:00.000Z`).getTime();
+  const next = new Date(`${nextWeekStart}T00:00:00.000Z`).getTime();
+  return next - previous === 7 * 24 * 60 * 60 * 1000;
 }
 
 function formatPayout(value: number): string {
