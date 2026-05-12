@@ -95,6 +95,7 @@ type ReferralCommissionPinRequestResult =
 const COMMISSION_PIN_SENT_MESSAGE = "If the email matches, we will send the code there.";
 const COMMISSION_PIN_RATE_LIMIT_MESSAGE = "We already sent you a code today";
 const COMMISSION_PIN_RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
+const WAITLIST_PAGE_SIZE = 1000;
 
 function toWaitlistReferralRows(data: Record<string, unknown>[]): WaitlistReferralRow[] {
   return data
@@ -178,6 +179,32 @@ function isNextDay(previousDate: string, nextDate: string): boolean {
   return next - previous === 24 * 60 * 60 * 1000;
 }
 
+async function fetchAllWaitlistRows(): Promise<Record<string, unknown>[] | null> {
+  try {
+    const rows: Record<string, unknown>[] = [];
+    let offset = 0;
+
+    while (true) {
+      const { data, error } = await db
+        .from("zn_waitlist")
+        .select("name, referral_code, referred_by, created_at, email_verified, cabal")
+        .order("created_at", { ascending: true })
+        .range(offset, offset + WAITLIST_PAGE_SIZE - 1);
+
+      if (error || !data) return null;
+
+      rows.push(...data);
+
+      if (data.length < WAITLIST_PAGE_SIZE) break;
+      offset += WAITLIST_PAGE_SIZE;
+    }
+
+    return rows;
+  } catch {
+    return null;
+  }
+}
+
 export async function getWaitlistStats(
   scope: ReferralScope = "all",
 ): Promise<{ waitlist: number; referred: number; rewardsPot: number }> {
@@ -197,12 +224,8 @@ export async function getWaitlistStats(
 
     const { count: referredCount } = await referredQuery;
 
-    const { data, error } = await db
-      .from("zn_waitlist")
-      .select("name, referral_code, referred_by, created_at, email_verified, cabal")
-      .order("created_at", { ascending: true });
-
-    if (error || !data) return { waitlist: 0, referred: 0, rewardsPot: 0 };
+    const data = await fetchAllWaitlistRows();
+    if (!data) return { waitlist: 0, referred: 0, rewardsPot: 0 };
 
     const rows = toWaitlistReferralRows(data);
     const rewardsPot = calculateRewardsPot(rows, scope);
@@ -221,12 +244,8 @@ export async function getLeadersTimeSeries(
   scope: ReferralScope = "all",
 ): Promise<TimeSeriesPoint[]> {
   try {
-    const { data, error } = await db
-      .from("zn_waitlist")
-      .select("name, referral_code, referred_by, created_at, email_verified, cabal")
-      .order("created_at", { ascending: true });
-
-    if (error || !data) return [];
+    const data = await fetchAllWaitlistRows();
+    if (!data) return [];
 
     const rows = toWaitlistReferralRows(data);
     const nameMap: Record<string, string> = {};
@@ -306,11 +325,8 @@ export async function getLeaderboard(
   scope: ReferralScope = "all",
 ): Promise<LeaderboardEntry[]> {
   try {
-    const { data, error } = await db
-      .from("zn_waitlist")
-      .select("name, referral_code, referred_by, created_at, email_verified, cabal")
-      .order("created_at", { ascending: true });
-    if (error || !data) return [];
+    const data = await fetchAllWaitlistRows();
+    if (!data) return [];
 
     const rows = toWaitlistReferralRows(data);
     const summaries = buildFixedDepthReferralSummaries(rows, scope);
@@ -387,12 +403,8 @@ export async function getLeaderboard(
 
 export async function getDailyRankings(scope: ReferralScope = "all"): Promise<DailyRow[]> {
   try {
-    const { data, error } = await db
-      .from("zn_waitlist")
-      .select("created_at, referral_code, referred_by, name, email_verified")
-      .order("created_at", { ascending: true });
-
-    if (error || !data || data.length === 0) return [];
+    const data = await fetchAllWaitlistRows();
+    if (!data || data.length === 0) return [];
 
     const nameMap: Record<string, string> = {};
     const dailyCountsByDate: Record<string, Record<string, number>> = {};
@@ -524,13 +536,8 @@ export async function getReferralDashboard(
     const normalizedCode = referralCode.trim();
     if (!normalizedCode) return null;
 
-    const { data, error } = await db
-      .from("zn_waitlist")
-      .select("name, referral_code, referred_by, created_at, email_verified, cabal")
-      .not("referral_code", "is", null)
-      .order("created_at", { ascending: true });
-
-    if (error || !data) return null;
+    const data = await fetchAllWaitlistRows();
+    if (!data) return null;
 
     const rows = toWaitlistReferralRows(data);
 
