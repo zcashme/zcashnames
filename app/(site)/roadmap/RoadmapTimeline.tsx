@@ -1,48 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTheme } from "next-themes";
+import ShareDropdown from "@/components/ShareDropdown";
 import { parseIsoDateUtc, type RoadmapPeriod } from "@/lib/roadmap";
-
-type PeriodLayout = RoadmapPeriod & {
-  isCurrent: boolean;
-};
+import {
+  buildRoadmapLayouts,
+  buildRoadmapShareMessage,
+  countCompletedRoadmapPeriods,
+  type RoadmapPeriodLayout,
+} from "@/lib/roadmap-status";
 
 const monthFormatter = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 const rangeFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const ROADMAP_SHARE_URL = "https://www.zcashnames.com/roadmap";
 
-const PERIOD_ACCENTS = [
-  {
-    fill: "linear-gradient(135deg, rgba(244,183,40,0.96) 0%, rgba(255,214,102,0.88) 100%)",
-    border: "rgba(244,183,40,0.85)",
-    glow: "rgba(244,183,40,0.22)",
-    chip: "rgba(244,183,40,0.16)",
-  },
-  {
-    fill: "linear-gradient(135deg, rgba(46,129,255,0.95) 0%, rgba(103,196,255,0.86) 100%)",
-    border: "rgba(103,196,255,0.82)",
-    glow: "rgba(46,129,255,0.18)",
-    chip: "rgba(46,129,255,0.16)",
-  },
-  {
-    fill: "linear-gradient(135deg, rgba(74,222,128,0.92) 0%, rgba(125,240,185,0.82) 100%)",
-    border: "rgba(74,222,128,0.82)",
-    glow: "rgba(74,222,128,0.18)",
-    chip: "rgba(74,222,128,0.16)",
-  },
-  {
-    fill: "linear-gradient(135deg, rgba(168,85,247,0.9) 0%, rgba(224,170,255,0.84) 100%)",
-    border: "rgba(192,132,252,0.82)",
-    glow: "rgba(168,85,247,0.18)",
-    chip: "rgba(168,85,247,0.16)",
-  },
-];
-
-const MONO_ACCENT = {
-  fill: "linear-gradient(135deg, rgba(155,188,15,0.92) 0%, rgba(139,172,15,0.84) 100%)",
-  border: "rgba(155,188,15,0.82)",
-  glow: "rgba(155,188,15,0.18)",
-  chip: "rgba(155,188,15,0.16)",
+type RoadmapSectionGroup = {
+  title?: string;
+  periods: RoadmapPeriodLayout[];
 };
 
 function toLocalUtcDate(date: Date): Date {
@@ -66,56 +42,70 @@ function periodsStart(periods: RoadmapPeriod[]): Date {
   return earliest;
 }
 
-function periodsEnd(periods: RoadmapPeriod[]): Date {
-  let latest = parseIsoDateUtc(periods[0].endDate);
+function periodsLastStart(periods: RoadmapPeriod[]): Date {
+  let latest = parseIsoDateUtc(periods[0].startDate);
 
   for (const period of periods) {
-    const date = parseIsoDateUtc(period.endDate);
+    const date = parseIsoDateUtc(period.startDate);
     if (date.getTime() > latest.getTime()) latest = date;
   }
 
   return latest;
 }
 
-function buildLayouts(periods: RoadmapPeriod[], today: Date): PeriodLayout[] {
-  return periods.map((period) => {
-    const start = parseIsoDateUtc(period.startDate);
-    const end = parseIsoDateUtc(period.endDate);
-
-    return {
-      ...period,
-      isCurrent: today.getTime() >= start.getTime() && today.getTime() <= end.getTime(),
-    };
-  });
-}
-
 function chooseInitialPeriod(periods: RoadmapPeriod[], today: Date): string {
-  const current = periods.find((period) => {
-    const start = parseIsoDateUtc(period.startDate);
-    const end = parseIsoDateUtc(period.endDate);
-    return today.getTime() >= start.getTime() && today.getTime() <= end.getTime();
-  });
+  const layouts = buildRoadmapLayouts(periods, today);
+  const current = layouts.find((period) => period.isCurrent);
   if (current) return current.id;
 
-  const upcoming = periods.find((period) => parseIsoDateUtc(period.startDate).getTime() > today.getTime());
+  const upcoming = layouts.find((period) => period.isUpcoming);
   return upcoming?.id ?? periods[0].id;
+}
+
+function buildSectionGroups(periods: RoadmapPeriodLayout[]): RoadmapSectionGroup[] {
+  const groups: RoadmapSectionGroup[] = [];
+
+  for (const period of periods) {
+    const previous = groups[groups.length - 1];
+    if (previous && previous.title === period.sectionTitle) {
+      previous.periods.push(period);
+      continue;
+    }
+
+    groups.push({
+      title: period.sectionTitle,
+      periods: [period],
+    });
+  }
+
+  return groups;
 }
 
 export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] }) {
   const { resolvedTheme } = useTheme();
   const today = toLocalUtcDate(new Date());
   const timelineStart = periodsStart(periods);
-  const timelineEnd = periodsEnd(periods);
-  const layouts = buildLayouts(periods, today);
+  const timelineEnd = periodsLastStart(periods);
+  const layouts = buildRoadmapLayouts(periods, today);
   const [expandedIds, setExpandedIds] = useState<string[]>(() => [chooseInitialPeriod(periods, today)]);
   const currentPeriodRef = useRef<HTMLElement | null>(null);
   const activePeriods = layouts.filter((layout) => layout.isCurrent);
+  const upcomingPeriod = layouts.find((layout) => layout.isUpcoming);
+  const statusTarget = activePeriods[0] ?? upcomingPeriod;
   const currentPeriod =
-    activePeriods[0] ??
+    statusTarget ??
     layouts.find((layout) => expandedIds.includes(layout.id)) ??
     layouts[0];
-  const firstCurrentPeriodId = activePeriods[0]?.id;
-  const isMonochrome = resolvedTheme === "monochrome";
+  const statusTargetId = statusTarget?.id;
+  const completedCount = countCompletedRoadmapPeriods(periods, today);
+  const shareMessage = buildRoadmapShareMessage({
+    currentFocusTitle: currentPeriod.title,
+    completedCount,
+    totalCount: periods.length,
+    shareUrl: ROADMAP_SHARE_URL,
+  });
+  const showCurrentPhaseButton = activePeriods.length > 0;
+  const sectionGroups = buildSectionGroups(layouts);
 
   function centerCurrentPeriod(behavior: ScrollBehavior) {
     currentPeriodRef.current?.scrollIntoView({ behavior, block: "center" });
@@ -128,7 +118,15 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
   }
 
   function expandCurrentPeriods() {
-    setExpandedIds(activePeriods.map((period) => period.id));
+    const targetIds = statusTarget ? [statusTarget.id] : [];
+    if (targetIds.length === 0) return;
+    setExpandedIds(targetIds);
+    window.requestAnimationFrame(() => centerCurrentPeriod("smooth"));
+  }
+
+  function focusCurrentPeriod() {
+    if (!statusTarget) return;
+    setExpandedIds((current) => (current.includes(statusTarget.id) ? current : [...current, statusTarget.id]));
     window.requestAnimationFrame(() => centerCurrentPeriod("smooth"));
   }
 
@@ -139,76 +137,99 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="rounded-[28px] border border-border-muted bg-[var(--color-card)] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.14)] sm:p-6">
+      <div className="flex justify-start">
+        <ShareDropdown
+          label="Share"
+          message={shareMessage}
+          shareUrl={ROADMAP_SHARE_URL}
+          emailSubject="ZcashNames Roadmap"
+          menuAlign="left"
+          buttonClassName="inline-flex min-h-11 items-center gap-2 rounded-md border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+        />
+      </div>
+      <section className="rounded-lg border border-border-muted bg-[var(--color-card)] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.14)] sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <h1 className="text-4xl font-bold leading-tight text-fg-heading sm:text-5xl">
-              Product roadmap
+              Launch Sequence
             </h1>
-            <p className="mt-3 text-base leading-7 text-fg-body sm:text-lg">
-              Phases are anchored to real calendar dates and expand to show the work inside them.
-            </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={expandCurrentPeriods}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted bg-[var(--color-raised)] px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
-            >
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-green)]" aria-hidden="true" />
-              Current phase
-            </button>
-          </div>
+          {showCurrentPhaseButton ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={expandCurrentPeriods}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted bg-[var(--color-raised)] px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+              >
+                <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-green)]" aria-hidden="true" />
+                Current phase
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-border-muted bg-[var(--color-raised)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Visible range</p>
+          <div className="rounded-lg border border-border-muted bg-[var(--color-raised)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Outlook</p>
             <p className="mt-2 text-base font-semibold text-fg-heading">
               {monthFormatter.format(timelineStart)} to {monthFormatter.format(timelineEnd)}
             </p>
           </div>
-          <div className="rounded-2xl border border-border-muted bg-[var(--color-raised)] p-4">
+          <div className="rounded-lg border border-border-muted bg-[var(--color-raised)] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Current focus</p>
-            <p className="mt-2 text-base font-semibold text-fg-heading">{currentPeriod.title}</p>
+            <button
+              type="button"
+              onClick={focusCurrentPeriod}
+              className="mt-2 text-left text-base font-semibold text-fg-heading transition-colors hover:text-[var(--color-brand-blue)]"
+            >
+              {currentPeriod.title}
+            </button>
           </div>
-          <div className="rounded-2xl border border-border-muted bg-[var(--color-raised)] p-4">
+          <div className="rounded-lg border border-border-muted bg-[var(--color-raised)] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Phases</p>
-            <p className="mt-2 text-base font-semibold text-fg-heading">{periods.length} mapped</p>
+            <p className="mt-2 text-base font-semibold text-fg-heading">
+              {completedCount} of {periods.length} complete
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-border-muted bg-[var(--color-card)] p-3 shadow-[0_18px_40px_rgba(0,0,0,0.14)] sm:p-5">
-        <div className="flex flex-col gap-4">
-          {layouts.map((period, index) => (
-            <ListRoadmapCard
-              key={period.id}
-              currentMarkerRef={period.id === firstCurrentPeriodId ? currentPeriodRef : undefined}
-              period={period}
-              accent={isMonochrome ? MONO_ACCENT : PERIOD_ACCENTS[index % PERIOD_ACCENTS.length]}
-              expanded={expandedIds.includes(period.id)}
-              onExpand={() => togglePeriod(period.id)}
-              monochrome={isMonochrome}
-            />
-          ))}
-        </div>
-      </section>
+      <div className="flex flex-col gap-8">
+        {sectionGroups.map((group) => (
+          <section key={group.title ?? group.periods[0].id} className="flex flex-col gap-3">
+            {group.title ? (
+              <p className="text-lg font-bold uppercase tracking-[0.08em] text-fg-heading sm:text-xl">
+                {group.title}
+              </p>
+            ) : null}
+            <div className="flex flex-col gap-4">
+              {group.periods.map((period) => (
+                <ListRoadmapCard
+                  key={period.id}
+                  currentMarkerRef={period.id === statusTargetId ? currentPeriodRef : undefined}
+                  period={period}
+                  expanded={expandedIds.includes(period.id)}
+                  onExpand={() => togglePeriod(period.id)}
+                  monochrome={resolvedTheme === "monochrome"}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   );
 }
 
 function ListRoadmapCard({
   period,
-  accent,
   expanded,
   onExpand,
   currentMarkerRef,
   monochrome,
 }: {
-  period: PeriodLayout;
-  accent: typeof MONO_ACCENT;
+  period: RoadmapPeriodLayout;
   expanded: boolean;
   onExpand: () => void;
   currentMarkerRef?: RefObject<HTMLElement | null>;
@@ -216,22 +237,54 @@ function ListRoadmapCard({
 }) {
   const panelId = `${period.id}-tasks`;
   const buttonId = `${period.id}-toggle`;
+  const isHighlighted = period.isCurrent || period.isUpcoming;
+  const highlightColor = period.isCurrent ? "var(--color-accent-green)" : "var(--color-accent-yellow)";
+  const highlightBackground = period.isCurrent
+    ? "color-mix(in srgb, var(--color-card) 92%, var(--color-accent-green-light))"
+    : "color-mix(in srgb, var(--color-card) 90%, var(--color-accent-yellow-light))";
+  const highlightBoxShadow = period.isCurrent
+    ? "0 0 0 1px color-mix(in srgb, var(--color-accent-green) 28%, transparent), 0 18px 40px rgba(0,0,0,0.14)"
+    : "0 0 0 1px color-mix(in srgb, var(--color-accent-yellow) 28%, transparent), 0 18px 40px rgba(0,0,0,0.14)";
+  const statusLabel = period.isCurrent ? "Active now" : null;
+  const normalizedBadge = period.badgeLabel?.trim().toLowerCase();
+  const isCompleteBadge = normalizedBadge === "complete";
+  const isApplyBadge = normalizedBadge === "apply now";
+  const isTbaBadge = normalizedBadge === "tba";
+  const badgeClassName =
+    isCompleteBadge || isApplyBadge
+      ? "border-[color-mix(in_srgb,var(--color-accent-green)_40%,transparent)] bg-[var(--color-accent-green-light)] text-[var(--color-accent-green)]"
+      : isTbaBadge
+        ? monochrome
+          ? "border-border-muted bg-[var(--color-raised)] text-fg-heading"
+          : "border-[color-mix(in_srgb,#dc2626_36%,transparent)] bg-[rgba(220,38,38,0.12)] text-[#dc2626] [[data-theme=monochrome]_&]:border-border-muted [[data-theme=monochrome]_&]:bg-[var(--color-raised)] [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
+        : "border-border-muted bg-[var(--color-raised)] text-fg-heading";
+  const applyBadgeClassName =
+    "border-[color-mix(in_srgb,var(--color-accent-green)_40%,transparent)] bg-transparent text-[var(--color-accent-green)]";
+  const taskMarkerClassName = isCompleteBadge
+    ? monochrome
+      ? "mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--fg-muted)]"
+      : "mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--color-accent-green)]"
+    : isTbaBadge
+      ? monochrome
+        ? "mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--fg-muted)]"
+        : "mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-[#dc2626] [[data-theme=monochrome]_&]:bg-[var(--fg-muted)]"
+      : period.isUpcoming
+        ? "mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--color-accent-yellow)]"
+        : "mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--fg-muted)]";
 
   return (
     <article
       ref={(node) => {
         if (currentMarkerRef) currentMarkerRef.current = node;
       }}
-      className={`rounded-[24px] border p-4 transition-colors sm:p-5 ${
-        period.isCurrent ? "" : "border-border-muted bg-[var(--color-card)]"
+      className={`rounded-lg border p-4 transition-colors sm:p-5 ${
+        isHighlighted ? "" : "border-border-muted bg-[var(--color-card)]"
       }`}
       style={{
-        borderColor: period.isCurrent ? "var(--color-accent-green)" : undefined,
-        background: period.isCurrent
-          ? "color-mix(in srgb, var(--color-card) 92%, var(--color-accent-green-light))"
-          : undefined,
-        boxShadow: period.isCurrent
-          ? "0 0 0 1px color-mix(in srgb, var(--color-accent-green) 28%, transparent), 0 18px 40px rgba(0,0,0,0.14)"
+        borderColor: isHighlighted ? highlightColor : undefined,
+        background: isHighlighted ? highlightBackground : undefined,
+        boxShadow: isHighlighted
+          ? highlightBoxShadow
           : "0 18px 40px rgba(0,0,0,0.14)",
       }}
     >
@@ -246,20 +299,42 @@ function ListRoadmapCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="flex items-center gap-2 text-2xl font-bold text-fg-heading">
-              {period.isCurrent && (
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-green)]" aria-hidden="true" />
+              {(period.isCurrent || period.isUpcoming) && (
+                <span
+                  className={`inline-block h-2.5 w-2.5 rounded-full ${
+                    period.isCurrent ? "bg-[var(--color-accent-green)]" : "bg-[var(--color-accent-yellow)]"
+                  }`}
+                  aria-hidden="true"
+                />
               )}
               <span>{period.title}</span>
             </h2>
-            {period.isCurrent && (
+            {period.badgeLabel && period.badgeHref ? (
+              <Link
+                href="/beta/apply"
+                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors hover:border-fg-heading ${isApplyBadge ? applyBadgeClassName : badgeClassName}`}
+              >
+                <span>{isCompleteBadge ? `✓ ${period.badgeLabel}` : period.badgeLabel}</span>
+                {isApplyBadge ? <span aria-hidden="true">→</span> : null}
+              </Link>
+            ) : period.badgeLabel ? (
+              <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${badgeClassName}`}>
+                {isCompleteBadge ? `✓ ${period.badgeLabel}` : period.badgeLabel}
+              </span>
+            ) : null}
+            {statusLabel && (
               <span
-                className="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-accent-green)]"
+                className="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em]"
                 style={{
-                  border: "1px solid color-mix(in srgb, var(--color-accent-green) 40%, transparent)",
-                  background: "var(--color-accent-green-light)",
+                  color: highlightColor,
+                  border: `1px solid color-mix(in srgb, ${highlightColor} 40%, transparent)`,
+                  background: period.isCurrent
+                    ? "var(--color-accent-green-light)"
+                    : "var(--color-accent-yellow-light)",
                 }}
               >
-                Active now
+                <span aria-hidden="true">→</span>
+                <span>{statusLabel}</span>
               </span>
             )}
           </div>
@@ -268,26 +343,15 @@ function ListRoadmapCard({
             <span className="inline-flex rounded-full border border-border-muted px-3 py-1.5 font-semibold">
               {formatRange(period.startDate, period.endDate)}
             </span>
-            <span
-              className="inline-flex rounded-full px-3 py-1.5 font-semibold"
-              style={{
-                background: monochrome ? "var(--color-raised)" : accent.chip,
-                border: monochrome ? "1px solid var(--border-muted)" : undefined,
-              }}
-            >
+            <span className="inline-flex rounded-full border border-border-muted bg-[var(--color-raised)] px-3 py-1.5 font-semibold">
               {period.tasks.length} tasks
             </span>
           </div>
         </div>
         <span
-          className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-lg font-black text-[var(--color-background)]"
+          className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border-muted bg-[var(--color-raised)] text-lg font-black text-fg-heading"
           style={{
-            background: monochrome ? "var(--color-raised)" : accent.fill,
-            borderColor: monochrome ? "var(--border-muted)" : accent.border,
-            boxShadow: monochrome
-              ? "none"
-              : `0 0 0 1px ${accent.border}, 0 14px 28px ${accent.glow}`,
-            color: monochrome ? "var(--fg-heading)" : "var(--color-background)",
+            boxShadow: "none",
           }}
           aria-hidden="true"
         >
@@ -300,10 +364,10 @@ function ListRoadmapCard({
           id={panelId}
           role="region"
           aria-labelledby={buttonId}
-          className="mt-4 rounded-[18px] border border-border-muted bg-[var(--color-raised)] p-4"
+          className="mt-4 rounded-lg border border-border-muted bg-[var(--color-raised)] p-4"
         >
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">
-            Tasks in this phase
+            In this phase
           </p>
           <ul className="mt-3 grid gap-3">
             {period.tasks.map((task) => (
@@ -311,11 +375,7 @@ function ListRoadmapCard({
                 key={task}
                 className="flex items-start gap-3 rounded-2xl border border-border-muted bg-[var(--color-card)] px-3 py-3 text-sm leading-6 text-fg-body"
               >
-                <span
-                  className="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ background: monochrome ? "var(--fg-muted)" : accent.border }}
-                  aria-hidden="true"
-                />
+                <span className={taskMarkerClassName} aria-hidden="true" />
                 <span>{task}</span>
               </li>
             ))}
