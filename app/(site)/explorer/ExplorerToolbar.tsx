@@ -1,16 +1,14 @@
 /**
  * ExplorerToolbar — the filter bar for the explorer page.
- * Renders a search input (delegated to ToolbarSearchInput), a network selector
- * (Mainnet / Testnet), and a sort dropdown (by height / name / type).
- * All state is lifted to ExplorerView; this component only receives callbacks.
+ * Renders a search input (delegated to ToolbarSearchInput) and a network
+ * selector (Mainnet / Testnet). All state is lifted to ExplorerView; this
+ * component only receives callbacks.
  */
 "use client";
 
 import { useState } from "react";
 import ToolbarSearchInput from "@/components/search/ToolbarSearchInput";
 import type { Network } from "@/lib/types";
-
-export type SortBy = "height" | "name" | "type";
 
 function Dropdown({
   value,
@@ -80,8 +78,6 @@ export default function ExplorerToolbar({
   onClearSearch,
   network,
   onNetworkChange,
-  sortBy,
-  onSortChange,
 }: {
   searchQuery: string;
   onSearchChange: (q: string) => void;
@@ -89,8 +85,6 @@ export default function ExplorerToolbar({
   onClearSearch: () => void;
   network: Network;
   onNetworkChange: (n: Network) => void;
-  sortBy: SortBy;
-  onSortChange: (s: SortBy) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -106,15 +100,6 @@ export default function ExplorerToolbar({
         options={[
           { value: "mainnet", label: "Mainnet" },
           { value: "testnet", label: "Testnet" },
-        ]}
-      />
-      <Dropdown
-        value={sortBy}
-        onChange={(v) => onSortChange(v as SortBy)}
-        options={[
-          { value: "height", label: "Last Updated" },
-          { value: "name", label: "Name" },
-          { value: "type", label: "Type" },
         ]}
       />
     </div>

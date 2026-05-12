@@ -8,7 +8,7 @@
 
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import ExplorerToolbar, { type SortBy } from "./ExplorerToolbar";
+import ExplorerToolbar from "./ExplorerToolbar";
 import {
   EXPLORER_PAGE_SIZE,
   clampPage,
@@ -34,32 +34,6 @@ import { zatsToZec } from "@/lib/zns/utils";
 import type { Listing, Network, Registration, ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import { ACTIONS, ACTION_LABELS } from "@/lib/types";
-
-function sortEvents(events: ZnsEvent[], sortBy: SortBy): ZnsEvent[] {
-  return [...events].sort((a, b) => {
-    if (sortBy === "height") return b.height - a.height;
-    if (sortBy === "name") return a.name.localeCompare(b.name) || b.height - a.height;
-    return a.action.localeCompare(b.action) || b.height - a.height;
-  });
-}
-
-function sortListings(listings: Listing[], sortBy: SortBy): Listing[] {
-  return [...listings].sort((a, b) => {
-    if (sortBy === "height") return b.height - a.height;
-    if (sortBy === "name") return a.name.localeCompare(b.name) || b.height - a.height;
-    return b.height - a.height;
-  });
-}
-
-function sortRegistrations(registrations: Registration[], sortBy: SortBy): Registration[] {
-  return [...registrations].sort((a, b) => {
-    if (sortBy === "height") return b.height - a.height || a.name.localeCompare(b.name);
-    if (sortBy === "name") return a.name.localeCompare(b.name) || b.height - a.height;
-    const aStatus = a.listing ? "listed" : "registered";
-    const bStatus = b.listing ? "listed" : "registered";
-    return aStatus.localeCompare(bStatus) || b.height - a.height || a.name.localeCompare(b.name);
-  });
-}
 
 function PaginationControls({
   page,
@@ -169,7 +143,6 @@ export default function ExplorerView({
   const selectedName = searchParams.get("name");
 
   // ── Local UI state (not URL-driven) ──────────────────────────────────────
-  const [sortBy, setSortBy] = useState<SortBy>("height");
   const [searchQuery, setSearchQuery] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
   const [uivkOpen, setUivkOpen] = useState(false);
@@ -182,16 +155,16 @@ export default function ExplorerView({
   // ── Tab counts (authoritative server totals; null where unknowable) ─────
   const hasSearchFilter = normalizeExplorerQuery(searchQuery).length > 0;
   const filteredRegistrations = useMemo(
-    () => sortRegistrations(filterRegistrations(initialRegistrations, searchQuery), sortBy),
-    [initialRegistrations, searchQuery, sortBy],
+    () => filterRegistrations(initialRegistrations, searchQuery),
+    [initialRegistrations, searchQuery],
   );
   const sortedListings = useMemo(
-    () => sortListings(initialListings, sortBy),
-    [initialListings, sortBy],
+    () => [...initialListings].sort((a, b) => b.height - a.height),
+    [initialListings],
   );
   const sortedEvents = useMemo(
-    () => sortEvents(getTabEvents(tab, initialEvents), sortBy),
-    [tab, initialEvents, sortBy],
+    () => getTabEvents(tab, initialEvents),
+    [tab, initialEvents],
   );
 
   function getTabCount(key: ExplorerTab): number | null {
@@ -286,15 +259,6 @@ export default function ExplorerView({
     });
   }
 
-  function handleSortChange(nextSortBy: SortBy) {
-    setSortBy(nextSortBy);
-    if (page !== 1) {
-      startTransition(() => {
-        router.push(buildUrl({ page: 1 }));
-      });
-    }
-  }
-
   function handlePageChange(nextPage: number) {
     const clamped = Math.max(1, nextPage);
     startTransition(() => {
@@ -380,8 +344,6 @@ export default function ExplorerView({
         onClearSearch={clearNameDetail}
         network={optimisticNetwork}
         onNetworkChange={handleNetworkChange}
-        sortBy={sortBy}
-        onSortChange={handleSortChange}
       />
 
       {pendingHydrated && pendingTransaction && (
