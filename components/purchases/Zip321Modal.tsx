@@ -522,7 +522,7 @@ export default function Zip321Modal({
       onClick={onClose}
     >
       <div
-        className="relative rounded-2xl w-full max-w-md overflow-visible p-8"
+        className="relative rounded-2xl w-full max-w-md overflow-visible"
         style={{
           background: "var(--feature-card-bg)",
           border: "1px solid var(--faq-border)",
@@ -531,6 +531,55 @@ export default function Zip321Modal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {phase !== "unlock" && (() => {
+          const isMined = phase === "scanning" && s.scanState === "mined";
+          return (
+            <span
+              className="absolute left-1/2 top-0 z-10 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
+              style={{
+                background: isMined ? "var(--color-accent-green-light)" : "var(--color-raised)",
+                color: isMined ? "var(--color-accent-green)" : "var(--fg-heading)",
+                border: "1px solid var(--border-muted)",
+              }}
+              aria-hidden="true"
+            >
+              {phase === "scanning" && !isMined ? (
+                <span
+                  className="inline-block h-6 w-6 rounded-full border-2 animate-spin"
+                  style={{ borderColor: "var(--border-muted)", borderTopColor: "var(--fg-heading)" }}
+                />
+              ) : isMined ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              ) : phase === "input" ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+                  <path d="M8 6h8" />
+                  <path d="M8 10h5" />
+                  <path d="M8 14h4" />
+                  <path d="M16 3h1a2 2 0 0 1 2 2v6" />
+                  <path d="M7 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5" />
+                  <path d="M9 3h6" />
+                  <path d="M15 18l4-4 2 2-4 4h-2v-2z" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+                  <path d="M7 3H5a2 2 0 0 0-2 2v2" />
+                  <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                  <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                  <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                  <path d="M8 8h8v8H8z" />
+                  <path d="M11 11h2v2h-2z" />
+                </svg>
+              )}
+            </span>
+          );
+        })()}
+        <div
+          className="max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain rounded-2xl p-8"
+          style={{ paddingTop: phase === "unlock" ? undefined : "3rem" }}
+          onWheel={(e) => e.stopPropagation()}
+        >
         {progressSegments && <div className="mb-5">{progressSegments}</div>}
         {phase === "unlock" && (
           <div className="flex flex-col gap-4">
@@ -559,9 +608,14 @@ export default function Zip321Modal({
         )}
         {phase === "input" && (
           <div className="flex flex-col gap-4">
-            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              {prepareDescription(action, name, "")}
-            </p>
+            <div className="text-center">
+              <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
+                {ACTION_LABELS[action]} {name}
+              </h2>
+              <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
+                {prepareDescription(action, name, "")}
+              </p>
+            </div>
             {needsAddress && (() => {
               const trimmed = s.addressInput.trim();
               const v = trimmed ? validateAddress(trimmed) : { status: "invalid" as const, warning: "" };
@@ -870,6 +924,7 @@ export default function Zip321Modal({
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>,
     document.body,

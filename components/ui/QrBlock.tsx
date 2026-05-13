@@ -90,7 +90,11 @@ export function QrBlock({ address, amount, memo, size = 200 }: QrBlockProps) {
   const uriResult = zip321Uri(address, amount, memo);
   const { uri } = uriResult;
   const { copied: uriCopied, copy: copyUri } = useCopy();
+  const { copied: addrCopied, copy: copyAddr } = useCopy();
+  const { copied: amtCopied, copy: copyAmt } = useCopy();
+  const { copied: memoCopied, copy: copyMemo } = useCopy();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hasAmount = !!amount && Number(amount) > 0;
 
   async function handleSavePng() {
     setQrError("");
@@ -139,6 +143,16 @@ export function QrBlock({ address, amount, memo, size = 200 }: QrBlockProps) {
         {showUri && (
           <CopyRow label="Full URI" value={uri} copied={uriCopied} onCopy={() => copyUri(uri)} />
         )}
+
+        <div className="flex w-full flex-col gap-2">
+          <CopyRow label="Address" value={address} copied={addrCopied} onCopy={() => copyAddr(address)} />
+          {hasAmount && (
+            <CopyRow label="Amount" value={`${amount} ZEC`} copied={amtCopied} onCopy={() => copyAmt(amount)} />
+          )}
+          {memo && (
+            <CopyRow label="Memo" value={memo} copied={memoCopied} onCopy={() => copyMemo(memo)} />
+          )}
+        </div>
 
         <button
           type="button"
