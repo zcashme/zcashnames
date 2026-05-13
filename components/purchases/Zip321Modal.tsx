@@ -159,6 +159,9 @@ type S = {
   // scanning phase
   scanState: ScanState;
   successFired: boolean;
+  // fund phase (BUY): gate seller payment behind protocol-tx confirmation so
+  // the buyer doesn't pay the seller before ZNS has accepted the BUY intent.
+  buyTxConfirmed: boolean;
 };
 
 type Msg =
@@ -177,6 +180,7 @@ const INIT: S = {
   signPubkey: "", signSignature: "", signError: "", signLoading: false,
   scanState: "not_detected",
   successFired: false,
+  buyTxConfirmed: false,
 };
 
 function purchaseReducer(state: S, msg: Msg): S {
@@ -204,7 +208,7 @@ const PHASE_OWNS: Record<Phase, ReadonlyArray<keyof S>> = {
   otp:      ["otpCode", "otpError"],
   sign:     ["signSignature", "signError"],
   confirm:  ["uri", "memo", "paymentAddress", "amountZec"],
-  fund:     [],
+  fund:     ["buyTxConfirmed"],
   scanning: ["scanState", "successFired"],
 };
 
@@ -467,8 +471,29 @@ export default function Zip321Modal({
     } else if (status === "rejected") set({ scanState: "rejected" });
   }, 2000);
 
+  // -- BUY gate: don't unlock the seller-payment QR until the protocol-fee tx
+  // has confirmed on-chain. Otherwise the buyer can pay the seller before ZNS
+  // recognises the BUY intent and lose the funds. Testnet has no mempool
+  // endpoint, so we treat the gate as auto-open there.
+  const buyGateActive =
+    phase === "fund" && action === "BUY" && !s.buyTxConfirmed && network === "mainnet";
+  usePoll(buyGateActive, async () => {
+    const result = await checkMempool(name, network);
+    if (result.found && result.response?.state.status === "confirmed") {
+      set({ buyTxConfirmed: true });
+    }
+  }, 2000);
+  // Testnet has no on-chain detection, so let the user proceed manually.
+  useEffect(() => {
+    if (phase === "fund" && action === "BUY" && network !== "mainnet" && !s.buyTxConfirmed) {
+      set({ buyTxConfirmed: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, action, network]);
+
   // -- Fund poll: BUY only. Auto-advance when seller's t-addr has the price. --
-  const fundActive = phase === "fund" && action === "BUY" && resolveResult.status === "listed";
+  const fundActive =
+    phase === "fund" && action === "BUY" && resolveResult.status === "listed" && s.buyTxConfirmed;
   usePoll(fundActive, async () => {
     if (resolveResult.status !== "listed") return;
     const { payTaddr, listingPrice } = resolveResult;
@@ -828,9 +853,13 @@ export default function Zip321Modal({
         )}
         {phase === "confirm" && (
           <div className="flex flex-col items-center gap-4 text-center">
-            <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Send Payment</h2>
+            <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
+              {action === "BUY" ? "Pay the registry" : "Send Payment"}
+            </h2>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              Send exact amount and memo to complete the transaction.
+              {action === "BUY"
+                ? <>This is the registry commission only. You&rsquo;ll pay the seller the listing price next.</>
+                : "Send exact amount and memo to complete the transaction."}
             </p>
             {s.uri && s.paymentAddress && (
               <QrBlock
@@ -847,42 +876,68 @@ export default function Zip321Modal({
             </button>
           </div>
         )}
-        {phase === "fund" && (
-          <div className="flex flex-col items-center gap-4 text-center">
-            <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Fund the Purchase</h2>
-            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              Send the listing price to the seller&rsquo;s transparent address to complete your purchase of <strong>{name}.zcash</strong>.
-            </p>
-            <div className="w-full rounded-xl p-5 flex flex-col items-center gap-3"
-              style={{ background: "var(--color-raised)", border: "1.5px solid var(--faq-border)" }}>
-              <div className="flex flex-col gap-1.5 w-full text-left">
-                <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Seller Address</span>
-                <code className="text-xs break-all rounded-lg px-3 py-2"
-                  style={{ background: "var(--color-background)", color: "var(--fg-heading)" }}>
-                  {resolveResult.status === "listed" ? resolveResult.payTaddr : "(unknown)"}
-                </code>
+        {phase === "fund" && (() => {
+          const listed = resolveResult.status === "listed" ? resolveResult : null;
+          if (!listed) {
+            return (
+              <div className="flex flex-col items-center gap-4 text-center">
+                <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Listing withdrawn</h2>
+                <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+                  This name is no longer for sale. Don&rsquo;t send the seller payment.
+                </p>
+                <button type="button" onClick={onClose}
+                  className="px-5 py-2.5 rounded-full text-sm font-semibold"
+                  style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>
+                  Close
+                </button>
               </div>
-              <div className="flex flex-col gap-1.5 w-full text-left">
-                <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Amount</span>
-                <code className="text-xs rounded-lg px-3 py-2"
-                  style={{ background: "var(--color-background)", color: "var(--fg-heading)" }}>
-                  {resolveResult.status === "listed" ? `${resolveResult.listingPrice.zec} ZEC` : "the listed price"}
-                </code>
-              </div>
+            );
+          }
+          return (
+            <div className="flex flex-col items-center gap-4 text-center">
+              <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Pay the seller</h2>
+              {!s.buyTxConfirmed ? (
+                <>
+                  <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+                    Waiting for the registry to confirm your transaction.
+                  </p>
+                  <div className="flex items-center gap-3 py-4">
+                    <span
+                      className="inline-block h-5 w-5 rounded-full border-2 animate-spin"
+                      style={{ borderColor: "var(--border-muted)", borderTopColor: "var(--fg-heading)" }}
+                    />
+                    <span className="text-sm" style={{ color: "var(--fg-muted)" }}>
+                      Confirming with the registry&hellip;
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+                    Send <strong>{listed.listingPrice.zec} ZEC</strong> to the seller&rsquo;s transparent address to complete your purchase of <strong>{name}.zcash</strong>.
+                  </p>
+                  <QrBlock
+                    address={listed.payTaddr}
+                    amount={String(listed.listingPrice.zec)}
+                    memo=""
+                    size={200}
+                  />
+                  {network === "mainnet" ? (
+                    <p className="text-sm" style={{ color: "var(--fg-muted)" }}>
+                      Waiting for payment detection&hellip;
+                    </p>
+                  ) : (
+                    <button type="button" onClick={() => advance()}
+                      className="px-5 py-2.5 rounded-full text-sm font-semibold"
+                      style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
+                      I&rsquo;ve Sent the Payment
+                    </button>
+                  )}
+                </>
+              )}
             </div>
-            {action === "BUY" && network === "mainnet" ? (
-              <p className="text-sm" style={{ color: "var(--fg-muted)" }}>
-                Waiting for payment detection...
-              </p>
-            ) : (
-              <button type="button" onClick={() => advance()}
-                className="px-5 py-2.5 rounded-full text-sm font-semibold"
-                style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-                I&rsquo;ve Sent the Payment
-              </button>
-            )}
-          </div>
-        )}
+          );
+        })()}
         {phase === "scanning" && s.scanState !== "mined" && (
           <div className="flex flex-col items-center gap-4 text-center">
             <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Scanning</h2>
