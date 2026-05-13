@@ -21,6 +21,7 @@ import { BETA_COOKIE_NAME, readCurrentStage } from "@/lib/beta/gate";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CabalLaunchBar from "@/components/influencer/CabalLaunchBar";
+import BetaApplyBar from "@/components/waitlist/BetaApplyBar";
 import { Analytics } from "@vercel/analytics/next";
 import { BRAND } from "@/lib/zns/brand";
 import "../globals.css";
@@ -127,6 +128,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         >
         <NetworkProvider initialMode={initialMode} hasBeta={hasBeta}>
 
+        <BetaApplyBar />
         <CabalLaunchBar />
         <Header />
         {children}
