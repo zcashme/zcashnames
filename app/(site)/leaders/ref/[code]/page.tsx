@@ -37,6 +37,7 @@ import {
   type ProjectionModel,
 } from "@/lib/leaders/referral-dashboard";
 import CopyIconButton from "@/components/CopyIconButton";
+import { usePwaInstall } from "@/components/hooks/usePwaInstall";
 
 const DIRECT_CHART_COLOR = "var(--leaders-area-referred)";
 const INDIRECT_CHART_COLOR = "var(--leaders-area-non-referred)";
@@ -162,6 +163,7 @@ function EmailConfirmedIcon({ className }: { className?: string }) {
 export default function ReferralDashboardPage() {
   const params = useParams<{ code: string }>();
   const referralCode = decodeURIComponent(typeof params?.code === "string" ? params.code : "");
+  const installState = usePwaInstall();
   const scope: ReferralScope = "all";
   const [data, setData] = useState<ReferralDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -170,6 +172,7 @@ export default function ReferralDashboardPage() {
   const [visibleReferralRows, setVisibleReferralRows] = useState(10);
   const [activeMetricKey, setActiveMetricKey] = useState<"referrals" | "direct" | "payout" | null>(null);
   const [directMetricFace, setDirectMetricFace] = useState<"direct" | "indirect">("direct");
+  const [chartRange, setChartRange] = useState<"7d" | "30d" | "allTime">("allTime");
   const [prices, setPrices] = useState<PriceByBucket>(DEFAULT_PRICE_BY_BUCKET);
   const [conversions, setConversions] = useState<ConversionByBucket>(DEFAULT_CONVERSION_BY_BUCKET);
   const [accessGesture, setAccessGesture] = useState({ count: 0, lastAt: 0 });
@@ -184,6 +187,9 @@ export default function ReferralDashboardPage() {
   const [modeSwitching, setModeSwitching] = useState(false);
   const [copiedReferralLink, setCopiedReferralLink] = useState(false);
   const copiedResetTimeoutRef = useRef<number | null>(null);
+  const installCardDismissTimeoutRef = useRef<number | null>(null);
+  const [installCardClosing, setInstallCardClosing] = useState(false);
+  const [installCardVisible, setInstallCardVisible] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -224,6 +230,15 @@ export default function ReferralDashboardPage() {
       commissionRate: projection?.commissionRate ?? 0.15,
     });
   }, [conversions, data, model, prices, projection?.commissionRate]);
+  const chartSeries = useMemo(() => {
+    if (chartRange === "allTime" || referralChartSeries.length === 0) return referralChartSeries;
+
+    const latestDate = new Date(`${referralChartSeries[referralChartSeries.length - 1].date}T00:00:00.000Z`);
+    const days = chartRange === "7d" ? 7 : 30;
+    const cutoff = latestDate.getTime() - (days - 1) * 24 * 60 * 60 * 1000;
+
+    return referralChartSeries.filter((point) => new Date(`${point.date}T00:00:00.000Z`).getTime() >= cutoff);
+  }, [chartRange, referralChartSeries]);
 
   const visibleReferrals = useMemo(() => {
     if (!data) return [];
@@ -253,6 +268,10 @@ export default function ReferralDashboardPage() {
     0,
     referralLevelOptions.findIndex((option) => option === referralLevelFilter),
   );
+  const referralRank =
+    data && data.totalAttributedReferrals > 0
+      ? (data.leaderboardRank ?? data.waitlistPosition)
+      : data?.waitlistPosition ?? null;
 
   useEffect(() => {
     setVisibleReferralRows(10);
@@ -277,8 +296,43 @@ export default function ReferralDashboardPage() {
       if (copiedResetTimeoutRef.current !== null) {
         window.clearTimeout(copiedResetTimeoutRef.current);
       }
+      if (installCardDismissTimeoutRef.current !== null) {
+        window.clearTimeout(installCardDismissTimeoutRef.current);
+      }
     };
   }, []);
+
+  useEffect(() => {
+    if (!installState.hideCard) {
+      setInstallCardClosing(false);
+      return;
+    }
+
+    if (installCardClosing) {
+      const timeoutId = window.setTimeout(() => {
+        setInstallCardClosing(false);
+      }, 240);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
+  }, [installState.hideCard]);
+
+  useEffect(() => {
+    if (installState.standalone || installState.hideCard) {
+      setInstallCardVisible(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setInstallCardVisible(true);
+    }, 40);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [installState.hideCard, installState.standalone]);
 
   const handleCommissionAccessGesture = () => {
     if (!data?.root?.cabal || modeSwitching) return;
@@ -427,24 +481,82 @@ export default function ReferralDashboardPage() {
         <DashboardShell>
           <h1 className="text-xl font-bold text-fg-heading">Dashboard unavailable</h1>
           <p className="mt-2 text-sm text-fg-muted">No referral data could be loaded for this code.</p>
-          <BackLink />
+          {!installState.standalone && <BackLink />}
         </DashboardShell>
       </main>
     );
   }
 
+  const showInstallCard = !installState.standalone && (!installState.hideCard || installCardClosing);
+  const showInstallCardTeaser =
+    !installState.standalone && installState.dismissed && !installCardClosing && !showInstallCard;
+
+  const dismissInstallCard = () => {
+    if (installCardClosing) return;
+    setInstallCardClosing(true);
+    installCardDismissTimeoutRef.current = window.setTimeout(() => {
+      installState.dismissInstallCard();
+      installCardDismissTimeoutRef.current = null;
+    }, 220);
+  };
+
+  const restoreInstallCard = () => {
+    if (installCardDismissTimeoutRef.current !== null) {
+      window.clearTimeout(installCardDismissTimeoutRef.current);
+      installCardDismissTimeoutRef.current = null;
+    }
+    setInstallCardClosing(false);
+    setInstallCardVisible(false);
+    installState.restoreInstallCard();
+  };
+
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 pb-20 pt-4 sm:px-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <BackLink />
-        <Link
-          href={`/sharekit?ref=${encodeURIComponent(referralCode)}`}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
+    <main className={`mx-auto w-full max-w-5xl px-4 pb-20 sm:px-6 ${installState.standalone ? "pt-5" : "pt-4"}`}>
+      {!installState.standalone && (
+        <div className="mb-4 grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
+          <div className="justify-self-start">
+            <BackLink />
+          </div>
+          <div className="justify-self-center">
+            {showInstallCardTeaser && (
+              <button
+                type="button"
+                onClick={restoreInstallCard}
+                className="cursor-pointer text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
+              >
+                Add to Home Screen
+              </button>
+            )}
+          </div>
+          <div className="justify-self-start sm:justify-self-end">
+            <Link
+              href={`/sharekit?ref=${encodeURIComponent(referralCode)}`}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
+            >
+              Share your reflink
+              <ShareIcon className="h-4 w-4 shrink-0" />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {showInstallCard && (
+        <div
+          className="overflow-hidden transition-all duration-200 ease-out"
+          style={{
+            maxHeight: installCardClosing ? 0 : installCardVisible ? 320 : 0,
+            opacity: installCardClosing ? 0 : installCardVisible ? 1 : 0,
+            marginBottom: installCardClosing ? 0 : installCardVisible ? "1.5rem" : 0,
+            transform: installCardClosing
+              ? "translateY(-6px)"
+              : installCardVisible
+                ? "translateY(0)"
+                : "translateY(-8px)",
+          }}
         >
-          Share your reflink
-          <ShareIcon className="h-4 w-4 shrink-0" />
-        </Link>
-      </div>
+          <InstallHomeScreenCard installState={installState} onDismiss={dismissInstallCard} />
+        </div>
+      )}
 
       <section
         className="mb-8 rounded-2xl border p-5 sm:p-6"
@@ -452,8 +564,26 @@ export default function ReferralDashboardPage() {
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="inline-flex items-center gap-1 text-3xl font-bold tracking-tight text-fg-heading">
+            <h1 className="inline-flex flex-wrap items-center gap-2 text-3xl font-bold tracking-tight text-fg-heading">
               <span>{data.root?.name ?? data.referralCode}</span>
+              {data.root?.cabal ? (
+                <button
+                  type="button"
+                  aria-label="Dashboard options"
+                  className="inline-block cursor-default rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
+                  style={{ borderColor: "var(--leaders-card-border)" }}
+                  onClick={handleCommissionAccessGesture}
+                >
+                  {data.waitlistPosition ? `#${data.waitlistPosition.toLocaleString()}` : "-"}
+                </button>
+              ) : (
+                <span
+                  className="inline-block rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
+                  style={{ borderColor: "var(--leaders-card-border)" }}
+                >
+                  {data.waitlistPosition ? `#${data.waitlistPosition.toLocaleString()}` : "-"}
+                </span>
+              )}
               {data.rootBadge && (
                 <img
                   src={data.rootBadge === "red" ? "/icons/fire-red.apng" : "/icons/fire-blue.apng"}
@@ -484,21 +614,14 @@ export default function ReferralDashboardPage() {
             </div>
           </div>
           <div className="text-right">
-            {data.root?.cabal ? (
-              <button
-                type="button"
-                aria-label="Dashboard options"
-                className="inline-block cursor-default rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
-                style={{ borderColor: "var(--leaders-card-border)" }}
-                onClick={handleCommissionAccessGesture}
-              >
-                {data.waitlistPosition ? `#${data.waitlistPosition.toLocaleString()}` : "-"}
-              </button>
-            ) : (
-              <p className="inline-block rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted" style={{ borderColor: "var(--leaders-card-border)" }}>
-                {data.waitlistPosition ? `#${data.waitlistPosition.toLocaleString()}` : "-"}
-              </p>
-            )}
+            <div className="text-sm text-fg-muted">
+              <span>Rank </span>
+              <span className="font-medium text-fg-body">
+                {referralRank && data.waitlistTotal
+                  ? `${referralRank.toLocaleString()} of ${data.waitlistTotal.toLocaleString()}`
+                  : "-"}
+              </span>
+            </div>
             <div className="mt-2 text-sm text-fg-muted">
               {data.root ? (
                 <>
@@ -598,7 +721,7 @@ export default function ReferralDashboardPage() {
             {commissionPinMessage && <p className="mt-2 text-sm text-fg-muted">{commissionPinMessage}</p>}
           </form>
         )}
-        <ReferralGrowthChart data={referralChartSeries} />
+        <ReferralGrowthChart data={chartSeries} chartRange={chartRange} setChartRange={setChartRange} />
       </section>
 
       <section className="mb-8 grid grid-cols-3 gap-3">
@@ -650,7 +773,12 @@ export default function ReferralDashboardPage() {
               ? "Direct referrals signed up with this referral code."
               : "Indirect referrals signed up through this code's referral tree.")}
           {activeMetricKey === "payout" && (
-            "Projected rewards if all referrals purchase names during early access."
+            <>
+              Projected rewards if all referrals purchase names during early access.{" "}
+              <Link href="/leaders/terms" className="underline underline-offset-2">
+                See terms.
+              </Link>
+            </>
           )}
         </p>
       </div>
@@ -997,6 +1125,71 @@ function DashboardIcon({ className }: { className?: string }) {
   );
 }
 
+function InstallHomeScreenCard({
+  installState,
+  onDismiss,
+}: {
+  installState: ReturnType<typeof usePwaInstall>;
+  onDismiss: () => void;
+}) {
+  return (
+    <section
+      className="relative overflow-hidden rounded-[24px] border"
+      style={{
+        background:
+          "linear-gradient(135deg, color-mix(in srgb, var(--leaders-card-bg-solid, var(--leaders-card-bg)) 88%, var(--leaders-area-referred) 12%), color-mix(in srgb, var(--leaders-card-bg-solid, var(--leaders-card-bg)) 92%, var(--leaders-area-non-referred) 8%))",
+        borderColor: "var(--leaders-card-border)",
+      }}
+    >
+      <div className="px-5 py-5 sm:px-6">
+        <div className="min-w-0">
+          <h2 className="max-w-3xl text-2xl font-bold tracking-tight text-fg-heading sm:text-3xl">
+            Add your referral dashboard to your Home Screen
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-fg-body sm:text-base">
+            Get one-tap access to your referrals, rewards, and progress anytime.
+          </p>
+          {installState.showIosInstructions ? (
+            <p className="mt-4 text-sm leading-relaxed text-fg-body">
+              In Safari, tap <ShareIcon className="mx-1 inline h-4 w-4 align-text-bottom" /> then choose{" "}
+              <span className="font-semibold text-fg-heading">Add to Home Screen</span>.
+            </p>
+          ) : null}
+
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                void installState.promptInstall();
+              }}
+              disabled={!installState.canInstall || installState.installing}
+              className="inline-flex min-w-[214px] cursor-pointer items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold text-[var(--leaders-rank-text)] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+              style={{
+                background: "var(--leaders-rank-gold)",
+                borderColor: "transparent",
+                boxShadow: "0 10px 24px color-mix(in srgb, var(--leaders-area-referred) 18%, transparent)",
+              }}
+            >
+              <HomeScreenIcon className="h-4 w-4 shrink-0" />
+              {installState.installing ? "Opening install prompt" : "Install dashboard"}
+            </button>
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="inline-flex min-w-[214px] cursor-pointer items-center justify-center rounded-full border px-5 py-3 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-muted"
+              style={{ borderColor: "var(--leaders-card-border)" }}
+            >
+              Dismiss
+            </button>
+          </div>
+
+          <p className="mt-4 text-sm text-fg-muted">Works on iPhone, Android, and desktop</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function BackLink() {
   return (
     <Link href="/leaders" className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline">
@@ -1006,109 +1199,176 @@ function BackLink() {
   );
 }
 
-function ReferralGrowthChart({ data }: { data: ReferralChartPoint[] }) {
+function HomeScreenIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <rect x="4" y="3" width="16" height="18" rx="3" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 8V15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M9.5 10.5L12 8L14.5 10.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8.5 18H15.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ReferralGrowthChart({
+  data,
+  chartRange,
+  setChartRange,
+}: {
+  data: ReferralChartPoint[];
+  chartRange: "7d" | "30d" | "allTime";
+  setChartRange: (range: "7d" | "30d" | "allTime") => void;
+}) {
   const [activeChartPoint, setActiveChartPoint] = useState<ReferralChartPoint | null>(null);
-  const chartGuidePoint = activeChartPoint ?? data[data.length - 1] ?? null;
+  const chartGuidePoint =
+    (activeChartPoint && data.some((point) => point.date === activeChartPoint.date) ? activeChartPoint : null) ??
+    data[data.length - 1] ??
+    null;
   const chartGuideReferrals = chartGuidePoint ? chartGuidePoint.direct + chartGuidePoint.indirect : 0;
+  const chartSummaryText = useMemo(() => {
+    if (data.length === 0) return "No change yet";
+
+    const last = data[data.length - 1];
+    const totalReferrals = last.direct + last.indirect;
+    const delta =
+      chartRange === "allTime"
+        ? totalReferrals
+        : data.reduce((sum, point) => sum + (point.directDelta ?? 0) + (point.indirectDelta ?? 0), 0);
+    const rangeLabel =
+      chartRange === "7d" ? "the last 7 days" : chartRange === "30d" ? "the last 30 days" : "all time";
+
+    return `${delta >= 0 ? "+" : ""}${delta.toLocaleString()} over ${rangeLabel}`;
+  }, [chartRange, data]);
 
   return (
     <div className="mt-6 border-t pt-5" style={{ borderColor: "var(--leaders-card-border)" }}>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-heading">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: REWARDS_CHART_COLOR }} />
-          Rewards
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm font-semibold text-fg-heading">
+          {chartSummaryText}
         </div>
-        <div className="flex items-center gap-3 text-sm font-semibold text-fg-heading">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: DIRECT_CHART_COLOR }} />
-            Direct
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: INDIRECT_CHART_COLOR }} />
-            Referrals
-          </span>
+        <div
+          className="inline-flex items-center rounded-full border p-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em]"
+          style={{ borderColor: "var(--leaders-card-border)" }}
+        >
+          {[
+            { key: "7d", label: "7D" },
+            { key: "30d", label: "30D" },
+            { key: "allTime", label: "All-time" },
+          ].map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              className="cursor-pointer rounded-full px-3 py-1 transition-colors"
+              style={
+                chartRange === option.key
+                  ? { background: "var(--leaders-rank-gold)", color: "var(--leaders-rank-text)" }
+                  : { color: "var(--fg-muted)" }
+              }
+              onClick={() => setChartRange(option.key as "7d" | "30d" | "allTime")}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
       {data.length === 0 ? (
         <p className="py-16 text-center text-sm text-fg-muted">No referral history yet.</p>
       ) : (
-        <ResponsiveContainer width="100%" height={240}>
-          <AreaChart
-            data={data}
-            margin={{ top: 4, right: -12, bottom: 0, left: -12 }}
-            onMouseMove={(state) => setActiveChartPoint(getActiveChartPoint(state, data))}
-            onMouseLeave={() => setActiveChartPoint(null)}
-          >
-            <defs>
-              <linearGradient id="gradDashboardDirect" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={DIRECT_CHART_COLOR} stopOpacity={0.4} />
-                <stop offset="100%" stopColor={DIRECT_CHART_COLOR} stopOpacity={0.05} />
-              </linearGradient>
-              <linearGradient id="gradDashboardIndirect" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={INDIRECT_CHART_COLOR} stopOpacity={0.4} />
-                <stop offset="100%" stopColor={INDIRECT_CHART_COLOR} stopOpacity={0.05} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis
-              dataKey="date"
-              tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
-              tickLine={false}
-              axisLine={{ stroke: "var(--border)" }}
-            />
-            <YAxis
-              yAxisId="rewards"
-              tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
-              tickLine={false}
-              axisLine={{ stroke: "var(--border)" }}
-              tickFormatter={formatRewardAxisTick}
-            />
-            <YAxis
-              yAxisId="referrals"
-              orientation="right"
-              tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
-              tickLine={false}
-              axisLine={{ stroke: "var(--border)" }}
-              allowDecimals={false}
-            />
-            <Tooltip content={<ReferralChartTooltip />} />
-            <Area
-              yAxisId="referrals"
-              type="monotone"
-              dataKey="direct"
-              stackId="referrals"
-              stroke={DIRECT_CHART_COLOR}
-              fill="url(#gradDashboardDirect)"
-              strokeWidth={2}
-            />
-            <Area
-              yAxisId="referrals"
-              type="monotone"
-              dataKey="indirect"
-              stackId="referrals"
-              stroke={INDIRECT_CHART_COLOR}
-              fill="url(#gradDashboardIndirect)"
-              strokeWidth={2}
-            />
-            <Line
-              yAxisId="rewards"
-              type="monotone"
-              dataKey="rewards"
-              stroke={REWARDS_CHART_COLOR}
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4, fill: REWARDS_CHART_COLOR }}
-            />
-            <AxisEndpointGuideLines
-              point={chartGuidePoint}
-              lines={[
-                { yAxisId: "rewards", value: chartGuidePoint?.rewards ?? 0, color: REWARDS_CHART_COLOR, side: "left" },
-                { yAxisId: "referrals", value: chartGuideReferrals, color: INDIRECT_CHART_COLOR, side: "right" },
-                { yAxisId: "referrals", value: chartGuidePoint?.direct ?? 0, color: DIRECT_CHART_COLOR, side: "right" },
-              ]}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <>
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart
+              data={data}
+              margin={{ top: 4, right: -12, bottom: 0, left: -12 }}
+              onMouseMove={(state) => setActiveChartPoint(getActiveChartPoint(state, data))}
+              onMouseLeave={() => setActiveChartPoint(null)}
+            >
+              <defs>
+                <linearGradient id="gradDashboardDirect" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={DIRECT_CHART_COLOR} stopOpacity={0.4} />
+                  <stop offset="100%" stopColor={DIRECT_CHART_COLOR} stopOpacity={0.05} />
+                </linearGradient>
+                <linearGradient id="gradDashboardIndirect" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={INDIRECT_CHART_COLOR} stopOpacity={0.4} />
+                  <stop offset="100%" stopColor={INDIRECT_CHART_COLOR} stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis
+                dataKey="date"
+                tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
+                tickLine={false}
+                axisLine={{ stroke: "var(--border)" }}
+              />
+              <YAxis
+                yAxisId="rewards"
+                tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
+                tickLine={false}
+                axisLine={{ stroke: "var(--border)" }}
+                tickFormatter={formatRewardAxisTick}
+              />
+              <YAxis
+                yAxisId="referrals"
+                orientation="right"
+                tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
+                tickLine={false}
+                axisLine={{ stroke: "var(--border)" }}
+                allowDecimals={false}
+              />
+              <Tooltip content={<ReferralChartTooltip />} />
+              <Area
+                yAxisId="referrals"
+                type="monotone"
+                dataKey="direct"
+                stackId="referrals"
+                stroke={DIRECT_CHART_COLOR}
+                fill="url(#gradDashboardDirect)"
+                strokeWidth={2}
+              />
+              <Area
+                yAxisId="referrals"
+                type="monotone"
+                dataKey="indirect"
+                stackId="referrals"
+                stroke={INDIRECT_CHART_COLOR}
+                fill="url(#gradDashboardIndirect)"
+                strokeWidth={2}
+              />
+              <Line
+                yAxisId="rewards"
+                type="monotone"
+                dataKey="rewards"
+                stroke={REWARDS_CHART_COLOR}
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4, fill: REWARDS_CHART_COLOR }}
+              />
+              <AxisEndpointGuideLines
+                point={chartGuidePoint}
+                lines={[
+                  { yAxisId: "rewards", value: chartGuidePoint?.rewards ?? 0, color: REWARDS_CHART_COLOR, side: "left" },
+                  { yAxisId: "referrals", value: chartGuideReferrals, color: INDIRECT_CHART_COLOR, side: "right" },
+                  { yAxisId: "referrals", value: chartGuidePoint?.direct ?? 0, color: DIRECT_CHART_COLOR, side: "right" },
+                ]}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+          <div className="mt-3 flex flex-wrap items-start justify-between gap-3 px-2 text-sm font-semibold text-fg-heading">
+            <div className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: REWARDS_CHART_COLOR }} />
+              Rewards
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: DIRECT_CHART_COLOR }} />
+                Direct
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: INDIRECT_CHART_COLOR }} />
+                Referrals
+              </span>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

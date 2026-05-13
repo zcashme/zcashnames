@@ -10,6 +10,7 @@ package-lock.json
 # build output
 dist
 .next
+.next-dev
 out
 
 # OS files

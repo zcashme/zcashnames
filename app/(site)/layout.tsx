@@ -8,6 +8,7 @@ import BetaApplyBar from "@/components/closedbeta/BetaApplyBar";
 import CabalLaunchBar from "@/components/influencer/CabalLaunchBar";
 import { Analytics } from "@vercel/analytics/next";
 import { BRAND } from "@/lib/zns/brand";
+import PwaShellClient from "@/components/PwaShellClient";
 import "../globals.css";
 
 const uiSans = Manrope({
@@ -100,6 +101,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body className={`${uiSans.variable} ${uiCursive.variable} ${brandSans.variable}`}>
+        <PwaShellClient />
         <ThemeProvider
           attribute="data-theme"
           defaultTheme="dark"
@@ -107,11 +109,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         >
         <NetworkProvider>
 
+        <div data-site-chrome="true">
         <BetaApplyBar />
         <CabalLaunchBar />
         <Header />
+        </div>
         {children}
+        <div data-site-chrome="true">
         <Footer />
+        </div>
 
         </NetworkProvider>
         </ThemeProvider>

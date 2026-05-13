@@ -96,6 +96,7 @@ const COMMISSION_PIN_RATE_LIMIT_MESSAGE = "We already sent you a code today";
 const COMMISSION_PIN_RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
 const WAITLIST_PAGE_SIZE = 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const REFERRAL_DASHBOARD_LOG_PREFIX = "[leaders/referral-dashboard]";
 
 function calculateGrowthPct(current: number, previous: number): number {
   if (previous === 0) return current === 0 ? 0 : Number.POSITIVE_INFINITY;
@@ -117,6 +118,17 @@ function toWaitlistReferralRows(data: Record<string, unknown>[]): WaitlistReferr
 
 function roundZec(value: number): number {
   return Math.round(value * 10000) / 10000;
+}
+
+function formatUnknownError(error: unknown): string {
+  if (error instanceof Error) return `${error.name}: ${error.message}`;
+  if (typeof error === "string") return error;
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
 }
 
 function resolveBaseUrl(headerStore: { get(name: string): string | null }): string {
@@ -176,7 +188,15 @@ async function fetchAllWaitlistRows(): Promise<Record<string, unknown>[] | null>
         .order("created_at", { ascending: true })
         .range(offset, offset + WAITLIST_PAGE_SIZE - 1);
 
-      if (error || !data) return null;
+      if (error || !data) {
+        console.error(`${REFERRAL_DASHBOARD_LOG_PREFIX} fetchAllWaitlistRows failed`, {
+          offset,
+          pageSize: WAITLIST_PAGE_SIZE,
+          hasData: Boolean(data),
+          error: error ? formatUnknownError(error) : "No data returned from Supabase.",
+        });
+        return null;
+      }
 
       rows.push(...data);
 
@@ -185,7 +205,10 @@ async function fetchAllWaitlistRows(): Promise<Record<string, unknown>[] | null>
     }
 
     return rows;
-  } catch {
+  } catch (error) {
+    console.error(`${REFERRAL_DASHBOARD_LOG_PREFIX} fetchAllWaitlistRows threw`, {
+      error: formatUnknownError(error),
+    });
     return null;
   }
 }
@@ -313,103 +336,109 @@ export async function getLeaderboard(
     const data = await fetchAllWaitlistRows();
     if (!data) return [];
 
-    const rows = toWaitlistReferralRows(data);
-    const summaries = buildFixedDepthReferralSummaries(rows, scope);
-
-    const nameMap: Record<string, string> = {};
-    for (const row of rows) {
-      if (row.referral_code && row.name && !nameMap[row.referral_code]) {
-        nameMap[row.referral_code] = row.name;
-      }
-    }
-
-    const now = new Date();
-    const today = now.toISOString().slice(0, 10);
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const nowMs = now.getTime();
-    const recentCutoff = nowMs - DAY_MS;
-    const previousRecentCutoff = nowMs - 2 * DAY_MS;
-    const weeklyCutoff = nowMs - 7 * DAY_MS;
-    const previousWeeklyCutoff = nowMs - 14 * DAY_MS;
-
-    const counts: Record<string, number> = {};
-    const recentCounts: Record<string, number> = {};
-    const previousRecentCounts: Record<string, number> = {};
-    const weeklyCounts: Record<string, number> = {};
-    const previousWeeklyCounts: Record<string, number> = {};
-    const todayCounts: Record<string, number> = {};
-    const yesterdayCounts: Record<string, number> = {};
-
-    for (const row of rows) {
-      if (!row.referred_by) continue;
-      if (scope === "confirmed" && !row.email_verified) continue;
-
-      const code = row.referred_by;
-      const date = row.created_at.slice(0, 10);
-
-      counts[code] = (counts[code] || 0) + 1;
-
-      const createdAtMs = new Date(row.created_at).getTime();
-
-      if (createdAtMs >= recentCutoff) {
-        recentCounts[code] = (recentCounts[code] || 0) + 1;
-      } else if (createdAtMs >= previousRecentCutoff) {
-        previousRecentCounts[code] = (previousRecentCounts[code] || 0) + 1;
-      }
-
-      if (createdAtMs >= weeklyCutoff) {
-        weeklyCounts[code] = (weeklyCounts[code] || 0) + 1;
-      } else if (createdAtMs >= previousWeeklyCutoff) {
-        previousWeeklyCounts[code] = (previousWeeklyCounts[code] || 0) + 1;
-      }
-
-      if (date === today) todayCounts[code] = (todayCounts[code] || 0) + 1;
-      if (date === yesterday) yesterdayCounts[code] = (yesterdayCounts[code] || 0) + 1;
-    }
-
-    const topToday = Object.entries(todayCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null;
-    const topYesterday = Object.entries(yesterdayCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null;
-    const streakCode = topToday && topToday === topYesterday ? topToday : null;
-    const topRecentCode = Object.entries(recentCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null;
-
-    return Object.entries(counts)
-      .map(([referral_code, referrals]) => {
-        const summary = summaries.get(referral_code);
-        const indirectReferrals = summary?.indirectReferrals ?? 0;
-        const displayedReferrals = referrals + indirectReferrals;
-
-        return {
-          name: nameMap[referral_code] || referral_code,
-          referral_code,
-          referrals,
-          indirectReferrals,
-          attributedReferrals: displayedReferrals,
-          recent: recentCounts[referral_code] || 0,
-          recentGrowthPct: calculateGrowthPct(
-            recentCounts[referral_code] || 0,
-            previousRecentCounts[referral_code] || 0,
-          ),
-          weeklyRecent: weeklyCounts[referral_code] || 0,
-          weeklyGrowthPct: calculateGrowthPct(
-            weeklyCounts[referral_code] || 0,
-            previousWeeklyCounts[referral_code] || 0,
-          ),
-          potential_rewards: summary?.potentialRewards ?? roundZec(referrals * 0.05),
-          streak: referral_code === streakCode,
-          topRecent: referral_code === topRecentCode && referral_code !== streakCode,
-        };
-      })
-      .sort((a, b) => {
-        if (b.attributedReferrals !== a.attributedReferrals) {
-          return b.attributedReferrals - a.attributedReferrals;
-        }
-        if (b.referrals !== a.referrals) return b.referrals - a.referrals;
-        return a.referral_code.localeCompare(b.referral_code);
-      })
-      .map((entry, i) => ({ ...entry, rank: i + 1 }));
+    return buildLeaderboardFromRows(toWaitlistReferralRows(data), scope);
   } catch {
     return [];
   }
+}
+
+function buildLeaderboardFromRows(
+  rows: WaitlistReferralRow[],
+  scope: ReferralScope = "all",
+): LeaderboardEntry[] {
+  const summaries = buildFixedDepthReferralSummaries(rows, scope);
+
+  const nameMap: Record<string, string> = {};
+  for (const row of rows) {
+    if (row.referral_code && row.name && !nameMap[row.referral_code]) {
+      nameMap[row.referral_code] = row.name;
+    }
+  }
+
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const nowMs = now.getTime();
+  const recentCutoff = nowMs - DAY_MS;
+  const previousRecentCutoff = nowMs - 2 * DAY_MS;
+  const weeklyCutoff = nowMs - 7 * DAY_MS;
+  const previousWeeklyCutoff = nowMs - 14 * DAY_MS;
+
+  const counts: Record<string, number> = {};
+  const recentCounts: Record<string, number> = {};
+  const previousRecentCounts: Record<string, number> = {};
+  const weeklyCounts: Record<string, number> = {};
+  const previousWeeklyCounts: Record<string, number> = {};
+  const todayCounts: Record<string, number> = {};
+  const yesterdayCounts: Record<string, number> = {};
+
+  for (const row of rows) {
+    if (!row.referred_by) continue;
+    if (scope === "confirmed" && !row.email_verified) continue;
+
+    const code = row.referred_by;
+    const date = row.created_at.slice(0, 10);
+
+    counts[code] = (counts[code] || 0) + 1;
+
+    const createdAtMs = new Date(row.created_at).getTime();
+
+    if (createdAtMs >= recentCutoff) {
+      recentCounts[code] = (recentCounts[code] || 0) + 1;
+    } else if (createdAtMs >= previousRecentCutoff) {
+      previousRecentCounts[code] = (previousRecentCounts[code] || 0) + 1;
+    }
+
+    if (createdAtMs >= weeklyCutoff) {
+      weeklyCounts[code] = (weeklyCounts[code] || 0) + 1;
+    } else if (createdAtMs >= previousWeeklyCutoff) {
+      previousWeeklyCounts[code] = (previousWeeklyCounts[code] || 0) + 1;
+    }
+
+    if (date === today) todayCounts[code] = (todayCounts[code] || 0) + 1;
+    if (date === yesterday) yesterdayCounts[code] = (yesterdayCounts[code] || 0) + 1;
+  }
+
+  const topToday = Object.entries(todayCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null;
+  const topYesterday = Object.entries(yesterdayCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null;
+  const streakCode = topToday && topToday === topYesterday ? topToday : null;
+  const topRecentCode = Object.entries(recentCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null;
+
+  return Object.entries(counts)
+    .map(([referral_code, referrals]) => {
+      const summary = summaries.get(referral_code);
+      const indirectReferrals = summary?.indirectReferrals ?? 0;
+      const displayedReferrals = referrals + indirectReferrals;
+
+      return {
+        name: nameMap[referral_code] || referral_code,
+        referral_code,
+        referrals,
+        indirectReferrals,
+        attributedReferrals: displayedReferrals,
+        recent: recentCounts[referral_code] || 0,
+        recentGrowthPct: calculateGrowthPct(
+          recentCounts[referral_code] || 0,
+          previousRecentCounts[referral_code] || 0,
+        ),
+        weeklyRecent: weeklyCounts[referral_code] || 0,
+        weeklyGrowthPct: calculateGrowthPct(
+          weeklyCounts[referral_code] || 0,
+          previousWeeklyCounts[referral_code] || 0,
+        ),
+        potential_rewards: summary?.potentialRewards ?? roundZec(referrals * 0.05),
+        streak: referral_code === streakCode,
+        topRecent: referral_code === topRecentCode && referral_code !== streakCode,
+      };
+    })
+    .sort((a, b) => {
+      if (b.attributedReferrals !== a.attributedReferrals) {
+        return b.attributedReferrals - a.attributedReferrals;
+      }
+      if (b.referrals !== a.referrals) return b.referrals - a.referrals;
+      return a.referral_code.localeCompare(b.referral_code);
+    })
+    .map((entry, i) => ({ ...entry, rank: i + 1 }));
 }
 
 export async function getDailyRankings(scope: ReferralScope = "all"): Promise<DailyRow[]> {
@@ -508,16 +537,31 @@ export async function getReferralDashboard(
   referralCode: string,
   scope: ReferralScope = "all",
 ): Promise<ReferralDashboardData | null> {
+  const normalizedCode = referralCode.trim();
+
   try {
-    const normalizedCode = referralCode.trim();
-    if (!normalizedCode) return null;
+    if (!normalizedCode) {
+      console.warn(`${REFERRAL_DASHBOARD_LOG_PREFIX} empty referral code`, {
+        referralCode,
+        scope,
+      });
+      return null;
+    }
 
     const data = await fetchAllWaitlistRows();
-    if (!data) return null;
+    if (!data) {
+      console.error(`${REFERRAL_DASHBOARD_LOG_PREFIX} waitlist fetch returned null`, {
+        referralCode: normalizedCode,
+        scope,
+      });
+      return null;
+    }
 
     const rows = toWaitlistReferralRows(data);
-
     const dashboard = buildReferralDashboard(normalizedCode, rows, scope);
+    const leaderboard = buildLeaderboardFromRows(rows, scope);
+    const leaderboardRank =
+      leaderboard.find((entry) => entry.referral_code === dashboard.referralCode)?.rank ?? null;
     const [commissionUnlocked, referralsUnlocked] = await Promise.all([
       dashboard.root?.cabal
         ? hasCommissionAccess(dashboard.referralCode).catch(() => false)
@@ -525,8 +569,13 @@ export async function getReferralDashboard(
       hasReferralTableAccess(dashboard.referralCode).catch(() => false),
     ]);
 
-    return { ...dashboard, commissionUnlocked, referralsUnlocked };
-  } catch {
+    return { ...dashboard, leaderboardRank, commissionUnlocked, referralsUnlocked };
+  } catch (error) {
+    console.error(`${REFERRAL_DASHBOARD_LOG_PREFIX} getReferralDashboard failed`, {
+      referralCode: normalizedCode,
+      scope,
+      error: formatUnknownError(error),
+    });
     return null;
   }
 }
