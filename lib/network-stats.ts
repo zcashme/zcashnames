@@ -38,6 +38,20 @@ export async function getChainStats(mode: "mainnet" | "testnet"): Promise<ChainS
   }
 }
 
+// Claim cost for a name of length `nameLen` on `network`. Owned by the
+// network module because pricing is a property of the network, not of any
+// individual name. Callers (resolveName, claimAction) ask the network for
+// "what does a name of this length cost right now" — they don't reach into
+// indexer status themselves.
+export async function getNamePricing(network: keyof typeof NETWORKS, nameLen: number): Promise<number> {
+  const zns = getZns(network);
+  const s = await zns.status();
+  if (!s.pricing) throw new Error("Pricing unavailable - indexer may be down.");
+  const cost = zns.claimCost(nameLen, s.pricing);
+  if (cost == null) throw new Error("Pricing unavailable - indexer may be down.");
+  return cost;
+}
+
 export async function getNetworkStats(mode: "waitlist" | "mainnet" | "testnet"): Promise<NetworkStats> {
   if (mode === "waitlist") {
     const { waitlist, referred, rewardsPot } = await getWaitlistStats("all");

@@ -3,7 +3,8 @@
 import crypto from "node:crypto";
 import { ZNS, BUY_COMMISSION, LIST_COMMISSION } from "zcashname-sdk";
 import type { Network } from "@/lib/types";
-import { getZns, fetchClaimCost, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
+import { getZns, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
+import { getNamePricing } from "@/lib/network-stats";
 import { MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import { getReservedName, verifyUnlockCode } from "@/lib/zns/reserved";
 import { verifyProof, verifyProofKind, issueProof, parseProofSubject } from "@/lib/zns/proof";
@@ -100,8 +101,7 @@ export async function claimAction(
   try {
     const zns = getZns(network);
     if (await zns.resolveName(n)) return { ok: false, error: `Name "${n}" is already registered.` };
-    const cost = await fetchClaimCost(n, network);
-    if (cost == null) return { ok: false, error: "Pricing unavailable - indexer may be down." };
+    const cost = await getNamePricing(network, n.length);
     const prepared = zns.prepareClaim(n, address, cost);
     const { memo, uri } = completeAction(prepared, sovereignSig, sovereignPub);
     return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: (prepared.cost / 1e8).toFixed(8) };

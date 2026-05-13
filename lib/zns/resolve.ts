@@ -9,6 +9,7 @@ import {
 } from "@/lib/zns/utils";
 import type { Network, Action, ResolveName } from "@/lib/types";
 import { getReservedName } from "@/lib/zns/reserved";
+import { getNamePricing } from "@/lib/network-stats";
 
 //
 // Server-side name resolution. These functions are the read path for the
@@ -55,14 +56,7 @@ export async function resolveName(
       return { status: "blocked", query: normalized };
     }
 
-    const s = await zns.status();
-    if (!s.pricing) {
-      throw new Error("Pricing unavailable - indexer may be down.");
-    }
-    const claimCostZats = zns.claimCost(normalized.length, s.pricing);
-    if (claimCostZats == null) {
-      throw new Error("Pricing unavailable - indexer may be down.");
-    }
+    const claimCostZats = await getNamePricing(network, normalized.length);
 
     // Reserved names (brands, protocol terms, community) need an unlock code
     if (reserved && !reserved.redeemed) {
