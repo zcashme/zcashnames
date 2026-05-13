@@ -79,14 +79,22 @@ export const ACTION_COLORS = {
 
 // Linear phases a purchase modal walks through. Zip321Modal renders one screen
 // per phase, advancing as the user completes each step.
+//
+//   scanning — watches the just-sent ZNS-memo'd tx through the mempool watcher
+//              until it confirms on-chain.
+//   settling — BUY-only. After the buyer pays the seller's t-addr, the indexer
+//              still has to observe the transparent payment and flip ownership.
+//              This phase polls the indexer until the name resolves to the
+//              buyer's UA, then declares success.
 export type Phase =
   | "unlock"
   | "input"
   | "otp"
   | "sign"
   | "confirm"
+  | "scanning"
   | "fund"
-  | "scanning";
+  | "settling";
 
 // Capability table per action. The phase list is *derived* from this plus the
 // runtime (resolve status, sovereign opt-in), so there's no second source of
@@ -122,8 +130,11 @@ export const ACTION_CAPS: Record<Action, ActionCaps> = {
  *     (user-opted sovereign CLAIM/BUY). It's `sign` when the registration has a
  *     committed pubkey, or when the user opted into sovereign mode; otherwise `otp`.
  *   - `confirm` always appears.
- *   - BUY appends `fund` for the seller payment.
- *   - All flows end in `scanning`.
+ *   - `scanning` always appears after `confirm` — watches the memo'd tx
+ *     (registry commission for BUY, the action tx for everything else) to mine.
+ *   - BUY adds `fund` after scanning (now that the BUY-intent is confirmed,
+ *     the buyer pays the seller's t-addr) and then `settling` (indexer flips
+ *     ownership once it observes the seller payment).
  */
 export function phasesFor(
   action: Action,
@@ -143,8 +154,11 @@ export function phasesFor(
   }
 
   phases.push("confirm");
-  if (caps.fund) phases.push("fund");
   phases.push("scanning");
+  if (caps.fund) {
+    phases.push("fund");
+    phases.push("settling");
+  }
   return phases;
 }
 

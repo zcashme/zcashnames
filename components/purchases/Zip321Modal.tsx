@@ -23,6 +23,7 @@ import { validateAddress } from "@/lib/zns/utils";
 import { generateSessionId, buildZvsMemo } from "@/lib/purchases/memo";
 import { zip321Uri } from "@/lib/purchases/zip321";
 import { checkMempool, checkUtxo } from "@/lib/zns/mempool";
+import { resolveName } from "@/lib/zns/resolve";
 import { generatePayload } from "@/lib/zns/payload";
 import { QrBlock } from "@/components/ui/QrBlock";
 
@@ -156,12 +157,12 @@ type S = {
   signLoading: boolean;
   // sovereign opt-in for CLAIM/BUY (committing a new pubkey to the registration)
   sovereign: boolean;
-  // scanning phase
+  // scanning phase (watches memo'd tx on the mempool watcher)
   scanState: ScanState;
   successFired: boolean;
-  // fund phase (BUY): gate seller payment behind protocol-tx confirmation so
-  // the buyer doesn't pay the seller before ZNS has accepted the BUY intent.
-  buyTxConfirmed: boolean;
+  // settling phase (BUY only): watches the indexer until the seller payment
+  // has been observed and ownership has flipped to the buyer.
+  settleState: ScanState;
 };
 
 type Msg =
@@ -180,7 +181,7 @@ const INIT: S = {
   signPubkey: "", signSignature: "", signError: "", signLoading: false,
   scanState: "not_detected",
   successFired: false,
-  buyTxConfirmed: false,
+  settleState: "not_detected",
 };
 
 function purchaseReducer(state: S, msg: Msg): S {
@@ -208,8 +209,9 @@ const PHASE_OWNS: Record<Phase, ReadonlyArray<keyof S>> = {
   otp:      ["otpCode", "otpError"],
   sign:     ["signSignature", "signError"],
   confirm:  ["uri", "memo", "paymentAddress", "amountZec"],
-  fund:     ["buyTxConfirmed"],
-  scanning: ["scanState", "successFired"],
+  scanning: ["scanState"],
+  fund:     [],
+  settling: ["settleState", "successFired"],
 };
 
 // ---- Component -------------------------------------------------------------
@@ -343,6 +345,31 @@ export default function Zip321Modal({
     }
     if (needsPayTaddr && !s.payTaddrInput.trim()) { set({ inputError: "Payout address is required." }); return; }
 
+    // Resume path: a BUY-intent has already been mined for this name. If the
+    // entered UA matches the locked buyer, skip straight to the seller-payment
+    // phase. If it doesn't match, someone else's BUY is in flight on this
+    // name — the user can't proceed until that window expires.
+    if (
+      action === "BUY"
+      && resolveResult.status === "listed"
+      && resolveResult.pendingBuy
+    ) {
+      const addr = s.addressInput.trim();
+      if (resolveResult.pendingBuy.buyer === addr) {
+        const fundIdx = phases.indexOf("fund");
+        if (fundIdx >= 0) {
+          set({
+            step: fundIdx,
+            address: addr,
+          });
+          return;
+        }
+      } else {
+        set({ inputError: "Another buyer has locked this name. Try again after their purchase window expires." });
+        return;
+      }
+    }
+
     const nextPhase = phases[s.step + 1];
     // Only build a fresh OTP session on first entry. If the user already paid
     // for a session and is re-advancing into otp after a back-nav, preserve it.
@@ -448,9 +475,18 @@ export default function Zip321Modal({
     }
   }
 
-  // -- Scanning: poll watcher until mined. Entry-state reset is handled by
-  // PHASE_OWNS on back-nav; forward entry inherits "not_detected" from INIT
-  // or from the prior back-nav reset.
+  // -- Scanning: poll watcher until the memo'd action tx confirms.
+  //
+  // For non-BUY actions, confirmed = "mined" = done — onSuccess fires here.
+  //
+  // For BUY, scanning watches the registry-commission tx (the BUY-intent) —
+  // confirmation means the registry has accepted the buyer's intent on-chain
+  // and the lock is set. Auto-advance into the fund phase so the buyer can
+  // pay the seller. We DON'T declare success here; ownership hasn't flipped
+  // yet, that happens later in `settling`.
+  //
+  // Entry-state reset is handled by PHASE_OWNS on back-nav; forward entry
+  // inherits "not_detected" from INIT or from the prior back-nav reset.
   const scanActive = phase === "scanning" && s.scanState !== "mined";
   usePoll(scanActive, async () => {
     const result = await checkMempool(name, network);
@@ -462,6 +498,10 @@ export default function Zip321Modal({
     if (status === "pending") set({ scanState: "in_mempool" });
     else if (status === "resolving") set({ scanState: "confirming" });
     else if (status === "confirmed") {
+      if (action === "BUY") {
+        advance({ scanState: "mined" });
+        return;
+      }
       if (!s.successFired) {
         set({ scanState: "mined", successFired: true });
         onSuccess?.(name);
@@ -471,29 +511,11 @@ export default function Zip321Modal({
     }
   }, 2000);
 
-  // -- BUY gate: don't unlock the seller-payment QR until the protocol-fee tx
-  // has confirmed on-chain. Otherwise the buyer can pay the seller before ZNS
-  // recognises the BUY intent and lose the funds. Testnet has no mempool
-  // endpoint, so we treat the gate as auto-open there.
-  const buyGateActive =
-    phase === "fund" && action === "BUY" && !s.buyTxConfirmed && network === "mainnet";
-  usePoll(buyGateActive, async () => {
-    const result = await checkMempool(name, network);
-    if (result.found && result.response?.state.status === "confirmed") {
-      set({ buyTxConfirmed: true });
-    }
-  }, 2000);
-  // Testnet has no on-chain detection, so let the user proceed manually.
-  useEffect(() => {
-    if (phase === "fund" && action === "BUY" && network !== "mainnet" && !s.buyTxConfirmed) {
-      set({ buyTxConfirmed: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, action, network]);
-
-  // -- Fund poll: BUY only. Auto-advance when seller's t-addr has the price. --
+  // -- Fund poll: BUY only. Auto-advance to settling when the seller's t-addr
+  // shows funds at or above the listing price. The scanning phase already
+  // ensured the BUY-intent is confirmed before we got here, so no gate.
   const fundActive =
-    phase === "fund" && action === "BUY" && resolveResult.status === "listed" && s.buyTxConfirmed;
+    phase === "fund" && action === "BUY" && resolveResult.status === "listed";
   usePoll(fundActive, async () => {
     if (resolveResult.status !== "listed") return;
     const { payTaddr, listingPrice } = resolveResult;
@@ -503,6 +525,28 @@ export default function Zip321Modal({
     }
   }, 3000);
 
+  // -- Settling poll: BUY only. The seller's t-addr has funds (per the fund
+  // phase) but the registry doesn't transfer the name until the indexer
+  // observes that payment on-chain and runs `finalize_buy`. Poll resolveName
+  // until `address === buyerUa`, then declare success.
+  const settleActive = phase === "settling" && s.settleState !== "mined";
+  usePoll(settleActive, async () => {
+    const buyerUa = s.address.trim();
+    const r = await resolveName(name, network);
+    if (r.status === "registered" && r.registration.address === buyerUa) {
+      if (!s.successFired) {
+        set({ settleState: "mined", successFired: true });
+        onSuccess?.(name);
+      } else {
+        set({ settleState: "mined" });
+      }
+    } else if (r.status === "listed" && r.pendingBuy?.buyer === buyerUa) {
+      set({ settleState: "confirming" });
+    } else {
+      set({ settleState: "not_detected" });
+    }
+  }, 2000);
+
   // -- Progress segments --
   function progressClipPath(i: number, n: number): string {
     if (n <= 1) return "polygon(0 0, 100% 0, 100% 100%, 0 100%)";
@@ -510,7 +554,10 @@ export default function Zip321Modal({
     if (i === n - 1) return "polygon(0 0, 100% 0, 100% 100%, 6px 100%)";
     return "polygon(0 0, calc(100% - 6px) 0, 100% 100%, 6px 100%)";
   }
-  const showProgress = !(phase === "scanning" && s.scanState === "mined");
+  const showProgress = !(
+    (phase === "scanning" && s.scanState === "mined" && action !== "BUY")
+    || (phase === "settling" && s.settleState === "mined")
+  );
   const progressSegments = showProgress ? (
     <div className="flex w-full justify-center">
       <div className="flex max-w-full items-center gap-[3px]">
@@ -637,32 +684,47 @@ export default function Zip321Modal({
             </div>
           </div>
         )}
-        {phase === "input" && (
+        {phase === "input" && (() => {
+          const pendingBuy =
+            action === "BUY" && resolveResult.status === "listed"
+              ? resolveResult.pendingBuy
+              : undefined;
+          const isResume = !!pendingBuy;
+          return (
           <div className="flex flex-col gap-4">
             <div className="text-center">
               <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
-                {ACTION_LABELS[action]} {name}
+                {isResume ? `Resume purchase of ${name}` : `${ACTION_LABELS[action]} ${name}`}
               </h2>
               <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
-                {prepareDescription(action, name, "")}
+                {isResume
+                  ? <>A purchase is already locked for this name. Enter the buyer&rsquo;s address to continue.</>
+                  : prepareDescription(action, name, "")}
               </p>
             </div>
             {needsAddress && (() => {
               const trimmed = s.addressInput.trim();
               const v = trimmed ? validateAddress(trimmed) : { status: "invalid" as const, warning: "" };
+              const isMatchedBuyer = !!pendingBuy && trimmed === pendingBuy.buyer;
+              const isMismatchedBuyer = !!pendingBuy && !!trimmed && trimmed !== pendingBuy.buyer && v.status === "unified";
               const borderColor = !trimmed
                 ? "var(--faq-border)"
-                : v.status === "viewkey" || v.status === "tex" || v.status === "invalid"
-                  ? "var(--accent-red, #e05252)"
-                  : v.status === "unified"
-                    ? "#22c55e"
-                    : "#ca8a04";
+                : isMatchedBuyer
+                  ? "#22c55e"
+                  : isMismatchedBuyer
+                    ? "var(--accent-red, #e05252)"
+                    : v.status === "viewkey" || v.status === "tex" || v.status === "invalid"
+                      ? "var(--accent-red, #e05252)"
+                      : v.status === "unified"
+                        ? "#22c55e"
+                        : "#ca8a04";
               const showWarning =
                 trimmed &&
                 v.warning &&
                 v.status !== "viewkey" &&
                 v.status !== "tex" &&
-                v.status !== "invalid";
+                v.status !== "invalid" &&
+                !isMatchedBuyer;
               return (
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
@@ -674,6 +736,16 @@ export default function Zip321Modal({
                     placeholder="u1…"
                     className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                     style={{ background: "var(--color-raised)", border: `1.5px solid ${borderColor}`, color: "var(--fg-heading)" }} />
+                  {isMatchedBuyer && (
+                    <p className="text-xs" style={{ color: "#22c55e" }}>
+                      ✓ This address matches the locked purchase. Continue to send the seller payment.
+                    </p>
+                  )}
+                  {isMismatchedBuyer && (
+                    <p className="text-xs" style={{ color: "var(--accent-red, #e05252)" }}>
+                      This name is locked to a different buyer&rsquo;s address.
+                    </p>
+                  )}
                   {showWarning && (
                     <p className="text-xs" style={{ color: "#ca8a04" }}>{v.warning}</p>
                   )}
@@ -745,11 +817,12 @@ export default function Zip321Modal({
               <button type="button" onClick={handleInputContinue}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold"
                 style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-                {s.sovereign ? "Continue to Sign" : "Continue"}
+                {isResume ? "Continue to Payment" : s.sovereign ? "Continue to Sign" : "Continue"}
               </button>
             </div>
           </div>
-        )}
+          );
+        })()}
         {phase === "sign" && (() => {
           const committedPubkey = ("registration" in resolveResult ? resolveResult.registration.pubkey : null) ?? "";
           return (
@@ -894,44 +967,30 @@ export default function Zip321Modal({
           return (
             <div className="flex flex-col items-center gap-4 text-center">
               <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Pay the seller</h2>
-              {!s.buyTxConfirmed ? (
-                <>
-                  <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-                    Waiting for the registry to confirm your transaction.
-                  </p>
-                  <div className="flex items-center gap-3 py-4">
-                    <span
-                      className="inline-block h-5 w-5 rounded-full border-2 animate-spin"
-                      style={{ borderColor: "var(--border-muted)", borderTopColor: "var(--fg-heading)" }}
-                    />
-                    <span className="text-sm" style={{ color: "var(--fg-muted)" }}>
-                      Confirming with the registry&hellip;
-                    </span>
-                  </div>
-                </>
+              <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+                Send <strong>{listed.listingPrice.zec} ZEC</strong> to the seller&rsquo;s transparent address to complete your purchase of <strong>{name}.zcash</strong>.
+              </p>
+              {listed.pendingBuy && (
+                <p className="text-xs break-all" style={{ color: "#22c55e" }}>
+                  ✓ Locked to {listed.pendingBuy.buyer.slice(0, 12)}…{listed.pendingBuy.buyer.slice(-8)}
+                </p>
+              )}
+              <QrBlock
+                address={listed.payTaddr}
+                amount={String(listed.listingPrice.zec)}
+                memo=""
+                size={200}
+              />
+              {network === "mainnet" ? (
+                <p className="text-sm" style={{ color: "var(--fg-muted)" }}>
+                  Waiting for payment detection&hellip;
+                </p>
               ) : (
-                <>
-                  <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-                    Send <strong>{listed.listingPrice.zec} ZEC</strong> to the seller&rsquo;s transparent address to complete your purchase of <strong>{name}.zcash</strong>.
-                  </p>
-                  <QrBlock
-                    address={listed.payTaddr}
-                    amount={String(listed.listingPrice.zec)}
-                    memo=""
-                    size={200}
-                  />
-                  {network === "mainnet" ? (
-                    <p className="text-sm" style={{ color: "var(--fg-muted)" }}>
-                      Waiting for payment detection&hellip;
-                    </p>
-                  ) : (
-                    <button type="button" onClick={() => advance()}
-                      className="px-5 py-2.5 rounded-full text-sm font-semibold"
-                      style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-                      I&rsquo;ve Sent the Payment
-                    </button>
-                  )}
-                </>
+                <button type="button" onClick={() => advance()}
+                  className="px-5 py-2.5 rounded-full text-sm font-semibold"
+                  style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
+                  I&rsquo;ve Sent the Payment
+                </button>
               )}
             </div>
           );
@@ -960,11 +1019,58 @@ export default function Zip321Modal({
             </button>
           </div>
         )}
-        {phase === "scanning" && s.scanState === "mined" && (
+        {phase === "scanning" && s.scanState === "mined" && action !== "BUY" && (
           <div className="flex flex-col items-center gap-5 text-center">
             <div className="text-5xl">🎉</div>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               {minedMessage(action, `${name}.zcash`)}
+            </p>
+            <div className="flex gap-3">
+              <a
+                href={network === "testnet" ? `/explorer?env=testnet&name=${encodeURIComponent(name)}` : `/explorer?name=${encodeURIComponent(name)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-5 py-2.5 rounded-full text-sm font-semibold transition-opacity hover:opacity-80"
+                style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)", textDecoration: "none" }}
+              >
+                View on Explorer
+              </a>
+              <button type="button" onClick={() => { clearResume(); onClose(); }}
+                className="px-6 py-3 rounded-full text-sm font-semibold"
+                style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+        {phase === "settling" && s.settleState !== "mined" && (
+          <div className="flex flex-col items-center gap-4 text-center">
+            <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Finalising your purchase</h2>
+            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+              The registry is waiting for your payment to the seller to confirm on-chain. Once it does, <strong>{name}.zcash</strong> transfers to your address.
+            </p>
+            <div className="w-full rounded-xl p-5 flex flex-col items-center gap-3"
+              style={{
+                background: "var(--color-raised)",
+                border: `1.5px solid ${s.settleState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
+              }}>
+              <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+                {s.settleState === "not_detected" && <>Waiting for the registry to observe your seller payment&hellip;</>}
+                {s.settleState === "confirming" && <>Your payment is being processed. Hang tight &mdash; this should only take a moment.</>}
+              </p>
+            </div>
+            <button type="button" onClick={onClose}
+              className="px-5 py-2.5 rounded-full text-sm font-semibold"
+              style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>
+              Close
+            </button>
+          </div>
+        )}
+        {phase === "settling" && s.settleState === "mined" && (
+          <div className="flex flex-col items-center gap-5 text-center">
+            <div className="text-5xl">🎉</div>
+            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+              {minedMessage("BUY", `${name}.zcash`)}
             </p>
             <div className="flex gap-3">
               <a
