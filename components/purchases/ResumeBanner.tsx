@@ -12,7 +12,6 @@ function describe(snap: ResumeSnapshot): string {
     case "in_mempool":   return "In mempool";
     case "confirming":   return "Confirming";
     case "mined":        return "Confirmed";
-    case "rejected":     return "Not found";
   }
 }
 

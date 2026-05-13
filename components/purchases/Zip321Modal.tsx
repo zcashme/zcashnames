@@ -448,10 +448,10 @@ export default function Zip321Modal({
     }
   }
 
-  // -- Scanning: poll watcher until mined/rejected. Entry-state reset is
-  // handled by PHASE_OWNS on back-nav; forward entry inherits "not_detected"
-  // from INIT or from the prior back-nav reset.
-  const scanActive = phase === "scanning" && s.scanState !== "mined" && s.scanState !== "rejected";
+  // -- Scanning: poll watcher until mined. Entry-state reset is handled by
+  // PHASE_OWNS on back-nav; forward entry inherits "not_detected" from INIT
+  // or from the prior back-nav reset.
+  const scanActive = phase === "scanning" && s.scanState !== "mined";
   usePoll(scanActive, async () => {
     const result = await checkMempool(name, network);
     if (!result.found || !result.response) {
@@ -468,7 +468,7 @@ export default function Zip321Modal({
       } else {
         set({ scanState: "mined" });
       }
-    } else if (status === "rejected") set({ scanState: "rejected" });
+    }
   }, 2000);
 
   // -- BUY gate: don't unlock the seller-payment QR until the protocol-fee tx
@@ -517,13 +517,11 @@ export default function Zip321Modal({
         {phases.map((step, i) => {
           const after = i > s.step;
           const current = i === s.step;
-          const rejected = current && phase === "scanning" && s.scanState === "rejected";
           // unlock is non-interactive — re-entering re-dispatches CLAIM with a
           // fresh proof, and there's nothing the user can fix back there.
           const clickable = i < s.step && step !== "unlock";
           let background = "var(--fg-heading)";
           if (after) background = "var(--border-muted)";
-          if (rejected) background = "var(--accent-red, #e05252)";
           return (
             <button
               key={`${step}-${i}`}
@@ -947,13 +945,12 @@ export default function Zip321Modal({
             <div className="w-full rounded-xl p-5 flex flex-col items-center gap-3"
               style={{
                 background: "var(--color-raised)",
-                border: `1.5px solid ${s.scanState === "in_mempool" || s.scanState === "confirming" ? "#ca8a04" : s.scanState === "rejected" ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`,
+                border: `1.5px solid ${s.scanState === "in_mempool" || s.scanState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
               }}>
               <p className="text-sm" style={{ color: "var(--fg-body)" }}>
                 {s.scanState === "not_detected" && <>Your {ACTION_NOUN[action]} hasn&rsquo;t been detected yet.</>}
                 {s.scanState === "in_mempool" && <>Your {ACTION_NOUN[action]} is in the mempool. Waiting to be mined.</>}
                 {s.scanState === "confirming" && <>Your {ACTION_NOUN[action]} is being mined. Hang tight &mdash; this should only take a moment.</>}
-                {s.scanState === "rejected" && <>Your {ACTION_NOUN[action]} was not found.</>}
               </p>
             </div>
             <button type="button" onClick={onClose}

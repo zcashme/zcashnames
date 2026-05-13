@@ -38,12 +38,12 @@ export function usePurchaseResume() {
     };
   }, []);
 
-  // Poll mempool when in scanning + not terminal. Terminal states (mined,
-  // rejected) hold their value until the user resumes or dismisses.
+  // Poll mempool while scanning. `mined` is the only terminal state — it
+  // holds until the user resumes or dismisses.
   useEffect(() => {
     if (!snapshot) return;
     if (snapshot.phase !== "scanning") return;
-    if (snapshot.scanState === "mined" || snapshot.scanState === "rejected") return;
+    if (snapshot.scanState === "mined") return;
 
     let cancelled = false;
     async function poll() {
@@ -56,7 +56,6 @@ export function usePurchaseResume() {
         if (status === "pending") next = "in_mempool";
         else if (status === "resolving") next = "confirming";
         else if (status === "confirmed") next = "mined";
-        else if (status === "rejected") next = "rejected";
       }
       if (next === snapshot.scanState) return;
       const updated: ResumeSnapshot = {

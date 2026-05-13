@@ -12,9 +12,9 @@ const STORAGE_KEY = "zns-pending-transaction-v1";
 // so the user can close the tab and come back. Once a transaction enters the
 // "scanning" phase, it polls the mempool watcher every 2 seconds.
 //
-// The mempool watcher (light.zcash.me) tracks ZNS transactions through four
-// stages: pending → resolving → confirmed / rejected. This hook maps those
-// to ScanState values and fires onSuccess when a tx reaches "mined".
+// The mempool watcher (light.zcash.me) tracks ZNS transactions through three
+// stages: pending → resolving → confirmed. This hook maps those to ScanState
+// values and fires onSuccess when a tx reaches "mined".
 //
 // Usage:
 //   const { pendingTransaction, persistPendingTransaction, clearPendingTransaction } =
@@ -42,8 +42,7 @@ export function usePendingTransaction(onSuccess?: (name: string) => void) {
     if (
       !pendingTransaction ||
       pendingTransaction.phase !== "scanning" ||
-      pendingTransaction.scanState === "mined" ||
-      pendingTransaction.scanState === "rejected"
+      pendingTransaction.scanState === "mined"
     ) {
       return;
     }
@@ -71,9 +70,6 @@ export function usePendingTransaction(onSuccess?: (name: string) => void) {
             break;
           case "confirmed":
             nextScanState = "mined";
-            break;
-          case "rejected":
-            nextScanState = "rejected";
             break;
         }
         if (entry.txid) nextTxid = entry.txid;

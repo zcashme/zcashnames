@@ -27,8 +27,6 @@ function describePending(state: PendingTransactionState): string {
       return "Confirming";
     case "mined":
       return "Confirmed";
-    case "rejected":
-      return "Not found";
   }
 }
 

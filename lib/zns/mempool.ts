@@ -8,11 +8,13 @@
  * server-side, so the client gets back rich structured data (action, name,
  * amounts, addresses) without doing any crypto work.
  *
- * Lifecycle: pending → resolving → confirmed | rejected
- *   - pending:    tx seen in mempool, not yet mined
- *   - resolving:  LWD is attempting to decrypt the note (Orchard trial-decrypt)
- *   - confirmed:  mined + note successfully decrypted
- *   - rejected:   mined but failed to decrypt within retry budget
+ * Lifecycle: pending → resolving → confirmed
+ *   - pending:    tx seen in mempool
+ *   - resolving:  tx has left the mempool, watcher is polling LWD for height
+ *   - confirmed:  LWD reports a non-zero block height
+ *
+ * There is no terminal failure status — a tx that never confirms stays in
+ * resolving indefinitely. Clients decide their own "waited too long" UX.
  *
  * Endpoints:
  *   GET /mempool-mainnet/name/:name  → TxStatusResponse (primary lookup)
@@ -66,20 +68,14 @@ export interface MempoolEntry {
  * Flattened for direct frontend consumption — status maps 1:1 to ScanState.
  */
 export interface MempoolTxState {
-  /** One of: "pending" | "resolving" | "confirmed" | "rejected" */
+  /** One of: "pending" | "resolving" | "confirmed" */
   status: string;
   /** Unix timestamp when first seen in mempool. (pending/resolving only) */
   seen_at?: number;
-  /** Number of LWD resolution attempts. (resolving only) */
-  checks?: number;
   /** Block height when confirmed. (confirmed only) */
   height?: number;
   /** Unix timestamp when confirmed. (confirmed only) */
   confirmed_at?: number;
-  /** Rejection reason. (rejected only) */
-  reason?: string;
-  /** Unix timestamp when rejected. (rejected only) */
-  rejected_at?: number;
 }
 
 /** Full response from /tx/:txid or /name/:name */

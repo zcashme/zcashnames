@@ -260,8 +260,7 @@ export type ScanState =
   | "not_detected"
   | "in_mempool"
   | "confirming"
-  | "mined"
-  | "rejected";
+  | "mined";
 
 // Persisted to localStorage so the user can close the tab and come back.
 // usePendingTransaction polls the mempool watcher until scanState settles.
