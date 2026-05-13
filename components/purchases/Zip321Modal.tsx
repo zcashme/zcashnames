@@ -896,7 +896,7 @@ export default function Zip321Modal({
               </div>
             )}
             {s.inputError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{s.inputError}</p>}
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-3 justify-center">
               {s.step > 0 && (
                 <button type="button" onClick={() => goto(s.step - 1)}
                   className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"

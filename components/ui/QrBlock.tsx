@@ -5,12 +5,6 @@ import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { zip321Uri } from "@/lib/purchases/zip321";
 import { useCopy } from "@/components/hooks/useCopy";
 
-function toBase64Url(text: string): string {
-  const bytes = new TextEncoder().encode(text);
-  const bin = String.fromCharCode(...bytes);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
 async function downloadQrPng(canvas: HTMLCanvasElement | null, filename: string): Promise<string | null> {
   if (!canvas) return "QR download is unavailable. Try again or copy the URI.";
   try {
@@ -149,20 +143,6 @@ export function QrBlock({ address, amount, memo, size = 200 }: QrBlockProps) {
           {showHelp ? "Hide Help" : "Trouble scanning?"}
         </button>
 
-        {showUri && (
-          <CopyRow label="Full URI" value={uri} copied={uriCopied} onCopy={() => copyUri(uri)} />
-        )}
-
-        <div className="flex w-full flex-col gap-2">
-          <CopyRow label="Address" value={address} copied={addrCopied} onCopy={() => copyAddr(address)} />
-          {hasAmount && (
-            <CopyRow label="Amount" value={`${amount} ZEC`} copied={amtCopied} onCopy={() => copyAmt(amount)} />
-          )}
-          {memo && (
-            <CopyRow label="Memo" value={memo} copied={memoCopied} onCopy={() => copyMemo(memo)} />
-          )}
-        </div>
-
         <div
           className="grid w-full transition-[grid-template-rows,opacity] duration-300 ease-out"
           style={{ gridTemplateRows: showHelp ? "1fr" : "0fr", opacity: showHelp ? 1 : 0 }}
@@ -201,13 +181,24 @@ export function QrBlock({ address, amount, memo, size = 200 }: QrBlockProps) {
             </div>
           </div>
         </div>
+
+        {showUri && (
+          <CopyRow label="Full URI" value={uri} copied={uriCopied} onCopy={() => copyUri(uri)} />
+        )}
+
+        <div className="flex w-full flex-col gap-2">
+          <CopyRow label="Address" value={address} copied={addrCopied} onCopy={() => copyAddr(address)} />
+          {hasAmount && (
+            <CopyRow label="Amount" value={`${amount} ZEC`} copied={amtCopied} onCopy={() => copyAmt(amount)} />
+          )}
+          {memo && (
+            <CopyRow label="Memo" value={memo} copied={memoCopied} onCopy={() => copyMemo(memo)} />
+          )}
+        </div>
       </div>
 
       {expanded && (
         <ExpandedQrModal
-          address={address}
-          amount={amount}
-          memo={memo}
           uriEncoded={uri}
           onClose={() => setExpanded(false)}
         />
@@ -225,18 +216,23 @@ type CopyRowProps = {
 
 function CopyRow({ label, value, copied, onCopy }: CopyRowProps) {
   return (
-    <div className="flex w-full items-center justify-between overflow-hidden rounded-lg px-3 py-2" style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)" }}>
-      <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5 text-center">
-        <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>{label}</span>
-        <code className="max-w-full truncate text-xs" style={{ color: "var(--fg-body)" }}>{value}</code>
-      </div>
+    <div className="grid w-full grid-cols-[4.5rem_1fr_auto] items-center gap-2 text-left">
+      <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>{label}</span>
+      <code
+        className="min-w-0 truncate rounded-md px-2 py-1 text-xs font-mono"
+        style={{ background: "var(--color-raised)", color: "var(--fg-body)", border: "1px solid var(--border-muted)" }}
+        title={value}
+      >
+        {value || "Not set"}
+      </code>
       <button
         type="button"
         onClick={onCopy}
-        className="ml-2 shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-lg cursor-pointer transition-opacity hover:opacity-80"
+        disabled={!value}
+        className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-lg cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
         style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
-        aria-label={`Copy ${label}`}
-        title={copied ? "Copied!" : `Copy ${label}`}
+        aria-label={`Copy ${label.toLowerCase()}`}
+        title={copied ? "Copied!" : `Copy ${label.toLowerCase()}`}
       >
         {copied ? <CheckIcon /> : <CopyIcon />}
       </button>
@@ -245,68 +241,50 @@ function CopyRow({ label, value, copied, onCopy }: CopyRowProps) {
 }
 
 type ExpandedQrModalProps = {
-  address: string;
-  amount: string;
-  memo: string;
   uriEncoded: string;
   onClose: () => void;
 };
 
-function ExpandedQrModal({ address, amount, memo, uriEncoded, onClose }: ExpandedQrModalProps) {
-  const memoEncoded = memo ? toBase64Url(memo) : "";
-  const { copy: copyUri } = useCopy();
-  const { copy: copyAddr } = useCopy();
-  const { copy: copyAmt } = useCopy();
-  const { copy: copyMemo } = useCopy();
-
+function ExpandedQrModal({ uriEncoded, onClose }: ExpandedQrModalProps) {
   return (
     <div
       className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.72)", backdropFilter: "blur(8px)" }}
-      onClick={onClose}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
     >
-      <div
-        className="relative flex max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] flex-col items-center gap-6 overflow-y-auto rounded-2xl p-8"
-        style={{ background: "var(--feature-card-bg)", border: "1px solid var(--faq-border)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg cursor-pointer transition-opacity hover:opacity-80"
-          style={{ background: "var(--color-raised)", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
-          aria-label="Close"
-        >
-          <RetractIcon />
-        </button>
-        <div className="flex w-full flex-col items-center gap-1 text-center">
-          <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Scan with Your Wallet</h2>
-          <p className="text-sm" style={{ color: "var(--fg-body)" }}>Open the QR code in your Zcash wallet app to pre-fill transaction details.</p>
-        </div>
-
+      <div className="flex max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] items-start justify-center gap-2">
         <a
           href={uriEncoded}
-          className="block rounded-xl bg-white p-4 transition-transform duration-150 ease-out active:scale-95"
+          className="block rounded-xl bg-white p-3 transition-transform duration-150 ease-out active:scale-95"
           style={{ WebkitTapHighlightColor: "transparent" }}
           aria-label="Open in wallet"
           title="Open in wallet"
+          onClick={(e) => e.stopPropagation()}
         >
-          <QRCodeSVG value={uriEncoded} size={360} fgColor="#000000" bgColor="#ffffff" marginSize={4} />
+          <QRCodeSVG
+            value={uriEncoded}
+            size={900}
+            fgColor="#000000"
+            bgColor="#ffffff"
+            marginSize={4}
+            className="h-auto w-[min(76vw,76vh,900px)] max-w-full"
+          />
         </a>
-
-        <div className="flex w-full flex-col gap-2">
-          <CopyRow label="Full URI" value={uriEncoded} copied={false} onCopy={() => copyUri(uriEncoded)} />
-          <CopyRow label="Address" value={address} copied={false} onCopy={() => copyAddr(address)} />
-          {amount && Number(amount) > 0 && (
-            <CopyRow label="Amount" value={`${amount} ZEC`} copied={false} onCopy={() => copyAmt(amount)} />
-          )}
-          {memo && (
-            <CopyRow label="Memo (plaintext)" value={memo} copied={false} onCopy={() => copyMemo(memo)} />
-          )}
-          {memoEncoded && (
-            <CopyRow label="Memo (encoded)" value={memoEncoded} copied={false} onCopy={() => copyMemo(memoEncoded)} />
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          className="mt-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-black cursor-pointer transition-opacity hover:opacity-85"
+          aria-label="Retract QR"
+          title="Retract QR"
+        >
+          <RetractIcon />
+        </button>
       </div>
     </div>
   );
