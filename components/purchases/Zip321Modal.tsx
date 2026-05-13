@@ -207,7 +207,9 @@ function purchaseReducer(state: S, msg: Msg): S {
 const PHASE_OWNS: Record<Phase, ReadonlyArray<keyof S>> = {
   unlock:   ["unlockCode", "unlockError"],
   input:    [],
-  otp:      ["otpCode", "otpError"],
+  // Back-nav past otp burns the session (memo/uri/sent/attempts) so the next
+  // forward pass requests a fresh passcode. handleOtpBack warns the user.
+  otp:      ["otpCode", "otpError", "otpMemo", "otpUri", "otpSent", "otpAttempts"],
   sign:     ["signSignature", "signError"],
   confirm:  ["uri", "memo", "paymentAddress", "amountZec"],
   scanning: ["scanState"],
@@ -280,14 +282,6 @@ export default function Zip321Modal({
     }
     set({ ...patch, step: targetStep });
   }
-
-  // For inputless OTP flows (DELIST/RELEASE), the modal opens directly on the
-  // otp phase — handleInputContinue never runs, so we lazily build the OTP
-  // session here on first entry.
-  useEffect(() => {
-    if (phase === "otp" && !s.otpMemo) set(buildOtpPatch());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, s.otpMemo]);
 
   // Builds the OTP memo/uri needed when advancing into the otp phase.
   function buildOtpPatch() {
@@ -396,6 +390,12 @@ export default function Zip321Modal({
   }
 
   // -- OTP phase --
+
+  function handleOtpBack() {
+    const ok = window.confirm("Are you sure? You'll have to request another passcode.");
+    if (!ok) return;
+    goto(s.step - 1);
+  }
 
   async function handleVerifyOtp() {
     if (s.otpLoading) return;
@@ -555,11 +555,7 @@ export default function Zip321Modal({
     if (i === n - 1) return "polygon(0 0, 100% 0, 100% 100%, 6px 100%)";
     return "polygon(0 0, calc(100% - 6px) 0, 100% 100%, 6px 100%)";
   }
-  const showProgress = !(
-    (phase === "scanning" && s.scanState === "mined" && action !== "BUY")
-    || (phase === "settling" && s.settleState === "mined")
-  );
-  const progressSegments = showProgress ? (
+  const progressSegments = (
     <div className="flex w-full justify-center">
       <div className="flex max-w-full items-center gap-[3px]">
         {phases.map((step, i) => {
@@ -585,7 +581,7 @@ export default function Zip321Modal({
         })}
       </div>
     </div>
-  ) : null;
+  );
 
   // -- Keyboard --
   useEffect(() => {
@@ -611,7 +607,12 @@ export default function Zip321Modal({
         onClick={(e) => e.stopPropagation()}
       >
         {phase !== "unlock" && (() => {
-          const isMined = phase === "scanning" && s.scanState === "mined";
+          const isMined =
+            (phase === "scanning" && s.scanState === "mined")
+            || (phase === "settling" && s.settleState === "mined");
+          const isWaiting =
+            (phase === "scanning" && s.scanState !== "mined")
+            || phase === "settling";
           return (
             <span
               className="absolute left-1/2 top-0 z-10 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
@@ -622,7 +623,7 @@ export default function Zip321Modal({
               }}
               aria-hidden="true"
             >
-              {phase === "scanning" && !isMined ? (
+              {isWaiting && !isMined ? (
                 <span
                   className="inline-block h-6 w-6 rounded-full border-2 animate-spin"
                   style={{ borderColor: "var(--border-muted)", borderTopColor: "var(--fg-heading)" }}
@@ -812,6 +813,11 @@ export default function Zip321Modal({
             )}
             {s.inputError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{s.inputError}</p>}
             <div className="flex gap-3 justify-end">
+              {s.step > 0 && (
+                <button type="button" onClick={() => goto(s.step - 1)}
+                  className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                  style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>Back</button>
+              )}
               <button type="button" onClick={onClose}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold"
                 style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>Cancel</button>
@@ -870,7 +876,10 @@ export default function Zip321Modal({
                 style={{ background: "var(--color-raised)", border: "1.5px solid var(--faq-border)", color: "var(--fg-heading)" }} />
             </div>
             {s.signError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{s.signError}</p>}
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-3 justify-between">
+              <button type="button" onClick={() => goto(s.step - 1)}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>Back</button>
               <button type="button" onClick={handleVerifySign} disabled={s.signLoading}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold disabled:opacity-50"
                 style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
@@ -894,26 +903,13 @@ export default function Zip321Modal({
                 size={180}
               />
             )}
-            {!s.otpSent ? (
-              <button type="button" onClick={() => set({ otpSent: true, otpError: "" })}
-                className="px-5 py-2.5 rounded-full text-sm font-semibold"
-                style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>
-                I Sent It!
-              </button>
-            ) : (
-              <>
-                <input type="text" inputMode="numeric" maxLength={6} value={s.otpCode}
-                  onChange={(e) => set({ otpCode: e.target.value.replace(/\D/g, "").slice(0, 6), otpError: "" })}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleVerifyOtp(); }}
-                  placeholder="000000" autoFocus
-                  className="w-full rounded-xl px-4 py-3 text-sm outline-none text-center tracking-[0.3em] font-mono"
-                  style={{ background: "var(--color-raised)", border: `1.5px solid ${s.otpError ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`, color: "var(--fg-heading)" }} />
-                <button type="button" onClick={handleVerifyOtp} disabled={!s.otpCode.trim() || s.otpLoading}
-                  className="px-5 py-2.5 rounded-full text-sm font-semibold disabled:opacity-50"
-                  style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-                  {s.otpLoading ? "Verifying…" : "Verify Code"}
-                </button>
-              </>
+            {s.otpSent && (
+              <input type="text" inputMode="numeric" maxLength={6} value={s.otpCode}
+                onChange={(e) => set({ otpCode: e.target.value.replace(/\D/g, "").slice(0, 6), otpError: "" })}
+                onKeyDown={(e) => { if (e.key === "Enter") handleVerifyOtp(); }}
+                placeholder="000000" autoFocus
+                className="w-full rounded-xl px-4 py-3 text-sm outline-none text-center tracking-[0.3em] font-mono"
+                style={{ background: "var(--color-raised)", border: `1.5px solid ${s.otpError ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`, color: "var(--fg-heading)" }} />
             )}
             {s.otpError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{s.otpError}</p>}
             {s.otpAttempts > 0 && (
@@ -921,6 +917,27 @@ export default function Zip321Modal({
                 Attempt {s.otpAttempts} of {getNetworkConstants(network).OTP_MAX_ATTEMPTS}
               </p>
             )}
+            <div className="flex flex-wrap gap-3 w-full justify-between pt-1">
+              {s.step > 0 ? (
+                <button type="button" onClick={handleOtpBack}
+                  className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                  style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>
+                  Back
+                </button>
+              ) : <span />}
+              <button type="button" onClick={() => set({ otpSent: true, otpError: "" })}
+                disabled={s.otpSent}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>
+                I Sent It!
+              </button>
+              <button type="button" onClick={handleVerifyOtp}
+                disabled={!s.otpSent || !s.otpCode.trim() || s.otpLoading || s.otpAttempts >= getNetworkConstants(network).OTP_MAX_ATTEMPTS}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
+                {s.otpLoading ? "Verifying…" : "Verify Code"}
+              </button>
+            </div>
           </div>
         )}
         {phase === "confirm" && (
@@ -941,11 +958,20 @@ export default function Zip321Modal({
                 size={200}
               />
             )}
-            <button type="button" onClick={() => advance()}
-              className="px-5 py-2.5 rounded-full text-sm font-semibold"
-              style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-              I Sent It!
-            </button>
+            <div className="flex gap-3">
+              {s.step > 0 && (
+                <button type="button" onClick={() => goto(s.step - 1)}
+                  className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                  style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>
+                  Back
+                </button>
+              )}
+              <button type="button" onClick={() => advance()}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold"
+                style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
+                I Sent It!
+              </button>
+            </div>
           </div>
         )}
         {phase === "fund" && (() => {

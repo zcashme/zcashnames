@@ -116,8 +116,8 @@ export const ACTION_CAPS: Record<Action, ActionCaps> = {
   BUY:     { needsAuth: false, allowsCommit: true,  fund: true,  needsInput: true  },
   UPDATE:  { needsAuth: true,  allowsCommit: true,  fund: false, needsInput: true  },
   LIST:    { needsAuth: true,  allowsCommit: true,  fund: false, needsInput: true  },
-  DELIST:  { needsAuth: true,  allowsCommit: false, fund: false, needsInput: false },
-  RELEASE: { needsAuth: true,  allowsCommit: false, fund: false, needsInput: false },
+  DELIST:  { needsAuth: true,  allowsCommit: false, fund: false, needsInput: true  },
+  RELEASE: { needsAuth: true,  allowsCommit: false, fund: false, needsInput: true  },
 };
 
 /**

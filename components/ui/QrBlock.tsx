@@ -140,6 +140,15 @@ export function QrBlock({ address, amount, memo, size = 200 }: QrBlockProps) {
           </button>
         </div>
 
+        <button
+          type="button"
+          onClick={() => setShowHelp((v) => !v)}
+          className="self-center px-1 py-1 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+          style={{ color: "var(--fg-body)" }}
+        >
+          {showHelp ? "Hide Help" : "Trouble scanning?"}
+        </button>
+
         {showUri && (
           <CopyRow label="Full URI" value={uri} copied={uriCopied} onCopy={() => copyUri(uri)} />
         )}
@@ -153,15 +162,6 @@ export function QrBlock({ address, amount, memo, size = 200 }: QrBlockProps) {
             <CopyRow label="Memo" value={memo} copied={memoCopied} onCopy={() => copyMemo(memo)} />
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={() => setShowHelp((v) => !v)}
-          className="self-center px-1 py-1 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-          style={{ color: "var(--fg-body)" }}
-        >
-          {showHelp ? "Hide Help" : "Trouble scanning?"}
-        </button>
 
         <div
           className="grid w-full transition-[grid-template-rows,opacity] duration-300 ease-out"
@@ -226,9 +226,9 @@ type CopyRowProps = {
 function CopyRow({ label, value, copied, onCopy }: CopyRowProps) {
   return (
     <div className="flex w-full items-center justify-between overflow-hidden rounded-lg px-3 py-2" style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)" }}>
-      <div className="flex min-w-0 flex-col gap-0.5">
+      <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5 text-center">
         <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>{label}</span>
-        <code className="truncate text-xs" style={{ color: "var(--fg-body)" }}>{value}</code>
+        <code className="max-w-full truncate text-xs" style={{ color: "var(--fg-body)" }}>{value}</code>
       </div>
       <button
         type="button"
