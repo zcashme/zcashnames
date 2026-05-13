@@ -66,7 +66,12 @@ function viewTransform(view: ModalView, current: ModalView): { transform: string
   return { transform: "translate(0, 0)", pointerEvents: active ? "auto" : "none" };
 }
 
-export default function WaitlistEntryForm() {
+interface WaitlistEntryFormProps {
+  onConfirm?: () => void;
+  onReset?: () => void;
+}
+
+export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryFormProps = {}) {
   const [mounted, setMounted] = useState(false);
   // ── Form state ──
   const [nameInput, setNameInput] = useState("");
@@ -102,6 +107,11 @@ export default function WaitlistEntryForm() {
 
   const name = normalizeUsername(nameInput);
   const showResult = confirmedName.length > 0;
+
+  useEffect(() => {
+    if (showResult) onConfirm?.();
+    else onReset?.();
+  }, [showResult, onConfirm, onReset]);
 
   const confirmName = () => {
     if (name.length > 0) {

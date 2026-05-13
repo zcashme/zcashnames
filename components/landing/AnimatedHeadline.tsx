@@ -1,25 +1,25 @@
-// Hero section: animated headline + optional right panel (typically PhoneStage).
-// Headline has two accent spans ("names" and "addresses") with CSS-driven
-// checkmark and redact animations. Animations replay on hover (with cooldown
-// to prevent rapid re-trigger) or auto-fire once when the midpoint of the
-// right panel scrolls past the viewport top.
-// All timers are tracked in a Set ref and cleaned up on unmount.
+// Animated product headline: "Personal names for shielded addresses."
+// "names" draws a checkmark; "addresses." gets redacted by a sweeping bar.
+// Animations auto-fire once when triggerRef's midpoint scrolls past the
+// viewport top, and replay on hover with a cooldown to prevent rapid retrigger.
+// Renders both mobile (xl:hidden) and desktop (hidden xl:block) variants
+// since they share animation state.
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-interface HeroProps {
-  rightPanel?: React.ReactNode;
-}
-
 const ANIM_MS = 2300;
 const HOVER_COOLDOWN_MS = 10000;
 
-export default function Hero({ rightPanel }: HeroProps) {
+interface AnimatedHeadlineProps {
+  triggerRef?: React.RefObject<HTMLElement | null>;
+  collapsed?: boolean;
+  children?: React.ReactNode;
+}
+
+export default function AnimatedHeadline({ triggerRef, collapsed = false, children }: AnimatedHeadlineProps) {
   const [checkVisible, setCheckVisible] = useState(false);
   const [sweeping, setSweeping] = useState(false);
-
-  const phonePanelRef = useRef<HTMLDivElement>(null);
 
   const animating = useRef(false);
   const autoSequenceTriggered = useRef(false);
@@ -63,7 +63,7 @@ export default function Hero({ rightPanel }: HeroProps) {
   }, [after, replayAnim]);
 
   useEffect(() => {
-    const el = phonePanelRef.current;
+    const el = triggerRef?.current;
     if (!el) return;
 
     let rafId = 0;
@@ -94,7 +94,7 @@ export default function Hero({ rightPanel }: HeroProps) {
       window.removeEventListener("scroll", onScrollOrResize);
       window.removeEventListener("resize", onScrollOrResize);
     };
-  }, [startSequence]);
+  }, [startSequence, triggerRef]);
 
   useEffect(() => {
     return () => {
@@ -152,11 +152,45 @@ export default function Hero({ rightPanel }: HeroProps) {
   );
 
   return (
-    <section className="hero-section w-full flex flex-col items-center px-4 relative z-[1] -mt-[92px]">
-      <div className="hero-grid w-full max-w-[1320px] grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(560px,640px)] items-start xl:items-center overflow-visible">
-        <div className="hero-mobile-headline xl:hidden w-full order-1">
+    <>
+      <div className="hero-mobile-headline xl:hidden w-full order-1">
+        <h1
+          className="font-bold leading-[0.96] text-center"
+          style={{
+            fontSize: "clamp(2.55rem, 6.1vw + 0.5rem, 6.5rem)",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          <span className="hero-headline-primary">Personal </span>
+          {identitySpan}
+          <br />
+          <span className="hero-headline-primary" style={{ fontFamily: "var(--font-cursive)", fontSize: "0.85em", fontWeight: 500 }}>for </span>
+          <span className="hero-headline-primary">shielded </span>
+          {activitySpan}
+        </h1>
+        <p
+          className="type-section-subtitle text-center mt-4"
+          style={{ color: "var(--fg-body)", letterSpacing: "-0.01em" }}
+        >
+          A name is all you need to transact privately.
+        </p>
+      </div>
+
+      <div className="w-full flex flex-col items-center xl:items-start text-center xl:text-left bg-transparent order-3 xl:order-none">
+        <div
+          className="hidden xl:block w-full overflow-hidden"
+          style={{
+            maxHeight: collapsed ? "0px" : "600px",
+            opacity: collapsed ? 0 : 1,
+            marginBottom: collapsed ? "0px" : "1.75rem",
+            transition:
+              "max-height 0.5s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease, margin-bottom 0.5s cubic-bezier(0.4,0,0.2,1)",
+            pointerEvents: collapsed ? "none" : "auto",
+          }}
+          aria-hidden={collapsed}
+        >
           <h1
-            className="font-bold leading-[0.96] text-center"
+            className="font-bold leading-[0.96] xl:text-left"
             style={{
               fontSize: "clamp(2.55rem, 6.1vw + 0.5rem, 6.5rem)",
               letterSpacing: "-0.02em",
@@ -164,61 +198,20 @@ export default function Hero({ rightPanel }: HeroProps) {
           >
             <span className="hero-headline-primary">Personal </span>
             {identitySpan}
+            <span className="hero-headline-primary" style={{ fontFamily: "var(--font-cursive)", fontSize: "0.85em", fontWeight: 500 }}> for</span>
             <br />
-            <span className="hero-headline-primary" style={{ fontFamily: "var(--font-cursive)", fontSize: "0.85em", fontWeight: 500 }}>for </span>
             <span className="hero-headline-primary">shielded </span>
             {activitySpan}
           </h1>
-          <p
-            className="type-section-subtitle text-center mt-4"
-            style={{ color: "var(--fg-body)", letterSpacing: "-0.01em" }}
-          >
-            A name is all you need to transact privately.
-          </p>
         </div>
-
-        <div className="w-full flex flex-col items-center xl:items-start text-center xl:text-left bg-transparent order-3 xl:order-none">
-          <div
-            className="hidden xl:block w-full overflow-hidden"
-            style={{
-              maxHeight: "600px",
-              opacity: 1,
-              marginBottom: "1.75rem",
-            }}
-          >
-            <h1
-              className="font-bold leading-[0.96] xl:text-left"
-              style={{
-                fontSize: "clamp(2.55rem, 6.1vw + 0.5rem, 6.5rem)",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              <span className="hero-headline-primary">Personal </span>
-              {identitySpan}
-              <span className="hero-headline-primary" style={{ fontFamily: "var(--font-cursive)", fontSize: "0.85em", fontWeight: 500 }}> for</span>
-              <br />
-              <span className="hero-headline-primary">shielded </span>
-              {activitySpan}
-            </h1>
-          </div>
-
-          <p
-            className="type-section-subtitle hidden xl:block text-center xl:text-left"
-            style={{ color: "var(--fg-body)", letterSpacing: "-0.01em", marginBottom: "1.75rem" }}
-          >
-            A name is all you need to transact privately.
-          </p>
-        </div>
-
-        {rightPanel && (
-          <div
-            ref={phonePanelRef}
-            className="order-2 xl:order-none w-full flex justify-center xl:justify-end items-start overflow-visible"
-          >
-            {rightPanel}
-          </div>
-        )}
+        <p
+          className="type-section-subtitle hidden xl:block text-center xl:text-left"
+          style={{ color: "var(--fg-body)", letterSpacing: "-0.01em", marginBottom: "1.75rem" }}
+        >
+          A name is all you need to transact privately.
+        </p>
+        {children}
       </div>
-    </section>
+    </>
   );
 }

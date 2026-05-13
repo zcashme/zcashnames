@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import HomePage from "@/components/landing/HomePage";
 import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
@@ -25,6 +26,10 @@ const leaderboardLink = (
 
 export default function WaitlistPageClient({ stats }: { stats: Stats }) {
   const { status, banner, clearBanner, closeSuccessModal } = useWaitlistVerification();
+  const [waitlistConfirmed, setWaitlistConfirmed] = useState(false);
+
+  const handleConfirm = useCallback(() => setWaitlistConfirmed(true), []);
+  const handleReset = useCallback(() => setWaitlistConfirmed(false), []);
 
   return (
     <>
@@ -69,10 +74,11 @@ export default function WaitlistPageClient({ stats }: { stats: Stats }) {
       )}
 
       <HomePage
-        form={<WaitlistEntryForm />}
+        form={<WaitlistEntryForm onConfirm={handleConfirm} onReset={handleReset} />}
         actionLink={leaderboardLink}
         stats={stats}
         subtitle="Be first to claim a name you can use, hold, or sell."
+        collapsed={waitlistConfirmed}
       />
 
       <VerifiedModal

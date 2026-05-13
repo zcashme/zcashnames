@@ -1,7 +1,8 @@
 "use client";
 
+import { useRef } from "react";
 import dynamic from "next/dynamic";
-import Hero from "@/components/landing/Hero";
+import AnimatedHeadline from "@/components/landing/AnimatedHeadline";
 import MarketStats from "@/components/landing/MarketStats";
 import HowItWorks from "@/components/landing/HowItWorks";
 import FAQ from "@/components/landing/FAQ";
@@ -39,43 +40,57 @@ type Props = {
   actionLink: React.ReactNode;
   stats: Stats;
   subtitle?: React.ReactNode;
+  collapsed?: boolean;
 };
 
-export default function HomePage({ form, actionLink, stats, subtitle }: Props) {
+export default function HomePage({ form, actionLink, stats, subtitle, collapsed = false }: Props) {
+  const phonePanelRef = useRef<HTMLDivElement>(null);
+
   return (
     <div className="home-theme-scope">
-      <Hero rightPanel={<PhoneStage embedded />} />
+      <section className="hero-section w-full flex flex-col items-center px-4 relative z-[1] -mt-[92px]">
+        <div className="hero-grid w-full max-w-[1320px] grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(560px,640px)] items-start xl:items-center overflow-visible">
+          <AnimatedHeadline triggerRef={phonePanelRef} collapsed={collapsed}>
+            <div className="w-full max-w-2xl sm:max-w-3xl xl:max-w-4xl self-center xl:self-start flex flex-col items-center gap-3">
+              {form}
+              {subtitle && (
+                <p
+                  className="type-section-subtitle text-center"
+                  style={{ color: "var(--fg-body)", letterSpacing: "-0.01em" }}
+                >
+                  {subtitle}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    style={{
+                      display: "inline-block",
+                      verticalAlign: "0.25em",
+                      width: "1.2em",
+                      height: "1.2em",
+                      marginLeft: "0.25em",
+                    }}
+                  >
+                    <path d="M1 16 C10 16 14 10 14 2 M8 8 L14 2 L20 8" />
+                  </svg>
+                </p>
+              )}
+            </div>
+          </AnimatedHeadline>
 
-      <div className="w-full px-4 pb-8 sm:pb-10 flex flex-col items-center gap-3">
-        {form}
-        {subtitle && (
-          <p
-            className="type-section-subtitle text-center"
-            style={{ color: "var(--fg-body)", letterSpacing: "-0.01em" }}
+          <div
+            ref={phonePanelRef}
+            className="order-2 xl:order-none w-full flex justify-center xl:justify-end items-start overflow-visible"
           >
-            {subtitle}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              style={{
-                display: "inline-block",
-                verticalAlign: "0.25em",
-                width: "1.2em",
-                height: "1.2em",
-                marginLeft: "0.25em",
-              }}
-            >
-              <path d="M1 16 C10 16 14 10 14 2 M8 8 L14 2 L20 8" />
-            </svg>
-          </p>
-        )}
-      </div>
+            <PhoneStage embedded />
+          </div>
+        </div>
+      </section>
 
       <MarketStats stats={stats} />
 
