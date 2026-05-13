@@ -26,6 +26,7 @@ import { checkMempool, checkUtxo } from "@/lib/zns/mempool";
 import { resolveName } from "@/lib/zns/resolve";
 import { generatePayload } from "@/lib/zns/payload";
 import { QrBlock } from "@/components/ui/QrBlock";
+import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
 
 // ---- Helpers ---------------------------------------------------------------
 
@@ -968,7 +969,7 @@ export default function Zip321Modal({
             <div className="flex flex-col items-center gap-4 text-center">
               <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Pay the seller</h2>
               <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-                Send <strong>{listed.listingPrice.zec} ZEC</strong> to the seller&rsquo;s transparent address to complete your purchase of <strong>{name}.zcash</strong>.
+                Send <strong>{listed.listingPrice.zec} ZEC</strong> to <strong>{name}</strong>&rsquo;s transparent address.
               </p>
               {listed.pendingBuy && (
                 <p className="text-xs break-all" style={{ color: "#22c55e" }}>
@@ -981,17 +982,11 @@ export default function Zip321Modal({
                 memo=""
                 size={200}
               />
-              {network === "mainnet" ? (
-                <p className="text-sm" style={{ color: "var(--fg-muted)" }}>
-                  Waiting for payment detection&hellip;
-                </p>
-              ) : (
-                <button type="button" onClick={() => advance()}
-                  className="px-5 py-2.5 rounded-full text-sm font-semibold"
-                  style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-                  I&rsquo;ve Sent the Payment
-                </button>
-              )}
+              <button type="button" onClick={() => advance()}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold"
+                style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
+                I&rsquo;ve Sent the Payment
+              </button>
             </div>
           );
         })()}
@@ -1021,7 +1016,7 @@ export default function Zip321Modal({
         )}
         {phase === "scanning" && s.scanState === "mined" && action !== "BUY" && (
           <div className="flex flex-col items-center gap-5 text-center">
-            <div className="text-5xl">🎉</div>
+            <ZcashNamesLogoMark size={64} />
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               {minedMessage(action, `${name}.zcash`)}
             </p>
@@ -1068,7 +1063,7 @@ export default function Zip321Modal({
         )}
         {phase === "settling" && s.settleState === "mined" && (
           <div className="flex flex-col items-center gap-5 text-center">
-            <div className="text-5xl">🎉</div>
+            <ZcashNamesLogoMark size={64} />
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               {minedMessage("BUY", `${name}.zcash`)}
             </p>
