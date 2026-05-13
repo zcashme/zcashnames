@@ -274,6 +274,14 @@ export default function Zip321Modal({
     set({ ...patch, step: targetStep });
   }
 
+  // For inputless OTP flows (DELIST/RELEASE), the modal opens directly on the
+  // otp phase — handleInputContinue never runs, so we lazily build the OTP
+  // session here on first entry.
+  useEffect(() => {
+    if (phase === "otp" && !s.otpMemo) set(buildOtpPatch());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, s.otpMemo]);
+
   // Builds the OTP memo/uri needed when advancing into the otp phase.
   function buildOtpPatch() {
     const regAddr = "registration" in resolveResult ? resolveResult.registration.address : "";
