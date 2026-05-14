@@ -1,24 +1,42 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { checkMempool } from "@/lib/zns/mempool";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { writeLocalStorage } from "@/components/hooks/useLocalStorage";
+import {
+  watchScanning, deriveScanState, type Expected,
+} from "@/lib/purchases/scanningWatcher";
 import {
   RESUME_EVENT, RESUME_KEY, clearResume, readResume, notifyResumeChanged,
   type ResumeSnapshot,
 } from "@/lib/purchases/resume";
-import type { ScanState } from "@/lib/types";
 
 // Phases for which the banner should appear. Earlier phases (unlock, input,
 // otp, sign) are still in-progress data collection — if the user closes the
 // modal there, they start over rather than being offered a resume pill.
 const BANNER_PHASES = new Set(["confirm", "fund", "scanning"]);
 
-// Read + watch the resume snapshot, and poll the mempool while the user is
-// in the scanning phase. This is the SOLE mempool poller for the scanning
-// lifecycle — the modal subscribes to the snapshot it writes here and
-// mirrors scanState into its own reducer. Returns a snapshot suitable for
-// the banner plus a dismiss callback.
+// Pull the `expected` post-action shape out of the modal's saved reducer
+// state. The shape mirrors what Zip321Modal builds at scanning-phase entry.
+function expectedFromSnapshot(snap: ResumeSnapshot): Expected | null {
+  const state = snap.state as { address?: string; priceInput?: string } | null;
+  if (!state) return null;
+  const address = state.address?.trim() || undefined;
+  let priceZats: number | undefined;
+  if (state.priceInput) {
+    const num = Number(state.priceInput.replace(/,/g, "").trim());
+    if (Number.isFinite(num) && num >= 0) priceZats = Math.round(num * 1e8);
+  }
+  return { action: snap.action, address, priceZats };
+}
+
+// Read + watch the resume snapshot. Subscribes to the shared scanning watcher
+// while in scanning phase so the snapshot's scanState stays current — this
+// lets the banner reflect mined/in_mempool/etc even when the modal is closed,
+// and lets a reopened modal rehydrate to the latest known state.
+//
+// The modal subscribes to the same watcher independently, so closing the
+// modal cleanly hands off polling responsibility to this hook (and vice
+// versa) via subscriber reference counting.
 export function usePurchaseResume() {
   const [snapshot, setSnapshot] = useState<ResumeSnapshot | null>(null);
 
@@ -35,41 +53,35 @@ export function usePurchaseResume() {
     };
   }, []);
 
-  // Poll mempool while scanning. `mined` is the only terminal state — it
-  // holds until the user resumes or dismisses.
+  // Subscribe to the scanning watcher while in scanning phase. Writes the
+  // derived scanState back into the snapshot (top-level + state mirror) so
+  // the banner reflects it and a reopened modal rehydrates correctly.
+  const sawMempoolRef = useRef(false);
   useEffect(() => {
     if (!snapshot) return;
     if (snapshot.phase !== "scanning") return;
     if (snapshot.scanState === "mined") return;
-
-    let cancelled = false;
-    async function poll() {
-      if (!snapshot) return;
-      const result = await checkMempool(snapshot.name, snapshot.network);
-      if (cancelled) return;
-      let next: ScanState = "not_detected";
-      if (result.found && result.response) {
-        const { status } = result.response.state;
-        if (status === "pending") next = "in_mempool";
-        else if (status === "resolving") next = "confirming";
-        else if (status === "confirmed") next = "mined";
-      }
-      if (next === snapshot.scanState) return;
+    const expected = expectedFromSnapshot(snapshot);
+    if (!expected) return;
+    const { name, network } = snapshot;
+    sawMempoolRef.current = snapshot.scanState !== "not_detected";
+    return watchScanning(name, network, (tick) => {
+      const cur = readResume();
+      if (!cur || cur.name !== name || cur.network !== network) return;
+      const { scanState: next, sawMempool } = deriveScanState(
+        tick, expected, { sawMempool: sawMempoolRef.current },
+      );
+      sawMempoolRef.current = sawMempool;
+      if (next === cur.scanState) return;
       const updated: ResumeSnapshot = {
-        ...snapshot,
+        ...cur,
         scanState: next,
-        // Mirror into the inner reducer state so when the modal rehydrates
-        // it picks up the latest scanState from the banner's polling.
-        state: { ...(snapshot.state as Record<string, unknown>), scanState: next },
+        state: { ...(cur.state as Record<string, unknown>), scanState: next },
       };
       writeLocalStorage(RESUME_KEY, updated);
       notifyResumeChanged();
-    }
-
-    poll();
-    const id = window.setInterval(poll, 2000);
-    return () => { cancelled = true; window.clearInterval(id); };
-  }, [snapshot]);
+    });
+  }, [snapshot?.phase, snapshot?.name, snapshot?.network, snapshot?.scanState, snapshot?.action]);
 
   const dismiss = useCallback(() => {
     clearResume();
