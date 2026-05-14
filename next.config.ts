@@ -96,7 +96,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https://www.zcashnames.com https://hackmd.io",
               "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
-              "connect-src 'self' https://vitals.vercel-insights.com https://light.zcash.me/zns-testnet https://light.zcash.me/zns-mainnet",
+              "connect-src 'self' https://vitals.vercel-insights.com https://light.zcash.me/zns-testnet https://light.zcash.me/zns-mainnet https://light.zcash.me/mempool-mainnet",
             ].join("; "),
           },
         ],
