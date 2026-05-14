@@ -21,7 +21,7 @@
  *   GET /mempool-mainnet/utxo/:taddr → UtxoResponse (BUY payment detection)
  *   GET /mempool-mainnet/tx/:txid    → TxStatusResponse (by txid)
  *
- * Consumed by usePendingTransaction.ts for the scanning / engagement UX.
+ * Consumed by usePurchaseResume.ts to drive the resume-banner scanning UX.
  */
 import type { Network } from "@/lib/types";
 

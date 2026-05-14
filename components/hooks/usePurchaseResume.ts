@@ -14,14 +14,11 @@ import type { ScanState } from "@/lib/types";
 // modal there, they start over rather than being offered a resume pill.
 const BANNER_PHASES = new Set(["confirm", "fund", "scanning"]);
 
-// Read + watch the resume snapshot, and poll the mempool when the user is in
-// the scanning phase but doesn't have the modal open. Returns a snapshot
-// suitable for the banner plus a dismiss callback.
-//
-// The poll loop here intentionally duplicates the modal's own poll while the
-// modal is open — both write the same scanState to storage, so the duplication
-// is at most extra mempool requests every 2s. Cheap, and keeps the hook
-// independent of any "is the modal open" signal.
+// Read + watch the resume snapshot, and poll the mempool while the user is
+// in the scanning phase. This is the SOLE mempool poller for the scanning
+// lifecycle — the modal subscribes to the snapshot it writes here and
+// mirrors scanState into its own reducer. Returns a snapshot suitable for
+// the banner plus a dismiss callback.
 export function usePurchaseResume() {
   const [snapshot, setSnapshot] = useState<ResumeSnapshot | null>(null);
 

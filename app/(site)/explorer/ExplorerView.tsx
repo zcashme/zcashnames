@@ -15,12 +15,10 @@ import Zip321Modal from "@/components/purchases/Zip321Modal";
 import ResumeBanner from "@/components/purchases/ResumeBanner";
 import { usePurchaseResume } from "@/components/hooks/usePurchaseResume";
 import { resolveName } from "@/lib/zns/resolve";
-import PendingTransactionBanner from "@/components/landing/PendingTransactionBanner";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import ActionBadge from "@/components/ActionBadge";
 
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
-import { usePendingTransaction } from "@/components/hooks/usePendingTransaction";
 import CopyIconButton from "@/components/CopyIconButton";
 import { filterRegistrations, zatsToZec } from "@/lib/zns/utils";
 import type { Listing, Network, Registration, ResolveName, ZnsEvent } from "@/lib/types";
@@ -149,12 +147,6 @@ export default function ExplorerView({
   const usdPerZec = useUsdPrice();
   const [isPending, startTransition] = useTransition();
   const [optimisticNetwork, setOptimisticNetwork] = useOptimistic(network);
-  const {
-    hydrated: pendingHydrated,
-    pendingTransaction,
-    persistPendingTransaction,
-    clearPendingTransaction,
-  } = usePendingTransaction(() => router.refresh());
 
   // ── URL-derived state (single source of truth) ────────────────────────────
   const tab = parseExplorerTab(searchParams.get("tab") ?? undefined);
@@ -370,14 +362,6 @@ export default function ExplorerView({
         network={optimisticNetwork}
         onNetworkChange={handleNetworkChange}
       />
-
-      {pendingHydrated && pendingTransaction && (
-        <PendingTransactionBanner
-          pendingTransaction={pendingTransaction}
-          onResume={() => {}}
-          onDismiss={clearPendingTransaction}
-        />
-      )}
 
       {/* Tabs */}
       <div

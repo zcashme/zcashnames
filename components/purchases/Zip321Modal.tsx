@@ -7,7 +7,10 @@ import { createPortal } from "react-dom";
 import { ACTION_CAPS, ACTION_LABELS, getNetworkConstants, phasesFor } from "@/lib/types";
 import type { Action as ZnsAction, ActionAuth, Network, Phase, ResolveName, ScanState } from "@/lib/types";
 import { readLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
-import { RESUME_KEY, clearResume, notifyResumeChanged, type ResumeSnapshot } from "@/lib/purchases/resume";
+import {
+  RESUME_KEY, RESUME_EVENT, clearResume, notifyResumeChanged, readResume,
+  type ResumeSnapshot,
+} from "@/lib/purchases/resume";
 
 // Resume: the modal writes its full reducer state to localStorage on every
 // dispatch, keyed by {action,name,network}. Reopening the modal for the same
@@ -22,7 +25,7 @@ import {
 import { validateAddress } from "@/lib/zns/utils";
 import { generateSessionId, buildZvsMemo } from "@/lib/purchases/memo";
 import { zip321Uri } from "@/lib/purchases/zip321";
-import { checkMempool, checkUtxo } from "@/lib/zns/mempool";
+import { checkUtxo } from "@/lib/zns/mempool";
 import { resolveName } from "@/lib/zns/resolve";
 import { generatePayload } from "@/lib/zns/payload";
 import { QrBlock } from "@/components/ui/QrBlock";
@@ -560,41 +563,49 @@ export default function Zip321Modal({
     }
   }
 
-  // -- Scanning: poll watcher until the memo'd action tx confirms.
+  // -- Scanning: drive scanState off the resume snapshot.
+  //
+  // `usePurchaseResume` (mounted in ExplorerView / HomeSearchResults) is the
+  // single mempool poller — it writes scanState into RESUME_KEY on every tick.
+  // The modal subscribes to that snapshot and mirrors scanState into its
+  // reducer so the in-modal UI updates without a second poll.
   //
   // For non-BUY actions, confirmed = "mined" = done — onSuccess fires here.
+  // For BUY, scanning watches the registry-commission tx (the BUY-intent);
+  // confirmation means the registry has accepted the buyer's intent on-chain.
+  // Auto-advance into fund so the buyer can pay the seller. We DON'T declare
+  // success here; ownership flips later in `settling`.
   //
-  // For BUY, scanning watches the registry-commission tx (the BUY-intent) —
-  // confirmation means the registry has accepted the buyer's intent on-chain
-  // and the lock is set. Auto-advance into the fund phase so the buyer can
-  // pay the seller. We DON'T declare success here; ownership hasn't flipped
-  // yet, that happens later in `settling`.
-  //
-  // Entry-state reset is handled by PHASE_OWNS on back-nav; forward entry
-  // inherits "not_detected" from INIT or from the prior back-nav reset.
-  const scanActive = phase === "scanning" && s.scanState !== "mined";
-  usePoll(scanActive, async () => {
-    const result = await checkMempool(name, network);
-    if (!result.found || !result.response) {
-      set({ scanState: "not_detected" });
+  // Entry-state reset is handled by PHASE_OWNS on back-nav.
+  const [resumeSnap, setResumeSnap] = useState<StoredResume | null>(() => readResume<S>());
+  useEffect(() => {
+    const refresh = () => setResumeSnap(readResume<S>());
+    const onStorage = (e: StorageEvent) => { if (e.key === RESUME_KEY) refresh(); };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(RESUME_EVENT, refresh);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(RESUME_EVENT, refresh);
+    };
+  }, []);
+  useEffect(() => {
+    if (phase !== "scanning") return;
+    if (!resumeSnap) return;
+    if (resumeSnap.action !== action || resumeSnap.name !== name || resumeSnap.network !== network) return;
+    const next = resumeSnap.scanState;
+    if (next === s.scanState) return;
+    if (next === "mined" && action === "BUY") {
+      advance({ scanState: "mined" });
       return;
     }
-    const { status } = result.response.state;
-    if (status === "pending") set({ scanState: "in_mempool" });
-    else if (status === "resolving") set({ scanState: "confirming" });
-    else if (status === "confirmed") {
-      if (action === "BUY") {
-        advance({ scanState: "mined" });
-        return;
-      }
-      if (!s.successFired) {
-        set({ scanState: "mined", successFired: true });
-        onSuccess?.(name);
-      } else {
-        set({ scanState: "mined" });
-      }
+    if (next === "mined" && !s.successFired) {
+      set({ scanState: "mined", successFired: true });
+      onSuccess?.(name);
+      return;
     }
-  }, 2000);
+    set({ scanState: next });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeSnap, phase, action, name, network, s.scanState, s.successFired]);
 
   // -- Fund poll: BUY only. Auto-advance to settling when the seller's t-addr
   // shows funds at or above the listing price. The scanning phase already

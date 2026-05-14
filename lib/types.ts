@@ -276,19 +276,6 @@ export type ScanState =
   | "confirming"
   | "mined";
 
-// Persisted to localStorage so the user can close the tab and come back.
-// usePendingTransaction polls the mempool watcher until scanState settles.
-export interface PendingTransactionState {
-  target: { action: Action; name: string; network: Network };
-  phase: Phase;
-  scanState: ScanState;
-  txid?: string;
-  warnings?: string[];
-  updatedAt: number;
-  addressInput?: string;
-  priceInput?: string;
-}
-
 /* ── Network Constants ────────────────────────────────────────────────── */
 
 interface NetworkConstants {
