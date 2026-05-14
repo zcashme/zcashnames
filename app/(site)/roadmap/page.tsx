@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     url: "https://www.zcashnames.com/roadmap",
     images: [
       {
-        url: "/og/roadmap.png",
+        url: "https://www.zcashnames.com/og/roadmap.png",
         width: 1200,
         height: 630,
         alt: "Roadmap | ZcashNames",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Roadmap | ZcashNames",
     description: "Calendar roadmap for the next ZcashNames product phases and tasks.",
-    images: ["/og/roadmap.png"],
+    images: ["https://www.zcashnames.com/og/roadmap.png"],
   },
 };
 
