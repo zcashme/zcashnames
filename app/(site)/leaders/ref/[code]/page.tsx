@@ -272,6 +272,10 @@ export default function ReferralDashboardPage() {
     data && "leaderboardRank" in data
       ? (data as ReferralDashboardData & { leaderboardRank?: number | null }).leaderboardRank
       : null;
+  const waitlistTotal =
+    data && "waitlistTotal" in data
+      ? (data as ReferralDashboardData & { waitlistTotal?: number }).waitlistTotal ?? null
+      : null;
   const referralRank =
     data && data.totalAttributedReferrals > 0 ? (leaderboardRank ?? data.waitlistPosition) : data?.waitlistPosition ?? null;
 
@@ -619,8 +623,8 @@ export default function ReferralDashboardPage() {
             <div className="text-sm text-fg-muted">
               <span>Rank </span>
               <span className="font-medium text-fg-body">
-                {referralRank && data.waitlistTotal
-                  ? `${referralRank.toLocaleString()} of ${data.waitlistTotal.toLocaleString()}`
+                {referralRank && waitlistTotal
+                  ? `${referralRank.toLocaleString()} of ${waitlistTotal.toLocaleString()}`
                   : "-"}
               </span>
             </div>
