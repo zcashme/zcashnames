@@ -66,6 +66,19 @@ test("buildReferralDashboard protects against cycles", () => {
   );
 });
 
+test("buildReferralDashboard keeps canonical identity and surfaces the preferred root code", () => {
+  const aliasRows: WaitlistReferralRow[] = [
+    row("Root", "root", null, true, "alice"),
+    row("Child", "child", "root", true),
+  ];
+
+  const dashboard = buildReferralDashboard("root", aliasRows);
+
+  assert.equal(dashboard.canonicalReferralCode, "root");
+  assert.equal(dashboard.referralCode, "alice");
+  assert.equal(dashboard.root?.preferred_referral_code, "alice");
+});
+
 test("buildFixedDepthReferralSummaries calculates direct, indirect, and depth rewards", () => {
   const summaries = buildFixedDepthReferralSummaries(rows);
   const root = summaries.get("root");
@@ -116,14 +129,20 @@ test("projection helpers calculate depth rewards, commission thresholds, and len
   assert.equal(getNameLengthBucket("abcdefg"), "7+");
 
   const dashboard = buildReferralDashboard("root", rows);
+  const dashboardData = {
+    ...dashboard,
+    leaderboardRank: null,
+    commissionUnlocked: false,
+    referralsUnlocked: false,
+  };
   const fixed = calculateReferralProjection({
-    data: dashboard,
+    data: dashboardData,
     model: "fixed",
     prices: DEFAULT_PRICE_BY_BUCKET,
     conversions: DEFAULT_CONVERSION_BY_BUCKET,
   });
   const commission = calculateReferralProjection({
-    data: dashboard,
+    data: dashboardData,
     model: "commission",
     prices: DEFAULT_PRICE_BY_BUCKET,
     conversions: DEFAULT_CONVERSION_BY_BUCKET,
@@ -148,10 +167,13 @@ function row(
   referral_code: string,
   referred_by: string | null,
   email_verified: boolean,
+  human_referral_code?: string,
 ): WaitlistReferralRow {
   return {
     name,
     referral_code,
+    human_referral_code: human_referral_code ?? null,
+    preferred_referral_code: human_referral_code ?? referral_code,
     referred_by,
     email_verified,
     cabal: false,

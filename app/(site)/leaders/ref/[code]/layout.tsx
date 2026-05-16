@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { resolveReferralIdentity } from "@/lib/referrals";
 import { BRAND } from "@/lib/zns/brand";
 
 export async function generateMetadata({
@@ -7,7 +8,12 @@ export async function generateMetadata({
   params: Promise<{ code: string }>;
 }): Promise<Metadata> {
   const { code } = await params;
-  const referralCode = decodeURIComponent(code);
+  const requestedCode = decodeURIComponent(code);
+  const resolved = await resolveReferralIdentity(requestedCode, {
+    ensureHumanReferralCode: true,
+    select: "id, name, referral_code, human_referral_code",
+  }).catch(() => null);
+  const referralCode = resolved?.preferredCode ?? requestedCode;
   const url = `${BRAND.url}/leaders/ref/${encodeURIComponent(referralCode)}`;
 
   return {

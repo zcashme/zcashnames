@@ -536,7 +536,7 @@ export default function ReferralDashboardPage() {
           </div>
           <div className="justify-self-start sm:justify-self-end">
             <Link
-              href={`/sharekit?ref=${encodeURIComponent(referralCode)}`}
+              href={`/sharekit?ref=${encodeURIComponent(data.referralCode)}`}
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
             >
               Share your reflink
@@ -968,7 +968,10 @@ export default function ReferralDashboardPage() {
                       <tr key={entry.referral_code} className="border-b last:border-b-0 transition-colors duration-300" style={{ borderColor: "var(--leaders-card-border)" }}>
                         <td className="py-2 pr-3 tabular-nums text-fg-body">{toRoman(entry.depth)}</td>
                         <td className="px-3 py-2 font-semibold text-fg-heading">
-                          <Link href={`/leaders/ref/${encodeURIComponent(entry.referral_code)}`} className="underline-offset-2 hover:underline">
+                          <Link
+                            href={`/leaders/ref/${encodeURIComponent(entry.preferred_referral_code ?? entry.referral_code)}`}
+                            className="underline-offset-2 hover:underline"
+                          >
                             {entry.name}
                           </Link>
                         </td>

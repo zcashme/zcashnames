@@ -7,6 +7,8 @@ export type ProjectionModel = "fixed" | "commission";
 export interface WaitlistReferralRow {
   name: string;
   referral_code: string;
+  human_referral_code?: string | null;
+  preferred_referral_code?: string;
   referred_by: string | null;
   created_at: string;
   email_verified: boolean;
@@ -25,6 +27,7 @@ export interface DirectReferralEntry extends ReferralTreeEntry {
 export interface ReferralDashboardBaseData {
   root: WaitlistReferralRow | null;
   referralCode: string;
+  canonicalReferralCode: string;
   waitlistPosition: number | null;
   waitlistTotal: number;
   rootBadge: "red" | "blue" | null;
@@ -222,6 +225,7 @@ export function buildReferralDashboard(
     const children = childrenByParent.get(rowCode) ?? [];
     descendants.push({
       ...next.row,
+      preferred_referral_code: next.row.preferred_referral_code ?? next.row.human_referral_code ?? rowCode,
       depth: next.depth,
       initiated_referrals: children.length,
     });
@@ -245,7 +249,8 @@ export function buildReferralDashboard(
 
   return {
     root,
-    referralCode: normalizedCode,
+    referralCode: root?.preferred_referral_code ?? root?.human_referral_code ?? normalizedCode,
+    canonicalReferralCode: normalizedCode,
     waitlistPosition: waitlistPosition && waitlistPosition > 0 ? waitlistPosition : null,
     waitlistTotal: rows.length,
     rootBadge: resolveReferralBadge(normalizedCode, eligibleRows),

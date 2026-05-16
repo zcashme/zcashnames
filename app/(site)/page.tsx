@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import HomePageClient from "./HomePageClient";
-import { db } from "@/lib/db";
+import { resolveReferralIdentity } from "@/lib/referrals";
 
 type HomePageProps = {
   searchParams?: Promise<{ ref?: string }>;
@@ -42,15 +42,10 @@ function normalizeReferralCode(value: string | undefined): string | null {
 
 async function lookupInviterName(referralCode: string): Promise<string | null> {
   try {
-    const { data, error } = await db
-      .from("zn_waitlist")
-      .select("name")
-      .eq("referral_code", referralCode)
-      .limit(1)
-      .maybeSingle();
-
-    if (error) return null;
-    const name = (data?.name as string | null | undefined)?.trim();
+    const resolved = await resolveReferralIdentity(referralCode, {
+      select: "id, name, referral_code, human_referral_code",
+    });
+    const name = (resolved?.row.name as string | null | undefined)?.trim();
     return name && name.length > 0 ? name : null;
   } catch {
     return null;

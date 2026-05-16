@@ -1,4 +1,11 @@
 import { BRAND } from "@/lib/zns/brand";
+export {
+  buildHumanReferralCodeCandidate,
+  getPreferredReferralCode,
+  isValidHumanReferralCode,
+  MAX_HUMAN_REFERRAL_CODE_LENGTH,
+  normalizeHumanReferralCode,
+} from "./referral-code-core";
 
 export function extractReferralCode(value: string): string {
   const trimmed = value.trim();

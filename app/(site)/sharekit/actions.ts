@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
 import { extractReferralCode } from "@/lib/referral-code";
+import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
 import {
   SHAREKIT_RECOVERY_ACCEPTED_MESSAGE,
   SHAREKIT_RECOVERY_ERROR_MESSAGE,
@@ -33,6 +34,7 @@ type ShareKitRecoveryRow = {
   name: string | null;
   email: string;
   referral_code: string | null;
+  human_referral_code?: string | null;
   email_verified: boolean;
   referral_email_resent_at: string | null;
 };
@@ -131,17 +133,13 @@ export async function lookupShareKitReferral(
   if (!referralCode) return { ok: false };
 
   try {
-    const { data, error } = await db
-      .from("zn_waitlist")
-      .select("name")
-      .eq("referral_code", referralCode)
-      .limit(1)
-      .maybeSingle();
+    const resolved = await resolveReferralIdentity(referralCode, {
+      select: "id, name, referral_code, human_referral_code",
+    });
+    if (!resolved) return { ok: false };
 
-    if (error || !data) return { ok: false };
-
-    const referralName = (data.name as string | null | undefined)?.trim() || null;
-    return { ok: true, referralCode, referralName };
+    const referralName = (resolved.row.name as string | null | undefined)?.trim() || null;
+    return { ok: true, referralCode: resolved.preferredCode, referralName };
   } catch {
     return { ok: false };
   }
@@ -184,7 +182,7 @@ export async function recoverShareKitReferralByEmail(input: string): Promise<Sha
 
     const { data, error } = await db
       .from("zn_waitlist")
-      .select("id, name, email, referral_code, email_verified, referral_email_resent_at")
+      .select("id, name, email, referral_code, human_referral_code, email_verified, referral_email_resent_at")
       .eq("email", email)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -238,10 +236,18 @@ export async function recoverShareKitReferralByEmail(input: string): Promise<Sha
       return acceptedRecoveryResult();
     }
 
+    const ensured = await ensureHumanReferralCode({
+      id: row.id,
+      name: row.name,
+      referral_code: row.referral_code,
+      human_referral_code: row.human_referral_code ?? null,
+    });
+
     await sendWaitlistWelcomeEmail({
       email,
       name: row.name?.trim() || "there",
-      referralCode: row.referral_code,
+      canonicalReferralCode: ensured.canonicalCode,
+      preferredReferralCode: ensured.preferredCode,
       baseUrl: resolveBaseUrl(headerStore),
     });
 

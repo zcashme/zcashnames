@@ -2,6 +2,7 @@ import type { WaitlistReferralRow } from "./referral-dashboard";
 
 export interface RankingEntry {
   referral_code: string;
+  canonical_referral_code: string;
   name: string;
   count: number;
   payout: number;
@@ -31,6 +32,7 @@ type ReferralScope = "all" | "confirmed";
 function buildTopThreeEntries(
   counts: Record<string, number>,
   nameMap: Record<string, string>,
+  preferredCodeMap: Record<string, string>,
 ): [RankingEntry?, RankingEntry?, RankingEntry?] {
   const ranked = Object.entries(counts)
     .sort(([codeA, countA], [codeB, countB]) => {
@@ -39,7 +41,8 @@ function buildTopThreeEntries(
     })
     .slice(0, 3)
     .map(([code, count]) => ({
-      referral_code: code,
+      referral_code: preferredCodeMap[code] || code,
+      canonical_referral_code: code,
       name: nameMap[code] || code,
       count,
       payout: Math.round(count * 0.05 * 1000) / 1000,
@@ -58,6 +61,18 @@ function buildNameMap(rows: WaitlistReferralRow[]): Record<string, string> {
   }
 
   return nameMap;
+}
+
+function buildPreferredCodeMap(rows: WaitlistReferralRow[]): Record<string, string> {
+  const preferredCodeMap: Record<string, string> = {};
+
+  for (const row of rows) {
+    if (row.referral_code && !preferredCodeMap[row.referral_code]) {
+      preferredCodeMap[row.referral_code] = row.preferred_referral_code ?? row.human_referral_code ?? row.referral_code;
+    }
+  }
+
+  return preferredCodeMap;
 }
 
 function formatUtcDate(date: Date): string {
@@ -91,6 +106,7 @@ export function buildDailyRankingsFromRows(
   if (rows.length === 0) return [];
 
   const nameMap = buildNameMap(rows);
+  const preferredCodeMap = buildPreferredCodeMap(rows);
   const dailyCountsByDate: Record<string, Record<string, number>> = {};
   const dates: string[] = [];
   const seenDates = new Set<string>();
@@ -115,7 +131,7 @@ export function buildDailyRankingsFromRows(
 
   return dates.map((date) => {
     const dailyCounts = dailyCountsByDate[date] || {};
-    const dailyTop = buildTopThreeEntries(dailyCounts, nameMap);
+    const dailyTop = buildTopThreeEntries(dailyCounts, nameMap, preferredCodeMap);
     const totalCount = Object.values(dailyCounts).reduce((sum, count) => sum + count, 0);
 
     for (const [code, count] of Object.entries(dailyCounts)) {
@@ -130,7 +146,7 @@ export function buildDailyRankingsFromRows(
       totalCount,
       totalGrowthPct,
       daily: dailyTop,
-      allTime: buildTopThreeEntries(cumulativeCounts, nameMap),
+      allTime: buildTopThreeEntries(cumulativeCounts, nameMap, preferredCodeMap),
     };
   });
 }
@@ -142,6 +158,7 @@ export function buildWeeklyRankingsFromRows(
   if (rows.length === 0) return [];
 
   const nameMap = buildNameMap(rows);
+  const preferredCodeMap = buildPreferredCodeMap(rows);
   const weeklyCountsByRange: Record<string, Record<string, number>> = {};
   const orderedWeeks: { week: string; weekStart: string; weekEnd: string }[] = [];
   const seenWeeks = new Set<string>();
@@ -168,7 +185,7 @@ export function buildWeeklyRankingsFromRows(
 
   return orderedWeeks.map(({ week, weekStart, weekEnd }) => {
     const weeklyCounts = weeklyCountsByRange[week] || {};
-    const weeklyTop = buildTopThreeEntries(weeklyCounts, nameMap);
+    const weeklyTop = buildTopThreeEntries(weeklyCounts, nameMap, preferredCodeMap);
     const totalCount = Object.values(weeklyCounts).reduce((sum, count) => sum + count, 0);
 
     for (const [code, count] of Object.entries(weeklyCounts)) {
@@ -185,7 +202,7 @@ export function buildWeeklyRankingsFromRows(
       totalCount,
       totalGrowthPct,
       weekly: weeklyTop,
-      allTime: buildTopThreeEntries(cumulativeCounts, nameMap),
+      allTime: buildTopThreeEntries(cumulativeCounts, nameMap, preferredCodeMap),
     };
   });
 }
