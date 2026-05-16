@@ -22,6 +22,7 @@ import {
   requestReferralCommissionPin,
   unlockReferralTable,
   unlockReferralCommissionMode,
+  type ReferralDashboardData,
   type ReferralScope,
 } from "@/lib/leaders/leaders";
 import {
@@ -33,7 +34,6 @@ import {
   type ConversionByBucket,
   type NameLengthBucket,
   type PriceByBucket,
-  type ReferralDashboardData,
   type ProjectionModel,
 } from "@/lib/leaders/referral-dashboard";
 import CopyIconButton from "@/components/CopyIconButton";

@@ -15,6 +15,7 @@ import {
 import {
   buildFixedDepthReferralSummaries,
   buildReferralDashboard,
+  type ReferralDashboardBaseData,
   type ReferralDashboardData,
   type WaitlistReferralRow,
 } from "@/lib/leaders/referral-dashboard";
@@ -27,6 +28,7 @@ import {
 } from "@/lib/leaders/rankings";
 
 export type { DailyRow, RankingEntry, WeeklyRow } from "@/lib/leaders/rankings";
+export type { ReferralDashboardData } from "@/lib/leaders/referral-dashboard";
 
 export interface TimeSeriesPoint {
   date: string;
@@ -558,7 +560,7 @@ export async function getReferralDashboard(
     }
 
     const rows = toWaitlistReferralRows(data);
-    const dashboard = buildReferralDashboard(normalizedCode, rows, scope);
+    const dashboard: ReferralDashboardBaseData = buildReferralDashboard(normalizedCode, rows, scope);
     const leaderboard = buildLeaderboardFromRows(rows, scope);
     const leaderboardRank =
       leaderboard.find((entry) => entry.referral_code === dashboard.referralCode)?.rank ?? null;
