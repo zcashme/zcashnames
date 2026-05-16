@@ -8,6 +8,9 @@ const DEFAULT_NAME_COLOR = "#f8f8f8";
 const DEFAULT_NAME = "ZECHARIAH";
 const SAMPLE_IMAGE_SRC = "/namepost/sample.png";
 const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
+const DEFAULT_TEXT_OFFSET_Y = 0;
+const TEXT_OFFSET_Y_MIN = -360;
+const TEXT_OFFSET_Y_MAX = 220;
 
 const logoVariations = [
   {
@@ -168,6 +171,7 @@ export default function AddressMeComposer() {
   const [nameHexInput, setNameHexInput] = useState(DEFAULT_NAME_COLOR);
   const [logoVariation, setLogoVariation] = useState<LogoVariation>("white");
   const [addressFont, setAddressFont] = useState<AddressFont>("ui-sans");
+  const [textOffsetY, setTextOffsetY] = useState(DEFAULT_TEXT_OFFSET_Y);
   const [loadedLogo, setLoadedLogo] = useState<LoadedLogo | null>(null);
   const [brandFontFamily, setBrandFontFamily] = useState("Inter, Arial, Helvetica, sans-serif");
   const [uiFontFamily, setUiFontFamily] = useState("Manrope, Arial, Helvetica, sans-serif");
@@ -268,13 +272,15 @@ export default function AddressMeComposer() {
     const useProperCase = selectedAddressFont.fontKey === "cursive";
     const displayName = useProperCase ? toProperCase(rawName) : rawName.toUpperCase();
     const addressText = useProperCase ? "Address Me By My Name" : "ADDRESS ME BY MY NAME";
+    const nameY = 463 + textOffsetY;
+    const addressY = 555 + textOffsetY;
 
     context.fillStyle = nameColor;
     fitSingleLineText(
       context,
       displayName,
       540,
-      463,
+      nameY,
       430,
       38,
       24,
@@ -287,7 +293,7 @@ export default function AddressMeComposer() {
       context,
       addressText,
       540,
-      555,
+      addressY,
       880,
       74,
       46,
@@ -314,6 +320,7 @@ export default function AddressMeComposer() {
     selectedAddressFont,
     selectedAddressFontFamily,
     selectedLogo,
+    textOffsetY,
   ]);
 
   useEffect(() => {
@@ -659,6 +666,25 @@ export default function AddressMeComposer() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="grid gap-2 sm:col-span-3">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-xs font-bold uppercase text-fg-muted" htmlFor="address-text-offset-y">
+                Text Vertical Position
+              </label>
+              <span className="text-xs font-semibold text-fg-body">{textOffsetY > 0 ? `+${textOffsetY}` : textOffsetY}px</span>
+            </div>
+            <input
+              id="address-text-offset-y"
+              type="range"
+              min={TEXT_OFFSET_Y_MIN}
+              max={TEXT_OFFSET_Y_MAX}
+              step={1}
+              value={textOffsetY}
+              onChange={(event) => setTextOffsetY(Number(event.target.value))}
+              className="w-full accent-[var(--fg-heading)]"
+            />
           </div>
 
           {status && <p className="text-sm font-semibold text-[#ff8a8a] sm:col-span-3">{status}</p>}
