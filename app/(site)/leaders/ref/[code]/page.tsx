@@ -51,10 +51,6 @@ interface EndpointGuideLine {
   side: AxisSide;
 }
 
-type ReferralDashboardView = ReferralDashboardData & {
-  leaderboardRank?: number | null;
-};
-
 function getActiveChartPoint<T extends { date: string }>(state: unknown, data: T[]): T | null {
   const chartState = state as
     | { activeTooltipIndex?: number | string; tooltipIndex?: number | string; activeLabel?: string }
@@ -169,7 +165,7 @@ export default function ReferralDashboardPage() {
   const referralCode = decodeURIComponent(typeof params?.code === "string" ? params.code : "");
   const installState = usePwaInstall();
   const scope: ReferralScope = "all";
-  const [data, setData] = useState<ReferralDashboardView | null>(null);
+  const [data, setData] = useState<ReferralDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [projectionOpen, setProjectionOpen] = useState(false);
   const [referralLevelFilter, setReferralLevelFilter] = useState<"all" | number>("all");
@@ -272,10 +268,12 @@ export default function ReferralDashboardPage() {
     0,
     referralLevelOptions.findIndex((option) => option === referralLevelFilter),
   );
+  const leaderboardRank =
+    data && "leaderboardRank" in data
+      ? (data as ReferralDashboardData & { leaderboardRank?: number | null }).leaderboardRank
+      : null;
   const referralRank =
-    data && data.totalAttributedReferrals > 0
-      ? (data.leaderboardRank ?? data.waitlistPosition)
-      : data?.waitlistPosition ?? null;
+    data && data.totalAttributedReferrals > 0 ? (leaderboardRank ?? data.waitlistPosition) : data?.waitlistPosition ?? null;
 
   useEffect(() => {
     setVisibleReferralRows(10);
