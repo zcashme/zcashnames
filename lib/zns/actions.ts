@@ -1,7 +1,7 @@
 "use server";
 
 import crypto from "node:crypto";
-import { ZNS, BUY_COMMISSION, LIST_COMMISSION } from "zcashname-sdk";
+import { ZNS } from "zcashname-sdk";
 import type { Network } from "@/lib/types";
 import { getZns, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
 import { getNamePricing } from "@/lib/network-stats";
@@ -131,7 +131,7 @@ export async function buyAction(
     if (!reg?.listing) return { ok: false, error: `Name "${n}" is not listed for sale.` };
     const price = listingPriceZats ?? reg.listing.price;
     const { memo, uri } = completeAction(zns.prepareBuy(n, address, price), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: (BUY_COMMISSION / 1e8).toFixed(8) };
+    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: "0" };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }
@@ -199,14 +199,18 @@ export async function listAction(
     return { ok: false, error: "Enter a valid transparent Zcash address (t1, t3, tm, or tn)." };
   }
   const maxZats = MAX_LIST_FOR_SALE_AMOUNT * 100_000_000;
-  const minZats = 100_000;
-  if (priceZats < minZats || priceZats > maxZats) {
-    return { ok: false, error: `Price must be between 0.001 and ${MAX_LIST_FOR_SALE_AMOUNT.toLocaleString()} ZEC.` };
+  if (priceZats < 0 || priceZats > maxZats) {
+    return { ok: false, error: `Price must be between 0 and ${MAX_LIST_FOR_SALE_AMOUNT.toLocaleString()} ZEC.` };
   }
 
   try {
-    const { memo, uri } = completeAction(zns.prepareList(n, priceZats, payTaddr, reg.nonce + 1), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: (LIST_COMMISSION / 1e8).toFixed(8) };
+    const status = await zns.status();
+    const commission = status.pricing ? zns.listCommission(status.pricing) : null;
+    if (commission == null) {
+      return { ok: false, error: "Pricing unavailable - indexer may be down." };
+    }
+    const { memo, uri } = completeAction(zns.prepareList(n, priceZats, payTaddr, reg.nonce + 1, commission), sovereignSig, sovereignPub);
+    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: (commission / 1e8).toFixed(8) };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
   }

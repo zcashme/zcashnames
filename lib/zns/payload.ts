@@ -20,7 +20,8 @@ export function generatePayload(
       case "CLAIM":   return zns.prepareClaim(name, address, 0).payload;
       case "BUY":     return zns.prepareBuy(name, address, priceZats).payload;
       case "UPDATE":  return zns.prepareUpdate(name, address, nonce).payload;
-      case "LIST":    return zns.prepareList(name, priceZats, payTaddr, nonce).payload;
+      // commission arg is only used for the URI; .payload omits it, so 0 is fine here.
+      case "LIST":    return zns.prepareList(name, priceZats, payTaddr, nonce, 0).payload;
       case "DELIST":  return zns.prepareDelist(name, nonce).payload;
       case "RELEASE": return zns.prepareRelease(name, nonce).payload;
     }

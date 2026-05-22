@@ -10,10 +10,13 @@ import {
   type ResumeSnapshot,
 } from "@/lib/purchases/resume";
 
-// Phases for which the banner should appear. Earlier phases (unlock, input,
-// otp, sign) are still in-progress data collection — if the user closes the
-// modal there, they start over rather than being offered a resume pill.
-const BANNER_PHASES = new Set(["confirm", "fund", "scanning"]);
+// All phases get a resume banner — closing the modal anywhere should behave
+// like "minimize", not "abandon". The banner restores the modal at the same
+// step; only the explicit "Done" / "Abandon" controls clear the snapshot.
+const BANNER_PHASES = new Set([
+  "unlock", "input", "otp", "sign",
+  "confirm", "fund", "scanning", "settling",
+]);
 
 // Pull the `expected` post-action shape out of the modal's saved reducer
 // state. The shape mirrors what Zip321Modal builds at scanning-phase entry.
