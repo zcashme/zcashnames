@@ -1102,11 +1102,8 @@ function ReferralDashboardSkeleton() {
             </div>
             <Skeleton w="w-20" />
           </div>
-          <div className="relative h-[240px] overflow-hidden rounded-lg">
-            <div className="absolute inset-x-0 bottom-6 top-4 animate-pulse rounded-lg bg-fg-dim/10" />
-            <div className="absolute bottom-10 left-4 h-16 w-[28%] animate-pulse rounded-md bg-fg-dim/15" />
-            <div className="absolute bottom-10 left-[34%] h-28 w-[28%] animate-pulse rounded-md bg-fg-dim/15" />
-            <div className="absolute bottom-10 right-4 h-40 w-[28%] animate-pulse rounded-md bg-fg-dim/15" />
+          <div className="flex h-[240px] items-center justify-center">
+            <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-fg-dim border-t-transparent" />
           </div>
         </div>
       </section>

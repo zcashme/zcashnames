@@ -32,7 +32,23 @@ import {
 import CopyIconButton from "@/components/CopyIconButton";
 
 const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
-const PERIOD_COLUMN_STYLE = { width: "11rem", minWidth: "11rem" } as const;
+const PERIOD_COLUMN_STYLE = { width: "8.75rem", minWidth: "8.75rem" } as const;
+const PERIOD_HEADER_STYLE = {
+  ...PERIOD_COLUMN_STYLE,
+  position: "sticky",
+  left: 0,
+  zIndex: 2,
+  background: "var(--leaders-card-bg-solid, var(--leaders-card-bg))",
+  borderRight: "1px solid var(--leaders-card-border)",
+} as const;
+const PERIOD_CELL_STYLE = {
+  ...PERIOD_COLUMN_STYLE,
+  position: "sticky",
+  left: 0,
+  zIndex: 1,
+  background: "var(--leaders-card-bg-solid, var(--leaders-card-bg))",
+  borderRight: "1px solid var(--leaders-card-border)",
+} as const;
 type AxisSide = "left" | "right";
 
 interface EndpointGuideLine {
@@ -142,11 +158,31 @@ function formatGrowthMetric(count: number, growthPct: number): string {
   return `${count} (${sign}${growthPct}%)`;
 }
 
-function formatPositiveGrowthMetric(count: number, growthPct: number): string | null {
-  if (count <= 0) return null;
-  if (!Number.isFinite(growthPct)) return `+${count} (+inf%)`;
-  const sign = growthPct > 0 ? "+" : "";
-  return `+${count} (${sign}${growthPct}%)`;
+function calculateNumericDomain(values: number[], { floorAtZero = false, integer = false }: { floorAtZero?: boolean; integer?: boolean } = {}): [number, number] {
+  if (values.length === 0) return floorAtZero ? [0, 1] : [0, 1];
+
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+
+  if (floorAtZero) min = Math.min(0, min);
+
+  if (min === max) {
+    const padding = min === 0 ? 1 : Math.max(Math.abs(min) * 0.1, integer ? 1 : 0.1);
+    min -= padding;
+    max += padding;
+  } else {
+    const padding = Math.max((max - min) * 0.08, integer ? 1 : 0.1);
+    min -= padding;
+    max += padding;
+  }
+
+  if (floorAtZero) min = Math.max(0, min);
+  if (integer) {
+    min = Math.floor(min);
+    max = Math.ceil(max);
+  }
+
+  return [min, max];
 }
 
 function EmailConfirmedIcon({ className }: { className?: string }) {
@@ -319,6 +355,7 @@ export default function LeaderboardContent() {
   const [weeklyRows, setWeeklyRows] = useState<WeeklyRow[]>([]);
   const [weeklyRankingsMode, setWeeklyRankingsMode] = useState<"weekly" | "allTime">("weekly");
   const [rankingsMode, setRankingsMode] = useState<"daily" | "allTime">("daily");
+  const [chartRange, setChartRange] = useState<"7d" | "30d" | "allTime">("allTime");
   const referralScope: ReferralScope = "all";
   const [visibleLeaderboardRows, setVisibleLeaderboardRows] = useState(10);
   const [visibleWeeklyRows, setVisibleWeeklyRows] = useState(7);
@@ -354,8 +391,44 @@ export default function LeaderboardContent() {
     () => leaderboard.slice(0, visibleLeaderboardRows),
     [leaderboard, visibleLeaderboardRows],
   );
-  const chartGuidePoint = activeChartPoint ?? timeSeries[timeSeries.length - 1] ?? null;
+  const chartTimeSeries = useMemo(() => {
+    if (chartRange === "allTime" || timeSeries.length === 0) return timeSeries;
+
+    const latestDate = new Date(`${timeSeries[timeSeries.length - 1].date}T00:00:00.000Z`);
+    const days = chartRange === "7d" ? 7 : 30;
+    const cutoff = latestDate.getTime() - (days - 1) * 24 * 60 * 60 * 1000;
+
+    return timeSeries.filter((point) => new Date(`${point.date}T00:00:00.000Z`).getTime() >= cutoff);
+  }, [chartRange, timeSeries]);
+
+  const chartGuidePoint =
+    (activeChartPoint && chartTimeSeries.some((point) => point.date === activeChartPoint.date) ? activeChartPoint : null) ??
+    chartTimeSeries[chartTimeSeries.length - 1] ??
+    null;
   const chartGuideWaitlist = chartGuidePoint ? chartGuidePoint.referred + chartGuidePoint.nonReferred : 0;
+  const chartSummaryText = useMemo(() => {
+    if (chartTimeSeries.length === 0) return "No change yet";
+    const last = chartTimeSeries[chartTimeSeries.length - 1];
+    const delta =
+      chartRange === "allTime"
+        ? last.total
+        : chartTimeSeries.reduce((sum, point) => sum + (point.totalDelta ?? 0), 0);
+    const rangeLabel =
+      chartRange === "7d" ? "the last 7 days" : chartRange === "30d" ? "the last 30 days" : "all time";
+    return `${delta >= 0 ? "+" : ""}${delta.toLocaleString()} over ${rangeLabel}`;
+  }, [chartRange, chartTimeSeries]);
+  const rewardsDomain = useMemo(
+    () => calculateNumericDomain(chartTimeSeries.map((point) => point.rewardsPot)),
+    [chartTimeSeries],
+  );
+  const waitlistDomain = useMemo(
+    () =>
+      calculateNumericDomain(
+        chartTimeSeries.map((point) => point.referred + point.nonReferred),
+        { integer: true },
+      ),
+    [chartTimeSeries],
+  );
 
   const canShowMoreLeaderboardRows = visibleLeaderboardRows < leaderboard.length;
   const canHideLeaderboardRows = visibleLeaderboardRows > 10;
@@ -520,7 +593,7 @@ export default function LeaderboardContent() {
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
         >
           <ShareIcon className="h-4 w-4 shrink-0" />
-          Share reflink
+          Share your reflink
         </Link>
       </div>
 
@@ -531,20 +604,33 @@ export default function LeaderboardContent() {
           borderColor: "var(--leaders-card-border)",
         }}
       >
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-heading">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: REWARDS_CHART_COLOR }} />
-            Rewards
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm font-semibold text-fg-heading">
+            {loading ? <Skeleton w="w-40" /> : chartSummaryText}
           </div>
-          <div className="flex items-center gap-3 text-sm font-semibold text-fg-heading">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--leaders-area-non-referred)" }} />
-              Waitlist
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--leaders-area-referred)" }} />
-              Referred
-            </span>
+          <div
+            className="inline-flex items-center rounded-full border p-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em]"
+            style={{ borderColor: "var(--leaders-card-border)" }}
+          >
+            {[
+              { key: "7d", label: "7D" },
+              { key: "30d", label: "30D" },
+              { key: "allTime", label: "All-time" },
+            ].map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                className="cursor-pointer rounded-full px-3 py-1 transition-colors"
+                style={
+                  chartRange === option.key
+                    ? { background: "var(--leaders-rank-gold)", color: "var(--leaders-rank-text)" }
+                    : { color: "var(--fg-muted)" }
+                }
+                onClick={() => setChartRange(option.key as "7d" | "30d" | "allTime")}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -552,14 +638,15 @@ export default function LeaderboardContent() {
           <div className="flex h-[300px] items-center justify-center">
             <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-fg-dim border-t-transparent" />
           </div>
-        ) : timeSeries.length === 0 ? (
+        ) : chartTimeSeries.length === 0 ? (
           <p className="py-20 text-center text-fg-muted">No data yet.</p>
         ) : (
+          <>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart
-              data={timeSeries}
+              data={chartTimeSeries}
               margin={{ top: 4, right: -12, bottom: 0, left: -12 }}
-              onMouseMove={(state) => setActiveChartPoint(getActiveChartPoint(state, timeSeries))}
+              onMouseMove={(state) => setActiveChartPoint(getActiveChartPoint(state, chartTimeSeries))}
               onMouseLeave={() => setActiveChartPoint(null)}
             >
               <defs>
@@ -584,6 +671,7 @@ export default function LeaderboardContent() {
                 tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
+                domain={rewardsDomain}
                 tickFormatter={(value) => `${Math.round(Number(value))}`}
               />
               <YAxis
@@ -592,6 +680,7 @@ export default function LeaderboardContent() {
                 tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
+                domain={waitlistDomain}
                 allowDecimals={false}
               />
               <Tooltip content={<ChartTooltip />} />
@@ -642,6 +731,23 @@ export default function LeaderboardContent() {
               />
             </AreaChart>
           </ResponsiveContainer>
+          <div className="mt-3 flex flex-wrap items-start justify-between gap-3 px-2 text-sm font-semibold text-fg-heading">
+            <div className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: REWARDS_CHART_COLOR }} />
+              Rewards
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--leaders-area-non-referred)" }} />
+                Waitlist
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--leaders-area-referred)" }} />
+                Referred
+              </span>
+            </div>
+          </div>
+          </>
         )}
       </section>
 
@@ -726,7 +832,7 @@ export default function LeaderboardContent() {
             maxHeight: `${86 + Math.max(1, visibleLeaderboard.length) * 58}px`,
           }}
         >
-          <div className="overflow-x-auto">
+          <div className="leaders-table-scroll overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead>
               <tr
@@ -738,9 +844,9 @@ export default function LeaderboardContent() {
                 <th className="px-4 py-3 text-left sm:px-6">
                   <span>Refs</span>
                 </th>
+                <th className="px-4 py-3 text-left sm:px-6">Rewards</th>
                 <th className="px-4 py-3 text-left sm:px-6">24H</th>
                 <th className="px-4 py-3 text-left sm:px-6">1W</th>
-                <th className="px-4 py-3 text-left sm:px-6">Rewards</th>
               </tr>
               </thead>
               <tbody>
@@ -761,13 +867,13 @@ export default function LeaderboardContent() {
                       <Skeleton w="w-8" />
                     </td>
                     <td className="px-4 py-3 text-left sm:px-6">
-                      <Skeleton w="w-20" />
-                    </td>
-                    <td className="px-4 py-3 text-left sm:px-6">
-                      <Skeleton w="w-20" />
-                    </td>
-                    <td className="px-4 py-3 text-left sm:px-6">
                       <Skeleton w="w-14" />
+                    </td>
+                    <td className="px-4 py-3 text-left sm:px-6">
+                      <Skeleton w="w-20" />
+                    </td>
+                    <td className="px-4 py-3 text-left sm:px-6">
+                      <Skeleton w="w-20" />
                     </td>
                   </tr>
                 ))
@@ -851,14 +957,20 @@ export default function LeaderboardContent() {
                     <td className="whitespace-nowrap px-4 py-3 tabular-nums sm:px-6">
                       <span className="font-semibold text-fg-heading">{entry.attributedReferrals}</span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 tabular-nums text-fg-muted sm:px-6">
-                      {formatGrowthMetric(entry.recent, entry.recentGrowthPct)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 tabular-nums text-fg-muted sm:px-6">
-                      {formatGrowthMetric(entry.weeklyRecent, entry.weeklyGrowthPct)}
-                    </td>
                     <td className="px-4 py-3 tabular-nums text-fg-body sm:px-6">
                       <ZecSymbol className="mr-0.5 inline-block" /> {formatZec(entry.potential_rewards)}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums sm:px-6">
+                      <div className="whitespace-nowrap text-fg-muted">{formatGrowthMetric(entry.recent, entry.recentGrowthPct)}</div>
+                      <div className="mt-0.5 tabular-nums text-[0.8rem] text-fg-body">
+                        <ZecSymbol className="mr-0.5 inline-block" /> {formatPayout(entry.recent * 0.05)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 tabular-nums sm:px-6">
+                      <div className="whitespace-nowrap text-fg-muted">{formatGrowthMetric(entry.weeklyRecent, entry.weeklyGrowthPct)}</div>
+                      <div className="mt-0.5 tabular-nums text-[0.8rem] text-fg-body">
+                        <ZecSymbol className="mr-0.5 inline-block" /> {formatPayout(entry.weeklyRecent * 0.05)}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -952,15 +1064,14 @@ export default function LeaderboardContent() {
             maxHeight: `${78 + Math.max(1, visibleWeeklyRankingRows.length) * 76}px`,
           }}
         >
-          <div className="overflow-x-auto">
+          <div className="leaders-table-scroll overflow-x-auto">
             <table className="w-full min-w-[620px] text-left text-sm">
               <thead>
               <tr
                 className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
                 style={{ borderColor: "var(--leaders-card-border)" }}
               >
-                <th className="px-4 py-2.5 sm:px-6" style={PERIOD_COLUMN_STYLE}>Week</th>
-                <th className="px-4 py-2.5 text-left sm:px-6">ALL</th>
+                <th className="px-4 py-2.5 sm:px-6" style={PERIOD_HEADER_STYLE}>Week</th>
                 <th className="px-4 py-2.5 text-left sm:px-6">1st</th>
                 <th className="px-4 py-2.5 text-left sm:px-6">2nd</th>
                 <th className="px-4 py-2.5 text-left sm:px-6">3rd</th>
@@ -974,11 +1085,8 @@ export default function LeaderboardContent() {
                     className="border-b last:border-b-0"
                     style={{ borderColor: "var(--leaders-card-border)" }}
                   >
-                    <td className="px-4 py-3 tabular-nums sm:px-6">
-                      <Skeleton w="w-44" />
-                    </td>
-                    <td className="px-4 py-3 sm:px-6">
-                      <Skeleton w="w-16" />
+                    <td className="px-4 py-3 tabular-nums sm:px-6" style={PERIOD_CELL_STYLE}>
+                      <Skeleton w="w-28" />
                     </td>
                     {Array.from({ length: 3 }).map((__, j) => (
                       <td key={j} className="px-4 py-3 sm:px-6">
@@ -989,7 +1097,7 @@ export default function LeaderboardContent() {
                 ))
               ) : visibleWeeklyRankingRows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-fg-muted">
+                  <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
                     No weekly ranking data yet.
                   </td>
                 </tr>
@@ -1001,18 +1109,16 @@ export default function LeaderboardContent() {
                     style={{ borderColor: "var(--leaders-card-border)" }}
                   >
                     <td
-                      className="px-4 py-3 font-mono text-[0.78rem] leading-[1.35] text-fg-muted sm:px-6"
-                      style={PERIOD_COLUMN_STYLE}
+                      className="px-4 py-3 font-mono text-[0.78rem] leading-[1.35] sm:px-6"
+                      style={PERIOD_CELL_STYLE}
                     >
-                      <span className="block">{row.weekStart}</span>
-                      <span className="block">{`to ${row.weekEnd}`}</span>
-                    </td>
-                    <td className="px-4 py-3 tabular-nums text-[0.78rem] text-fg-muted sm:px-6">
-                      {row.totalCount > 0 ? (
-                        `${row.totalCount} (${Number.isFinite(row.totalGrowthPct) ? `${row.totalGrowthPct > 0 ? "+" : ""}${row.totalGrowthPct}%` : "+inf%"})`
-                      ) : (
-                        <span>-</span>
-                      )}
+                      <span className="block font-semibold text-fg-heading">{row.weekStart}</span>
+                      <span className="block font-semibold text-fg-heading">{`to ${row.weekEnd}`}</span>
+                      <span className="mt-1 block text-[0.72rem] text-fg-muted">
+                        {row.totalCount > 0
+                          ? `${row.totalCount} (${Number.isFinite(row.totalGrowthPct) ? `${row.totalGrowthPct > 0 ? "+" : ""}${row.totalGrowthPct}%` : "+inf%"})`
+                          : "-"}
+                      </span>
                     </td>
                     <td className="px-4 py-3 sm:px-6">
                       <RankingCell
@@ -1130,8 +1236,7 @@ export default function LeaderboardContent() {
                 className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
                 style={{ borderColor: "var(--leaders-card-border)" }}
               >
-                <th className="px-4 py-2.5 sm:px-6" style={PERIOD_COLUMN_STYLE}>Date</th>
-                <th className="px-4 py-2.5 text-left sm:px-6">ALL</th>
+                <th className="px-4 py-2.5 sm:px-6" style={PERIOD_HEADER_STYLE}>Date</th>
                 <th className="px-4 py-2.5 text-left sm:px-6">1st</th>
                 <th className="px-4 py-2.5 text-left sm:px-6">2nd</th>
                 <th className="px-4 py-2.5 text-left sm:px-6">3rd</th>
@@ -1145,11 +1250,8 @@ export default function LeaderboardContent() {
                     className="border-b last:border-b-0"
                     style={{ borderColor: "var(--leaders-card-border)" }}
                   >
-                    <td className="px-4 py-3 tabular-nums sm:px-6">
-                      <Skeleton w="w-20" />
-                    </td>
-                    <td className="px-4 py-3 sm:px-6">
-                      <Skeleton w="w-16" />
+                    <td className="px-4 py-3 tabular-nums sm:px-6" style={PERIOD_CELL_STYLE}>
+                      <Skeleton w="w-24" />
                     </td>
                     {Array.from({ length: 3 }).map((__, j) => (
                       <td key={j} className="px-4 py-3 sm:px-6">
@@ -1160,7 +1262,7 @@ export default function LeaderboardContent() {
                 ))
               ) : visibleRows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-fg-muted">
+                  <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
                     No daily ranking data yet.
                   </td>
                 </tr>
@@ -1173,18 +1275,16 @@ export default function LeaderboardContent() {
                   >
                     <td
                       className="px-4 py-3 font-mono text-[0.78rem] sm:px-6"
-                      style={PERIOD_COLUMN_STYLE}
+                      style={PERIOD_CELL_STYLE}
                     >
-                      <Link href={`/leaders/${row.date}`} className="text-fg-muted underline-offset-2 hover:underline">
+                      <Link href={`/leaders/${row.date}`} className="font-semibold text-fg-heading underline-offset-2 hover:underline">
                         {row.date}
                       </Link>
-                    </td>
-                    <td className="px-4 py-3 tabular-nums text-[0.78rem] text-fg-muted sm:px-6">
-                      {row.totalCount > 0 ? (
-                        `${row.totalCount} (${Number.isFinite(row.totalGrowthPct) ? `${row.totalGrowthPct > 0 ? "+" : ""}${row.totalGrowthPct}%` : "+inf%"})`
-                      ) : (
-                        <span>-</span>
-                      )}
+                      <span className="mt-1 block text-[0.72rem] text-fg-muted">
+                        {row.totalCount > 0
+                          ? `${row.totalCount} (${Number.isFinite(row.totalGrowthPct) ? `${row.totalGrowthPct > 0 ? "+" : ""}${row.totalGrowthPct}%` : "+inf%"})`
+                          : "-"}
+                      </span>
                     </td>
                     <td className="px-4 py-3 sm:px-6">
                       <RankingCell
