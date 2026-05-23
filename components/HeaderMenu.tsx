@@ -10,8 +10,6 @@ import {
   type CommunityCard,
 } from "@/lib/community/sections";
 
-// Recursive menu-link type used to build the nested nav tree.
-// Top-level items may have children (rendered as expandable sections).
 type MenuLink = {
   label: string;
   href: string;
@@ -23,8 +21,6 @@ type MenuLink = {
   children?: MenuLink[];
 };
 
-// Build child links from specific community subsections at module load.
-// COMMUNITY_SECTIONS is a static data source consumed across the site.
 const communitySectionLinks: MenuLink[] = COMMUNITY_SECTIONS
   .filter((section) => ["get-involved", "partners", "features", "events"].includes(section.slug))
   .map((section) => ({
@@ -34,9 +30,12 @@ const communitySectionLinks: MenuLink[] = COMMUNITY_SECTIONS
   }));
 
 const socialLinks = sectionCardMenuLinks("social");
+const blogLinks = sectionCardMenuLinks("blogs").map((item) => ({
+  ...item,
+  displayPath: "Coming soon",
+  disabled: true,
+}));
 
-// Complete menu tree: static pages + nested sections sourced from
-// COMMUNITY_SECTIONS data. Rendered by HeaderMenu via MenuItem/MenuAnchor.
 const menuLinks: MenuLink[] = [
   { label: "Home", href: "/", displayPath: "zcashnames.com" },
   { label: "Explorer", href: "/explorer" },
@@ -80,7 +79,8 @@ const menuLinks: MenuLink[] = [
     label: "Blogs",
     href: communitySectionHref("blogs"),
     displayPath: "/blogs",
-    children: sectionCardMenuLinks("blogs"),
+    comingSoon: true,
+    children: blogLinks,
   },
   {
     label: "Leaderboard",
@@ -113,11 +113,6 @@ function cardMenuDisplayPath(card: CommunityCard): string {
   return card.href;
 }
 
-// Hamburger menu for the site header. Renders the static menuLinks tree
-// with expandable nested sections. Two-phase open/close: `open` controls the
-// animated panel, `menuVisible` keeps the DOM mounted for the exit animation.
-// Outside click (pointerdown) and Escape key dismiss the menu and collapse
-// any expanded section, returning focus to the hamburger button.
 export default function HeaderMenu() {
   const [open, setOpen] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -151,7 +146,6 @@ export default function HeaderMenu() {
     };
   }, [open]);
 
-  // Delay unmounting the panel so the exit animation (opacity/translate) plays.
   useEffect(() => {
     if (open) {
       setMenuVisible(true);
@@ -219,9 +213,6 @@ export default function HeaderMenu() {
   );
 }
 
-// Renders a single top-level menu row. If the item has children, it includes
-// an expand/collapse toggle and renders child links inside an animated grid.
-// One child section is expanded at a time (controlled by expandedSection state).
 function MenuItem({
   item,
   expanded,
@@ -260,10 +251,6 @@ function MenuItem({
   );
 }
 
-// The actual link row (or toggle+link for expandable parents).
-// Handles three render modes: external `<a>`, disabled `<div>`, and Next.js `<Link>`.
-// `primary` rows get bold styling; child rows get indented styling with a parentPath prefix.
-// `hidden` controls tabIndex so collapsed child links aren't focusable.
 function MenuAnchor({
   item,
   expanded = false,
@@ -412,9 +399,6 @@ function FeaturedBadge() {
   );
 }
 
-// Derives a concise display path for the right-aligned breadcrumb in each row.
-// For external URLs, extracts the hostname. For child links, collapses deep
-// paths into `.../segment` notation.
 function displayPath(item: MenuLink, parentPath?: string): string {
   if (item.displayPath) return item.displayPath;
 
@@ -434,8 +418,6 @@ function displayPath(item: MenuLink, parentPath?: string): string {
   }
 }
 
-// Extracts a human-readable short path from community section external URLs
-// (e.g., Twitter handle, Telegram username, Discord invite code).
 function communityPath(href: string): string {
   try {
     const url = new URL(href);
