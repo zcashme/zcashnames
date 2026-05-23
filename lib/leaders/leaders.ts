@@ -293,28 +293,34 @@ function buildLeadersTimeSeriesFromData(
       cabal: Boolean(rawRow.cabal),
     };
     const date = row.created_at.slice(0, 10);
+    const isNewDate = date !== lastDate;
+
+    // On a new date, finalize the previous point's rewardsPot + topReferrer using
+    // cumulativeRows as it stands before pushing this row. This makes calculateRewardsPot
+    // run once per date instead of once per row.
+    if (isNewDate && points.length > 0) {
+      points[points.length - 1].rewardsPot = calculateRewardsPot(cumulativeRows, scope);
+      const top = resolveTopReferrer(dailyCounts, nameMap, previousTopCode);
+      points[points.length - 1].topReferrer = top;
+      previousTopCode = top?.code ?? null;
+      dailyCounts = {};
+    }
+
     total += 1;
     if (row.referral_code) cumulativeRows.push(row);
 
     const isCountedReferral =
       Boolean(row.referred_by) && (scope === "all" || row.email_verified);
-
     if (isCountedReferral) referred += 1;
 
-    const rewardsPot = calculateRewardsPot(cumulativeRows, scope);
-
-    if (date !== lastDate) {
-      if (points.length > 0) {
-        const top = resolveTopReferrer(dailyCounts, nameMap, previousTopCode);
-        points[points.length - 1].topReferrer = top;
-        previousTopCode = top?.code ?? null;
-      }
-
-      dailyCounts = {};
-      points.push({ date, total, referred, nonReferred: total - referred, rewardsPot });
+    if (isNewDate) {
+      points.push({ date, total, referred, nonReferred: total - referred, rewardsPot: 0 });
       lastDate = date;
     } else {
-      points[points.length - 1] = { date, total, referred, nonReferred: total - referred, rewardsPot };
+      const point = points[points.length - 1];
+      point.total = total;
+      point.referred = referred;
+      point.nonReferred = total - referred;
     }
 
     if (isCountedReferral) {
@@ -323,7 +329,9 @@ function buildLeadersTimeSeriesFromData(
     }
   }
 
+  // Final flush for the last date — rewardsPot was never set inside the loop.
   if (points.length > 0) {
+    points[points.length - 1].rewardsPot = calculateRewardsPot(cumulativeRows, scope);
     const top = resolveTopReferrer(dailyCounts, nameMap, previousTopCode);
     points[points.length - 1].topReferrer = top;
   }
