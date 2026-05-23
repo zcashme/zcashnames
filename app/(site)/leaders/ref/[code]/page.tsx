@@ -365,8 +365,8 @@ export default function ReferralDashboardPage() {
           href={`/sharekit?ref=${encodeURIComponent(referralCode)}`}
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
         >
+          Share your reflink
           <ShareIcon className="h-4 w-4 shrink-0" />
-          Share reflink
         </Link>
       </div>
 
@@ -910,9 +910,21 @@ function ShareIcon({ className }: { className?: string }) {
   );
 }
 
+function DashboardIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <rect x="3" y="4" width="8" height="7" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+      <rect x="13" y="4" width="8" height="11" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+      <rect x="3" y="13" width="8" height="7" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+      <rect x="13" y="17" width="8" height="3" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
 function BackLink() {
   return (
-    <Link href="/leaders" className="text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline">
+    <Link href="/leaders" className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline">
+      <DashboardIcon className="h-4 w-4 shrink-0" />
       Back to Leaders
     </Link>
   );

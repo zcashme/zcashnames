@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import ReferralCodeRecovery from "@/components/ReferralCodeRecovery";
 import { extractReferralCode } from "@/lib/referral-code";
 
 export default function ReferralCodeEntryPage() {
@@ -28,10 +29,10 @@ export default function ReferralCodeEntryPage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 pb-20 pt-4 sm:px-6">
       <section
-        className="rounded-2xl border p-5 sm:p-6"
+        className="mx-auto max-w-2xl rounded-2xl border p-5 sm:p-6"
         style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)" }}
       >
-        <div className="max-w-xl">
+        <div>
           <h1 className="text-3xl font-bold tracking-tight text-fg-heading">
             Enter your referral code to see your dashboard.
           </h1>
@@ -43,7 +44,7 @@ export default function ReferralCodeEntryPage() {
             <label className="block text-sm font-semibold text-fg-heading" htmlFor="referral-code">
               Referral code or link
             </label>
-            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-2">
               <input
                 id="referral-code"
                 type="text"
@@ -53,20 +54,30 @@ export default function ReferralCodeEntryPage() {
                   setError("");
                 }}
                 placeholder="zcashnames.com/?ref=your-code"
-                className="min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
+                className="w-full min-w-0 rounded-lg border bg-transparent px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
                 style={{ borderColor: "var(--leaders-card-border)" }}
               />
+            </div>
+            <div className="mt-3">
               <button
                 type="submit"
-                className="cursor-pointer rounded-lg border px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-muted"
+                className="w-full cursor-pointer rounded-lg border px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-muted"
                 style={{ borderColor: "var(--leaders-card-border)" }}
               >
                 View dashboard
               </button>
             </div>
+            <div className="mt-3">
+              <ReferralCodeRecovery
+                className="w-full"
+                triggerClassName="w-full cursor-pointer rounded-lg border px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                formClassName="mt-4 flex flex-col gap-3 border-t pt-4"
+                controlsId="leaders-ref-forgot-code"
+              />
+            </div>
             {error && <p className="mt-2 text-sm text-fg-muted">{error}</p>}
           </form>
-          <p className="mt-4 text-xs text-fg-muted">
+          <p className="mt-4 text-center text-xs text-fg-muted">
             Referral rewards are subject to{" "}
             <Link href="/leaders/terms" className="underline underline-offset-2">
               terms

@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import ReferralCodeRecovery from "@/components/ReferralCodeRecovery";
 import { useCopy } from "@/components/hooks/useCopy";
 import ShareDropdown, { ShareCopyIcon } from "@/components/ShareDropdown";
 import { buildReferralUrl, extractReferralCode } from "@/lib/referral-code";
-import type { ShareKitRecoveryPublicStatus } from "@/lib/sharekit-recovery";
 import type { ShareKitDraft, ShareKitSection } from "@/lib/sharekit";
-import { lookupShareKitReferral, recoverShareKitReferralByEmail } from "./actions";
+import { lookupShareKitReferral } from "./actions";
 
 function replaceYourLink(post: string, shareUrl: string): string {
   return post.replaceAll("[your link]", shareUrl);
@@ -44,11 +44,6 @@ export default function ShareKitClient({
   const [error, setError] = useState(initialWarning);
   const [referralName, setReferralName] = useState(initialReferralName);
   const [submitting, setSubmitting] = useState(false);
-  const [recoveryOpen, setRecoveryOpen] = useState(false);
-  const [recoveryInput, setRecoveryInput] = useState("");
-  const [recovering, setRecovering] = useState(false);
-  const [recoveryStatus, setRecoveryStatus] = useState<ShareKitRecoveryPublicStatus | null>(null);
-  const [recoveryMessage, setRecoveryMessage] = useState("");
   const previousShareUrlRef = useRef(buildReferralUrl(initialReferralCode));
 
   useEffect(() => {
@@ -133,15 +128,6 @@ export default function ShareKitClient({
     updateUrl("");
   }
 
-  async function recoverReferralCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setRecovering(true);
-    const result = await recoverShareKitReferralByEmail(recoveryInput);
-    setRecovering(false);
-    setRecoveryStatus(result.status);
-    setRecoveryMessage(result.message);
-  }
-
   function updateDraftValue(draftId: string, value: string) {
     setDraftValues((current) => ({ ...current, [draftId]: value }));
   }
@@ -204,63 +190,10 @@ export default function ShareKitClient({
             >
               {submitting ? "Checking..." : referralCode ? "Update code" : "Apply code"}
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setRecoveryOpen((current) => !current);
-                setRecoveryStatus(null);
-                setRecoveryMessage("");
-              }}
-              className={resolvedTheme === "light"
-                ? "rounded-md border border-border-muted bg-[var(--color-card)] px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
-                : "cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"}
-              aria-expanded={recoveryOpen}
-              aria-controls="sharekit-forgot-code"
-            >
-              Forgot code?
-            </button>
+            <ReferralCodeRecovery variant="sharekit" controlsId="sharekit-forgot-code" />
           </div>
           {error && <p className="text-sm text-fg-muted">{error}</p>}
         </form>
-        {recoveryOpen && (
-          <form id="sharekit-forgot-code" onSubmit={recoverReferralCode} className="mt-4 flex flex-col gap-3 border-t border-border-muted pt-4">
-            <label htmlFor="sharekit-recovery-input" className="text-sm font-semibold text-fg-heading">
-              Enter the email address you used to join the waitlist.
-            </label>
-            <input
-              id="sharekit-recovery-input"
-              type="email"
-              value={recoveryInput}
-              onChange={(event) => {
-                setRecoveryInput(event.target.value);
-                setRecoveryStatus(null);
-                setRecoveryMessage("");
-              }}
-              placeholder="you@example.com"
-              className={`min-w-0 rounded-lg border border-border-muted px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
-                resolvedTheme === "light" ? "bg-[var(--color-card)]" : "bg-transparent"
-              }`}
-            />
-            <div className="flex flex-wrap gap-2">
-              <button type="submit" disabled={recovering} className={referralActionButtonClassName}>
-                {recovering ? "Checking..." : "Recover link"}
-              </button>
-            </div>
-            {recoveryMessage ? (
-              <p
-                className={`text-sm ${
-                  recoveryStatus === "accepted"
-                    ? "text-fg-heading"
-                  : recoveryStatus === "error"
-                      ? "text-fg-muted"
-                      : "text-fg-body"
-                }`}
-              >
-                {recoveryMessage}
-              </p>
-            ) : null}
-          </form>
-        )}
       </section>
 
       <section className="flex flex-col gap-5">

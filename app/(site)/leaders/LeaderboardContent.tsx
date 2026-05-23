@@ -232,6 +232,27 @@ function ShareIcon({ className }: { className?: string }) {
   );
 }
 
+function DashboardIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <rect x="3" y="4" width="8" height="7" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+      <rect x="13" y="4" width="8" height="11" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+      <rect x="3" y="13" width="8" height="7" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+      <rect x="13" y="17" width="8" height="3" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function HomeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <path d="M4 10.5L12 4L20 10.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6.5 9.5V20H17.5V9.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 20V14H14V20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function ChartTooltip({
   active,
   payload,
@@ -585,15 +606,16 @@ export default function LeaderboardContent() {
           headerTitleTarget,
         )}
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <Link href="/" className="text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline">
+          <HomeIcon className="h-4 w-4 shrink-0" />
           Back to Home
         </Link>
         <Link
-          href="/sharekit"
+          href="/leaders/ref"
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
         >
-          <ShareIcon className="h-4 w-4 shrink-0" />
-          Share your reflink
+          See your dashboard
+          <DashboardIcon className="h-4 w-4 shrink-0" />
         </Link>
       </div>
 
