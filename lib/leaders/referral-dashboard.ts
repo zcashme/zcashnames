@@ -34,18 +34,23 @@ export interface DirectReferralEntry extends ReferralTreeEntry {
   depth: 1;
 }
 
-export interface ReferralDashboardData {
+export interface ReferralDashboardBaseData {
   root: WaitlistReferralRow | null;
   referralCode: string;
   waitlistPosition: number | null;
+  waitlistTotal: number;
   rootBadge: "red" | "blue" | null;
-  commissionUnlocked: boolean;
-  referralsUnlocked: boolean;
   directReferrals: DirectReferralEntry[];
   descendants: ReferralTreeEntry[];
   depthCounts: Array<{ depth: number; count: number }>;
   totalAttributedReferrals: number;
   maxDepth: number;
+}
+
+export interface ReferralDashboardData extends ReferralDashboardBaseData {
+  leaderboardRank: number | null;
+  commissionUnlocked: boolean;
+  referralsUnlocked: boolean;
 }
 
 export type PriceByBucket = Record<NameLengthBucket, number>;
@@ -190,7 +195,7 @@ export function buildReferralDashboard(
   referralCode: string,
   rows: WaitlistReferralRow[],
   scope: ReferralScope = "all",
-): ReferralDashboardData {
+): ReferralDashboardBaseData {
   const normalizedCode = referralCode.trim();
   const eligibleRows = rows.filter((row) => scope === "all" || row.email_verified);
   const root = rows.find((row) => row.referral_code === normalizedCode) ?? null;
@@ -254,9 +259,8 @@ export function buildReferralDashboard(
     root,
     referralCode: normalizedCode,
     waitlistPosition: waitlistPosition && waitlistPosition > 0 ? waitlistPosition : null,
+    waitlistTotal: rows.length,
     rootBadge: resolveReferralBadge(normalizedCode, eligibleRows),
-    commissionUnlocked: false,
-    referralsUnlocked: false,
     directReferrals: descendants.filter((entry): entry is DirectReferralEntry => entry.depth === 1),
     descendants,
     depthCounts,

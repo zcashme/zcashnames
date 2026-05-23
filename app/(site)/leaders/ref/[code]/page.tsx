@@ -29,6 +29,7 @@ import {
   requestReferralCommissionPin,
   unlockReferralTable,
   unlockReferralCommissionMode,
+  type ReferralDashboardData,
   type ReferralScope,
 } from "@/lib/leaders/leaders";
 import {
@@ -40,7 +41,6 @@ import {
   type ConversionByBucket,
   type NameLengthBucket,
   type PriceByBucket,
-  type ReferralDashboardData,
   type ProjectionModel,
 } from "@/lib/leaders/referral-dashboard";
 import CopyIconButton from "@/components/CopyIconButton";
@@ -57,10 +57,6 @@ interface EndpointGuideLine {
   color: string;
   side: AxisSide;
 }
-
-type ReferralDashboardView = ReferralDashboardData & {
-  leaderboardRank?: number | null;
-};
 
 function getActiveChartPoint<T extends { date: string }>(state: unknown, data: T[]): T | null {
   const chartState = state as
@@ -176,7 +172,7 @@ export default function ReferralDashboardPage() {
   const referralCode = decodeURIComponent(typeof params?.code === "string" ? params.code : "");
   const installState = usePwaInstall();
   const scope: ReferralScope = "all";
-  const [data, setData] = useState<ReferralDashboardView | null>(null);
+  const [data, setData] = useState<ReferralDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [projectionOpen, setProjectionOpen] = useState(false);
   const [referralLevelFilter, setReferralLevelFilter] = useState<"all" | number>("all");
@@ -279,10 +275,16 @@ export default function ReferralDashboardPage() {
     0,
     referralLevelOptions.findIndex((option) => option === referralLevelFilter),
   );
+  const leaderboardRank =
+    data && "leaderboardRank" in data
+      ? (data as ReferralDashboardData & { leaderboardRank?: number | null }).leaderboardRank
+      : null;
+  const waitlistTotal =
+    data && "waitlistTotal" in data
+      ? (data as ReferralDashboardData & { waitlistTotal?: number }).waitlistTotal ?? null
+      : null;
   const referralRank =
-    data && data.totalAttributedReferrals > 0
-      ? (data.leaderboardRank ?? data.waitlistPosition)
-      : data?.waitlistPosition ?? null;
+    data && data.totalAttributedReferrals > 0 ? (leaderboardRank ?? data.waitlistPosition) : data?.waitlistPosition ?? null;
 
   useEffect(() => {
     setVisibleReferralRows(10);
@@ -628,8 +630,8 @@ export default function ReferralDashboardPage() {
             <div className="text-sm text-fg-muted">
               <span>Rank </span>
               <span className="font-medium text-fg-body">
-                {referralRank && data.waitlistTotal
-                  ? `${referralRank.toLocaleString()} of ${data.waitlistTotal.toLocaleString()}`
+                {referralRank && waitlistTotal
+                  ? `${referralRank.toLocaleString()} of ${waitlistTotal.toLocaleString()}`
                   : "-"}
               </span>
             </div>
