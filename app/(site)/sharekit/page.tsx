@@ -6,8 +6,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { Metadata } from "next";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import { db } from "@/lib/db";
 import { extractReferralCode } from "@/lib/referral-code";
+import { resolveReferralIdentity } from "@/lib/referrals";
 import { parseShareKitMarkdown } from "@/lib/sharekit";
 import ShareKitClient from "./ShareKitClient";
 
@@ -44,25 +44,6 @@ function firstParam(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
-async function lookupInviterName(referralCode: string): Promise<string | null> {
-  if (!referralCode) return null;
-
-  try {
-    const { data, error } = await db
-      .from("zn_waitlist")
-      .select("name")
-      .eq("referral_code", referralCode)
-      .limit(1)
-      .maybeSingle();
-
-    if (error) return null;
-    const name = (data?.name as string | null | undefined)?.trim();
-    return name && name.length > 0 ? name : null;
-  } catch {
-    return null;
-  }
-}
-
 export default async function ShareKitPage({
   searchParams,
 }: {
@@ -70,8 +51,13 @@ export default async function ShareKitPage({
 }) {
   const params = (await searchParams) ?? {};
   const requestedReferralCode = extractReferralCode(firstParam(params.ref) ?? "");
-  const initialReferralName = await lookupInviterName(requestedReferralCode);
-  const initialReferralCode = initialReferralName ? requestedReferralCode : "";
+  const resolvedReferral = requestedReferralCode
+    ? await resolveReferralIdentity(requestedReferralCode, {
+        select: "id, name, referral_code, human_referral_code",
+      }).catch(() => null)
+    : null;
+  const initialReferralName = (resolvedReferral?.row.name as string | null | undefined)?.trim() || null;
+  const initialReferralCode = resolvedReferral?.preferredCode ?? "";
   const initialWarning =
     requestedReferralCode && !initialReferralName
       ? "Referral code not found. Posts are using the default link."

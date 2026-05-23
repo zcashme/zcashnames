@@ -23,6 +23,7 @@ import {
   parseWaitlistConfirmToken,
 } from "@/lib/waitlist/confirm-token";
 import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
+import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
 import { normalizeUsername } from "@/lib/zns/utils";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
@@ -50,6 +51,7 @@ type WaitlistRow = {
   name: string;
   email: string;
   referral_code: string | null;
+  human_referral_code?: string | null;
   referred_by: string | null;
   email_verified: boolean;
 };
@@ -88,9 +90,12 @@ function normalizeEmail(input: string): string {
   return input.trim().toLowerCase();
 }
 
-function normalizeReferredBy(input: string | null): string | null {
+async function normalizeReferredBy(input: string | null): Promise<string | null> {
   const code = (input ?? "").trim();
-  return isValidReferralCode(code) ? code : null;
+  if (isValidReferralCode(code)) return code;
+
+  const resolved = await resolveReferralIdentity(code);
+  return resolved?.canonicalCode ?? null;
 }
 
 export async function submitWaitlist(
@@ -98,7 +103,7 @@ export async function submitWaitlist(
 ): Promise<{ error: string | null }> {
   const normalizedName = normalizeUsername(payload.name);
   const normalizedEmail = normalizeEmail(payload.email);
-  const normalizedReferredBy = normalizeReferredBy(payload.referred_by);
+  const normalizedReferredBy = await normalizeReferredBy(payload.referred_by);
 
   if (!isValidName(normalizedName) || !isValidEmail(normalizedEmail)) {
     return { error: GENERIC_ERROR };
@@ -205,6 +210,10 @@ export async function submitSurvey(
   payload: SurveyPayload,
 ): Promise<{ error: string | null; shouldContact: boolean }> {
   const { use_cases, other_use_case, want_early_trial, may_contact, comments } = payload;
+  const resolved = await resolveReferralIdentity(payload.referral_code);
+  if (!resolved) {
+    return { error: GENERIC_ERROR, shouldContact: false };
+  }
 
   const { data, error } = await db
     .from("zn_waitlist")
@@ -216,7 +225,7 @@ export async function submitSurvey(
       comments,
       survey_completed_at: new Date().toISOString(),
     })
-    .eq("referral_code", payload.referral_code)
+    .eq("referral_code", resolved.canonicalCode)
     .select("email, name, email_verified")
     .single();
 
@@ -241,7 +250,7 @@ export async function submitSurvey(
       await db
         .from("zn_waitlist")
         .update({ followup_email_sent_at: new Date().toISOString() })
-        .eq("referral_code", payload.referral_code);
+        .eq("referral_code", resolved.canonicalCode);
     } catch (emailErr) {
       console.error("Follow-up email error:", emailErr);
     }
@@ -282,7 +291,7 @@ export async function confirmWaitlistEmail(
 
   const { data, error } = await db
     .from("zn_waitlist")
-    .select("id, name, email, referral_code, email_verified")
+    .select("id, name, email, referral_code, human_referral_code, email_verified")
     .eq("id", parsed.waitlistId)
     .single();
 
@@ -309,11 +318,21 @@ export async function confirmWaitlistEmail(
     return { status: "invalid" };
   }
 
+  let preferredReferralCode = row.human_referral_code?.trim() || (row.referral_code ?? "");
   try {
+    const ensured = await ensureHumanReferralCode({
+      id: row.id,
+      name: row.name,
+      referral_code: row.referral_code ?? "",
+      human_referral_code: row.human_referral_code ?? null,
+    });
+    preferredReferralCode = ensured.preferredCode;
+
     await sendWaitlistWelcomeEmail({
       email: row.email,
       name: row.name,
-      referralCode: row.referral_code ?? "",
+      canonicalReferralCode: ensured.canonicalCode,
+      preferredReferralCode: ensured.preferredCode,
       baseUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "",
     });
   } catch (emailError) {
@@ -322,7 +341,7 @@ export async function confirmWaitlistEmail(
 
   return {
     status: "success",
-    ref: row.referral_code ?? undefined,
+    ref: preferredReferralCode || undefined,
     name: row.name,
   };
 }

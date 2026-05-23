@@ -1,4 +1,11 @@
 import { BRAND } from "@/lib/zns/brand";
+export {
+  buildHumanReferralCodeCandidate,
+  getPreferredReferralCode,
+  isValidHumanReferralCode,
+  MAX_HUMAN_REFERRAL_CODE_LENGTH,
+  normalizeHumanReferralCode,
+} from "./referral-code-core";
 
 // Extracts a referral code from a URL (via `ref` query param) or raw string.
 // Falls back to the raw trimmed value when no URL structure is detected.

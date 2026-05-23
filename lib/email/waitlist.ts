@@ -29,21 +29,23 @@ export async function sendWaitlistConfirmationEmail({
 export async function sendWaitlistWelcomeEmail({
   email,
   name,
-  referralCode,
+  canonicalReferralCode,
+  preferredReferralCode,
   baseUrl,
 }: {
   email: string;
   name: string;
-  referralCode: string;
+  canonicalReferralCode: string;
+  preferredReferralCode: string;
   baseUrl: string;
 }): Promise<void> {
-  const referralUrl = `${baseUrl}/?ref=${referralCode}`;
-  const accessPin = getCommissionPin(referralCode);
+  const referralUrl = `${baseUrl}/?ref=${preferredReferralCode}`;
+  const accessPin = getCommissionPin(canonicalReferralCode);
 
   await sendEmail({
     from: FROM_EMAIL,
     to: email,
     subject: "Early access to ZcashNames",
-    react: WaitlistEmail({ name, referralUrl, referralCode, accessPin }),
+    react: WaitlistEmail({ name, referralUrl, referralCode: preferredReferralCode, accessPin }),
   });
 }

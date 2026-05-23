@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { sendCommissionPinEmail } from "@/lib/email/commission-pin";
+import { getPreferredReferralCode } from "@/lib/referral-code";
 import {
   clearCommissionAccessCookie,
   getCommissionPin,
@@ -26,6 +27,7 @@ import {
   type RankingEntry,
   type WeeklyRow,
 } from "@/lib/leaders/rankings";
+import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
 
 export type { DailyRow, RankingEntry, WeeklyRow } from "@/lib/leaders/rankings";
 export type { ReferralDashboardData } from "@/lib/leaders/referral-dashboard";
@@ -47,6 +49,7 @@ export interface LeaderboardEntry {
   rank: number;
   name: string;
   referral_code: string;
+  canonical_referral_code: string;
   referrals: number;
   indirectReferrals: number;
   attributedReferrals: number;
@@ -110,6 +113,11 @@ function toWaitlistReferralRows(data: Record<string, unknown>[]): WaitlistReferr
     .map((row) => ({
       name: (row.name as string | null) ?? "",
       referral_code: (row.referral_code as string | null) ?? "",
+      human_referral_code: (row.human_referral_code as string | null) ?? null,
+      preferred_referral_code: getPreferredReferralCode({
+        referral_code: (row.referral_code as string | null) ?? "",
+        human_referral_code: (row.human_referral_code as string | null) ?? null,
+      }),
       referred_by: (row.referred_by as string | null) ?? null,
       created_at: row.created_at as string,
       email_verified: Boolean(row.email_verified),
@@ -178,6 +186,18 @@ function isNextDay(previousDate: string, nextDate: string): boolean {
   return next - previous === 24 * 60 * 60 * 1000;
 }
 
+function buildPreferredCodeMap(rows: WaitlistReferralRow[]): Record<string, string> {
+  const preferredCodeMap: Record<string, string> = {};
+
+  for (const row of rows) {
+    if (row.referral_code && !preferredCodeMap[row.referral_code]) {
+      preferredCodeMap[row.referral_code] = row.preferred_referral_code ?? row.human_referral_code ?? row.referral_code;
+    }
+  }
+
+  return preferredCodeMap;
+}
+
 async function fetchAllWaitlistRows(): Promise<Record<string, unknown>[] | null> {
   try {
     const rows: Record<string, unknown>[] = [];
@@ -186,7 +206,7 @@ async function fetchAllWaitlistRows(): Promise<Record<string, unknown>[] | null>
     while (true) {
       const { data, error } = await db
         .from("zn_waitlist")
-        .select("name, referral_code, referred_by, created_at, email_verified, cabal")
+        .select("name, referral_code, human_referral_code, referred_by, created_at, email_verified, cabal")
         .order("created_at", { ascending: true })
         .range(offset, offset + WAITLIST_PAGE_SIZE - 1);
 
@@ -351,6 +371,7 @@ function buildLeaderboardFromRows(
   const summaries = buildFixedDepthReferralSummaries(rows, scope);
 
   const nameMap: Record<string, string> = {};
+  const preferredCodeMap = buildPreferredCodeMap(rows);
   for (const row of rows) {
     if (row.referral_code && row.name && !nameMap[row.referral_code]) {
       nameMap[row.referral_code] = row.name;
@@ -414,7 +435,8 @@ function buildLeaderboardFromRows(
 
       return {
         name: nameMap[referral_code] || referral_code,
-        referral_code,
+        referral_code: preferredCodeMap[referral_code] || referral_code,
+        canonical_referral_code: referral_code,
         referrals,
         indirectReferrals,
         attributedReferrals: displayedReferrals,
@@ -438,7 +460,7 @@ function buildLeaderboardFromRows(
         return b.attributedReferrals - a.attributedReferrals;
       }
       if (b.referrals !== a.referrals) return b.referrals - a.referrals;
-      return a.referral_code.localeCompare(b.referral_code);
+      return a.canonical_referral_code.localeCompare(b.canonical_referral_code);
     })
     .map((entry, i) => ({ ...entry, rank: i + 1 }));
 }
@@ -491,7 +513,7 @@ export async function getLeadersData(scope: ReferralScope = "all"): Promise<Lead
     }
 
     const continuesStreak =
-      previousTopCode === topEntry.referral_code &&
+      previousTopCode === (topEntry.canonical_referral_code ?? topEntry.referral_code) &&
       previousDate !== null &&
       isNextDay(previousDate, row.date);
 
@@ -499,7 +521,7 @@ export async function getLeadersData(scope: ReferralScope = "all"): Promise<Lead
     row.topBadge = currentStreak >= 2 ? "red" : "blue";
 
     previousDate = row.date;
-    previousTopCode = topEntry.referral_code;
+    previousTopCode = topEntry.canonical_referral_code ?? topEntry.referral_code;
   }
 
   return { timeSeries, leaderboard, dailyRankings, weeklyRankings, stats };
@@ -514,7 +536,7 @@ export async function getDailyNewNames(date: string): Promise<DailyNewNameEntry[
 
     const { data, error } = await db
       .from("zn_waitlist")
-      .select("name, referral_code, referred_by, created_at, email_verified")
+      .select("name, referral_code, human_referral_code, referred_by, created_at, email_verified")
       .gte("created_at", start.toISOString())
       .lt("created_at", end.toISOString())
       .order("created_at", { ascending: true });
@@ -524,7 +546,10 @@ export async function getDailyNewNames(date: string): Promise<DailyNewNameEntry[
     return data
       .map((row) => ({
         name: (row.name as string | null) ?? "",
-        referral_code: (row.referral_code as string | null) ?? "",
+        referral_code: getPreferredReferralCode({
+          referral_code: (row.referral_code as string | null) ?? "",
+          human_referral_code: (row.human_referral_code as string | null) ?? null,
+        }),
         referred_by: (row.referred_by as string | null) ?? null,
         created_at: row.created_at as string,
         email_verified: Boolean(row.email_verified),
@@ -550,6 +575,14 @@ export async function getReferralDashboard(
       return null;
     }
 
+    const resolved = await resolveReferralIdentity(normalizedCode, {
+      ensureHumanReferralCode: true,
+      select: "id, name, referral_code, human_referral_code, cabal",
+    });
+    if (!resolved) {
+      return null;
+    }
+
     const data = await fetchAllWaitlistRows();
     if (!data) {
       console.error(`${REFERRAL_DASHBOARD_LOG_PREFIX} waitlist fetch returned null`, {
@@ -560,15 +593,15 @@ export async function getReferralDashboard(
     }
 
     const rows = toWaitlistReferralRows(data);
-    const dashboard: ReferralDashboardBaseData = buildReferralDashboard(normalizedCode, rows, scope);
+    const dashboard: ReferralDashboardBaseData = buildReferralDashboard(resolved.canonicalCode, rows, scope);
     const leaderboard = buildLeaderboardFromRows(rows, scope);
     const leaderboardRank =
-      leaderboard.find((entry) => entry.referral_code === dashboard.referralCode)?.rank ?? null;
+      leaderboard.find((entry) => entry.canonical_referral_code === dashboard.canonicalReferralCode)?.rank ?? null;
     const [commissionUnlocked, referralsUnlocked] = await Promise.all([
       dashboard.root?.cabal
-        ? hasCommissionAccess(dashboard.referralCode).catch(() => false)
+        ? hasCommissionAccess(dashboard.canonicalReferralCode).catch(() => false)
         : false,
-      hasReferralTableAccess(dashboard.referralCode).catch(() => false),
+      hasReferralTableAccess(dashboard.canonicalReferralCode).catch(() => false),
     ]);
 
     return { ...dashboard, leaderboardRank, commissionUnlocked, referralsUnlocked };
@@ -590,21 +623,19 @@ export async function unlockReferralCommissionMode(
     const normalizedCode = referralCode.trim();
     if (!normalizedCode) return { ok: false, error: "Code not recognized." };
 
-    const { data, error } = await db
-      .from("zn_waitlist")
-      .select("referral_code, cabal")
-      .eq("referral_code", normalizedCode)
-      .maybeSingle();
+    const resolved = await resolveReferralIdentity(normalizedCode, {
+      select: "id, name, referral_code, human_referral_code, cabal",
+    });
 
-    if (error || !data || !data.cabal) {
+    if (!resolved || !resolved.row.cabal) {
       return { ok: false, error: "Code not recognized." };
     }
 
-    if (!verifyCommissionPin(normalizedCode, pin)) {
+    if (!verifyCommissionPin(resolved.canonicalCode, pin)) {
       return { ok: false, error: "Code not recognized." };
     }
 
-    await setCommissionAccessCookie(normalizedCode);
+    await setCommissionAccessCookie(resolved.canonicalCode);
     return { ok: true };
   } catch {
     return { ok: false, error: "Code not recognized." };
@@ -628,21 +659,19 @@ export async function unlockReferralTable(
     const normalizedCode = referralCode.trim();
     if (!normalizedCode) return { ok: false, error: "Code not recognized." };
 
-    const { data, error } = await db
-      .from("zn_waitlist")
-      .select("referral_code")
-      .eq("referral_code", normalizedCode)
-      .maybeSingle();
+    const resolved = await resolveReferralIdentity(normalizedCode, {
+      select: "id, name, referral_code, human_referral_code",
+    });
 
-    if (error || !data?.referral_code) {
+    if (!resolved) {
       return { ok: false, error: "Code not recognized." };
     }
 
-    if (!verifyCommissionPin(normalizedCode, pin)) {
+    if (!verifyCommissionPin(resolved.canonicalCode, pin)) {
       return { ok: false, error: "Code not recognized." };
     }
 
-    await setReferralTableAccessCookie(normalizedCode);
+    await setReferralTableAccessCookie(resolved.canonicalCode);
     return { ok: true };
   } catch {
     return { ok: false, error: "Code not recognized." };
@@ -659,43 +688,37 @@ export async function requestReferralCommissionPin(
     if (!normalizedCode) return { ok: true, message: COMMISSION_PIN_SENT_MESSAGE };
     if (!normalizedEmail) return { ok: false, error: "Enter the email address you used for early access." };
 
-    const { data, error } = await db
-      .from("zn_waitlist")
-      .select("name, email, referral_code, access_pin_email_sent_at")
-      .eq("referral_code", normalizedCode)
-      .maybeSingle();
+    const resolved = await resolveReferralIdentity(normalizedCode, {
+      select: "id, name, email, referral_code, human_referral_code, access_pin_email_sent_at",
+    });
 
-    if (error) {
-      console.error("[leaders-commission-pin] waitlist lookup failed:", error);
-      return { ok: false, error: "Could not send code right now." };
-    }
-
-    if (!data || !data.email || !data.referral_code) {
+    if (!resolved || !resolved.row.email || !resolved.row.referral_code) {
       return { ok: true, message: COMMISSION_PIN_SENT_MESSAGE };
     }
 
-    const storedEmail = String(data.email).trim().toLowerCase();
+    const storedEmail = String(resolved.row.email).trim().toLowerCase();
     if (storedEmail !== normalizedEmail) {
       return { ok: true, message: COMMISSION_PIN_SENT_MESSAGE };
     }
 
-    if (wasCommissionPinSentToday(data.access_pin_email_sent_at)) {
+    if (wasCommissionPinSentToday(resolved.row.access_pin_email_sent_at)) {
       return { ok: true, message: COMMISSION_PIN_RATE_LIMIT_MESSAGE };
     }
 
     const headerStore = await headers();
+    const ensured = await ensureHumanReferralCode(resolved.row);
     await sendCommissionPinEmail({
       email: normalizedEmail,
-      name: String(data.name || "there"),
-      pin: getCommissionPin(String(data.referral_code)),
-      referralCode: String(data.referral_code),
+      name: String(resolved.row.name || "there"),
+      pin: getCommissionPin(ensured.canonicalCode),
+      referralCode: ensured.preferredCode,
       baseUrl: resolveBaseUrl(headerStore),
     });
 
     const { error: updateError } = await db
       .from("zn_waitlist")
       .update({ access_pin_email_sent_at: new Date().toISOString() })
-      .eq("referral_code", normalizedCode);
+      .eq("referral_code", ensured.canonicalCode);
 
     if (updateError) {
       console.error("[leaders-commission-pin] sent_at update failed:", updateError);
