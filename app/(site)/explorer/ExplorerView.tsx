@@ -118,10 +118,7 @@ interface ExplorerViewProps {
     forSale: number;
     syncedHeight: number;
     uivk: string;
-  };
-  uivks: {
-    mainnet: { value: string; verified: boolean };
-    testnet: { value: string; verified: boolean };
+    uivkVerified: boolean;
   };
   network: Network;
   nameQuery: string;
@@ -135,7 +132,6 @@ export default function ExplorerView({
   initialListings,
   initialRegistrations,
   stats,
-  uivks,
   network,
   nameQuery,
   nameResult,
@@ -158,7 +154,7 @@ export default function ExplorerView({
   const [searchQuery, setSearchQuery] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
   const [uivkOpen, setUivkOpen] = useState(false);
-  const [copied, setCopied] = useState<"mainnet" | "testnet" | null>(null);
+  const [uivkCopied, setUivkCopied] = useState(false);
   const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
   const { snapshot: resumeSnap, visible: resumeVisible, dismiss: resumeDismiss } = usePurchaseResume();
 
@@ -294,12 +290,11 @@ export default function ExplorerView({
     });
   }
 
-  function copyUivk(network: "mainnet" | "testnet") {
-    const { value } = uivks[network];
-    if (!value) return;
-    navigator.clipboard.writeText(value);
-    setCopied(network);
-    setTimeout(() => setCopied(null), 2000);
+  function copyUivk() {
+    if (!stats.uivk) return;
+    navigator.clipboard.writeText(stats.uivk);
+    setUivkCopied(true);
+    setTimeout(() => setUivkCopied(false), 2000);
   }
 
   return (
@@ -340,7 +335,7 @@ export default function ExplorerView({
                 />
               </svg>
           </button>
-          {(uivks.mainnet.value || uivks.testnet.value) && (
+          {stats.uivk && (
             <button
               type="button"
               onClick={() => setUivkOpen(true)}
@@ -672,42 +667,23 @@ export default function ExplorerView({
               </button>
             </div>
 
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Mainnet</div>
-                    <UivkVerifiedBadge value={uivks.mainnet.value} verified={uivks.mainnet.verified} />
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                    {network === "mainnet" ? "Mainnet" : "Testnet"}
                   </div>
-                  <CopyIconButton
-                    onClick={() => copyUivk("mainnet")}
-                    ariaLabel="Copy mainnet UIVK"
-                    title={copied === "mainnet" ? "Copied!" : "Copy mainnet UIVK"}
-                    copied={copied === "mainnet"}
-                    disabled={!uivks.mainnet.value}
-                  />
+                  <UivkVerifiedBadge value={stats.uivk} verified={stats.uivkVerified} />
                 </div>
-                <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{uivks.mainnet.value || "Unavailable"}</p>
+                <CopyIconButton
+                  onClick={copyUivk}
+                  ariaLabel={`Copy ${network} UIVK`}
+                  title={uivkCopied ? "Copied!" : `Copy ${network} UIVK`}
+                  copied={uivkCopied}
+                  disabled={!stats.uivk}
+                />
               </div>
-
-              <div className="h-px w-full bg-[var(--leaders-card-border)]" />
-
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Testnet</div>
-                    <UivkVerifiedBadge value={uivks.testnet.value} verified={uivks.testnet.verified} />
-                  </div>
-                  <CopyIconButton
-                    onClick={() => copyUivk("testnet")}
-                    ariaLabel="Copy testnet UIVK"
-                    title={copied === "testnet" ? "Copied!" : "Copy testnet UIVK"}
-                    copied={copied === "testnet"}
-                    disabled={!uivks.testnet.value}
-                  />
-                </div>
-                <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{uivks.testnet.value || "Unavailable"}</p>
-              </div>
+              <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{stats.uivk || "Unavailable"}</p>
             </div>
           </div>
         </div>

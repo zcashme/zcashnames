@@ -1,6 +1,6 @@
 /**
  * Server-side explorer page — the single data-fetching entry point.
- * Fires 5 parallel fetches (events, listings, registrations, mainnet stats, testnet stats)
+ * Fires 4 parallel fetches (events, listings, registrations, chain stats)
  * for the selected ?env (mainnet | testnet). Also resolves a name when ?name is set.
  * All results are passed as props to ExplorerView for client-side interactivity.
  */
@@ -56,18 +56,12 @@ export default async function ExplorerPage({
   const nameQuery = params.name ?? "";
   const action = getEventActionFilter(tab);
 
-  const [eventsResult, listings, registrations, mainnetStats, testnetStats] = await Promise.all([
+  const [eventsResult, listings, registrations, stats] = await Promise.all([
     getEvents({ action, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }, network),
     getListings(network),
     getCurrentRegistrations(network),
-    getChainStats("mainnet"),
-    getChainStats("testnet"),
+    getChainStats(network),
   ]);
-  const stats = network === "mainnet" ? mainnetStats : testnetStats;
-  const uivks = {
-    mainnet: { value: mainnetStats.uivk, verified: mainnetStats.uivkVerified },
-    testnet: { value: testnetStats.uivk, verified: testnetStats.uivkVerified },
-  };
 
   const initialEvents = eventsResult.events;
   const initialEventsTotal = eventsResult.total;
@@ -95,7 +89,6 @@ export default async function ExplorerPage({
         initialListings={listings}
         initialRegistrations={registrations}
         stats={stats}
-        uivks={uivks}
         network={network}
         nameQuery={nameQuery}
         nameResult={nameResult}
