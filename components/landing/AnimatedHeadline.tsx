@@ -153,7 +153,7 @@ export default function AnimatedHeadline({ triggerRef, collapsed = false, childr
 
   return (
     <>
-      <div className="hero-mobile-headline xl:hidden w-full order-1">
+      <div className="landing-mobile-headline xl:hidden w-full order-1">
         <h1
           className="font-bold leading-[0.96] text-center"
           style={{

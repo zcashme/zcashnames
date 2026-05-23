@@ -865,34 +865,34 @@ body {
   background-color: var(--color-background);
 }
 
-/* ── Hero mobile spacing (single-panel layout) ────────────────── */
+/* ── Landing top spacing (single-panel layout) ────────────────── */
 
 /* Spacings 1 & 4: header→card-stack (top) and CTA→counting-bar (bottom) */
-.hero-section {
+.landing-top {
   padding-top: calc(92px + var(--vertical-gap));
   padding-bottom: var(--vertical-gap);
 }
 
 @media (min-width: 640px) {
-  .hero-section {
+  .landing-top {
     padding-top: calc(92px + 3.5rem);
     padding-bottom: 7rem; /* preserves sm:pb-28 */
   }
 }
 
 /* Spacing 2: card-stack → "Public identity" headline (grid row gap) */
-.hero-grid {
+.landing-top-grid {
   gap: var(--vertical-gap);
 }
 
 @media (min-width: 1280px) {
-  .hero-grid {
+  .landing-top-grid {
     gap: 2.5rem; /* preserves xl:gap-10 */
   }
 }
 
 /* Spacing 3: "Private activity" headline → entry bar bottom margin */
-.hero-mobile-headline {
+.landing-mobile-headline {
   margin-bottom: var(--vertical-gap);
 }
 
