@@ -6,7 +6,7 @@
  */
 "use client";
 
-import { useMemo, useOptimistic, useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ExplorerToolbar from "./ExplorerToolbar";
 import { PAGE_SIZE, parseExplorerTab, type ExplorerTab } from "./tabs";
@@ -20,7 +20,7 @@ import ActionBadge from "@/components/ActionBadge";
 
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import CopyIconButton from "@/components/CopyIconButton";
-import { filterRegistrations, zatsToZec } from "@/lib/zns/utils";
+import { zatsToZec } from "@/lib/zns/utils";
 import type { Listing, Network, Registration, ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import { ACTIONS, ACTION_LABELS } from "@/lib/types";
@@ -168,20 +168,8 @@ export default function ExplorerView({
   const nameDataReady = !!nameResult;
 
   // ── Tab counts (authoritative server totals; null where unknowable) ─────
-  const hasSearchFilter = searchQuery.trim().length > 0;
-  const filteredRegistrations = useMemo(
-    () => filterRegistrations(initialRegistrations, searchQuery),
-    [initialRegistrations, searchQuery],
-  );
-  const sortedListings = useMemo(
-    () => [...initialListings].sort((a, b) => b.height - a.height),
-    [initialListings],
-  );
-
   function getTabCount(key: ExplorerTab): number | null {
-    if (key === "registered") {
-      return hasSearchFilter ? filteredRegistrations.length : stats.claimed;
-    }
+    if (key === "registered") return stats.claimed;
     if (key === "forsale") return stats.forSale;
     // Events-style tabs: only the active tab has a known total from the server.
     if (key === tab) return initialEventsTotal;
@@ -190,20 +178,11 @@ export default function ExplorerView({
 
   // ── Active-tab pagination ────────────────────────────────────────────────
   const totalItems =
-    tab === "registered" ? filteredRegistrations.length
-    : tab === "forsale" ? sortedListings.length
+    tab === "registered" ? stats.claimed
+    : tab === "forsale" ? stats.forSale
     : initialEventsTotal;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const sliceStart = (safePage - 1) * PAGE_SIZE;
-  const visibleRegistrations = useMemo(
-    () => filteredRegistrations.slice(sliceStart, sliceStart + PAGE_SIZE),
-    [filteredRegistrations, sliceStart],
-  );
-  const visibleListings = useMemo(
-    () => sortedListings.slice(sliceStart, sliceStart + PAGE_SIZE),
-    [sortedListings, sliceStart],
-  );
 
   const isMoreTabActive = MORE_TABS.some((t) => t.key === tab);
   const activeMoreLabel = MORE_TABS.find((t) => t.key === tab)?.label;
@@ -245,13 +224,7 @@ export default function ExplorerView({
   }
 
   function handleSearchChange(nextQuery: string) {
-    const wasEmpty = !searchQuery;
     setSearchQuery(nextQuery);
-    if (nextQuery && wasEmpty && (tab !== "registered" || page !== 1)) {
-      startTransition(() => {
-        router.push(buildUrl({ tab: "registered", page: 1 }));
-      });
-    }
   }
 
   function handleNameClick(name: string) {
@@ -480,14 +453,14 @@ export default function ExplorerView({
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleRegistrations.length === 0 ? (
+                    {initialRegistrations.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
                           No registered names found.
                         </td>
                       </tr>
                     ) : (
-                      visibleRegistrations.map((r) => (
+                      initialRegistrations.map((r) => (
                         <tr
                           key={`${r.name}:${r.txid}`}
                           className="border-b last:border-b-0 transition-colors"
@@ -533,14 +506,14 @@ export default function ExplorerView({
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleListings.length === 0 ? (
+                    {initialListings.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
                           No names listed for sale.
                         </td>
                       </tr>
                     ) : (
-                      visibleListings.map((l) => (
+                      initialListings.map((l) => (
                         <tr
                           key={l.txid}
                           className="border-b last:border-b-0 transition-colors"

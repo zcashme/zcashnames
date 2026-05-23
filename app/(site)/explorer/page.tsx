@@ -1,12 +1,12 @@
 /**
  * Server-side explorer page — the single data-fetching entry point.
- * Fires 4 parallel fetches (events, listings, registrations, chain stats)
- * for the selected ?env (mainnet | testnet). Also resolves a name when ?name is set.
- * All results are passed as props to ExplorerView for client-side interactivity.
+ * Fetches chain stats plus exactly one tab's page of data, server-paginated.
+ * Tab counts come from chain stats; the active tab's total drives pagination.
+ * Also resolves a name when ?name is set.
  */
 import { getCurrentRegistrations, getEvents, getListings, resolveName } from "@/lib/zns/resolve";
 import { getChainStats } from "@/lib/network-stats";
-import type { Action, Network } from "@/lib/types";
+import type { Action, Listing, Network, Registration, ZnsEvent } from "@/lib/types";
 import { ACTIONS } from "@/lib/types";
 import type { ResolveName } from "@/lib/types";
 import ExplorerView from "./ExplorerView";
@@ -55,14 +55,26 @@ export default async function ExplorerPage({
   const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
   const nameQuery = params.name ?? "";
   const action = getEventActionFilter(tab);
+  const offset = (page - 1) * PAGE_SIZE;
 
-  const [eventsResult, listings, registrations, stats] = await Promise.all([
-    getEvents({ action, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }, network),
-    getListings(network),
-    getCurrentRegistrations(network),
+  let registrationsP: Promise<Registration[]> = Promise.resolve([]);
+  let listingsP: Promise<{ listings: Listing[]; total: number }> = Promise.resolve({ listings: [], total: 0 });
+  let eventsP: Promise<{ events: ZnsEvent[]; total: number }> = Promise.resolve({ events: [], total: 0 });
+  if (tab === "registered") {
+    registrationsP = getCurrentRegistrations(network, PAGE_SIZE, offset);
+  } else if (tab === "forsale") {
+    listingsP = getListings(network, PAGE_SIZE, offset);
+  } else {
+    eventsP = getEvents({ action, limit: PAGE_SIZE, offset }, network);
+  }
+
+  const [stats, registrations, listingsResult, eventsResult] = await Promise.all([
     getChainStats(network),
+    registrationsP,
+    listingsP,
+    eventsP,
   ]);
-
+  const listings = listingsResult.listings;
   const initialEvents = eventsResult.events;
   const initialEventsTotal = eventsResult.total;
 

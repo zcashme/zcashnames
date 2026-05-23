@@ -24,9 +24,13 @@ import { getNamePricing } from "@/lib/network-stats";
 // data from the indexer and return it to the server component.
 //
 
-export async function getCurrentRegistrations(network: Network = "testnet") {
+export async function getCurrentRegistrations(
+  network: Network = "testnet",
+  limit?: number,
+  offset?: number,
+) {
   try {
-    const registrations = await getZns(network).listAllRegistrations();
+    const registrations = await getZns(network).listAllRegistrations(limit, offset);
     return [...registrations].sort((a, b) => b.height - a.height || a.name.localeCompare(b.name));
   } catch {
     return [];
@@ -120,12 +124,15 @@ export async function resolveName(
 }
 
 
-export async function getListings(network: Network = "testnet") {
+export async function getListings(
+  network: Network = "testnet",
+  limit?: number,
+  offset?: number,
+) {
   try {
-    const { listings } = await getZns(network).listings();
-    return listings;
+    return await getZns(network).listings(limit, offset);
   } catch {
-    return [];
+    return { listings: [], total: 0 };
   }
 }
 
