@@ -16,18 +16,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import {
-  getDailyRankings,
-  getLeaderboard,
-  getLeadersTimeSeries,
-  getWeeklyRankings,
-  getWaitlistStats,
-  type DailyRow,
-  type LeaderboardEntry,
-  type RankingEntry,
-  type ReferralScope,
-  type TimeSeriesPoint,
-  type WeeklyRow,
+import type {
+  DailyRow,
+  LeaderboardEntry,
+  LeadersData,
+  RankingEntry,
+  TimeSeriesPoint,
+  WeeklyRow,
 } from "@/lib/leaders/leaders";
 import CopyIconButton from "@/components/CopyIconButton";
 
@@ -368,21 +363,15 @@ function StatCard({
   );
 }
 
-export default function LeaderboardContent() {
+export default function LeaderboardContent({ data }: { data: LeadersData }) {
+  const { timeSeries, leaderboard, dailyRankings: dailyRows, weeklyRankings: weeklyRows, stats } = data;
   const [headerTitleTarget, setHeaderTitleTarget] = useState<HTMLElement | null>(null);
-  const [timeSeries, setTimeSeries] = useState<TimeSeriesPoint[]>([]);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [dailyRows, setDailyRows] = useState<DailyRow[]>([]);
-  const [weeklyRows, setWeeklyRows] = useState<WeeklyRow[]>([]);
   const [weeklyRankingsMode, setWeeklyRankingsMode] = useState<"weekly" | "allTime">("weekly");
   const [rankingsMode, setRankingsMode] = useState<"daily" | "allTime">("daily");
   const [chartRange, setChartRange] = useState<"7d" | "30d" | "allTime">("allTime");
-  const referralScope: ReferralScope = "all";
   const [visibleLeaderboardRows, setVisibleLeaderboardRows] = useState(10);
   const [visibleWeeklyRows, setVisibleWeeklyRows] = useState(7);
   const [visibleDailyRows, setVisibleDailyRows] = useState(7);
-  const [stats, setStats] = useState({ waitlist: 0, referred: 0, rewardsPot: 0 });
-  const [loading, setLoading] = useState(true);
   const [activeStatKey, setActiveStatKey] = useState<"waitlist" | "referred" | "rewards" | null>(null);
   const [activeChartPoint, setActiveChartPoint] = useState<TimeSeriesPoint | null>(null);
   const [copiedReferralCode, setCopiedReferralCode] = useState<string | null>(null);
@@ -529,34 +518,6 @@ export default function LeaderboardContent() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      setLoading(true);
-      const [ts, lb, dr, wr, st] = await Promise.all([
-        getLeadersTimeSeries(referralScope),
-        getLeaderboard(referralScope),
-        getDailyRankings(referralScope),
-        getWeeklyRankings(referralScope),
-        getWaitlistStats(referralScope),
-      ]);
-
-      if (!cancelled) {
-        setTimeSeries(ts);
-        setLeaderboard(lb);
-        setDailyRows(dr);
-        setWeeklyRows(wr);
-        setStats(st);
-        setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [referralScope]);
-
-  useEffect(() => {
     setVisibleDailyRows(7);
   }, [filteredDailyRows.length]);
 
@@ -566,7 +527,7 @@ export default function LeaderboardContent() {
 
   useEffect(() => {
     setVisibleLeaderboardRows(10);
-  }, [leaderboard.length, referralScope]);
+  }, [leaderboard.length]);
 
   useEffect(() => {
     return () => {
@@ -628,7 +589,7 @@ export default function LeaderboardContent() {
       >
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm font-semibold text-fg-heading">
-            {loading ? <Skeleton w="w-40" /> : chartSummaryText}
+            {chartSummaryText}
           </div>
           <div
             className="inline-flex items-center rounded-full border p-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em]"
@@ -656,11 +617,7 @@ export default function LeaderboardContent() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex h-[300px] items-center justify-center">
-            <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-fg-dim border-t-transparent" />
-          </div>
-        ) : chartTimeSeries.length === 0 ? (
+        {chartTimeSeries.length === 0 ? (
           <p className="py-20 text-center text-fg-muted">No data yet.</p>
         ) : (
           <>
@@ -777,26 +734,22 @@ export default function LeaderboardContent() {
         <div className="grid grid-cols-3 gap-3 sm:gap-4">
           <StatCard
             label="Waitlist"
-            value={loading ? <Skeleton /> : stats.waitlist.toLocaleString()}
+            value={stats.waitlist.toLocaleString()}
             active={activeStatKey === "waitlist"}
             onClick={() => setActiveStatKey((current) => (current === "waitlist" ? null : "waitlist"))}
           />
           <StatCard
             label="Referred"
-            value={loading ? <Skeleton /> : stats.referred.toLocaleString()}
+            value={stats.referred.toLocaleString()}
             active={activeStatKey === "referred"}
             onClick={() => setActiveStatKey((current) => (current === "referred" ? null : "referred"))}
           />
           <StatCard
             label="Rewards"
             value={
-              loading ? (
-                <Skeleton />
-              ) : (
-                <>
-                  <ZecSymbol className="mr-0.5 inline-block" /> {formatZec(stats.rewardsPot)}
-                </>
-              )
+              <>
+                <ZecSymbol className="mr-0.5 inline-block" /> {formatZec(stats.rewardsPot)}
+              </>
             }
             active={activeStatKey === "rewards"}
             onClick={() => setActiveStatKey((current) => (current === "rewards" ? null : "rewards"))}
@@ -872,34 +825,7 @@ export default function LeaderboardContent() {
               </tr>
               </thead>
               <tbody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr
-                    key={i}
-                    className="border-b last:border-b-0"
-                    style={{ borderColor: "var(--leaders-card-border)" }}
-                  >
-                    <td className="px-4 py-3 sm:px-6">
-                      <Skeleton w="w-6" />
-                    </td>
-                    <td className="px-4 py-3 sm:px-6">
-                      <Skeleton w="w-28" />
-                    </td>
-                    <td className="px-4 py-3 text-left sm:px-6">
-                      <Skeleton w="w-8" />
-                    </td>
-                    <td className="px-4 py-3 text-left sm:px-6">
-                      <Skeleton w="w-14" />
-                    </td>
-                    <td className="px-4 py-3 text-left sm:px-6">
-                      <Skeleton w="w-20" />
-                    </td>
-                    <td className="px-4 py-3 text-left sm:px-6">
-                      <Skeleton w="w-20" />
-                    </td>
-                  </tr>
-                ))
-              ) : leaderboard.length === 0 ? (
+              {leaderboard.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-fg-muted">
                     No referrals yet.
@@ -1100,24 +1026,7 @@ export default function LeaderboardContent() {
               </tr>
               </thead>
               <tbody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr
-                    key={i}
-                    className="border-b last:border-b-0"
-                    style={{ borderColor: "var(--leaders-card-border)" }}
-                  >
-                    <td className="px-4 py-3 tabular-nums sm:px-6" style={PERIOD_CELL_STYLE}>
-                      <Skeleton w="w-28" />
-                    </td>
-                    {Array.from({ length: 3 }).map((__, j) => (
-                      <td key={j} className="px-4 py-3 sm:px-6">
-                        <Skeleton w="w-24" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : visibleWeeklyRankingRows.length === 0 ? (
+              {visibleWeeklyRankingRows.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
                     No weekly ranking data yet.
@@ -1265,24 +1174,7 @@ export default function LeaderboardContent() {
               </tr>
               </thead>
               <tbody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr
-                    key={i}
-                    className="border-b last:border-b-0"
-                    style={{ borderColor: "var(--leaders-card-border)" }}
-                  >
-                    <td className="px-4 py-3 tabular-nums sm:px-6" style={PERIOD_CELL_STYLE}>
-                      <Skeleton w="w-24" />
-                    </td>
-                    {Array.from({ length: 3 }).map((__, j) => (
-                      <td key={j} className="px-4 py-3 sm:px-6">
-                        <Skeleton w="w-24" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : visibleRows.length === 0 ? (
+              {visibleRows.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
                     No daily ranking data yet.

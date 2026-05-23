@@ -1,6 +1,8 @@
-// Server component: renders the leaderboard page with SEO metadata and hydrates the
-// client-side LeaderboardContent which fetches its own data from leaderboard APIs.
+// Server component: fetches leaderboard data once and renders the page with SEO
+// metadata. LeaderboardContent receives the data as a prop and stays interactive
+// for local UI state (toggles, expand-more, etc.).
 import type { Metadata } from "next";
+import { getLeadersData } from "@/lib/leaders/leaders";
 import LeaderboardContent from "./LeaderboardContent";
 
 export const metadata: Metadata = {
@@ -30,10 +32,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function LeadersPage() {
+export default async function LeadersPage() {
+  const data = await getLeadersData();
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-4 sm:px-6">
-      <LeaderboardContent />
+      <LeaderboardContent data={data} />
     </main>
   );
 }
