@@ -2282,6 +2282,15 @@ body {
   background: color-mix(in srgb, var(--fg-heading) 72%, transparent);
 }
 
+.app-shell-standalone [data-site-chrome="true"] {
+  display: none !important;
+}
+
+.app-shell-standalone body,
+body.app-shell-standalone {
+  min-height: 100svh;
+}
+
 
 
 
