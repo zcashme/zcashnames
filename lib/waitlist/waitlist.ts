@@ -35,6 +35,47 @@ export interface WaitlistPayload {
   newsletter: boolean;
   referral_code: string;
   referred_by: string | null;
+  turnstile_token: string;
+}
+
+async function verifyTurnstileToken(
+  token: string,
+  remoteIp: string | null,
+): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) {
+    console.error("Turnstile verify skipped: TURNSTILE_SECRET_KEY is not set");
+    return false;
+  }
+  if (!token) return false;
+
+  const body = new URLSearchParams();
+  body.set("secret", secret);
+  body.set("response", token);
+  if (remoteIp) body.set("remoteip", remoteIp);
+
+  try {
+    const res = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      },
+    );
+    if (!res.ok) {
+      console.error("Turnstile verify HTTP error:", res.status);
+      return false;
+    }
+    const data = (await res.json()) as { success?: boolean; "error-codes"?: string[] };
+    if (!data.success) {
+      console.error("Turnstile verify failed:", data["error-codes"]);
+    }
+    return Boolean(data.success);
+  } catch (err) {
+    console.error("Turnstile verify error:", err);
+    return false;
+  }
 }
 
 export interface SurveyPayload {
@@ -133,6 +174,17 @@ export async function submitWaitlist(
   }
 
   const headerStore = await headers();
+
+  const remoteIp =
+    headerStore.get("cf-connecting-ip") ||
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    headerStore.get("x-real-ip") ||
+    null;
+
+  const turnstileOk = await verifyTurnstileToken(payload.turnstile_token, remoteIp);
+  if (!turnstileOk) {
+    return { error: GENERIC_ERROR };
+  }
 
   const { data: existingRows, error: existingError } = await db
     .from("zn_waitlist")

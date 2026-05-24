@@ -5,6 +5,9 @@ import { createPortal } from "react-dom";
 import { normalizeUsername } from "@/lib/zns/client";
 import { submitWaitlist, getWaitlistCountForName } from "@/lib/waitlist/waitlist";
 import SurveyForm from "@/components/SurveyForm";
+import Turnstile from "@/components/Turnstile";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 interface Props {
   usdPerZec: number | null;
@@ -68,6 +71,9 @@ export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Pro
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showTurnstile, setShowTurnstile] = useState(false);
+  const [turnstileError, setTurnstileError] = useState(false);
+  const [turnstileAttempt, setTurnstileAttempt] = useState(0);
 
   // ── Modal state ──
   const [modalView, setModalView] = useState<ModalView>("confirm");
@@ -155,11 +161,9 @@ export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Pro
 
   const canSubmit = confirmedName.length > 0 && isValidEmail(email);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canSubmit || submitting) return;
-    setSubmitError("");
+  const performSubmit = async (token: string) => {
     setSubmitting(true);
+    setSubmitError("");
 
     const referralCode = generateReferralCode();
 
@@ -169,17 +173,32 @@ export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Pro
       newsletter,
       referral_code: referralCode,
       referred_by: referredByRef.current || null,
+      turnstile_token: token,
     });
 
     if (error) {
       setSubmitError("Something went wrong. Please try again.");
       setSubmitting(false);
+      setShowTurnstile(false);
       return;
     }
 
     setMyReferralCode(referralCode);
     setSubmitting(false);
     setSubmitted(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit || submitting) return;
+    if (!TURNSTILE_SITE_KEY) {
+      setSubmitError("Captcha is not configured. Please contact support.");
+      return;
+    }
+    setSubmitError("");
+    setTurnstileError(false);
+    setTurnstileAttempt((n) => n + 1);
+    setShowTurnstile(true);
   };
 
   const shareUrl =
@@ -197,6 +216,8 @@ export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Pro
     setMyReferralCode("");
     setSubmitError("");
     setSubmitting(false);
+    setShowTurnstile(false);
+    setTurnstileError(false);
     setModalView("confirm");
     setSurveyContactMsg(false);
   };
@@ -438,16 +459,42 @@ export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Pro
                 </label>
               </div>
 
+              {/* Turnstile — appears only after Submit is pressed.
+                  `key` forces a fresh widget on each retry. */}
+              {showTurnstile && TURNSTILE_SITE_KEY && (
+                <Turnstile
+                  key={turnstileAttempt}
+                  siteKey={TURNSTILE_SITE_KEY}
+                  onVerify={(token) => {
+                    setTurnstileError(false);
+                    void performSubmit(token);
+                  }}
+                  onExpire={() => setTurnstileError(true)}
+                  onError={() => setTurnstileError(true)}
+                />
+              )}
+              {turnstileError && (
+                <p className="text-xs text-center" style={{ color: "var(--home-result-status-negative-fg)" }}>
+                  Verification failed. Please try again.
+                </p>
+              )}
+
               {/* Submit */}
               {submitError && (
                 <p className="text-xs text-center" style={{ color: "var(--home-result-status-negative-fg)" }}>{submitError}</p>
               )}
-              <button type="submit" disabled={!canSubmit || submitting}
-                className="w-full rounded-xl py-3 text-sm font-bold transition-opacity"
-                style={{ ...primaryBtnStyle, opacity: canSubmit && !submitting ? 1 : 0.4, cursor: canSubmit && !submitting ? "pointer" : "not-allowed" }}
-              >
-                {submitting ? "Submitting…" : "Submit"}
-              </button>
+              {(() => {
+                const busy = submitting || (showTurnstile && !turnstileError);
+                const enabled = canSubmit && !busy;
+                return (
+                  <button type="submit" disabled={!enabled}
+                    className="w-full rounded-xl py-3 text-sm font-bold transition-opacity"
+                    style={{ ...primaryBtnStyle, opacity: enabled ? 1 : 0.4, cursor: enabled ? "pointer" : "not-allowed" }}
+                  >
+                    {busy ? "Submitting…" : "Submit"}
+                  </button>
+                );
+              })()}
             </div>
 
             {/* Fine print */}
