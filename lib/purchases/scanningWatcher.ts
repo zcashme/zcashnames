@@ -92,11 +92,20 @@ export function isExpectedMined(reg: ResolveName | null, expected: Expected): bo
   if (!reg) return false;
   switch (expected.action) {
     case "CLAIM":
-    case "BUY":
     case "UPDATE":
       if (!expected.address) return false;
       if (reg.status !== "registered" && reg.status !== "listed") return false;
       return reg.registration.address === expected.address;
+    case "BUY":
+      // "Mined" for BUY = the BUY-intent has landed and the registry has
+      // locked the name to this buyer. The registration.address flip to the
+      // buyer happens later, during settling (after the seller payment).
+      // Also accept the post-settlement state so a reopened modal rehydrates
+      // cleanly into "mined" without a transient "not_detected" tick.
+      if (!expected.address) return false;
+      if (reg.status === "listed" && reg.pendingBuy?.buyer === expected.address) return true;
+      if (reg.status === "registered" && reg.registration.address === expected.address) return true;
+      return false;
     case "LIST":
       if (reg.status !== "listed") return false;
       if (expected.priceZats == null) return false;
