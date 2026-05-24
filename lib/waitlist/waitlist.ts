@@ -1,6 +1,7 @@
 "use server";
 
 import { createHash } from "crypto";
+import { resolveMx } from "node:dns/promises";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { sendFollowUp } from "@/lib/email/followup";
@@ -17,6 +18,16 @@ import { normalizeUsername } from "@/lib/zns/client";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 const MAX_REFERRAL_CODE_RETRIES = 6;
+
+const BLOCKED_EMAIL_DOMAINS = new Set([
+  "example.com",
+  "wshu.net",
+  "viralmail.top",
+  "denipl.net",
+  "denipl.com",
+  "forexzig.com",
+  "fxzig.com",
+]);
 
 export interface WaitlistPayload {
   name: string;
@@ -47,6 +58,19 @@ type WaitlistRow = {
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function isDeliverableEmail(email: string): Promise<boolean> {
+  if (!isValidEmail(email)) return false;
+  const domain = email.split("@")[1]?.toLowerCase();
+  if (!domain) return false;
+  if (BLOCKED_EMAIL_DOMAINS.has(domain)) return false;
+  try {
+    const records = await resolveMx(domain);
+    return records.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 function isValidName(name: string): boolean {
@@ -104,7 +128,7 @@ export async function submitWaitlist(
   const normalizedEmail = normalizeEmail(payload.email);
   const normalizedReferredBy = await normalizeReferredBy(payload.referred_by);
 
-  if (!isValidName(normalizedName) || !isValidEmail(normalizedEmail)) {
+  if (!isValidName(normalizedName) || !(await isDeliverableEmail(normalizedEmail))) {
     return { error: GENERIC_ERROR };
   }
 
