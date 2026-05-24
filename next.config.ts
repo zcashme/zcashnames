@@ -83,6 +83,15 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
+    const isDev = process.env.NODE_ENV === "development";
+    const connectSrc = [
+      "'self'",
+      "https://vitals.vercel-insights.com",
+      "https://light.zcash.me/zns-testnet",
+      "https://light.zcash.me/zns-mainnet",
+      "https://light.zcash.me/mempool-mainnet",
+      ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*", "ws://localhost:*"] : []),
+    ].join(" ");
     return [
       {
         source: "/(.*)",
@@ -99,7 +108,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https://www.zcashnames.com https://hackmd.io",
               "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
-              "connect-src 'self' https://vitals.vercel-insights.com https://light.zcash.me/zns-testnet https://light.zcash.me/zns-mainnet https://light.zcash.me/mempool-mainnet",
+              `connect-src ${connectSrc}`,
             ].join("; "),
           },
         ],
