@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { forwardRef, useEffect, useId, useImperativeHandle, useRef } from "react";
 
 const SCRIPT_SRC = "https://www.google.com/recaptcha/api.js?render=explicit";
 const SCRIPT_ID = "g-recaptcha-script";
@@ -20,7 +20,13 @@ interface RenderOptions {
 interface GrecaptchaApi {
   render(container: HTMLElement, options: RenderOptions): number;
   reset(widgetId?: number): void;
+  execute(widgetId?: number): void;
   ready(cb: () => void): void;
+}
+
+export interface RecaptchaHandle {
+  execute(): void;
+  reset(): void;
 }
 
 declare global {
@@ -69,7 +75,7 @@ interface Props {
   className?: string;
 }
 
-export default function Recaptcha({
+const Recaptcha = forwardRef<RecaptchaHandle, Props>(function Recaptcha({
   siteKey,
   onVerify,
   onExpire,
@@ -77,7 +83,7 @@ export default function Recaptcha({
   theme = "light",
   size = "normal",
   className,
-}: Props) {
+}, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<number | null>(null);
   const onVerifyRef = useRef(onVerify);
@@ -90,6 +96,31 @@ export default function Recaptcha({
     onExpireRef.current = onExpire;
     onErrorRef.current = onError;
   }, [onVerify, onExpire, onError]);
+
+  useImperativeHandle(ref, () => ({
+    execute() {
+      const api = window.grecaptcha;
+      const widgetId = widgetIdRef.current;
+      if (api && widgetId !== null) {
+        try {
+          api.execute(widgetId);
+        } catch {
+          // widget not ready or already executing
+        }
+      }
+    },
+    reset() {
+      const api = window.grecaptcha;
+      const widgetId = widgetIdRef.current;
+      if (api && widgetId !== null) {
+        try {
+          api.reset(widgetId);
+        } catch {
+          // ignore
+        }
+      }
+    },
+  }), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -128,4 +159,6 @@ export default function Recaptcha({
   }, [siteKey, theme, size]);
 
   return <div ref={containerRef} id={`grecaptcha-${id}`} className={className} />;
-}
+});
+
+export default Recaptcha;

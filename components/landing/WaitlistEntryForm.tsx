@@ -20,7 +20,7 @@ import { createPortal } from "react-dom";
 import { normalizeUsername } from "@/lib/zns/utils";
 import { submitWaitlist, getWaitlistCountForName } from "@/lib/waitlist/waitlist";
 import SurveyForm from "@/components/SurveyForm";
-import Recaptcha from "@/components/Recaptcha";
+import Recaptcha, { type RecaptchaHandle } from "@/components/Recaptcha";
 
 const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? "";
 
@@ -85,20 +85,14 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
-  // Bumping this key forces <Recaptcha> to remount (and reset) after a
-  // failed submit or token expiry — simpler than threading a ref reset.
-  const [recaptchaKey, setRecaptchaKey] = useState(0);
 
-  const handleRecaptchaVerify = useCallback((token: string) => {
-    setRecaptchaToken(token);
-  }, []);
-  const handleRecaptchaExpire = useCallback(() => {
-    setRecaptchaToken(null);
-  }, []);
-  const handleRecaptchaError = useCallback(() => {
-    setRecaptchaToken(null);
-  }, []);
+  // Invisible reCAPTCHA: the user clicks Submit, we call execute() which may
+  // either silently approve (and immediately fire onVerify) or pop a challenge.
+  // pendingSubmitRef tracks whether the current onVerify should trigger the
+  // server post or whether it's a stray token (e.g. token refreshed after
+  // expiry without a fresh click).
+  const recaptchaRef = useRef<RecaptchaHandle>(null);
+  const pendingSubmitRef = useRef(false);
 
   // ── Modal state ──
   const [modalView, setModalView] = useState<ModalView>("confirm");
@@ -187,15 +181,9 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
     };
   }, [confirmedName]);
 
-  const canSubmit =
-    confirmedName.length > 0 && isValidEmail(email) && !!recaptchaToken;
+  const canSubmit = confirmedName.length > 0 && isValidEmail(email);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canSubmit || submitting || !recaptchaToken) return;
-    setSubmitError("");
-    setSubmitting(true);
-
+  const doSubmit = useCallback(async (token: string) => {
     const referralCode = generateReferralCode();
 
     const { error } = await submitWaitlist({
@@ -204,20 +192,53 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
       newsletter,
       referral_code: referralCode,
       referred_by: referredByRef.current || null,
-      recaptcha_token: recaptchaToken,
+      recaptcha_token: token,
     });
 
     if (error) {
       setSubmitError("Something went wrong. Please try again.");
       setSubmitting(false);
-      setRecaptchaToken(null);
-      setRecaptchaKey((k) => k + 1);
+      recaptchaRef.current?.reset();
       return;
     }
 
     setMyReferralCode(referralCode);
     setSubmitting(false);
     setSubmitted(true);
+  }, [confirmedName, email, newsletter]);
+
+  const handleRecaptchaVerify = useCallback((token: string) => {
+    if (!pendingSubmitRef.current) return;
+    pendingSubmitRef.current = false;
+    void doSubmit(token);
+  }, [doSubmit]);
+
+  const handleRecaptchaExpire = useCallback(() => {
+    if (pendingSubmitRef.current) {
+      pendingSubmitRef.current = false;
+      setSubmitting(false);
+      setSubmitError("Verification timed out. Please try again.");
+    }
+  }, []);
+
+  const handleRecaptchaError = useCallback(() => {
+    if (pendingSubmitRef.current) {
+      pendingSubmitRef.current = false;
+      setSubmitting(false);
+      setSubmitError("Verification failed. Please try again.");
+      recaptchaRef.current?.reset();
+    }
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit || submitting) return;
+    setSubmitError("");
+    setSubmitting(true);
+    pendingSubmitRef.current = true;
+    // execute() either fires onVerify immediately (silent pass) or pops a
+    // challenge whose completion fires onVerify. doSubmit runs from there.
+    recaptchaRef.current?.execute();
   };
 
   const handleClose = () => {
@@ -231,8 +252,8 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
     setSubmitting(false);
     setModalView("confirm");
     setSurveyContactMsg(false);
-    setRecaptchaToken(null);
-    setRecaptchaKey((k) => k + 1);
+    pendingSubmitRef.current = false;
+    recaptchaRef.current?.reset();
   };
 
   const inputBase: React.CSSProperties = {
@@ -472,17 +493,18 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
                 </label>
               </div>
 
-              {/* reCAPTCHA */}
+              {/* reCAPTCHA — invisible: no visible widget; runs on Submit
+                  click via ref.execute(). Google injects a "protected by
+                  reCAPTCHA" badge in the page corner. */}
               {RECAPTCHA_SITE_KEY && (
-                <div className="flex justify-center">
-                  <Recaptcha
-                    key={recaptchaKey}
-                    siteKey={RECAPTCHA_SITE_KEY}
-                    onVerify={handleRecaptchaVerify}
-                    onExpire={handleRecaptchaExpire}
-                    onError={handleRecaptchaError}
-                  />
-                </div>
+                <Recaptcha
+                  ref={recaptchaRef}
+                  siteKey={RECAPTCHA_SITE_KEY}
+                  size="invisible"
+                  onVerify={handleRecaptchaVerify}
+                  onExpire={handleRecaptchaExpire}
+                  onError={handleRecaptchaError}
+                />
               )}
 
               {/* Submit */}
