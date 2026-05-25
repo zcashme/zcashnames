@@ -13,6 +13,7 @@
 // getWaitlistStats: aggregates total signups, referred count, and estimated rewards pot.
 "use server";
 
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { sendFollowUp } from "@/lib/email/followup";
 import { sendWaitlistConfirmationEmail } from "@/lib/email/waitlist";
@@ -35,6 +36,47 @@ export interface WaitlistPayload {
   newsletter: boolean;
   referral_code: string;
   referred_by: string | null;
+  recaptcha_token: string;
+}
+
+async function verifyRecaptchaToken(
+  token: string,
+  remoteIp: string | null,
+): Promise<boolean> {
+  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  if (!secret) {
+    console.error("reCAPTCHA verify skipped: RECAPTCHA_SECRET_KEY is not set");
+    return false;
+  }
+  if (!token) return false;
+
+  const body = new URLSearchParams();
+  body.set("secret", secret);
+  body.set("response", token);
+  if (remoteIp) body.set("remoteip", remoteIp);
+
+  try {
+    const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
+    if (!res.ok) {
+      console.error("reCAPTCHA verify HTTP error:", res.status);
+      return false;
+    }
+    const data = (await res.json()) as {
+      success?: boolean;
+      "error-codes"?: string[];
+    };
+    if (!data.success) {
+      console.error("reCAPTCHA verify failed:", data["error-codes"]);
+    }
+    return Boolean(data.success);
+  } catch (err) {
+    console.error("reCAPTCHA verify error:", err);
+    return false;
+  }
 }
 
 export interface SurveyPayload {
@@ -106,6 +148,17 @@ export async function submitWaitlist(
   const normalizedReferredBy = await normalizeReferredBy(payload.referred_by);
 
   if (!isValidName(normalizedName) || !isValidEmail(normalizedEmail)) {
+    return { error: GENERIC_ERROR };
+  }
+
+  const headerStore = await headers();
+  const remoteIp =
+    headerStore.get("cf-connecting-ip") ||
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    headerStore.get("x-real-ip") ||
+    null;
+  const captchaOk = await verifyRecaptchaToken(payload.recaptcha_token, remoteIp);
+  if (!captchaOk) {
     return { error: GENERIC_ERROR };
   }
 

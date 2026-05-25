@@ -104,11 +104,12 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https://www.zcashnames.com https://hackmd.io",
               "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
               `connect-src ${connectSrc}`,
+              "frame-src 'self' https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/",
             ].join("; "),
           },
         ],

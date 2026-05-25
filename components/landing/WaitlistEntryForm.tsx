@@ -15,11 +15,14 @@
 // On mount, reads ?ref= from URL params for referral attribution.
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { normalizeUsername } from "@/lib/zns/utils";
 import { submitWaitlist, getWaitlistCountForName } from "@/lib/waitlist/waitlist";
 import SurveyForm from "@/components/SurveyForm";
+import Recaptcha from "@/components/Recaptcha";
+
+const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? "";
 
 function isValidEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -82,6 +85,20 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  // Bumping this key forces <Recaptcha> to remount (and reset) after a
+  // failed submit or token expiry — simpler than threading a ref reset.
+  const [recaptchaKey, setRecaptchaKey] = useState(0);
+
+  const handleRecaptchaVerify = useCallback((token: string) => {
+    setRecaptchaToken(token);
+  }, []);
+  const handleRecaptchaExpire = useCallback(() => {
+    setRecaptchaToken(null);
+  }, []);
+  const handleRecaptchaError = useCallback(() => {
+    setRecaptchaToken(null);
+  }, []);
 
   // ── Modal state ──
   const [modalView, setModalView] = useState<ModalView>("confirm");
@@ -170,11 +187,12 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
     };
   }, [confirmedName]);
 
-  const canSubmit = confirmedName.length > 0 && isValidEmail(email);
+  const canSubmit =
+    confirmedName.length > 0 && isValidEmail(email) && !!recaptchaToken;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit || submitting) return;
+    if (!canSubmit || submitting || !recaptchaToken) return;
     setSubmitError("");
     setSubmitting(true);
 
@@ -186,11 +204,14 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
       newsletter,
       referral_code: referralCode,
       referred_by: referredByRef.current || null,
+      recaptcha_token: recaptchaToken,
     });
 
     if (error) {
       setSubmitError("Something went wrong. Please try again.");
       setSubmitting(false);
+      setRecaptchaToken(null);
+      setRecaptchaKey((k) => k + 1);
       return;
     }
 
@@ -210,6 +231,8 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
     setSubmitting(false);
     setModalView("confirm");
     setSurveyContactMsg(false);
+    setRecaptchaToken(null);
+    setRecaptchaKey((k) => k + 1);
   };
 
   const inputBase: React.CSSProperties = {
@@ -448,6 +471,19 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
                   Get newsletter
                 </label>
               </div>
+
+              {/* reCAPTCHA */}
+              {RECAPTCHA_SITE_KEY && (
+                <div className="flex justify-center">
+                  <Recaptcha
+                    key={recaptchaKey}
+                    siteKey={RECAPTCHA_SITE_KEY}
+                    onVerify={handleRecaptchaVerify}
+                    onExpire={handleRecaptchaExpire}
+                    onError={handleRecaptchaError}
+                  />
+                </div>
+              )}
 
               {/* Submit */}
               {submitError && (
