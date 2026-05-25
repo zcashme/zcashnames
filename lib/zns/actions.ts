@@ -1,8 +1,15 @@
 "use server";
 
 import crypto from "node:crypto";
-import { ZNS, type PreparedAction } from "zcashname-sdk";
 import type { Network } from "@/lib/types";
+
+// Local mirror of zcashname-sdk's PreparedAction — the SDK declares it in
+// zns.d.ts but doesn't formally export it (as of 0.10.0). Drop when upstream
+// adds it to its `export { ... }` list.
+interface PreparedAction {
+  readonly payload: string;
+  complete(signature: string, userPubkey?: string): { memo: string; uri: string };
+}
 import { getZns, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
 import { getNamePricing } from "@/lib/network-stats";
 import { MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";

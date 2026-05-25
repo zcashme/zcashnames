@@ -5,8 +5,18 @@ import { getPublicKeyAsync, signAsync } from "@noble/ed25519";
 import { Suspense, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import { ZNS, type PayloadValidationResult } from "zcashname-sdk";
+import { ZNS } from "zcashname-sdk";
 import { useCopy } from "@/components/hooks/useCopy";
+
+// Local mirror of zcashname-sdk's PayloadValidationResult — the SDK declares it
+// in zns.d.ts but doesn't formally export it (as of 0.10.0). Drop when upstream
+// adds it to its `export { ... }` list.
+type PayloadValidationResult = {
+  readonly valid: boolean;
+  readonly action: string;
+  readonly message: string;
+  readonly level: "valid" | "invalid" | "unrecognized";
+};
 
 function bytesToBase64(bytes: ArrayBuffer | Uint8Array): string {
   return btoa(String.fromCharCode(...new Uint8Array(bytes)));
