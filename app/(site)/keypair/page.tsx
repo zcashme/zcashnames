@@ -5,14 +5,7 @@ import { getPublicKeyAsync, signAsync } from "@noble/ed25519";
 import { Suspense, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import { ZNS } from "zcashname-sdk";
-
-type PayloadValidationResult = {
-  valid: boolean;
-  action: string;
-  message: string;
-  level: "valid" | "invalid" | "unrecognized";
-};
+import { ZNS, type PayloadValidationResult } from "zcashname-sdk";
 import { useCopy } from "@/components/hooks/useCopy";
 
 function bytesToBase64(bytes: ArrayBuffer | Uint8Array): string {

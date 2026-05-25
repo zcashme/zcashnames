@@ -1,7 +1,7 @@
 "use server";
 
 import crypto from "node:crypto";
-import { ZNS } from "zcashname-sdk";
+import { ZNS, type PreparedAction } from "zcashname-sdk";
 import type { Network } from "@/lib/types";
 import { getZns, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
 import { getNamePricing } from "@/lib/network-stats";
@@ -47,18 +47,13 @@ function sign(payload: string): string {
   return crypto.sign(null, Buffer.from(payload, "utf-8"), getSigningKey()).toString("base64");
 }
 
-interface Prepared {
-  readonly payload: string;
-  complete(signature: string, userPubkey?: string): { memo: string; uri: string };
-}
-
-// Every ZNS action produces a Prepared object (payload + a complete() method).
+// Every ZNS action produces a PreparedAction (payload + a complete() method).
 // We sign the payload with the server's admin key, then call complete() which
 // embeds the signature and returns the ZIP-321 URI the wallet needs.
 // Complete a prepared action. If sovereign sig+pubkey are provided, the
 // client has already signed — embed them in the memo. Otherwise, admin-sign.
 function completeAction(
-  prepared: Prepared,
+  prepared: PreparedAction,
   sovereignSig?: string,
   sovereignPub?: string,
 ): { memo: string; uri: string } {

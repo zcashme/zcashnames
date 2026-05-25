@@ -79,40 +79,26 @@ export async function resolveName(
   }
 
   // Name is registered — check whether it also has an active listing.
-  // The SDK's resolveName() sometimes omits the listing, so we do a
-  // separate listings() query as a fallback.
-  let regWithListing = registration;
-  if (registration && !registration.listing) {
-    const { listings } = await zns.listings();
-    const listing = listings.find((l) => l.name === normalized);
-    if (listing) {
-      regWithListing = {
-        ...registration,
-        listing,
-      };
-    }
-  }
-
   const reg = {
-    name: regWithListing!.name,
-    address: regWithListing!.address,
-    txid: regWithListing!.txid,
-    height: regWithListing!.height,
-    nonce: regWithListing!.nonce,
-    pubkey: regWithListing!.pubkey ?? null,
+    name: registration!.name,
+    address: registration!.address,
+    txid: registration!.txid,
+    height: registration!.height,
+    nonce: registration!.nonce,
+    pubkey: registration!.pubkey ?? null,
   };
 
-  if (regWithListing!.listing) {
+  if (registration!.listing) {
     return {
       status: "listed",
       query: normalized,
       registration: reg,
       listingPrice: {
-        zats: regWithListing!.listing!.price,
-        zec: zatsToZec(regWithListing!.listing!.price),
+        zats: registration!.listing.price,
+        zec: zatsToZec(registration!.listing.price),
       },
-      payTaddr: regWithListing!.listing.payTaddr,
-      pendingBuy: regWithListing!.listing.pendingBuy,
+      payTaddr: registration!.listing.payTaddr,
+      pendingBuy: registration!.listing.pendingBuy,
     };
   }
 

@@ -50,6 +50,8 @@ export function validateAddress(address: string): AddressValidationResult {
 // string needs to be validated, normalised, or priced.
 //
 
+// Must mirror SDK's isValidName regex — SDK exports it only as a ZNS instance
+// method, not a free function, so we duplicate the regex here for client/hook use.
 const NAME_RE = /^[a-z0-9]{1,62}$/;
 
 export function normalizeUsername(raw: string): string {
