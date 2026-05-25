@@ -86,13 +86,7 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Invisible reCAPTCHA: the user clicks Submit, we call execute() which may
-  // either silently approve (and immediately fire onVerify) or pop a challenge.
-  // pendingSubmitRef tracks whether the current onVerify should trigger the
-  // server post or whether it's a stray token (e.g. token refreshed after
-  // expiry without a fresh click).
   const recaptchaRef = useRef<RecaptchaHandle>(null);
-  const pendingSubmitRef = useRef(false);
 
   // ── Modal state ──
   const [modalView, setModalView] = useState<ModalView>("confirm");
@@ -183,9 +177,8 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
 
   const canSubmit = confirmedName.length > 0 && isValidEmail(email);
 
-  const doSubmit = useCallback(async (token: string) => {
+  const handleRecaptchaVerify = useCallback(async (token: string) => {
     const referralCode = generateReferralCode();
-
     const { error } = await submitWaitlist({
       name: confirmedName,
       email,
@@ -207,27 +200,10 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
     setSubmitted(true);
   }, [confirmedName, email, newsletter]);
 
-  const handleRecaptchaVerify = useCallback((token: string) => {
-    if (!pendingSubmitRef.current) return;
-    pendingSubmitRef.current = false;
-    void doSubmit(token);
-  }, [doSubmit]);
-
-  const handleRecaptchaExpire = useCallback(() => {
-    if (pendingSubmitRef.current) {
-      pendingSubmitRef.current = false;
-      setSubmitting(false);
-      setSubmitError("Verification timed out. Please try again.");
-    }
-  }, []);
-
   const handleRecaptchaError = useCallback(() => {
-    if (pendingSubmitRef.current) {
-      pendingSubmitRef.current = false;
-      setSubmitting(false);
-      setSubmitError("Verification failed. Please try again.");
-      recaptchaRef.current?.reset();
-    }
+    setSubmitError("Verification failed. Please try again.");
+    setSubmitting(false);
+    recaptchaRef.current?.reset();
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -235,9 +211,6 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
     if (!canSubmit || submitting) return;
     setSubmitError("");
     setSubmitting(true);
-    pendingSubmitRef.current = true;
-    // execute() either fires onVerify immediately (silent pass) or pops a
-    // challenge whose completion fires onVerify. doSubmit runs from there.
     recaptchaRef.current?.execute();
   };
 
@@ -252,7 +225,6 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
     setSubmitting(false);
     setModalView("confirm");
     setSurveyContactMsg(false);
-    pendingSubmitRef.current = false;
     recaptchaRef.current?.reset();
   };
 
@@ -502,7 +474,6 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
                   siteKey={RECAPTCHA_SITE_KEY}
                   size="invisible"
                   onVerify={handleRecaptchaVerify}
-                  onExpire={handleRecaptchaExpire}
                   onError={handleRecaptchaError}
                 />
               )}
