@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 export default async function LeadersPage() {
-  const data = await getLeadersData("confirmed");
+  const data = await getLeadersData();
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-4 sm:px-6">
       <LeaderboardContent data={data} />

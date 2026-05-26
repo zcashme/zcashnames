@@ -10,8 +10,6 @@ import { roundZec } from "@/lib/zns/utils";
 //
 // Both tree traversals guard against cycles via visited + path sets.
 // Consumed by leaders.ts for leaderboard and referral dashboard data.
-export type ReferralScope = "all" | "confirmed";
-
 export type NameLengthBucket = "1" | "2" | "3" | "4" | "5" | "6" | "7+";
 
 export type ProjectionModel = "fixed" | "commission";
@@ -124,9 +122,8 @@ export function fixedRewardForDepth(depth: number): number {
 
 export function buildFixedDepthReferralSummaries(
   rows: WaitlistReferralRow[],
-  scope: ReferralScope = "all",
 ): Map<string, FixedDepthReferralSummary> {
-  const eligibleRows = rows.filter((row) => scope === "all" || row.email_verified);
+  const eligibleRows = rows.filter((row) => row.email_verified);
   const childrenByParent = new Map<string, WaitlistReferralRow[]>();
   const candidateCodes = new Set<string>();
 
@@ -197,10 +194,9 @@ export function commissionRateForAttributedReferrals(totalAttributedReferrals: n
 export function buildReferralDashboard(
   referralCode: string,
   rows: WaitlistReferralRow[],
-  scope: ReferralScope = "all",
 ): ReferralDashboardBaseData {
   const normalizedCode = referralCode.trim();
-  const eligibleRows = rows.filter((row) => scope === "all" || row.email_verified);
+  const eligibleRows = rows.filter((row) => row.email_verified);
   const root = rows.find((row) => row.referral_code === normalizedCode) ?? null;
   const waitlistPosition = root
     ? [...rows]

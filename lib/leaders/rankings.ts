@@ -27,8 +27,6 @@ export interface WeeklyRow {
   allTime: [RankingEntry?, RankingEntry?, RankingEntry?];
 }
 
-type ReferralScope = "all" | "confirmed";
-
 function buildTopThreeEntries(
   counts: Record<string, number>,
   nameMap: Record<string, string>,
@@ -101,7 +99,6 @@ function calculateGrowthPct(current: number, previous: number): number {
 
 export function buildDailyRankingsFromRows(
   rows: WaitlistReferralRow[],
-  scope: ReferralScope = "all",
 ): DailyRow[] {
   if (rows.length === 0) return [];
 
@@ -120,7 +117,7 @@ export function buildDailyRankingsFromRows(
     }
 
     if (!row.referred_by) continue;
-    if (scope === "confirmed" && !row.email_verified) continue;
+    if (!row.email_verified) continue;
 
     if (!dailyCountsByDate[date]) dailyCountsByDate[date] = {};
     dailyCountsByDate[date][row.referred_by] = (dailyCountsByDate[date][row.referred_by] || 0) + 1;
@@ -153,7 +150,6 @@ export function buildDailyRankingsFromRows(
 
 export function buildWeeklyRankingsFromRows(
   rows: WaitlistReferralRow[],
-  scope: ReferralScope = "all",
 ): WeeklyRow[] {
   if (rows.length === 0) return [];
 
@@ -165,7 +161,7 @@ export function buildWeeklyRankingsFromRows(
 
   for (const row of rows) {
     if (!row.referred_by) continue;
-    if (scope === "confirmed" && !row.email_verified) continue;
+    if (!row.email_verified) continue;
 
     const date = row.created_at.slice(0, 10);
     const weekRange = getUtcWeekRange(date);

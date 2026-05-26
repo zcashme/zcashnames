@@ -30,7 +30,6 @@ import {
   unlockReferralTable,
   unlockReferralCommissionMode,
   type ReferralDashboardData,
-  type ReferralScope,
 } from "@/lib/leaders/leaders";
 import {
   calculateReferralProjection,
@@ -171,7 +170,6 @@ export default function ReferralDashboardPage() {
   const params = useParams<{ code: string }>();
   const referralCode = decodeURIComponent(typeof params?.code === "string" ? params.code : "");
   const installState = usePwaInstall();
-  const scope: ReferralScope = "confirmed";
   const [data, setData] = useState<ReferralDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [projectionOpen, setProjectionOpen] = useState(false);
@@ -203,7 +201,7 @@ export default function ReferralDashboardPage() {
 
     (async () => {
       setLoading(true);
-      const result = await getReferralDashboard(referralCode, scope);
+      const result = await getReferralDashboard(referralCode);
       if (!cancelled) {
         setData(result);
         setLoading(false);
@@ -213,7 +211,7 @@ export default function ReferralDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [referralCode, scope]);
+  }, [referralCode]);
 
   const model: ProjectionModel = data?.root?.cabal && data.commissionUnlocked ? "commission" : "fixed";
   const referralsTableUnlocked = model === "commission" || Boolean(data?.referralsUnlocked);
@@ -292,7 +290,7 @@ export default function ReferralDashboardPage() {
 
   useEffect(() => {
     setDirectMetricFace("direct");
-  }, [referralCode, scope]);
+  }, [referralCode]);
 
   useEffect(() => {
     setAccessGesture({ count: 0, lastAt: 0 });

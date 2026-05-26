@@ -40,8 +40,8 @@ export default function LeaderSnapshotPage() {
     (async () => {
       setLoading(true);
       const [rows, series, names] = await Promise.all([
-        getDailyRankings("confirmed"),
-        getLeadersTimeSeries("confirmed"),
+        getDailyRankings(),
+        getLeadersTimeSeries(),
         getDailyNewNames(selectedDate),
       ]);
       if (cancelled) return;

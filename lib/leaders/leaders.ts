@@ -78,8 +78,6 @@ export interface DailyNewNameEntry {
   email_verified: boolean;
 }
 
-export type ReferralScope = "all" | "confirmed";
-
 type ReferralCommissionUnlockResult =
   | { ok: true }
   | { ok: false; error: string };
@@ -158,8 +156,8 @@ function wasCommissionPinSentToday(value: unknown): boolean {
   return Date.now() - sentAt < COMMISSION_PIN_RATE_LIMIT_MS;
 }
 
-function calculateRewardsPot(rows: WaitlistReferralRow[], scope: ReferralScope): number {
-  const summaries = buildFixedDepthReferralSummaries(rows, scope);
+function calculateRewardsPot(rows: WaitlistReferralRow[]): number {
+  const summaries = buildFixedDepthReferralSummaries(rows);
   const rewardsPot = Array.from(summaries.values()).reduce(
     (total, summary) => total + (summary.directReferrals > 0 ? summary.potentialRewards : 0),
     0,
@@ -238,26 +236,19 @@ async function fetchAllWaitlistRows(): Promise<Record<string, unknown>[] | null>
 function buildWaitlistStatsFromData(
   data: Record<string, unknown>[],
   rows: WaitlistReferralRow[],
-  scope: ReferralScope,
 ): { waitlist: number; referred: number; rewardsPot: number } {
   return {
-    waitlist: scope === "confirmed" ? data.filter((r) => Boolean(r.email_verified)).length : data.length,
-    referred: data.filter((r) => {
-      if (!r.referred_by) return false;
-      if (scope === "confirmed" && !r.email_verified) return false;
-      return true;
-    }).length,
-    rewardsPot: calculateRewardsPot(rows, scope),
+    waitlist: data.filter((r) => Boolean(r.email_verified)).length,
+    referred: data.filter((r) => Boolean(r.referred_by) && Boolean(r.email_verified)).length,
+    rewardsPot: calculateRewardsPot(rows),
   };
 }
 
-export async function getWaitlistStats(
-  scope: ReferralScope = "all",
-): Promise<{ waitlist: number; referred: number; rewardsPot: number }> {
+export async function getWaitlistStats(): Promise<{ waitlist: number; referred: number; rewardsPot: number }> {
   try {
     const data = await fetchAllWaitlistRows();
     if (!data) return { waitlist: 0, referred: 0, rewardsPot: 0 };
-    return buildWaitlistStatsFromData(data, toWaitlistReferralRows(data), scope);
+    return buildWaitlistStatsFromData(data, toWaitlistReferralRows(data));
   } catch {
     return { waitlist: 0, referred: 0, rewardsPot: 0 };
   }
@@ -266,7 +257,6 @@ export async function getWaitlistStats(
 function buildLeadersTimeSeriesFromData(
   data: Record<string, unknown>[],
   rows: WaitlistReferralRow[],
-  scope: ReferralScope,
 ): TimeSeriesPoint[] {
   const nameMap: Record<string, string> = {};
   for (const row of rows) {
@@ -299,14 +289,14 @@ function buildLeadersTimeSeriesFromData(
     // cumulativeRows as it stands before pushing this row. This makes calculateRewardsPot
     // run once per date instead of once per row.
     if (isNewDate && points.length > 0) {
-      points[points.length - 1].rewardsPot = calculateRewardsPot(cumulativeRows, scope);
+      points[points.length - 1].rewardsPot = calculateRewardsPot(cumulativeRows);
       const top = resolveTopReferrer(dailyCounts, nameMap, previousTopCode);
       points[points.length - 1].topReferrer = top;
       previousTopCode = top?.code ?? null;
       dailyCounts = {};
     }
 
-    const isCountedMember = scope === "all" || row.email_verified;
+    const isCountedMember = row.email_verified;
     if (isCountedMember) total += 1;
     if (row.referral_code) cumulativeRows.push(row);
 
@@ -331,7 +321,7 @@ function buildLeadersTimeSeriesFromData(
 
   // Final flush for the last date — rewardsPot was never set inside the loop.
   if (points.length > 0) {
-    points[points.length - 1].rewardsPot = calculateRewardsPot(cumulativeRows, scope);
+    points[points.length - 1].rewardsPot = calculateRewardsPot(cumulativeRows);
     const top = resolveTopReferrer(dailyCounts, nameMap, previousTopCode);
     points[points.length - 1].topReferrer = top;
   }
@@ -346,26 +336,22 @@ function buildLeadersTimeSeriesFromData(
   return points;
 }
 
-export async function getLeadersTimeSeries(
-  scope: ReferralScope = "all",
-): Promise<TimeSeriesPoint[]> {
+export async function getLeadersTimeSeries(): Promise<TimeSeriesPoint[]> {
   try {
     const data = await fetchAllWaitlistRows();
     if (!data) return [];
-    return buildLeadersTimeSeriesFromData(data, toWaitlistReferralRows(data), scope);
+    return buildLeadersTimeSeriesFromData(data, toWaitlistReferralRows(data));
   } catch {
     return [];
   }
 }
 
-export async function getLeaderboard(
-  scope: ReferralScope = "all",
-): Promise<LeaderboardEntry[]> {
+export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   try {
     const data = await fetchAllWaitlistRows();
     if (!data) return [];
 
-    return buildLeaderboardFromRows(toWaitlistReferralRows(data), scope);
+    return buildLeaderboardFromRows(toWaitlistReferralRows(data));
   } catch {
     return [];
   }
@@ -373,9 +359,8 @@ export async function getLeaderboard(
 
 function buildLeaderboardFromRows(
   rows: WaitlistReferralRow[],
-  scope: ReferralScope = "all",
 ): LeaderboardEntry[] {
-  const summaries = buildFixedDepthReferralSummaries(rows, scope);
+  const summaries = buildFixedDepthReferralSummaries(rows);
 
   const nameMap: Record<string, string> = {};
   const preferredCodeMap = buildPreferredCodeMap(rows);
@@ -404,7 +389,7 @@ function buildLeaderboardFromRows(
 
   for (const row of rows) {
     if (!row.referred_by) continue;
-    if (scope === "confirmed" && !row.email_verified) continue;
+    if (!row.email_verified) continue;
 
     const code = row.referred_by;
     const date = row.created_at.slice(0, 10);
@@ -472,29 +457,29 @@ function buildLeaderboardFromRows(
     .map((entry, i) => ({ ...entry, rank: i + 1 }));
 }
 
-export async function getDailyRankings(scope: ReferralScope = "all"): Promise<DailyRow[]> {
+export async function getDailyRankings(): Promise<DailyRow[]> {
   try {
     const data = await fetchAllWaitlistRows();
     if (!data || data.length === 0) return [];
 
-    return buildDailyRankingsFromRows(toWaitlistReferralRows(data), scope);
+    return buildDailyRankingsFromRows(toWaitlistReferralRows(data));
   } catch {
     return [];
   }
 }
 
-export async function getWeeklyRankings(scope: ReferralScope = "all"): Promise<WeeklyRow[]> {
+export async function getWeeklyRankings(): Promise<WeeklyRow[]> {
   try {
     const data = await fetchAllWaitlistRows();
     if (!data || data.length === 0) return [];
 
-    return buildWeeklyRankingsFromRows(toWaitlistReferralRows(data), scope);
+    return buildWeeklyRankingsFromRows(toWaitlistReferralRows(data));
   } catch {
     return [];
   }
 }
 
-export async function getLeadersData(scope: ReferralScope = "all"): Promise<LeadersData> {
+export async function getLeadersData(): Promise<LeadersData> {
   const data = await fetchAllWaitlistRows();
   if (!data) {
     return {
@@ -507,11 +492,11 @@ export async function getLeadersData(scope: ReferralScope = "all"): Promise<Lead
   }
   const rows = toWaitlistReferralRows(data);
 
-  const timeSeries = buildLeadersTimeSeriesFromData(data, rows, scope);
-  const leaderboard = buildLeaderboardFromRows(rows, scope);
-  const initialDailyRankings = buildDailyRankingsFromRows(rows, scope);
-  const weeklyRankings = buildWeeklyRankingsFromRows(rows, scope);
-  const stats = buildWaitlistStatsFromData(data, rows, scope);
+  const timeSeries = buildLeadersTimeSeriesFromData(data, rows);
+  const leaderboard = buildLeaderboardFromRows(rows);
+  const initialDailyRankings = buildDailyRankingsFromRows(rows);
+  const weeklyRankings = buildWeeklyRankingsFromRows(rows);
+  const stats = buildWaitlistStatsFromData(data, rows);
 
   const dailyRankings: DailyRow[] = initialDailyRankings.map((row) => ({ ...row, topBadge: null }));
 
@@ -579,7 +564,6 @@ export async function getDailyNewNames(date: string): Promise<DailyNewNameEntry[
 
 export async function getReferralDashboard(
   referralCode: string,
-  scope: ReferralScope = "all",
 ): Promise<ReferralDashboardData | null> {
   const normalizedCode = referralCode.trim();
 
@@ -587,7 +571,6 @@ export async function getReferralDashboard(
     if (!normalizedCode) {
       console.warn(`${REFERRAL_DASHBOARD_LOG_PREFIX} empty referral code`, {
         referralCode,
-        scope,
       });
       return null;
     }
@@ -604,14 +587,13 @@ export async function getReferralDashboard(
     if (!data) {
       console.error(`${REFERRAL_DASHBOARD_LOG_PREFIX} waitlist fetch returned null`, {
         referralCode: normalizedCode,
-        scope,
       });
       return null;
     }
 
     const rows = toWaitlistReferralRows(data);
-    const dashboard: ReferralDashboardBaseData = buildReferralDashboard(resolved.canonicalCode, rows, scope);
-    const leaderboard = buildLeaderboardFromRows(rows, scope);
+    const dashboard: ReferralDashboardBaseData = buildReferralDashboard(resolved.canonicalCode, rows);
+    const leaderboard = buildLeaderboardFromRows(rows);
     const leaderboardRank =
       leaderboard.find((entry) => entry.canonical_referral_code === dashboard.canonicalReferralCode)?.rank ?? null;
     const [commissionUnlocked, referralsUnlocked] = await Promise.all([
@@ -625,7 +607,6 @@ export async function getReferralDashboard(
   } catch (error) {
     console.error(`${REFERRAL_DASHBOARD_LOG_PREFIX} getReferralDashboard failed`, {
       referralCode: normalizedCode,
-      scope,
       error: formatUnknownError(error),
     });
     return null;
