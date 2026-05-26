@@ -306,11 +306,11 @@ function buildLeadersTimeSeriesFromData(
       dailyCounts = {};
     }
 
-    total += 1;
+    const isCountedMember = scope === "all" || row.email_verified;
+    if (isCountedMember) total += 1;
     if (row.referral_code) cumulativeRows.push(row);
 
-    const isCountedReferral =
-      Boolean(row.referred_by) && (scope === "all" || row.email_verified);
+    const isCountedReferral = isCountedMember && Boolean(row.referred_by);
     if (isCountedReferral) referred += 1;
 
     if (isNewDate) {
