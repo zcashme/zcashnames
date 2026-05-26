@@ -54,7 +54,7 @@ export async function getNamePricing(network: keyof typeof NETWORKS, nameLen: nu
 
 export async function getNetworkStats(mode: "waitlist" | "mainnet" | "testnet"): Promise<NetworkStats> {
   if (mode === "waitlist") {
-    const { waitlist, referred, rewardsPot } = await getWaitlistStats("all");
+    const { waitlist, referred, rewardsPot } = await getWaitlistStats("confirmed");
     return { mode: "waitlist", waitlist, referred, rewardsPot };
   }
 
