@@ -1,4 +1,5 @@
 import { ZNS } from "zcashname-sdk";
+import { bech32, bech32m } from "bech32";
 import type { Network, Registration, ResolveName, NameAvailabilityState } from "@/lib/types";
 
 const instances: Record<Network, ZNS> = {
@@ -21,27 +22,49 @@ export interface AddressValidationResult {
   warning: string;
 }
 
-const VIEWKEY_RE = /^(uview1|utestview1|zsview1|ztestsaplingview1)/i;
+function isViewingKey(a: string): boolean {
+  return /^(uview1|utestview1|zsview1|ztestsaplingview1)/i.test(a);
+}
+
+function isTex(a: string): boolean {
+  const s = a.toLowerCase();
+  if (!(s.startsWith("tex1") || s.startsWith("textest1"))) return false;
+  try {
+    const dec = bech32m.decode(s, 100);
+    return dec.prefix === "tex" || dec.prefix === "textest";
+  } catch { return false; }
+}
+
+function isUnified(a: string): boolean {
+  const s = a.toLowerCase();
+  if (!(s.startsWith("u1") || s.startsWith("utest1"))) return false;
+  try {
+    const dec = bech32m.decode(s, 300);
+    return dec.prefix === "u" || dec.prefix === "utest";
+  } catch { return false; }
+}
+
+function isSapling(a: string): boolean {
+  const s = a.toLowerCase();
+  if (!(s.startsWith("zs1") || s.startsWith("ztestsapling1"))) return false;
+  try {
+    const dec = bech32.decode(s, 200);
+    return dec.prefix === "zs" || dec.prefix === "ztestsapling";
+  } catch { return false; }
+}
+
+function isTransparent(a: string): boolean {
+  return /^[tT](1|3|m|2)[A-Za-z0-9]{20,}$/.test(a);
+}
 
 export function validateAddress(address: string): AddressValidationResult {
   const t = String(address ?? "").trim();
   if (!t) return { status: "invalid", warning: "" };
-
-  if (VIEWKEY_RE.test(t))
-    return { status: "viewkey", warning: "Viewing keys are not accepted." };
-
-  if (/^(tex1|textest1)/i.test(t))
-    return { status: "tex", warning: "TEX addresses are not supported." };
-
-  if (t.startsWith("utest1") || t.startsWith("u1"))
-    return { status: "unified", warning: "" };
-
-  if (/^(zs1|ztestsapling1)/i.test(t))
-    return { status: "sapling", warning: "Sapling address - Unified preferred." };
-
-  if (/^[tT](1|3|m|2)[A-Za-z0-9]{20,}$/.test(t))
-    return { status: "transparent", warning: "Transparent addresses leak metadata." };
-
+  if (isViewingKey(t)) return { status: "viewkey", warning: "Viewing keys are not accepted." };
+  if (isTex(t))         return { status: "tex", warning: "TEX addresses are not supported." };
+  if (isUnified(t))     return { status: "unified", warning: "" };
+  if (isSapling(t))     return { status: "sapling", warning: "Sapling address - Unified preferred." };
+  if (isTransparent(t)) return { status: "transparent", warning: "Transparent addresses leak metadata." };
   return { status: "invalid", warning: "Invalid address format." };
 }
 
