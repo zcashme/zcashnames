@@ -241,7 +241,7 @@ function buildWaitlistStatsFromData(
   scope: ReferralScope,
 ): { waitlist: number; referred: number; rewardsPot: number } {
   return {
-    waitlist: data.length,
+    waitlist: scope === "confirmed" ? data.filter((r) => Boolean(r.email_verified)).length : data.length,
     referred: data.filter((r) => {
       if (!r.referred_by) return false;
       if (scope === "confirmed" && !r.email_verified) return false;
