@@ -1,3 +1,10 @@
+/**
+ * Shared React Email layout wrapper for all email templates. Provides the outer
+ * <Html>/<Body>/<Container> structure, dark background theme, ZcashNames logo,
+ * preview text, heading, dividers, and a social links footer. Every email
+ * component in this directory composes with EmailLayout to ensure consistent
+ * branding and rendering across email clients.
+ */
 import {
   Body,
   Container,

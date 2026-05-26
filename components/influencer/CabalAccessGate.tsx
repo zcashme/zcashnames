@@ -17,6 +17,10 @@ function SubmitButton() {
   );
 }
 
+// Password gate guarding the influencer/cabal deck. Uses useActionState
+// to call the unlockCabal server action; the server validates the password
+// and either returns an error or renders the deck. Renders the deck title
+// via InfluencerHeaderTitle (a portal into the site header).
 export default function CabalAccessGate({ deckTitle }: { deckTitle: string }) {
   const [state, formAction] = useActionState(unlockCabal, INITIAL_STATE);
 

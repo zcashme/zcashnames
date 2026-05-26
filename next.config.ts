@@ -1,3 +1,9 @@
+// Next.js configuration for the ZcashNames documentation site.
+// Wraps the default config with the Nextra docs plugin and enriches it with:
+//   - Domain redirects (zcashna.me, zcashname.com → zcashnames.com)
+//   - Security headers (CSP, HSTS, framing, referrer policy)
+//   - A /api/confirm redirect that passes a ?token through to the landing page
+//   - Windows symlink workaround for OneDrive reparse points
 import type { NextConfig } from "next";
 import nextra from "nextra";
 import fs from "node:fs";
@@ -71,12 +77,19 @@ const nextConfig: NextConfig = {
       {
         source: "/api/confirm",
         has: [{ type: "query", key: "token", value: "(?<token>.+)" }],
-        destination: "/?token=:token",
+        destination: "/waitlist?token=:token",
         permanent: false,
       },
     ];
   },
   async headers() {
+    const isDev = process.env.NODE_ENV === "development";
+    const connectSrc = [
+      "'self'",
+      "https://vitals.vercel-insights.com",
+      "https://light.zcash.me",
+      ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*", "ws://localhost:*"] : []),
+    ].join(" ");
     return [
       {
         source: "/(.*)",
@@ -89,12 +102,12 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://challenges.cloudflare.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https://www.zcashnames.com https://hackmd.io",
               "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
-              "connect-src 'self' https://vitals.vercel-insights.com https://challenges.cloudflare.com",
-              "frame-src https://challenges.cloudflare.com",
+              `connect-src ${connectSrc}`,
+              "frame-src 'self' https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/",
             ].join("; "),
           },
         ],

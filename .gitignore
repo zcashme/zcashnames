@@ -58,9 +58,6 @@ public/_pagefind/
 .vscode/
 backup-latest-commit.patch
 beta-testers.json
-components/emails/BetaInviteEmail.tsx
-lib/beta/
-lib/email/beta-invite.ts
 sql/
 
 

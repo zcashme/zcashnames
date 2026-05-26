@@ -1,3 +1,9 @@
+/**
+ * Beta v2 application form. Collects display name, why, focus areas, experience,
+ * referral source, and one or more contact methods (email, telegram, signal, etc.).
+ * Assembles fields into FormData and calls submitBetaV2Application server action on submit.
+ * Uses useTransition for optimistic pending state during submission.
+ */
 "use client";
 
 import { useState, useTransition } from "react";
@@ -7,7 +13,7 @@ import {
   CONTACT_LABEL,
   CONTACT_PLACEHOLDER,
   type ContactKind,
-} from "@/lib/contact-methods";
+} from "@/lib/types";
 
 interface ContactRow {
   uid: string;
@@ -17,6 +23,7 @@ interface ContactRow {
 
 type FocusArea = "user" | "sdk";
 
+/** Finds the first CONTACT_KINDS value not already used in the current contact rows. */
 function nextUnusedKind(rows: ContactRow[]): ContactKind | null {
   return CONTACT_KINDS.find((kind) => !rows.some((row) => row.kind === kind)) ?? null;
 }
@@ -94,6 +101,10 @@ export default function BetaV2ApplicationForm() {
     setContacts((prev) => prev.map((row) => (row.uid === uid ? { ...row, value } : row)));
   }
 
+  /**
+   * Swaps kinds between two rows when the user selects a kind already in use by
+   * another row — avoids collisions without needing a dedicated "swap" UX.
+   */
   function updateContactKind(uid: string, kind: ContactKind) {
     setContacts((prev) => {
       const current = prev.find((row) => row.uid === uid);
@@ -112,6 +123,7 @@ export default function BetaV2ApplicationForm() {
     });
   }
 
+  /** Validates, assembles FormData, and calls submitBetaV2Application server action. */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (pending) return;

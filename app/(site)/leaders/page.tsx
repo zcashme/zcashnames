@@ -1,4 +1,8 @@
+// Server component: fetches leaderboard data once and renders the page with SEO
+// metadata. LeaderboardContent receives the data as a prop and stays interactive
+// for local UI state (toggles, expand-more, etc.).
 import type { Metadata } from "next";
+import { getLeadersData } from "@/lib/leaders/leaders";
 import LeaderboardContent from "./LeaderboardContent";
 
 export const metadata: Metadata = {
@@ -13,7 +17,7 @@ export const metadata: Metadata = {
     url: "https://www.zcashnames.com/leaders",
     images: [
       {
-        url: "https://www.zcashnames.com/og/leaders.png",
+        url: "/og/leaders.png",
         width: 1200,
         height: 630,
         alt: "ZcashNames leaders leaderboard preview",
@@ -24,14 +28,15 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Leaderboard | ZcashNames",
     description: "Global referral rankings, growth, and rewards progress.",
-    images: ["https://www.zcashnames.com/og/leaders.png"],
+    images: ["/og/leaders.png"],
   },
 };
 
-export default function LeadersPage() {
+export default async function LeadersPage() {
+  const data = await getLeadersData();
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-4 sm:px-6">
-      <LeaderboardContent />
+      <LeaderboardContent data={data} />
     </main>
   );
 }

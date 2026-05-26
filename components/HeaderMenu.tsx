@@ -26,7 +26,7 @@ const communitySectionLinks: MenuLink[] = COMMUNITY_SECTIONS
   .map((section) => ({
     label: section.title,
     href: communitySectionHref(section.slug),
-    displayPath: `?section=${section.slug}`,
+    displayPath: `/${section.slug}`,
   }));
 
 const socialLinks = sectionCardMenuLinks("social");
@@ -71,13 +71,13 @@ const menuLinks: MenuLink[] = [
   },
   {
     label: "Social",
-    href: "/community?section=social",
+    href: communitySectionHref("social"),
     displayPath: "/social",
     children: socialLinks,
   },
   {
     label: "Blogs",
-    href: "/community?section=blogs",
+    href: communitySectionHref("blogs"),
     displayPath: "/blogs",
     comingSoon: true,
     children: blogLinks,

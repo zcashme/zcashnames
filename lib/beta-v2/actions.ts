@@ -1,10 +1,16 @@
+// Beta v2 server actions:
+//   submitBetaV2Application — public apply form → beta_testers_v2 insert + admin email
+//   sendBetaInvite          — admin triggers invite email to approved applicant
+//   redeemBetaInviteCode    — applicant trades code for a signed session cookie
 "use server";
 
 import { createHash, randomBytes } from "crypto";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { CONTACT_KINDS, type ContactKind } from "@/lib/contact-methods";
+import { CONTACT_KINDS, type ContactKind } from "@/lib/types";
 import { sendBetaV2ApplicationNotice } from "@/lib/email/beta-application-v2";
+import { sendBetaInviteEmail } from "@/lib/email/beta-invite";
+import { setTesterCookie, setStageCookie } from "@/lib/beta/gate";
 
 export type BetaV2ApplicationResult =
   | { ok: true }
@@ -166,4 +172,85 @@ export async function submitBetaV2Application(
   });
 
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Admin: send invite to an approved applicant.
+// ---------------------------------------------------------------------------
+
+export type SendBetaInviteResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export async function sendBetaInvite(testerId: string): Promise<SendBetaInviteResult> {
+  const { data, error } = await db
+    .from("beta_testers_v2")
+    .select("id, display_name, contact_email, status, invite_code")
+    .eq("id", testerId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[beta-v2] sendBetaInvite lookup failed:", error);
+    return { ok: false, error: "DB error. Try again." };
+  }
+  if (!data) return { ok: false, error: "Applicant not found." };
+  if (data.status === "revoked") return { ok: false, error: "Applicant is revoked." };
+  if (!data.contact_email) return { ok: false, error: "No email address on file." };
+
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.zcashnames.com";
+
+  await sendBetaInviteEmail({
+    email: data.contact_email as string,
+    displayName: data.display_name as string,
+    inviteCode: data.invite_code as string,
+    baseUrl,
+  });
+
+  await db
+    .from("beta_testers_v2")
+    .update({ status: "invited", code_sent_at: new Date().toISOString() })
+    .eq("id", testerId);
+
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Applicant: redeem an invite code → signed session cookie.
+// ---------------------------------------------------------------------------
+
+export type RedeemBetaInviteResult =
+  | { ok: true; displayName: string }
+  | { ok: false; error: string };
+
+export async function redeemBetaInviteCode(code: string): Promise<RedeemBetaInviteResult> {
+  if (!code) return { ok: false, error: "No invite code." };
+
+  const codeHash = createHash("sha256").update(code).digest("hex");
+
+  const { data, error } = await db
+    .from("beta_testers_v2")
+    .select("id, display_name, status")
+    .eq("code_hash", codeHash)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[beta-v2] redeemBetaInviteCode lookup failed:", error);
+    return { ok: false, error: "Something went wrong. Try again." };
+  }
+  if (!data) return { ok: false, error: "Invalid invite code." };
+  if (data.status === "revoked") return { ok: false, error: "This invite has been revoked." };
+
+  const testerId = data.id as string;
+  const displayName = data.display_name as string;
+
+  await setTesterCookie(testerId);
+  await setStageCookie("mainnet");
+
+  await db
+    .from("beta_testers_v2")
+    .update({ status: "active", activated_at: new Date().toISOString() })
+    .eq("id", testerId)
+    .neq("status", "active");
+
+  return { ok: true, displayName };
 }

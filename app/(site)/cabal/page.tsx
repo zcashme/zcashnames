@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Metadata } from "next";
+import { slugify } from "@/lib/sharekit";
 import CabalAccessGate from "@/components/influencer/CabalAccessGate";
 import InfluencerDeck, { type InfluencerSlide } from "@/components/influencer/InfluencerDeck";
 import { readCurrentCabalInvite } from "@/lib/cabal/access";
@@ -29,15 +30,6 @@ function stripFrontmatter(markdown: string): string {
 
 function stripToc(markdown: string): string {
   return markdown.replace(/^\s*\[toc\]\s*$/gim, "");
-}
-
-function slugify(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return slug || "slide";
 }
 
 function getSlideHeading(content: string, index: number, locked: boolean): { title: string; level: number } {
@@ -98,6 +90,15 @@ function addTocNumbers(slides: Omit<InfluencerSlide, "tocNumber">[]): Influencer
   });
 }
 
+/**
+ * Parses the influencer.md deck file into structured slides.
+ * Flow: strip frontmatter → strip [toc] → split on "---" dividers →
+ * extract heading (title + level) → detect locked "Equity (Password Protected)"
+ * slides → assign unique slug IDs → number the table of contents hierarchically.
+ *
+ * Connected modules: InfluencerDeck (renders slides), CabalAccessGate (auth gate),
+ * and cabal/actions.ts (chat/interest submission server actions).
+ */
 function parseSlides(markdown: string): InfluencerSlide[] {
   const seen = new Map<string, number>();
 
@@ -124,6 +125,13 @@ function parseSlides(markdown: string): InfluencerSlide[] {
   return addTocNumbers(slides);
 }
 
+/**
+ * Cabal deck page (server component).
+ * Reads the zn_cabal cookie via readCurrentCabalInvite. If no valid invite
+ * is found, renders CabalAccessGate (password unlock form). Otherwise,
+ * parses deck/influencer.md into slides and renders the full InfluencerDeck
+ * with the invitee's displayName as the initial comment name.
+ */
 export default async function InfluencerPage() {
   const markdown = await fs.readFile(MARKDOWN_PATH, "utf8");
   const slides = parseSlides(markdown);

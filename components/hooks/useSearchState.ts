@@ -2,26 +2,43 @@
 
 import { useState, useRef, useCallback } from "react";
 import { resolveName } from "@/lib/zns/resolve";
-import { normalizeUsername, isValidUsername } from "@/lib/zns/client";
+import { normalizeUsername, isValidUsername } from "@/lib/zns/utils";
+import { useZns } from "@/components/hooks/useZns";
 import type { ResolveName } from "@/lib/types";
-import type { Network } from "@/lib/zns/client";
 
-interface SearchState {
+//
+// Search state machine for the home page name search.
+//
+// Handles the full lifecycle of a name lookup:
+//   1. User types a name → normalised and validated client-side
+//   2. Valid name → resolveName() server action is called
+//   3. Result is prepended to the results list (most recent first)
+//   4. After a purchase, refreshResult() re-resolves that one name
+//   5. Dismiss button removes a result from the list
+//
+// Race condition protection: each search gets a monotonically increasing
+// requestId. When a response arrives, we discard it if a newer request
+// was already made. This prevents a slow response from overwriting a
+// fast one (e.g. typing "al" then "alice" before the first resolves).
+//
+
+interface UseSearchStateReturn {
+  // State
   input: string;
   results: ResolveName[];
   searching: boolean;
   searchError: string | null;
-}
-
-interface UseSearchStateReturn extends SearchState {
   setInput: (value: string) => void;
+  // Actions
   handleSearch: (nameValue: string) => Promise<void>;
   refreshResult: (name: string) => Promise<void>;
   removeResult: (query: string) => void;
   reset: () => void;
 }
 
-export function useSearchState(network: Network): UseSearchStateReturn {
+export function useSearchState(): UseSearchStateReturn {
+  const { zns } = useZns();
+  const network = zns.mode === "waitlist" ? "testnet" : zns.mode;
   const [input, setInputState] = useState("");
   const [results, setResults] = useState<ResolveName[]>([]);
   const [searching, setSearching] = useState(false);
@@ -78,7 +95,7 @@ export function useSearchState(network: Network): UseSearchStateReturn {
         setSearching(false);
       }
     }
-  }, [network]);
+  }, [zns.mode]);
 
   const refreshResult = useCallback(async (name: string) => {
     try {
@@ -89,7 +106,7 @@ export function useSearchState(network: Network): UseSearchStateReturn {
     } catch {
       // Leave the stale entry in place.
     }
-  }, [network]);
+  }, [zns.mode]);
 
   const removeResult = useCallback((query: string) => {
     setResults((prev) => prev.filter((item) => item.query !== query));

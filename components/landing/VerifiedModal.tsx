@@ -1,3 +1,13 @@
+// Post-email-verification modal rendered via createPortal at document.body.
+//
+// View-transition system visually slides between three stacked views:
+//   confirm → survey → thankyou (vertical slide)
+// The "confirm" view shows a success checkmark, referral link with copy/share
+// (clipboard API + Web Share API), and a "Take Survey" CTA that slides to the
+// survey view. The "thankyou" view optionally shows a contact follow-up message.
+//
+// Receives the verified name + referral code from the parent (typically the
+// email verification flow). SurveyForm handles the actual data submission.
 "use client";
 
 import { useState, useCallback } from "react";
@@ -16,6 +26,7 @@ interface VerifiedModalProps {
 
 const TRANSITION = "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)";
 
+// Maps view state to CSS transform for the animated slide between views.
 function getViewTransform(view: ViewState, current: ViewState) {
   if (view === "confirm") {
     if (current === "survey" || current === "thankyou") {

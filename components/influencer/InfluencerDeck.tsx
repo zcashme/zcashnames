@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { submitCabalChat, submitCabalInterest } from "@/app/(site)/cabal/actions";
+import { readLocalStorage, writeLocalStorage, removeLocalStorage } from "@/components/hooks/useLocalStorage";
 
 export type InfluencerSlide = {
   id: string;
@@ -189,6 +190,17 @@ function shouldShowTocItem(itemNumber: string, activeNumber: string): boolean {
   return activeNumber === rootNumber || activeNumber.startsWith(`${rootNumber}.`);
 }
 
+// Main slide-deck viewer for the influencer/cabal page. Manages:
+// - Arrow-key and touch-swipe slide navigation
+// - Collapsible table of contents with auto-scroll tracking (shouldShowTocItem
+//   shows only sibling slides under the current top-level section)
+// - Markdown slide content rendered via react-markdown with a custom accordion
+//   code-block parser (AccordionCodeBlock / parseAccordionItems)
+// - Two collapsible action panels — Comment (per-slide feedback) and Join Us
+//   (interest form) — both submitted via server actions (submitCabalChat,
+//   submitCabalInterest) with name persisted to localStorage
+// - InfluencerHeaderTitle portals the deck title into the site header element
+// - Progress bar, locked-slide gate, and overview-slide navigation
 export default function InfluencerDeck({
   slides,
   deckTitle,
@@ -229,16 +241,16 @@ export default function InfluencerDeck({
       return;
     }
 
-    const savedName = window.localStorage.getItem("cabal-chat-name");
+    const savedName = readLocalStorage("cabal-chat-name", "");
     if (savedName) setChatName(savedName);
   }, [initialCommentName]);
 
   useEffect(() => {
     const trimmedName = chatName.trim();
     if (trimmedName) {
-      window.localStorage.setItem("cabal-chat-name", trimmedName);
+      writeLocalStorage("cabal-chat-name", trimmedName);
     } else {
-      window.localStorage.removeItem("cabal-chat-name");
+      removeLocalStorage("cabal-chat-name");
     }
   }, [chatName]);
 

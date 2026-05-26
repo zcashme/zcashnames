@@ -1,3 +1,13 @@
+/**
+ * Beta tester checklist UI. Renders categorized checkboxes grouped into "User experience"
+ * and "Developer experience" sub-lists, with optional nested section headers. State is
+ * persisted via useChecklistProgress (localStorage + API). Supports per-item reporting
+ * (clicking a row pre-links it for a targeted feedback submission) and an onboarding
+ * tooltip tour.
+ *
+ * Design note: expanded/collapsed state for sub-lists and sections is owned by the
+ * parent (FeedbackPanelBody) so it survives tab switches between Checklist and Report.
+ */
 "use client";
 
 import { Fragment, useMemo, type CSSProperties } from "react";
@@ -46,6 +56,8 @@ interface SubListDef {
   items: ChecklistItem[];
 }
 
+/** Items filtered from BETA_CHECKLIST by audience. "both" items appear in both sub-lists
+ *  but share progress state via item.id, so checking one instance updates the other. */
 const USER_ITEMS = BETA_CHECKLIST.filter((i) => i.group === "user" || i.group === "both");
 const DEV_ITEMS = BETA_CHECKLIST.filter((i) => i.group === "developer" || i.group === "both");
 
@@ -55,6 +67,8 @@ export interface ChecklistExpansionDefaults {
 }
 
 /** Pure helper: which checklist groups and nested sections should start expanded. */
+/** Determines which checklist groups and nested sections should start expanded,
+ *  driven by the tester's focus areas. SDK-only testers see Developer first. */
 export function initialChecklistExpansion(focus?: ("user" | "sdk")[]): ChecklistExpansionDefaults {
   const sdkOnly = focus?.length === 1 && focus[0] === "sdk";
   if (sdkOnly) {

@@ -1,3 +1,6 @@
+// Reusable wrapper for the component gallery page. Accepts theme-keyed HTML
+// snippets, detects the active next-themes mode, and renders a live preview
+// frame alongside a collapsible source panel with copy and download.
 "use client";
 
 import { useEffect, useState } from "react";

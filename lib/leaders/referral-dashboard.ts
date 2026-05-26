@@ -1,5 +1,15 @@
-export type ReferralScope = "all" | "confirmed";
+import { roundZec } from "@/lib/zns/utils";
 
+// Referral tree algorithms for the leaders dashboard.
+//
+// Core operations:
+//   buildFixedDepthReferralSummaries  — BFS over referral graph with cycle detection,
+//                                       decay rewards (0.05 / 2^(depth-1)), per-code summaries
+//   buildReferralDashboard            — single-code depth tree for the referral detail view
+//   calculateReferralProjection       — revenue/payout projections by name-length bucket
+//
+// Both tree traversals guard against cycles via visited + path sets.
+// Consumed by leaders.ts for leaderboard and referral dashboard data.
 export type NameLengthBucket = "1" | "2" | "3" | "4" | "5" | "6" | "7+";
 
 export type ProjectionModel = "fixed" | "commission";
@@ -112,9 +122,8 @@ export function fixedRewardForDepth(depth: number): number {
 
 export function buildFixedDepthReferralSummaries(
   rows: WaitlistReferralRow[],
-  scope: ReferralScope = "all",
 ): Map<string, FixedDepthReferralSummary> {
-  const eligibleRows = rows.filter((row) => scope === "all" || row.email_verified);
+  const eligibleRows = rows.filter((row) => row.email_verified);
   const childrenByParent = new Map<string, WaitlistReferralRow[]>();
   const candidateCodes = new Set<string>();
 
@@ -185,10 +194,9 @@ export function commissionRateForAttributedReferrals(totalAttributedReferrals: n
 export function buildReferralDashboard(
   referralCode: string,
   rows: WaitlistReferralRow[],
-  scope: ReferralScope = "all",
 ): ReferralDashboardBaseData {
   const normalizedCode = referralCode.trim();
-  const eligibleRows = rows.filter((row) => scope === "all" || row.email_verified);
+  const eligibleRows = rows.filter((row) => row.email_verified);
   const root = rows.find((row) => row.referral_code === normalizedCode) ?? null;
   const waitlistPosition = root
     ? [...rows]
@@ -351,8 +359,4 @@ export function calculateReferralProjection({
 
 function sanitizeNumber(value: number): number {
   return Number.isFinite(value) ? value : 0;
-}
-
-function roundZec(value: number): number {
-  return Math.round(value * 10000) / 10000;
 }

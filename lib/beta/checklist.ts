@@ -1,10 +1,12 @@
-// Canonical beta-test checklist. Items are referenced by id from:
+// Canonical beta-test checklist — single source of truth for all checklist items.
+// Items are referenced by id from:
 //   - components/closedbeta/FeedbackChecklist.tsx (the modal/page UI)
 //   - the future Supabase `beta_checklist_progress` table
 //
 // To add or rename items, edit here only — UI and DB schema both key off `id`.
 // Items tagged `group: "both"` appear in BOTH sub-lists in the UI but are still
 // a single canonical item (one row in state, one tick).
+// Data flows: checklist.ts → actions.ts (saveChecklistProgress/loadChecklistProgress) → Supabase beta_checklist_progress
 
 type ChecklistGroup = "user" | "developer" | "both";
 

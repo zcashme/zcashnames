@@ -6,6 +6,9 @@ const logoPaths = {
   monochrome: "/brandkit/zcashnames-primary-logo-monochrome-green-transparent-377x403.svg",
 };
 
+// Three-theme logo: renders all three variants (dark, light, monochrome) as stacked layers
+// and shows/hides them with CSS data-theme selectors ([data-theme=dark] etc.). The monochrome
+// variant uses a CSS mask to inherit --fg-heading color at runtime.
 export default function ZcashNamesLogoMark({
   alt = "ZcashNames",
   size = 40,

@@ -102,6 +102,8 @@ const SNIPPETS: Snippets = {
   monochrome: buildSnippet("monochrome"),
 };
 
+// Gallery card for the leaderboard pill link displayed below the hero in
+// waitlist mode. Renders a bordered pill with a star icon linking to /leaders.
 export default function HomeLeaderboardLinkCard() {
   return (
     <GalleryCard

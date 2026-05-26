@@ -120,4 +120,4 @@ The signing key lives outside the indexer. In the reference web app (zcashnames.
 
 Rust: [`src/memo.rs::verify_signature`](https://github.com/zcashme/ZNS/blob/master/src/memo.rs) in the indexer repo.
 
-TypeScript: not currently exposed from the SDK (verification is not done client-side in the web app). The SDK emits memos from a signed payload it receives from the server. A future SDK addition will add a `verifyRegistration(reg, adminPubkey)` helper.
+TypeScript: `verifyRegistration(reg, adminPubkey)` and `verifyListing(listing, adminPubkey)` are both available on the `ZNS` client. See [TypeScript SDK — Signature Verification](/docs/sdk/typescript#signature-verification). Note that the SDK normalizes field names from snake_case to camelCase: `admin_pubkey` → `adminPubkey`, `last_action` → `lastAction`, `pay_taddr` → `payTaddr`.

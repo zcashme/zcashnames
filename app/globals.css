@@ -56,17 +56,11 @@
   --sf-bg: #1a1a1a;
   --sf-input-color: #d1d5db;
   --sf-placeholder-color: #555555;
-  --sf-prefix-color: #6b7280;
-  --sf-divider-color: rgba(255, 255, 255, 0.12);
-  --sf-border-a: #c8921a;
-  --sf-border-b: #F4B728;
-  --sf-after-glow: inset 0 0 0 1px rgba(244, 183, 40, 0.12);
   --sf-search-btn-bg: linear-gradient(116deg, #d09a24 0%, #f4b728 62%, #ffe08b 100%);
   --sf-search-btn-shadow: inset 0 1px 0 rgba(255,255,255,0.35), inset 0 0 0 1px rgba(244,183,40,0.28), 0 10px 20px rgba(0,0,0,0.35), 0 6px 16px rgba(244,183,40,0.16);
   --sf-shell-shadow: 0 8px 22px rgba(49, 65, 99, 0.1);
   --sf-focus-shadow: 0 10px 28px rgba(37, 72, 133, 0.18), 0 0 0 3px rgba(90, 151, 255, 0.18);
   --sf-focus-border-color: #f4b728;
-  --sf-suffix-color: #69708a;
   --sf-claim-text: #1a1a1a;
   --sf-claim-sheen-from: rgba(255, 255, 255, 0.25);
   --sf-claim-sheen-to: rgba(255, 255, 255, 0);
@@ -276,17 +270,11 @@
   --sf-bg: #f3f5fb;
   --sf-input-color: #5a6074;
   --sf-placeholder-color: #a6adbc;
-  --sf-prefix-color: #8c93a4;
-  --sf-divider-color: rgba(120, 132, 158, 0.32);
-  --sf-border-a: #97e1d3;
-  --sf-border-b: #5caaf4;
-  --sf-after-glow: inset 0 0 0 1px rgba(255, 255, 255, 0.78);
   --sf-search-btn-bg: linear-gradient(118deg, #2a6be6 0%, #2b8feb 54%, #2dc7ce 100%);
   --sf-search-btn-shadow: inset 0 0 0 2px rgba(255,255,255,0.9), 0 10px 18px rgba(33,78,158,0.22);
   --sf-shell-shadow: 0 8px 22px rgba(49, 65, 99, 0.1);
   --sf-focus-shadow: 0 10px 28px rgba(37, 72, 133, 0.18), 0 0 0 3px rgba(90, 151, 255, 0.18);
   --sf-focus-border-color: #2b8feb;
-  --sf-suffix-color: #69708a;
   --sf-claim-text: #ffffff;
   --sf-claim-sheen-from: rgba(255, 255, 255, 0.25);
   --sf-claim-sheen-to: rgba(255, 255, 255, 0);
@@ -442,17 +430,11 @@
   --sf-bg: var(--mono-1);
   --sf-input-color: var(--mono-3);
   --sf-placeholder-color: var(--mono-2);
-  --sf-prefix-color: var(--mono-2);
-  --sf-divider-color: rgba(155, 188, 15, 0.35);
-  --sf-border-a: var(--mono-2);
-  --sf-border-b: var(--mono-3);
-  --sf-after-glow: inset 0 0 0 1px rgba(155, 188, 15, 0.24);
   --sf-search-btn-bg: linear-gradient(180deg, rgba(155, 188, 15, 0.88) 0%, rgba(139, 172, 15, 0.88) 100%);
   --sf-search-btn-shadow: inset 0 0 0 2px rgba(155,188,15,0.5), 0 10px 18px rgba(15,56,15,0.44);
   --sf-shell-shadow: 0 8px 22px rgba(15, 56, 15, 0.44);
   --sf-focus-shadow: 0 10px 28px rgba(15,56,15,0.5), 0 0 0 3px rgba(155,188,15,0.34);
   --sf-focus-border-color: #9bbc0f;
-  --sf-suffix-color: var(--mono-3);
   --sf-claim-text: var(--mono-0);
   --sf-claim-sheen-from: rgba(155, 188, 15, 0.6);
   --sf-claim-sheen-to: rgba(155, 188, 15, 0);
@@ -667,9 +649,24 @@ body {
   position: relative;
 }
 
-body::before,
-body::after {
-  content: none;
+@keyframes roadmap-apply-pill-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+.roadmap-status-apply-now {
+  animation: roadmap-apply-pill-breathe 2.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-status-apply-now {
+    animation: none;
+  }
 }
 
 [data-theme="monochrome"] .home-theme-scope .theme-media-home,
@@ -868,34 +865,34 @@ body::after {
   background-color: var(--color-background);
 }
 
-/* ── Hero mobile spacing (single-panel layout) ────────────────── */
+/* ── Landing top spacing (single-panel layout) ────────────────── */
 
 /* Spacings 1 & 4: header→card-stack (top) and CTA→counting-bar (bottom) */
-.hero-section {
+.landing-top {
   padding-top: calc(92px + var(--vertical-gap));
   padding-bottom: var(--vertical-gap);
 }
 
 @media (min-width: 640px) {
-  .hero-section {
+  .landing-top {
     padding-top: calc(92px + 3.5rem);
     padding-bottom: 7rem; /* preserves sm:pb-28 */
   }
 }
 
 /* Spacing 2: card-stack → "Public identity" headline (grid row gap) */
-.hero-grid {
+.landing-top-grid {
   gap: var(--vertical-gap);
 }
 
 @media (min-width: 1280px) {
-  .hero-grid {
+  .landing-top-grid {
     gap: 2.5rem; /* preserves xl:gap-10 */
   }
 }
 
 /* Spacing 3: "Private activity" headline → entry bar bottom margin */
-.hero-mobile-headline {
+.landing-mobile-headline {
   margin-bottom: var(--vertical-gap);
 }
 
@@ -996,23 +993,6 @@ body::after {
   -webkit-text-fill-color: currentColor;
 }
 
-
-/* ═══════════════════════════
-   SearchForm - mask-composite border
-   (cannot be expressed in Tailwind)
-   ═══════════════════════════ */
-
-.searchform-shell::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  border: 1px solid var(--border-muted);
-}
-
-.searchform-shell:focus-within::before {
-}
 
 /* ═══════════════════════════
    Per-card theme variables
@@ -1158,12 +1138,6 @@ body::after {
   border: 2.5px solid var(--sf-focus-border-color);
 }
 
-.searchform-shell.is-compact {
-  --sf-h: 48px;
-  --sf-claim-w: 94px;
-  padding: 3px;
-}
-
 .searchform-main {
   position: relative;
   z-index: 1;
@@ -1196,10 +1170,6 @@ body::after {
   padding: 0 0 0 clamp(10px, 1.15vw, 18px);
 }
 
-.searchform-input.is-compact {
-  font-size: 1.04rem;
-}
-
 .searchform-input::placeholder,
 .searchform-input::-webkit-input-placeholder {
   color: var(--sf-placeholder-color);
@@ -1230,10 +1200,6 @@ body::after {
   line-height: 1;
 }
 
-.searchform-input-overlay.is-compact {
-  font-size: 1.04rem;
-}
-
 .searchform-input-overlay-value.has-value {
   color: var(--sf-input-color);
 }
@@ -1252,65 +1218,6 @@ body::after {
   color: transparent;
   caret-color: var(--sf-input-color);
   width: 100%;
-}
-
-.searchform-divider {
-  width: 1px;
-  align-self: center;
-  height: 54%;
-  background: var(--sf-divider-color);
-  margin: 0 8px;
-}
-
-.searchform-suffix {
-  border: none;
-  background: none;
-  color: var(--sf-suffix-color);
-  padding: 0;
-  width: clamp(72px, 8.5vw, 102px);
-  display: flex;
-  justify-content: center;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.searchform-suffix.is-compact {
-  width: 58px;
-}
-
-.searchform-suffix-clip {
-  display: block;
-  width: 100%;
-  height: 1.42rem;
-  overflow: hidden;
-  position: relative;
-}
-
-.searchform-suffix-clip.is-compact {
-  height: 1.1rem;
-}
-
-.searchform-suffix-track {
-  display: flex;
-  flex-direction: column;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  transition: transform 0.25s ease;
-}
-
-.searchform-suffix-item {
-  height: 1.42rem;
-  line-height: 1.42rem;
-  font-size: clamp(0.96rem, 1.6vw, 1.3rem);
-  text-align: center;
-}
-
-.searchform-suffix-item.is-compact {
-  height: 1.1rem;
-  line-height: 1.1rem;
-  font-size: 0.86rem;
 }
 
 .searchform-claim {
@@ -1388,8 +1295,7 @@ body::after {
   filter: saturate(0.88);
 }
 
-.searchform-claim:focus-visible,
-.searchform-suffix:focus-visible {
+.searchform-claim:focus-visible {
   outline: 3px solid var(--sf-focus-outline-color);
   outline-offset: 2px;
 }

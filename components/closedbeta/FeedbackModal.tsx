@@ -1,16 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import FeedbackPanelBody from "./FeedbackPanelBody";
 
 interface Props {
-  /** Optional pre-loaded tester name. Otherwise the panel fetches on first open. */
+  network: "mainnet" | "testnet";
   initialTesterName?: string | null;
-  /** Active stage from StatusToggle — drives both checklist scoping and the report's stage column. */
-  defaultNetwork: "testnet" | "mainnet";
-  /** Open the panel once after mount, used when entering search mode. */
-  openOnMount?: boolean;
 }
 
 const PANEL_WIDTH_PX = 440;
@@ -34,13 +30,12 @@ function nextTooltipStep(step: TooltipStep | null): TooltipStep | null {
   }
 }
 
-export default function FeedbackModal({ initialTesterName, defaultNetwork, openOnMount = false }: Props) {
+export default function FeedbackModal({ network, initialTesterName }: Props) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isWide, setIsWide] = useState(false);
   const [tooltipStep, setTooltipStep] = useState<TooltipStep | null>(null);
   const [hasShownTooltipSequence, setHasShownTooltipSequence] = useState(false);
-  const hasAppliedOpenOnMount = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -52,16 +47,11 @@ export default function FeedbackModal({ initialTesterName, defaultNetwork, openO
   }, []);
 
   useEffect(() => {
-    if (!mounted || !openOnMount || hasAppliedOpenOnMount.current) return;
-    hasAppliedOpenOnMount.current = true;
-    setOpen(true);
-    if (!hasShownTooltipSequence) {
-      setTooltipStep("popout");
-      setHasShownTooltipSequence(true);
-    }
-  }, [mounted, openOnMount, hasShownTooltipSequence]);
+    if (!open || hasShownTooltipSequence) return;
+    setHasShownTooltipSequence(true);
+    setTooltipStep("popout");
+  }, [open, hasShownTooltipSequence]);
 
-  // ESC closes the panel.
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -71,6 +61,8 @@ export default function FeedbackModal({ initialTesterName, defaultNetwork, openO
     return () => document.removeEventListener("keydown", handler);
   }, [open]);
 
+  const stage = network;
+
   const primaryBtnStyle: React.CSSProperties = {
     background: "var(--home-result-primary-bg)",
     color: "var(--home-result-primary-fg)",
@@ -79,10 +71,6 @@ export default function FeedbackModal({ initialTesterName, defaultNetwork, openO
 
   function openPanel() {
     setOpen(true);
-    if (!hasShownTooltipSequence) {
-      setTooltipStep("popout");
-      setHasShownTooltipSequence(true);
-    }
   }
 
   return (
@@ -123,7 +111,7 @@ export default function FeedbackModal({ initialTesterName, defaultNetwork, openO
           >
             <FeedbackPanelBody
               mode="panel"
-              stage={defaultNetwork}
+              stage={stage}
               initialTesterName={initialTesterName}
               onClose={() => setOpen(false)}
               tooltipStep={tooltipStep}

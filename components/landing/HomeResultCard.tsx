@@ -1,20 +1,21 @@
+// Search result card for the home page — purely presentational, driven by props.
+// Renders: name + status badge (via NameStatusBadge) + optional price +
+// action buttons (via NameStatusButtons) + footer chips (char count, popular) +
+// links to Explorer and ZcashMe. Derives explorer URL from network mode.
 "use client";
 
 import Image from "next/image";
-import type { Action } from "@/lib/types";
-import type { Network } from "@/lib/zns/client";
+import type { Action, Network, NameAvailabilityState } from "@/lib/types";
 import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
 import {
   NameStatusBadge,
   NameStatusButtons,
-  type NameAvailabilityState,
   statusSupportsPrice,
 } from "@/components/NameStatus";
 
 interface HomeResultCardProps {
   displayName: string;
   network: Network;
-  firstBucket?: number;
   availabilityState: NameAvailabilityState;
   priceLabel?: string;
   usdLabel?: string;
@@ -26,7 +27,6 @@ interface HomeResultCardProps {
 export default function HomeResultCard({
   displayName,
   network,
-  firstBucket,
   availabilityState,
   priceLabel,
   usdLabel,
@@ -37,7 +37,6 @@ export default function HomeResultCard({
   const plainName = displayName.replace(/\.(zcash|zec)$/i, "");
   const encodedName = encodeURIComponent(plainName);
   const charCount = plainName.length;
-  const firstBucketLabel = firstBucket ? `First ${firstBucket}` : null;
   const explorerUrl =
     network === "testnet"
       ? `/explorer?env=testnet&name=${encodedName}`
@@ -51,14 +50,12 @@ export default function HomeResultCard({
   const footerChips = isAvailable
     ? [
         `${charCount} characters`,
-        ...(firstBucketLabel ? [firstBucketLabel] : []),
         "No previous owners",
         ...(isPopularName ? ["Popular name"] : []),
       ]
     : isForSale
       ? [
           `${charCount} characters`,
-          ...(firstBucketLabel ? [firstBucketLabel] : []),
           ...(isPopularName ? ["Popular name"] : []),
         ]
       : [];

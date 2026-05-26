@@ -1,11 +1,27 @@
+/*
+ * Marketing site layout — the root layout for the public-facing (site) route group.
+ *
+ * Fonts (Manrope, Dancing Script, Inter) are loaded into CSS variables here and
+ * applied on the <body> so every page below inherits them.  The <html> element
+ * lives in this file because Next.js App Router layouts must own the root shell.
+ *
+ * Providers (ThemeProvider → NetworkProvider) wrap all children so the entire
+ * marketing site shares theme state and ZNS network context.
+ *
+ * Header, Footer, and CabalLaunchBar are site‑wide chrome rendered on every
+ * marketing page.  SEO metadata (OpenGraph, Twitter, JSON‑LD) is defined
+ * alongside the layout so it applies globally.
+ */
 import type { Metadata } from "next";
 import { Manrope, Dancing_Script, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
-import { NetworkProvider } from "@/components/NetworkToggle";
+import { cookies } from "next/headers";
+import { NetworkProvider } from "@/components/hooks/useZns";
+import { BETA_COOKIE_NAME, readCurrentStage } from "@/lib/beta/gate";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import BetaApplyBar from "@/components/closedbeta/BetaApplyBar";
 import CabalLaunchBar from "@/components/influencer/CabalLaunchBar";
+import BetaApplyBar from "@/components/waitlist/BetaApplyBar";
 import { Analytics } from "@vercel/analytics/next";
 import { BRAND } from "@/lib/zns/brand";
 import PwaShellClient from "@/components/PwaShellClient";
@@ -74,6 +90,11 @@ export const metadata: Metadata = {
 /* ── Layout ─────────────────────────────────────────────────────────── */
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const hasBeta = !!cookieStore.get(BETA_COOKIE_NAME)?.value;
+  const stage = await readCurrentStage();
+  const initialMode = stage ?? "waitlist";
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -107,7 +128,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           defaultTheme="dark"
           themes={["dark", "light", "monochrome"]}
         >
-        <NetworkProvider>
+        <NetworkProvider initialMode={initialMode} hasBeta={hasBeta}>
 
         <div data-site-chrome="true">
         <BetaApplyBar />

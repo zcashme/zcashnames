@@ -1,7 +1,18 @@
+// Waitlist server actions — the primary entry point for the public waitlist page.
+//
+// submitWaitlist: upsert-like flow. If email exists unverified → update row & re-send
+//   confirmation. If new → insert + generate unique 8-char referral code.
+//   Sends confirmation email with a signed token (confirm-token.ts → email/waitlist.ts).
+//
+// submitSurvey: updates survey fields by referral_code, optionally triggers a follow-up
+//   email if may_contact or want_early_trial is set and email is verified.
+//
+// confirmWaitlistEmail: validates the email confirmation token, marks email_verified=true,
+//   sends welcome email with the referral code.
+//
+// getWaitlistStats: aggregates total signups, referred count, and estimated rewards pot.
 "use server";
 
-import { createHash } from "crypto";
-import { resolveMx } from "node:dns/promises";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { sendFollowUp } from "@/lib/email/followup";
@@ -14,20 +25,10 @@ import {
 } from "@/lib/waitlist/confirm-token";
 import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
 import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
-import { normalizeUsername } from "@/lib/zns/client";
+import { normalizeUsername } from "@/lib/zns/utils";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 const MAX_REFERRAL_CODE_RETRIES = 6;
-
-const BLOCKED_EMAIL_DOMAINS = new Set([
-  "example.com",
-  "wshu.net",
-  "viralmail.top",
-  "denipl.net",
-  "denipl.com",
-  "forexzig.com",
-  "fxzig.com",
-]);
 
 export interface WaitlistPayload {
   name: string;
@@ -35,16 +36,16 @@ export interface WaitlistPayload {
   newsletter: boolean;
   referral_code: string;
   referred_by: string | null;
-  turnstile_token: string;
+  recaptcha_token: string;
 }
 
-async function verifyTurnstileToken(
+async function verifyRecaptchaToken(
   token: string,
   remoteIp: string | null,
 ): Promise<boolean> {
-  const secret = process.env.TURNSTILE_SECRET_KEY;
+  const secret = process.env.RECAPTCHA_SECRET_KEY;
   if (!secret) {
-    console.error("Turnstile verify skipped: TURNSTILE_SECRET_KEY is not set");
+    console.error("reCAPTCHA verify skipped: RECAPTCHA_SECRET_KEY is not set");
     return false;
   }
   if (!token) return false;
@@ -55,25 +56,25 @@ async function verifyTurnstileToken(
   if (remoteIp) body.set("remoteip", remoteIp);
 
   try {
-    const res = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: body.toString(),
-      },
-    );
+    const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
     if (!res.ok) {
-      console.error("Turnstile verify HTTP error:", res.status);
+      console.error("reCAPTCHA verify HTTP error:", res.status);
       return false;
     }
-    const data = (await res.json()) as { success?: boolean; "error-codes"?: string[] };
+    const data = (await res.json()) as {
+      success?: boolean;
+      "error-codes"?: string[];
+    };
     if (!data.success) {
-      console.error("Turnstile verify failed:", data["error-codes"]);
+      console.error("reCAPTCHA verify failed:", data["error-codes"]);
     }
     return Boolean(data.success);
   } catch (err) {
-    console.error("Turnstile verify error:", err);
+    console.error("reCAPTCHA verify error:", err);
     return false;
   }
 }
@@ -99,19 +100,6 @@ type WaitlistRow = {
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-async function isDeliverableEmail(email: string): Promise<boolean> {
-  if (!isValidEmail(email)) return false;
-  const domain = email.split("@")[1]?.toLowerCase();
-  if (!domain) return false;
-  if (BLOCKED_EMAIL_DOMAINS.has(domain)) return false;
-  try {
-    const records = await resolveMx(domain);
-    return records.length > 0;
-  } catch {
-    return false;
-  }
 }
 
 function isValidName(name: string): boolean {
@@ -152,16 +140,6 @@ async function normalizeReferredBy(input: string | null): Promise<string | null>
   return resolved?.canonicalCode ?? null;
 }
 
-function resolveBaseUrl(headerStore: { get(name: string): string | null }): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
-
-  const proto = headerStore.get("x-forwarded-proto") || "https";
-  const host = headerStore.get("x-forwarded-host") || headerStore.get("host");
-  if (host) return `${proto}://${host}`;
-  return "https://zcashnames.com";
-}
-
 export async function submitWaitlist(
   payload: WaitlistPayload,
 ): Promise<{ error: string | null }> {
@@ -169,20 +147,18 @@ export async function submitWaitlist(
   const normalizedEmail = normalizeEmail(payload.email);
   const normalizedReferredBy = await normalizeReferredBy(payload.referred_by);
 
-  if (!isValidName(normalizedName) || !(await isDeliverableEmail(normalizedEmail))) {
+  if (!isValidName(normalizedName) || !isValidEmail(normalizedEmail)) {
     return { error: GENERIC_ERROR };
   }
 
   const headerStore = await headers();
-
   const remoteIp =
     headerStore.get("cf-connecting-ip") ||
     headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     headerStore.get("x-real-ip") ||
     null;
-
-  const turnstileOk = await verifyTurnstileToken(payload.turnstile_token, remoteIp);
-  if (!turnstileOk) {
+  const captchaOk = await verifyRecaptchaToken(payload.recaptcha_token, remoteIp);
+  if (!captchaOk) {
     return { error: GENERIC_ERROR };
   }
 
@@ -258,7 +234,7 @@ export async function submitWaitlist(
     waitlistId,
     email: normalizedEmail,
   });
-  const confirmUrl = `${resolveBaseUrl(headerStore)}/?token=${encodeURIComponent(confirmToken)}`;
+  const confirmUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/waitlist?token=${encodeURIComponent(confirmToken)}`;
 
   try {
     await sendWaitlistConfirmationEmail({
@@ -318,7 +294,7 @@ export async function submitSurvey(
     try {
       const reasons: string[] = [];
       if (want_early_trial) reasons.push("You expressed interest in trying ZcashNames before launch.");
-      if (integrateSelected) reasons.push("You’re interested in integrating ZcashNames with your app.");
+      if (integrateSelected) reasons.push("You're interested in integrating ZcashNames with your app.");
       if (may_contact && reasons.length === 0) reasons.push("You said we could reach out.");
       const reasonCopy = reasons.join(" ");
 
@@ -351,33 +327,6 @@ export async function getWaitlistCountForName(name: string): Promise<number> {
   }
 }
 
-export async function getWaitlistStats(): Promise<{
-  waitlist: number;
-  referred: number;
-  rewardsPot: number;
-}> {
-  try {
-    const { count: waitlistCount } = await db
-      .from("zn_waitlist")
-      .select("*", { count: "exact", head: true });
-
-    const { count: referredCount } = await db
-      .from("zn_waitlist")
-      .select("*", { count: "exact", head: true })
-      .not("referred_by", "is", null);
-
-    const waitlist = waitlistCount ?? 0;
-    const referred = referredCount ?? 0;
-
-    return {
-      waitlist,
-      referred,
-      rewardsPot: Math.round(referred * 0.05 * 1000) / 1000,
-    };
-  } catch {
-    return { waitlist: 0, referred: 0, rewardsPot: 0 };
-  }
-}
 
 export interface ConfirmWaitlistResult {
   status: "success" | "already" | "invalid";
@@ -388,8 +337,6 @@ export interface ConfirmWaitlistResult {
 export async function confirmWaitlistEmail(
   token: string,
 ): Promise<ConfirmWaitlistResult> {
-  const headerStore = await headers();
-
   const parsed = parseWaitlistConfirmToken(token);
   if (!parsed || isWaitlistConfirmTokenExpired(parsed)) {
     return { status: "invalid" };
@@ -439,7 +386,7 @@ export async function confirmWaitlistEmail(
       name: row.name,
       canonicalReferralCode: ensured.canonicalCode,
       preferredReferralCode: ensured.preferredCode,
-      baseUrl: resolveBaseUrl(headerStore),
+      baseUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "",
     });
   } catch (emailError) {
     console.error("Waitlist welcome email error:", emailError);

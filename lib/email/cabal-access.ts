@@ -1,7 +1,9 @@
 import "server-only";
 
+// Internal notification when someone views the cabal proposal deck.
+// Plain-text email sent to partner@zcash.me.
 import { FROM_EMAIL, TO_EMAIL } from "@/lib/email/constants";
-import { getResend } from "@/lib/email/client";
+import { sendEmail } from "@/lib/email/client";
 
 export type CabalAccessNotice = {
   name: string;
@@ -9,7 +11,6 @@ export type CabalAccessNotice = {
 };
 
 export async function sendCabalAccessNotice(notice: CabalAccessNotice): Promise<void> {
-  const resend = getResend();
   const name = notice.name.trim() || "Unknown visitor";
   const body = [
     `${name} is viewing your proposal.`,
@@ -18,7 +19,7 @@ export async function sendCabalAccessNotice(notice: CabalAccessNotice): Promise<
     `Viewed at: ${notice.submittedAt}`,
   ].join("\n");
 
-  await resend.emails.send({
+  await sendEmail({
     from: FROM_EMAIL,
     to: TO_EMAIL,
     subject: `Cabal proposal view: ${name}`,

@@ -1,9 +1,14 @@
+/**
+ * ExplorerToolbar — the filter bar for the explorer page.
+ * Renders a search input (delegated to ToolbarSearchInput) and a network
+ * selector (Mainnet / Testnet). All state is lifted to ExplorerView; this
+ * component only receives callbacks.
+ */
 "use client";
 
 import { useState } from "react";
-
-export type Environment = "all" | "mainnet" | "testnet";
-export type SortBy = "height" | "name" | "type";
+import ToolbarSearchInput from "@/components/search/ToolbarSearchInput";
+import type { Network } from "@/lib/types";
 
 function Dropdown({
   value,
@@ -71,71 +76,30 @@ export default function ExplorerToolbar({
   onSearchChange,
   onSearchSubmit,
   onClearSearch,
-  environment,
-  onEnvironmentChange,
-  sortBy,
-  onSortChange,
+  network,
+  onNetworkChange,
 }: {
   searchQuery: string;
   onSearchChange: (q: string) => void;
   onSearchSubmit: () => void;
   onClearSearch: () => void;
-  environment: Environment;
-  onEnvironmentChange: (env: Environment) => void;
-  sortBy: SortBy;
-  onSortChange: (s: SortBy) => void;
+  network: Network;
+  onNetworkChange: (n: Network) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="relative flex-1 min-w-[180px]">
-        <svg
-          viewBox="0 0 20 20"
-          fill="none"
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-muted"
-          aria-hidden="true"
-        >
-          <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.8" />
-          <path d="M13 13l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") onSearchSubmit(); }}
-          placeholder="Search..."
-          className="w-full rounded-lg border py-2 pl-9 pr-16 text-sm outline-none"
-          style={{
-            background: "var(--color-raised)",
-            borderColor: "var(--leaders-card-border)",
-            color: "var(--fg-heading)",
-          }}
-        />
-        {searchQuery.trim() && (
-          <button
-            type="button"
-            onClick={onClearSearch}
-            className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded px-2 py-1 text-[0.72rem] font-semibold text-fg-muted transition-colors hover:text-fg-heading"
-          >
-            Clear
-          </button>
-        )}
-      </div>
-      <Dropdown
-        value={environment}
-        onChange={(v) => onEnvironmentChange(v as Environment)}
-        options={[
-          { value: "all", label: "All Environments" },
-          { value: "mainnet", label: "Mainnet" },
-          { value: "testnet", label: "Testnet" },
-        ]}
+      <ToolbarSearchInput
+        value={searchQuery}
+        onChange={onSearchChange}
+        onSubmit={onSearchSubmit}
+        onClear={onClearSearch}
       />
       <Dropdown
-        value={sortBy}
-        onChange={(v) => onSortChange(v as SortBy)}
+        value={network}
+        onChange={(v) => onNetworkChange(v as Network)}
         options={[
-          { value: "height", label: "Last Updated" },
-          { value: "name", label: "Name" },
-          { value: "type", label: "Type" },
+          { value: "mainnet", label: "Mainnet" },
+          { value: "testnet", label: "Testnet" },
         ]}
       />
     </div>

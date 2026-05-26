@@ -1,8 +1,18 @@
+/**
+ * Beta feedback submission form. Collects severity, experience rating, wallet info,
+ * steps/expected/actual behavior, txid, notes, and up to 5 screenshots. Assembles
+ * everything into FormData and calls submitBetaFeedback server action.
+ *
+ * Wallet is persisted to localStorage so it carries across reports and sessions.
+ * On successful submission the form resets (except wallet) and emits onSuccess for
+ * parent callbacks (e.g. clearing the linked checklist item).
+ */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { submitBetaFeedback } from "@/lib/beta/actions";
 import type { ChecklistItem } from "@/lib/beta/checklist";
+import { readLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
 
 interface Props {
   /** Initial network — usually the current network from StatusToggle. */
@@ -131,22 +141,14 @@ export default function FeedbackForm({
 
   // Hydrate wallet from localStorage so it sticks across reports + sessions.
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(WALLET_STORAGE_KEY);
-      if (stored) setWallet(stored);
-    } catch {
-      // localStorage blocked — silent fallback
-    }
+    const stored = readLocalStorage(WALLET_STORAGE_KEY, "");
+    if (stored) setWallet(stored);
   }, []);
 
   // Persist wallet on every change.
   useEffect(() => {
-    try {
-      if (wallet) {
-        window.localStorage.setItem(WALLET_STORAGE_KEY, wallet);
-      }
-    } catch {
-      // silent
+    if (wallet) {
+      writeLocalStorage(WALLET_STORAGE_KEY, wallet);
     }
   }, [wallet]);
 
@@ -192,6 +194,11 @@ export default function FeedbackForm({
    * grep-able string so it reads cleanly in the Supabase table editor.
    * Example: "1440x900 dpr=2 form=desktop orient=landscape-primary lang=en-US"
    */
+  /**
+   * One grep-able string capturing viewport, DPR, device form factor, orientation,
+   * and locale at submission time. Written to supabase for support triage.
+   * Example: "1440x900 dpr=2 form=desktop orient=landscape-primary lang=en-US"
+   */
   function captureClientEnv(): string {
     if (typeof window === "undefined") return "";
     try {
@@ -211,6 +218,7 @@ export default function FeedbackForm({
     }
   }
 
+  /** Guards against empty submissions, assembles FormData, and calls submitBetaFeedback. */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submitting) return;

@@ -1,3 +1,9 @@
+/**
+ * Component gallery page ("use client").
+ * Renders groups of production UI elements as live previews alongside their
+ * self-contained HTML/CSS source (theme-aware, no Tailwind, no external deps).
+ * Used as a visual reference and copy-paste source for off-site embeds.
+ */
 "use client";
 
 import HeroSearchFormCard from "@/components/gallery/cards/HeroSearchFormCard";

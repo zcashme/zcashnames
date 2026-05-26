@@ -1,3 +1,10 @@
+// Client component: renders a single daily snapshot page at /leaders/[date].
+// Fetches daily rankings, full time series, and new names for the given date.
+// Layout is a 16:9 card (SVG-exportable via cloneWithInlineStylesAsync) containing:
+//   - Background time series chart (non-interactive, decorative)
+//   - 24h rankings, all-time rankings, and aggregate stats (waitlist/referred/rewards)
+// Below it, a 1:1 grid of new names with copy/hide controls and its own SVG export.
+// Always uses "confirmed" (email-verified) referral scope.
 "use client";
 
 import Link from "next/link";
@@ -8,7 +15,6 @@ import {
   getDailyNewNames,
   getDailyRankings,
   getLeadersTimeSeries,
-  type ReferralScope,
   type DailyNewNameEntry,
   type DailyRow,
   type RankingEntry,
@@ -23,7 +29,6 @@ export default function LeaderSnapshotPage() {
   const [dailyRows, setDailyRows] = useState<DailyRow[]>([]);
   const [timeSeries, setTimeSeries] = useState<TimeSeriesPoint[]>([]);
   const [newNames, setNewNames] = useState<DailyNewNameEntry[]>([]);
-  const [referralScope, setReferralScope] = useState<ReferralScope>("all");
   const [namesCopied, setNamesCopied] = useState(false);
   const [hiddenNameKeys, setHiddenNameKeys] = useState<Set<string>>(new Set());
 
@@ -35,8 +40,8 @@ export default function LeaderSnapshotPage() {
     (async () => {
       setLoading(true);
       const [rows, series, names] = await Promise.all([
-        getDailyRankings(referralScope),
-        getLeadersTimeSeries(referralScope),
+        getDailyRankings(),
+        getLeadersTimeSeries(),
         getDailyNewNames(selectedDate),
       ]);
       if (cancelled) return;
@@ -49,7 +54,7 @@ export default function LeaderSnapshotPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedDate, referralScope]);
+  }, [selectedDate]);
 
   const filteredRows = useMemo(() => dailyRows, [dailyRows]);
   const snapshotBackgroundSeries = useMemo(
@@ -201,7 +206,6 @@ export default function LeaderSnapshotPage() {
           <Link href="/leaders" className="text-sm font-semibold text-fg-muted hover:text-fg-heading transition-colors">
             ← Back to Leaderboard
           </Link>
-          <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={handleSaveSnapshotSvg}
@@ -210,38 +214,6 @@ export default function LeaderSnapshotPage() {
           >
             Save 16:9 SVG
           </button>
-            <div
-              className="inline-flex items-center rounded-full border p-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em]"
-              style={{ borderColor: "var(--leaders-card-border)" }}
-            >
-              <button
-                type="button"
-                className="rounded-full px-3 py-1 transition-colors cursor-pointer"
-                style={
-                  referralScope === "all"
-                    ? { background: "var(--leaders-rank-gold)", color: "var(--leaders-rank-text)" }
-                    : { color: "var(--fg-muted)" }
-                }
-                onClick={() => setReferralScope("all")}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-full px-3 py-1 transition-colors cursor-pointer"
-                style={
-                  referralScope === "confirmed"
-                    ? { background: "var(--leaders-rank-gold)", color: "var(--leaders-rank-text)" }
-                    : { color: "var(--fg-muted)" }
-                }
-                onClick={() => setReferralScope("confirmed")}
-                title="Confirmed email referrals"
-                aria-label="Confirmed email referrals"
-              >
-                <EmailConfirmedIcon className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
         </div>
 
         <div
@@ -358,7 +330,7 @@ export default function LeaderSnapshotPage() {
           <div className="min-h-0 flex-1 p-4">
             <NewNamesSection
               entries={visibleNewNames}
-              showConfirmedIcons={referralScope === "confirmed"}
+              showConfirmedIcons={true}
               onHide={(entry) => {
                 const key = entry.name.trim().toLowerCase();
                 setHiddenNameKeys((prev) => new Set(prev).add(key));

@@ -1,3 +1,9 @@
+/**
+ * Static informational content for the beta v2 brief page. Renders sections covering
+ * what's being tested, focus areas, expectations, timeline, and contact channels.
+ * Exports BETA_V2_SECTIONS — a structured section manifest consumed by BetaV2Toc
+ * for scroll-spy sidebar navigation.
+ */
 import Link from "next/link";
 import { BRAND } from "@/lib/zns/brand";
 

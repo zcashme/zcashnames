@@ -1,3 +1,8 @@
+/**
+ * React Email template: partner/survey follow-up email. Uses a dynamic reasonCopy
+ * string (set by the admin sending the follow-up) to personalize the message,
+ * with a Cal.com booking link for scheduling a call.
+ */
 import { Button, Section, Text } from "@react-email/components";
 import { EmailLayout } from "./EmailLayout";
 import { content, paragraph, ctaButton } from "@/lib/email/styles";

@@ -1,3 +1,6 @@
+// Server component: renders the "Address Me By My Name" page.
+// Metadata is defined here for SEO; the interactive canvas composer
+// is delegated to the client-only AddressMeComposer below.
 import type { Metadata } from "next";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import AddressMeComposer from "./AddressMeComposer";

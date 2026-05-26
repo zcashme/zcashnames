@@ -1,3 +1,10 @@
+// Client component: referral dashboard for a specific code. Fetches full referral
+// tree from getReferralDashboard(), computes reward projections via
+// calculateReferralProjection(). Renders a growth chart, metric cards
+// (referrals / direct|indirect / rewards), a reward summary schedule, and a
+// filterable referrals table. Supports two projection models: "fixed" (halving
+// rewards by depth) and "commission" (percentage-based, unlockable via a 6-digit
+// PIN with email recovery). The referrals table is independently lockable.
 "use client";
 
 import Link from "next/link";
@@ -23,7 +30,6 @@ import {
   unlockReferralTable,
   unlockReferralCommissionMode,
   type ReferralDashboardData,
-  type ReferralScope,
 } from "@/lib/leaders/leaders";
 import {
   calculateReferralProjection,
@@ -164,7 +170,6 @@ export default function ReferralDashboardPage() {
   const params = useParams<{ code: string }>();
   const referralCode = decodeURIComponent(typeof params?.code === "string" ? params.code : "");
   const installState = usePwaInstall();
-  const scope: ReferralScope = "all";
   const [data, setData] = useState<ReferralDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [projectionOpen, setProjectionOpen] = useState(false);
@@ -196,7 +201,7 @@ export default function ReferralDashboardPage() {
 
     (async () => {
       setLoading(true);
-      const result = await getReferralDashboard(referralCode, scope);
+      const result = await getReferralDashboard(referralCode);
       if (!cancelled) {
         setData(result);
         setLoading(false);
@@ -206,7 +211,7 @@ export default function ReferralDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [referralCode, scope]);
+  }, [referralCode]);
 
   const model: ProjectionModel = data?.root?.cabal && data.commissionUnlocked ? "commission" : "fixed";
   const referralsTableUnlocked = model === "commission" || Boolean(data?.referralsUnlocked);
@@ -285,7 +290,7 @@ export default function ReferralDashboardPage() {
 
   useEffect(() => {
     setDirectMetricFace("direct");
-  }, [referralCode, scope]);
+  }, [referralCode]);
 
   useEffect(() => {
     setAccessGesture({ count: 0, lastAt: 0 });

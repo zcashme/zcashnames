@@ -7,6 +7,8 @@ interface SearchFormProps {
   claimLoading?: boolean;
 }
 
+// Sanitizes raw input: lowercase, alphanumeric only, max 62 chars.
+// Ensures names conform to ZNS protocol constraints before submission.
 function validate(raw: string): string {
   return raw
     .toLowerCase()
@@ -15,6 +17,11 @@ function validate(raw: string): string {
     .slice(0, 62);
 }
 
+// Home-page name search input with visual `.zcash` suffix overlay.
+// Validates on keystroke, submits on Enter. Shows an inline loading
+// spinner (hourglass icon) while the parent runs a lookup/claim check.
+// Controlled component: parent owns `value` via onChange and triggers
+// the search via onSubmit.
 export default function SearchForm({
   value,
   onChange,

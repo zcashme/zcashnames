@@ -23,6 +23,9 @@ importers:
       '@vercel/analytics':
         specifier: ^2.0.1
         version: 2.0.1(next@15.5.14(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)
+      bech32:
+        specifier: ^2.0.0
+        version: 2.0.0
       next:
         specifier: ^15.3.0
         version: 15.5.14(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -60,8 +63,8 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1
       zcashname-sdk:
-        specifier: ^0.7.0
-        version: 0.7.0
+        specifier: ^0.10.0
+        version: 0.10.0
     devDependencies:
       '@playwright/test':
         specifier: ^1.59.1
@@ -723,6 +726,10 @@ packages:
 
   '@noble/ed25519@3.1.0':
     resolution: {integrity: sha512-pfcObRY3CtvwfaG9Mt5XqZdKmAQppl37tHUeuBhDUbiwJBCVY4/A4lbMvb1xKhMDx96AqAqZpMWuBX1HulhX4g==}
+
+  '@noble/hashes@2.2.0':
+    resolution: {integrity: sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg==}
+    engines: {node: '>= 20.19.0'}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -2922,8 +2929,8 @@ packages:
     engines: {node: '>= 14.6'}
     hasBin: true
 
-  zcashname-sdk@0.7.0:
-    resolution: {integrity: sha512-Hz/23BL18fFTqzHKu1Erac+TaM+Kwxcu8HfPFZauRQ6zQTKnzFbS99KIo8p4SQSJueGBV2P0uo/2LyVI8rxeag==}
+  zcashname-sdk@0.10.0:
+    resolution: {integrity: sha512-o5UB1sPbeUp8E2pLy6QDSjpL9gKiyL9cuwzXZ7cWh3+9zpUjR7KOQ2gR1V5n9GrdZmZuafb3gJ8h/BrZSNCu7Q==}
 
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
@@ -3391,6 +3398,8 @@ snapshots:
   '@noble/ed25519@2.3.0': {}
 
   '@noble/ed25519@3.1.0': {}
+
+  '@noble/hashes@2.2.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
@@ -6169,9 +6178,10 @@ snapshots:
 
   yaml@2.8.3: {}
 
-  zcashname-sdk@0.7.0:
+  zcashname-sdk@0.10.0:
     dependencies:
       '@noble/ed25519': 2.3.0
+      '@noble/hashes': 2.2.0
       bech32: 2.0.0
 
   zod@4.3.6: {}

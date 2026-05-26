@@ -2,7 +2,7 @@
 
 A quick reference for the Zcash Name System TypeScript SDK and JSON-RPC API.
 
-The ZNS indexer exposes exactly four JSON-RPC methods — `status`, `resolve`, `listings`, `events`. The TypeScript SDK is a thin, typed surface over those four methods. Every section below documents one capability with both paths side by side: the SDK call a TypeScript wallet should make, and the raw JSON-RPC a non-TypeScript wallet or debugger can hit directly.
+The ZNS indexer exposes exactly four JSON-RPC methods: `status`, `resolve`, `listings`, `events`. The TypeScript SDK is a thin, typed surface over those four methods. Every section below documents one capability with both paths side by side: the SDK call a TypeScript wallet should make, and the raw JSON-RPC a non-TypeScript wallet or debugger can hit directly.
 
 ---
 
@@ -41,8 +41,8 @@ const zns = new ZNS({ url: "http://localhost:3000" });
 | Network | Base URL |
 |---------|----------|
 | Testnet | `https://light.zcash.me/zns-testnet` |
-| Mainnet (beta) | `https://main.zcashnames.com` — mirrors `zns-mainnet-test`, will be the official mainnet resolver |
-| Mainnet test (beta only) | `https://light.zcash.me/zns-mainnet-test` — will sunset after beta |
+| Mainnet (beta) | `https://main.zcashnames.com` (mirrors `zns-mainnet-test`; will be the official mainnet resolver) |
+| Mainnet test (beta only) | `https://light.zcash.me/zns-mainnet-test` (beta only; will sunset after beta) |
 
 ---
 
@@ -84,11 +84,10 @@ curl -sX POST https://light.zcash.me/zns-testnet \
 
 ### Wallet checks
 
-- `synced_height` — the latest block the indexer has scanned. If you're waiting for a recent transaction, compare this to the block your tx landed in; the indexer trails the chain by a few blocks.
-- `admin_pubkey` — keep this. You'll need it later for [verifying signatures](#security-verifying-signatures).
-- `uivk` — must match the network you expect. The SDK's [`verify()`](#security-verifying-the-indexer) compares this against pinned values.
-- `registered` / `listed` — totals for pagination math.
-- `pricing` may be `null` if no `SETPRICE` has been observed — treat it as advisory. See [Pricing Tiers](#pricing-tiers).
+- `synced_height`: the latest block the indexer has scanned. If you're waiting for a recent transaction, compare this to the block your tx landed in; the indexer trails the chain by a few blocks.
+- `admin_pubkey`: keep this. You'll need it later for [verifying signatures](#security-verifying-signatures).
+- `uivk`: must match the network you expect. The SDK's [`verify()`](#security-verifying-the-indexer) compares this against pinned values.
+- `registered` / `listed`: totals for pagination math.
 
 ---
 
@@ -96,7 +95,7 @@ curl -sX POST https://light.zcash.me/zns-testnet \
 
 Forward resolution: name → single registration (or `null` if unclaimed).
 
-> The SDK splits name-, address-, and all-registrations lookups into three methods, but the JSON-RPC has **one** `resolve` method. The wire method branches on the shape of `query`: a name string returns a single object (or `null`), a unified address returns `{registrations, total}`, and an empty string returns a paginated list of all registrations (see [List all registrations](#list-all-registrations)).
+> The SDK splits name-, address-, and all-registrations lookups into three methods, but the JSON-RPC has **one** `resolve` method. The wire method branches on the shape of `query`: a name string returns a single object (or `null`), a unified address returns a bare `Registration[]`, and an empty string returns a paginated bare `Registration[]` (see [List all registrations](#list-all-registrations)).
 
 ### SDK
 
@@ -110,7 +109,7 @@ if (reg) {
 }
 ```
 
-**Returns:** `Registration | null` — `null` means the name isn't registered.
+**Returns:** `Registration | null` (`null` means the name isn't registered).
 
 ### JSON-RPC
 
@@ -138,8 +137,8 @@ curl -sX POST https://light.zcash.me/zns-testnet \
 
 ### Wallet checks
 
-- `null` result means available — or invalid (wrong characters, too long). Use [`isAvailable`](#check-name-availability) if you want a simple boolean.
-- `listing` is populated if the name is currently on the marketplace — avoid sending to an address you're about to buy from.
+- `null` result means available or invalid (wrong characters, too long). Use [`isAvailable`](#check-name-availability) if you want a simple boolean.
+- `listing` is populated if the name is currently on the marketplace; avoid sending to an address you're about to buy from.
 - `pubkey === null` means OTP/passcode-controlled; a set `pubkey` means sovereign. See [Signature Scheme](#security-verifying-signatures).
 
 ---
@@ -157,7 +156,7 @@ const registrations = await zns.resolveAddress(
   0    // offset
 );
 
-// Returns Registration[] — may be empty if no names found
+// Returns Registration[] (may be empty if no names found)
 for (const reg of registrations) {
   console.log(reg.name);
 }
@@ -184,21 +183,16 @@ curl -sX POST https://light.zcash.me/zns-testnet \
 
 ### Response shape
 
-The wire response is `{ registrations, total }`, not a bare array:
+The wire response is a bare array:
 
 ```json
-{
-  "registrations": [ /* Registration[] */ ],
-  "total": 5
-}
+[ /* Registration[] */ ]
 ```
-
-The SDK unwraps this and returns `Registration[]`. Direct RPC clients must read `result.registrations`.
 
 ### Wallet checks
 
-- Empty `registrations` is valid — the address simply has no names.
-- `total` is the full count — use it to drive pagination, not the length of the current page.
+- An empty array means the address has no registered names.
+- Paginate using `offset`; stop when the returned array is shorter than `limit`.
 
 ---
 
@@ -252,22 +246,16 @@ curl -sX POST https://light.zcash.me/zns-testnet \
 
 ### Response shape
 
-Same `{ registrations, total }` shape as [resolve-by-address](#resolve-an-address):
+Same bare array as [resolve-by-address](#resolve-an-address):
 
 ```json
-{
-  "registrations": [ /* Registration[] */ ],
-  "total": 42
-}
+[ /* Registration[] */ ]
 ```
-
-The SDK unwraps `result.registrations` and returns a bare `Registration[]`.
 
 ### Wallet checks
 
 - `limit` is capped at 500 server-side. Larger values are clamped.
-- A short page (`batch.length < limit`) marks the last page — see the batching example above.
-- Compare `total` against the indexer's `status.registered` — they should match.
+- A short page (`batch.length < limit`) marks the last page. See the batching example above.
 
 ---
 
@@ -291,7 +279,7 @@ for (const listing of listings) {
 }
 ```
 
-**Note:** `listings` takes **positional** arguments `(limit?, offset?)`, not an options object. The wire method is `listings` — not `list_for_sale` or similar legacy names.
+**Note:** `listings` takes **positional** arguments `(limit?, offset?)`, not an options object. The wire method is `listings` (not `list_for_sale` or similar legacy names).
 
 ### JSON-RPC
 
@@ -314,6 +302,7 @@ curl -sX POST https://light.zcash.me/zns-testnet \
     {
       "name": "bob",
       "price": 100000000,
+      "pay_taddr": "t1abc123...",
       "nonce": 3,
       "txid": "fed321...",
       "height": 3901250,
@@ -327,7 +316,8 @@ curl -sX POST https://light.zcash.me/zns-testnet \
 ### Wallet checks
 
 - `price` is in zatoshis (1 ZEC = 10⁸ zatoshis).
-- `total` is the global count — use it for pagination, not `listings.length`.
+- `pay_taddr` is the seller's transparent address; buyers must send payment here, not to the registry.
+- `total` is the global count; use it for pagination, not `listings.length`.
 - Each listing has a signature you can verify against the `pubkey` on the backing registration. See [Verifying Signatures](#security-verifying-signatures).
 
 ---
@@ -349,10 +339,10 @@ const { events: nameHistory } = await zns.events({ name: "alice", limit: 50, off
 const { events: claims } = await zns.events({ action: "CLAIM", limit: 50 });
 
 // Events after a specific block (strict >)
-const { events: recent } = await zns.events({ since_height: 3900000, limit: 100 });
+const { events: recent } = await zns.events({ sinceHeight: 3900000, limit: 100 });
 ```
 
-**Note:** Unlike `listings` / `resolveAddress` / `listAllRegistrations`, `events` takes a single **options object** (`{ name?, action?, since_height?, limit?, offset? }`). `since_height` is strictly greater-than — to include block 3900000, pass `since_height: 3899999`.
+**Note:** Unlike `listings` / `resolveAddress` / `listAllRegistrations`, `events` takes a single **options object** (`{ name?, action?, sinceHeight?, limit?, offset? }`). `sinceHeight` is strictly greater-than: to include block 3900000, pass `sinceHeight: 3899999`. The SDK normalizes `sinceHeight` to `since_height` on the wire automatically.
 
 ### JSON-RPC
 
@@ -413,7 +403,7 @@ curl -sX POST https://light.zcash.me/zns-testnet \
 ### Wallet checks
 
 - Events are ordered newest-first.
-- `action` is a single string, not an array — issue multiple requests if you need an OR across actions.
+- `action` is a single string, not an array. Issue multiple requests if you need an OR across actions.
 - `price` is populated for `LIST` / `BUY` / `SETPRICE`, `null` otherwise.
 - `ua` is the unified address involved in the event (buyer for `BUY`, owner for `CLAIM`/`UPDATE`, etc.) and may be `null` for events without a user-visible address.
 
@@ -421,7 +411,7 @@ curl -sX POST https://light.zcash.me/zns-testnet \
 
 ## Check name availability
 
-Convenience wrapper around `resolveName` — returns `true` when the name isn't registered.
+Convenience wrapper around `resolveName`. Returns `true` when the name isn't registered.
 
 ```typescript
 const available = await zns.isAvailable("myname");
@@ -456,7 +446,7 @@ const cost = status.pricing?.tiers[nameLength - 1]; // Index 4 for 5 chars
 console.log(`Claim cost: ${cost} zatoshis (${cost! / 1e8} ZEC)`);
 ```
 
-`status.pricing` is **not signed** — treat it as advisory. See [Verifying State](/docs/indexer/verifying-state).
+`status.pricing` is **not signed**; treat it as advisory. See [Verifying State](/docs/indexer/verifying-state).
 
 ---
 
@@ -471,14 +461,14 @@ Anyone can run an indexer, but you want to make sure you're talking to a legitim
 ```typescript
 try {
   await zns.verify();
-  console.log("Indexer verified — good to go");
+  console.log("Indexer verified");
 } catch (e) {
-  console.error("UIVK mismatch — this indexer is unknown");
+  console.error("UIVK mismatch: this indexer is unknown");
   // Consider refusing to proceed or showing a warning
 }
 ```
 
-**Note:** This calls `status()` internally and checks the `uivk` field against known values. It throws if they don't match. There is no dedicated RPC method for `verify` — it's a client-side check against `status.uivk`.
+**Note:** This calls `status()` internally and checks the `uivk` field against known values. It throws if they don't match. There is no dedicated RPC method for `verify`; it's a client-side check against `status.uivk`.
 
 ---
 
@@ -493,12 +483,12 @@ const status = await zns.status();
 
 const reg = await zns.resolveName("alice");
 if (reg && reg.signature) {
-  const valid = await zns.verifyRegistration(reg, status.admin_pubkey);
+  const valid = await zns.verifyRegistration(reg, status.adminPubkey);
 
   if (valid) {
     console.log("Registration is legit");
   } else {
-    console.error("WARNING: Invalid signature — possible tampering");
+    console.error("WARNING: Invalid signature, possible tampering");
   }
 }
 ```
@@ -508,7 +498,7 @@ if (reg && reg.signature) {
 ```typescript
 const { listings } = await zns.listings();
 for (const listing of listings) {
-  const valid = await zns.verifyListing(listing, status.admin_pubkey);
+  const valid = await zns.verifyListing(listing, status.adminPubkey);
   if (!valid) {
     console.error(`Listing for ${listing.name} has invalid signature`);
   }
@@ -537,14 +527,14 @@ if (reg.pubkey === null) {
 ```
 
 **Sovereign vs admin signatures:**
-- When `pubkey` is `null`: signature was created by the admin key. Verify using `status.admin_pubkey`.
+- When `pubkey` is `null`: signature was created by the admin key. Verify using `status.adminPubkey`.
 - When `pubkey` is set: signature was created by that pubkey. Verify using `reg.pubkey`.
 
 The signed memo format is the same for both:
 - `CLAIM:{name}:{address}`
 - `UPDATE:{name}:{address}:{nonce}`
 
-**Why it matters:** Sovereign names don't need server interaction — the owner signs directly. OTP-controlled names use the web app to generate signed memos after proving control.
+**Why it matters:** Sovereign names don't need server interaction; the owner signs directly. OTP-controlled names use the web app to generate signed memos after proving control.
 
 ---
 
@@ -560,9 +550,11 @@ The memo format depends on `last_action`:
 |--------|-------------|
 | `CLAIM` | `CLAIM:{name}:{address}` |
 | `UPDATE` | `UPDATE:{name}:{address}:{nonce}` |
-| `BUY` | `BUY:{name}:{address}` |
+| `LIST` | `LIST:{name}:{price}:{pay_taddr}:{nonce}` |
 | `DELIST` | `DELIST:{name}:{nonce}` |
 | `RELEASE` | `RELEASE:{name}:{nonce}` |
+
+**BUY is a two-step protocol.** The buyer first sends a shielded memo: `BUY:{name}:{buyer_ua}` with note value ≥ 0.0001 ZEC. This locks the listing for ~2 hours (144 blocks). The buyer then sends the listing price as a transparent transaction to the seller's `pay_taddr`. The indexer detects the payment and finalizes the transfer. The `BUY` event in the event log records the ua of the buyer, not a memo-derived pre-image.
 
 **Example:**
 ```typescript
@@ -581,11 +573,11 @@ const valid = await verify(
 
 ### Listing Signatures
 
-Pre-image format is always: `LIST:{name}:{price}:{nonce}`
+Pre-image format is always: `LIST:{name}:{price}:{pay_taddr}:{nonce}`
 
 **Example:**
 ```typescript
-const preimage = `LIST:bob:100000000:3`;
+const preimage = `LIST:bob:100000000:t1abc123...:3`;
 const signature = Buffer.from(listing.signature, "base64");
 const valid = await verify(
   signature,
@@ -602,15 +594,15 @@ const valid = await verify(
 
 ```typescript
 interface Registration {
-  name: string;              // The claimed name
-  address: string;           // Unified Zcash address
-  txid: string;              // Transaction that created/updated this
-  height: number;            // Block height of the tx
-  nonce: number;             // Replay protection counter
-  signature: string | null;  // Ed25519 signature (base64)
-  last_action: "CLAIM" | "UPDATE" | "DELIST" | "BUY" | "RELEASE";
-  pubkey: string | null;     // Sovereign owner pubkey (null = OTP-controlled)
-  listing: Listing | null;   // Active listing, if any
+  name: string;
+  address: string;
+  txid: string;
+  height: number;
+  nonce: number;
+  signature: string | null;
+  lastAction: "CLAIM" | "UPDATE" | "DELIST" | "BUY" | "RELEASE";
+  pubkey: string | null;     // null = OTP-controlled, set = sovereign
+  listing: Listing | null;
 }
 ```
 
@@ -619,12 +611,22 @@ interface Registration {
 ```typescript
 interface Listing {
   name: string;
-  price: number;        // Price in zatoshis
+  price: number;             // in zatoshis
+  payTaddr: string;          // seller's transparent address for receiving payment
   nonce: number;
   txid: string;
   height: number;
-  signature: string;    // Ed25519 signature
+  signature: string;
   pubkey: string | null;
+  pendingBuy: PendingBuy | undefined;
+}
+
+interface PendingBuy {
+  buyer: string;
+  price: number;
+  claimHeight: number;
+  expiresAt: number;
+  txid: string;
 }
 ```
 
@@ -637,8 +639,8 @@ interface Event {
   action: "CLAIM" | "LIST" | "DELIST" | "RELEASE" | "UPDATE" | "BUY" | "SETPRICE";
   txid: string;
   height: number;
-  ua: string | null;    // Unified address involved
-  price: number | null; // For LIST, BUY, SETPRICE
+  ua: string | null;
+  price: number | null;      // populated for LIST, BUY, SETPRICE
   nonce: number | null;
   signature: string | null;
   pubkey: string | null;
@@ -650,24 +652,24 @@ interface Event {
 ## Configuration
 
 ```typescript
-import { DEFAULT_URL, TESTNET_UIVK, MAINNET_UIVK } from "zcashname-sdk";
+import { NETWORKS, ZNS } from "zcashname-sdk";
 
-// Default indexer endpoint — testnet
-console.log(DEFAULT_URL);
+// Default indexer endpoint (testnet)
+console.log(NETWORKS.testnet.url);
 // → "https://light.zcash.me/zns-testnet"
 
 // Pinned UIVK for verifying you're talking to the real testnet indexer
-console.log(TESTNET_UIVK);
+console.log(NETWORKS.testnet.uivk);
 // → "uivktest1hzw7wyadutvzfgpna80yftsk5l7jeyu2p5me5quvp28tytxueta00cx4068wnlzcv7tx9n3t3gfhsy83pe4y6jrhxtzaq0hj6xtg5zrk2dn7zen3vns2a5pgs4fxdjlletmqrhfa42"
 
 // Pinned UIVK for verifying mainnet indexers
-console.log(MAINNET_UIVK);
-// → "uivk1gl26qy0xjja7lqhyg3pf0x4j4j66kqwewrjkdcg28eqq4wgtzjmujpee7x9cs2ec9xhnlgrm8ptlw8z80j2aryw8nqtssser2ys778a0s00uvgkdjnfr58sndhfvc3f4zqjs6ywva6"
+console.log(NETWORKS.mainnet.uivk);
 
 // Where to send ZNS transactions (CLAIM, UPDATE, LIST, etc)
+const zns = new ZNS();
 const registryAddr = zns.registryAddress;
-// → testnet: utest1f32kn6c4zvn54xr8wfsnxmj9hzpu2mwgtxzpzwcw34906tdccdvzs0z2dx38lly7tpan77x6udt8pjczqm22ymsdhlz9j0tk5yq664nl
-// → mainnet: u1k0evt0ahj5qdt6y9ftsxndl8lrkm4ff6rp00u04cjpmqj6hxl9t8hfsxftmn3ht34e03lljh89czn2h8qn67rwrs8x0hm3lsxsucp9q9
+// testnet: utest1f32kn6c4zvn54xr8wfsnxmj9hzpu2mwgtxzpzwcw34906tdccdvzs0z2dx38lly7tpan77x6udt8pjczqm22ymsdhlz9j0tk5yq664nl
+// mainnet: u1k0evt0ahj5qdt6y9ftsxndl8lrkm4ff6rp00u04cjpmqj6hxl9t8hfsxftmn3ht34e03lljh89czn2h8qn67rwrs8x0hm3lsxsucp9q9
 ```
 
 ---
@@ -684,6 +686,6 @@ const registryAddr = zns.registryAddress;
 ## Beta Notes
 
 - **Mainnet prices are 1/100th** of production pricing during beta
-- **Testnet is free** — no real ZEC required
-- **Names are permanent** once claimed — no renewal fees
-- **Orchard only** — all transactions use shielded Orchard outputs
+- **Testnet is free**: no real ZEC required
+- **Names are permanent** once claimed, no renewal fees
+- **Orchard only**: all transactions use shielded Orchard outputs

@@ -1,19 +1,28 @@
+// Waitlist signup form.
+//
+// Two-phase UX:
+//   Phase 1: name input with .zcash suffix overlay ("Get Early Access" button
+//            confirms the name and reveals Phase 2).
+//   Phase 2: email + newsletter opt-in + submit button. On submit, generates a
+//            unique referral code, calls submitWaitlist server action, and opens
+//            a post-submit modal.
+//
+// Post-submit modal (createPortal) has four transition views:
+//   confirm → community → survey → thankyou
+// (confirm ↔ community slide horizontally; confirm → survey → thankyou vertically).
+// SurveyForm handles actual survey data submission.
+//
+// On mount, reads ?ref= from URL params for referral attribution.
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { normalizeUsername } from "@/lib/zns/client";
+import { normalizeUsername } from "@/lib/zns/utils";
 import { submitWaitlist, getWaitlistCountForName } from "@/lib/waitlist/waitlist";
 import SurveyForm from "@/components/SurveyForm";
-import Turnstile from "@/components/Turnstile";
+import Recaptcha, { type RecaptchaHandle } from "@/components/Recaptcha";
 
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
-
-interface Props {
-  usdPerZec: number | null;
-  onConfirm?: () => void;
-  onReset?: () => void;
-}
+const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? "";
 
 function isValidEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -60,7 +69,12 @@ function viewTransform(view: ModalView, current: ModalView): { transform: string
   return { transform: "translate(0, 0)", pointerEvents: active ? "auto" : "none" };
 }
 
-export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Props) {
+interface WaitlistEntryFormProps {
+  onConfirm?: () => void;
+  onReset?: () => void;
+}
+
+export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryFormProps = {}) {
   const [mounted, setMounted] = useState(false);
   // ── Form state ──
   const [nameInput, setNameInput] = useState("");
@@ -71,13 +85,11 @@ export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Pro
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [showTurnstile, setShowTurnstile] = useState(false);
-  const [turnstileError, setTurnstileError] = useState(false);
-  const [turnstileAttempt, setTurnstileAttempt] = useState(0);
+
+  const recaptchaRef = useRef<RecaptchaHandle>(null);
 
   // ── Modal state ──
   const [modalView, setModalView] = useState<ModalView>("confirm");
-  const [copied, setCopied] = useState(false);
   const [myReferralCode, setMyReferralCode] = useState("");
 
   const [surveyContactMsg, setSurveyContactMsg] = useState(false);
@@ -101,10 +113,14 @@ export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Pro
   const name = normalizeUsername(nameInput);
   const showResult = confirmedName.length > 0;
 
+  useEffect(() => {
+    if (showResult) onConfirm?.();
+    else onReset?.();
+  }, [showResult, onConfirm, onReset]);
+
   const confirmName = () => {
     if (name.length > 0) {
       setConfirmedName(name);
-      onConfirm?.();
       return;
     }
     nameInputRef.current?.focus();
@@ -161,65 +177,55 @@ export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Pro
 
   const canSubmit = confirmedName.length > 0 && isValidEmail(email);
 
-  const performSubmit = async (token: string) => {
-    setSubmitting(true);
-    setSubmitError("");
-
+  const handleRecaptchaVerify = useCallback(async (token: string) => {
     const referralCode = generateReferralCode();
-
     const { error } = await submitWaitlist({
       name: confirmedName,
       email,
       newsletter,
       referral_code: referralCode,
       referred_by: referredByRef.current || null,
-      turnstile_token: token,
+      recaptcha_token: token,
     });
 
     if (error) {
       setSubmitError("Something went wrong. Please try again.");
       setSubmitting(false);
-      setShowTurnstile(false);
+      recaptchaRef.current?.reset();
       return;
     }
 
     setMyReferralCode(referralCode);
     setSubmitting(false);
     setSubmitted(true);
-  };
+  }, [confirmedName, email, newsletter]);
+
+  const handleRecaptchaError = useCallback(() => {
+    setSubmitError("Verification failed. Please try again.");
+    setSubmitting(false);
+    recaptchaRef.current?.reset();
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit || submitting) return;
-    if (!TURNSTILE_SITE_KEY) {
-      setSubmitError("Captcha is not configured. Please contact support.");
-      return;
-    }
     setSubmitError("");
-    setTurnstileError(false);
-    setTurnstileAttempt((n) => n + 1);
-    setShowTurnstile(true);
+    setSubmitting(true);
+    recaptchaRef.current?.execute();
   };
-
-  const shareUrl =
-    typeof window !== "undefined" && myReferralCode
-      ? `${window.location.origin}?ref=${myReferralCode}`
-      : "";
 
   const handleClose = () => {
     setSubmitted(false);
     setNameInput("");
     setConfirmedName("");
-    onReset?.();
     setEmail("");
     setNewsletter(true);
     setMyReferralCode("");
     setSubmitError("");
     setSubmitting(false);
-    setShowTurnstile(false);
-    setTurnstileError(false);
     setModalView("confirm");
     setSurveyContactMsg(false);
+    recaptchaRef.current?.reset();
   };
 
   const inputBase: React.CSSProperties = {
@@ -363,7 +369,7 @@ export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Pro
                 ref={nameInputRef}
                 type="text"
                 value={nameInput}
-                onChange={(e) => { setNameInput(normalizeUsername(e.target.value)); setConfirmedName(""); onReset?.(); }}
+                onChange={(e) => { setNameInput(normalizeUsername(e.target.value)); setConfirmedName(""); }}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); confirmName(); } }}
@@ -459,42 +465,29 @@ export default function WaitlistEntryForm({ usdPerZec, onConfirm, onReset }: Pro
                 </label>
               </div>
 
-              {/* Turnstile — appears only after Submit is pressed.
-                  `key` forces a fresh widget on each retry. */}
-              {showTurnstile && TURNSTILE_SITE_KEY && (
-                <Turnstile
-                  key={turnstileAttempt}
-                  siteKey={TURNSTILE_SITE_KEY}
-                  onVerify={(token) => {
-                    setTurnstileError(false);
-                    void performSubmit(token);
-                  }}
-                  onExpire={() => setTurnstileError(true)}
-                  onError={() => setTurnstileError(true)}
+              {/* reCAPTCHA — invisible: no visible widget; runs on Submit
+                  click via ref.execute(). Google injects a "protected by
+                  reCAPTCHA" badge in the page corner. */}
+              {RECAPTCHA_SITE_KEY && (
+                <Recaptcha
+                  ref={recaptchaRef}
+                  siteKey={RECAPTCHA_SITE_KEY}
+                  size="invisible"
+                  onVerify={handleRecaptchaVerify}
+                  onError={handleRecaptchaError}
                 />
-              )}
-              {turnstileError && (
-                <p className="text-xs text-center" style={{ color: "var(--home-result-status-negative-fg)" }}>
-                  Verification failed. Please try again.
-                </p>
               )}
 
               {/* Submit */}
               {submitError && (
                 <p className="text-xs text-center" style={{ color: "var(--home-result-status-negative-fg)" }}>{submitError}</p>
               )}
-              {(() => {
-                const busy = submitting || (showTurnstile && !turnstileError);
-                const enabled = canSubmit && !busy;
-                return (
-                  <button type="submit" disabled={!enabled}
-                    className="w-full rounded-xl py-3 text-sm font-bold transition-opacity"
-                    style={{ ...primaryBtnStyle, opacity: enabled ? 1 : 0.4, cursor: enabled ? "pointer" : "not-allowed" }}
-                  >
-                    {busy ? "Submitting…" : "Submit"}
-                  </button>
-                );
-              })()}
+              <button type="submit" disabled={!canSubmit || submitting}
+                className="w-full rounded-xl py-3 text-sm font-bold transition-opacity"
+                style={{ ...primaryBtnStyle, opacity: canSubmit && !submitting ? 1 : 0.4, cursor: canSubmit && !submitting ? "pointer" : "not-allowed" }}
+              >
+                {submitting ? "Submitting…" : "Submit"}
+              </button>
             </div>
 
             {/* Fine print */}

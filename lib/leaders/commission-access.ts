@@ -1,7 +1,11 @@
 import "server-only";
 
-import { createHmac, timingSafeEqual } from "crypto";
-import { cookies } from "next/headers";
+// Cookie-based access control for the leaders commission dashboard.
+// Issues signed cookies (base64url payload + HMAC signature) for two tiers:
+// commission mode (cabal members) and referral table access (all users).
+// Uses the same HMAC secret derivation as commission-pin.
+import { safeEqual, signHmac, resolveSecret } from "@/lib/hmac";
+import { parseSignedCookie, setCookie, clearCookie, getCookie } from "@/lib/cookie";
 import { deriveCommissionPin, normalizeCommissionReferralCode } from "@/lib/leaders/commission-pin";
 
 export const LEADERS_COMMISSION_COOKIE_NAME = "zn_leaders_commission";
@@ -9,72 +13,47 @@ export const LEADERS_REFERRALS_COOKIE_NAME = "zn_leaders_referrals";
 const COOKIE_TTL_SECONDS = 60 * 60 * 24 * 30;
 
 function getSecret(): string {
-  const secret =
-    process.env.BETA_GATE_SECRET ||
-    process.env.WAITLIST_CONFIRM_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!secret) {
-    throw new Error("Missing BETA_GATE_SECRET (or fallback secret).");
+  return resolveSecret(
+    process.env.BETA_GATE_SECRET,
+    process.env.WAITLIST_CONFIRM_SECRET,
+  );
+}
+
+function encodePayload(referralCode: string, expiresAt: number): string {
+  return Buffer.from(
+    JSON.stringify({ referralCode, expiresAt }),
+    "utf8",
+  ).toString("base64url");
+}
+
+function parseReferralPayload(
+  value: string,
+): { referralCode: string; expiresAt: number } | null {
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(value, "base64url").toString("utf8"),
+    ) as { referralCode?: unknown; expiresAt?: unknown };
+
+    if (typeof parsed.referralCode !== "string" || !parsed.referralCode) return null;
+    if (typeof parsed.expiresAt !== "number" || !Number.isFinite(parsed.expiresAt)) return null;
+    if (parsed.expiresAt < Math.floor(Date.now() / 1000)) return null;
+
+    return {
+      referralCode: normalizeCommissionReferralCode(parsed.referralCode),
+      expiresAt: parsed.expiresAt,
+    };
+  } catch {
+    return null;
   }
-  return secret;
-}
-
-function safeEqual(a: string, b: string): boolean {
-  const left = Buffer.from(a);
-  const right = Buffer.from(b);
-  if (left.length !== right.length) return false;
-  return timingSafeEqual(left, right);
-}
-
-function sign(referralCode: string, expiresAt: number): string {
-  return createHmac("sha256", getSecret())
-    .update(`${referralCode}:${expiresAt}`)
-    .digest("hex");
-}
-
-function cookieOptions(maxAgeSeconds: number) {
-  return {
-    httpOnly: true as const,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: maxAgeSeconds,
-  };
 }
 
 function buildCookieValue(referralCode: string): { value: string; expiresAt: number } {
   const normalizedCode = normalizeCommissionReferralCode(referralCode);
   const expiresAt = Math.floor(Date.now() / 1000) + COOKIE_TTL_SECONDS;
-  const payload = Buffer.from(JSON.stringify({ referralCode: normalizedCode, expiresAt }), "utf8").toString("base64url");
-
-  return { value: `${payload}.${sign(normalizedCode, expiresAt)}`, expiresAt };
-}
-
-function parseCookieValue(value: string): { referralCode: string; expiresAt: number } | null {
-  const parts = value.split(".");
-  if (parts.length !== 2) return null;
-
-  const [payload, signature] = parts;
-  if (!payload || !signature) return null;
-
-  let parsed: { referralCode?: unknown; expiresAt?: unknown };
-  try {
-    parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
-      referralCode?: unknown;
-      expiresAt?: unknown;
-    };
-  } catch {
-    return null;
-  }
-
-  if (typeof parsed.referralCode !== "string" || !parsed.referralCode) return null;
-  if (typeof parsed.expiresAt !== "number" || !Number.isFinite(parsed.expiresAt)) return null;
-  if (parsed.expiresAt < Math.floor(Date.now() / 1000)) return null;
-
-  const normalizedCode = normalizeCommissionReferralCode(parsed.referralCode);
-  if (!safeEqual(signature, sign(normalizedCode, parsed.expiresAt))) return null;
-
-  return { referralCode: normalizedCode, expiresAt: parsed.expiresAt };
+  const payload = encodePayload(normalizedCode, expiresAt);
+  const secret = getSecret();
+  const signature = signHmac(secret, payload);
+  return { value: `${payload}.${signature}`, expiresAt };
 }
 
 export function verifyCommissionPin(referralCode: string, pin: string): boolean {
@@ -92,42 +71,34 @@ export function getCommissionPin(referralCode: string): string {
 export async function setCommissionAccessCookie(referralCode: string): Promise<void> {
   const { value, expiresAt } = buildCookieValue(referralCode);
   const maxAge = expiresAt - Math.floor(Date.now() / 1000);
-  const store = await cookies();
-
-  store.set(LEADERS_COMMISSION_COOKIE_NAME, value, cookieOptions(maxAge));
+  await setCookie(LEADERS_COMMISSION_COOKIE_NAME, value, maxAge);
 }
 
 export async function clearCommissionAccessCookie(): Promise<void> {
-  const store = await cookies();
-
-  store.set(LEADERS_COMMISSION_COOKIE_NAME, "", cookieOptions(0));
+  await clearCookie(LEADERS_COMMISSION_COOKIE_NAME);
 }
 
 export async function setReferralTableAccessCookie(referralCode: string): Promise<void> {
   const { value, expiresAt } = buildCookieValue(referralCode);
   const maxAge = expiresAt - Math.floor(Date.now() / 1000);
-  const store = await cookies();
-
-  store.set(LEADERS_REFERRALS_COOKIE_NAME, value, cookieOptions(maxAge));
+  await setCookie(LEADERS_REFERRALS_COOKIE_NAME, value, maxAge);
 }
 
 export async function hasCommissionAccess(referralCode: string): Promise<boolean> {
-  const store = await cookies();
-  const cookie = store.get(LEADERS_COMMISSION_COOKIE_NAME);
-  if (!cookie?.value) return false;
+  const value = await getCookie(LEADERS_COMMISSION_COOKIE_NAME);
+  if (!value) return false;
 
-  const parsed = parseCookieValue(cookie.value);
+  const parsed = parseSignedCookie(value, getSecret(), parseReferralPayload);
   if (!parsed) return false;
 
   return parsed.referralCode === normalizeCommissionReferralCode(referralCode);
 }
 
 export async function hasReferralTableAccess(referralCode: string): Promise<boolean> {
-  const store = await cookies();
-  const cookie = store.get(LEADERS_REFERRALS_COOKIE_NAME);
-  if (!cookie?.value) return false;
+  const value = await getCookie(LEADERS_REFERRALS_COOKIE_NAME);
+  if (!value) return false;
 
-  const parsed = parseCookieValue(cookie.value);
+  const parsed = parseSignedCookie(value, getSecret(), parseReferralPayload);
   if (!parsed) return false;
 
   return parsed.referralCode === normalizeCommissionReferralCode(referralCode);

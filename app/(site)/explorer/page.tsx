@@ -1,18 +1,16 @@
-import { getCurrentRegistrations, getEvents, getListings, getHomeStats, resolveName } from "@/lib/zns/resolve";
-import type { Network, Event } from "@/lib/zns/client";
+/**
+ * Server-side explorer page — the single data-fetching entry point.
+ * Fetches chain stats plus exactly one tab's page of data, server-paginated.
+ * Tab counts come from chain stats; the active tab's total drives pagination.
+ * Also resolves a name when ?name is set.
+ */
+import { getCurrentRegistrations, getEvents, getListings, resolveName } from "@/lib/zns/resolve";
+import { getChainStats } from "@/lib/network-stats";
+import type { Action, Listing, Network, Registration, ZnsEvent } from "@/lib/types";
+import { ACTIONS } from "@/lib/types";
 import type { ResolveName } from "@/lib/types";
-import ExplorerShell from "./ExplorerShell";
-import {
-  ACTION_TYPES,
-  EXPLORER_PAGE_SIZE,
-  getPaginationOffset,
-  paginateRows,
-  parseExplorerPage,
-  parseExplorerTab,
-  type ExplorerTab,
-} from "./explorerFilters";
-
-type Environment = "all" | "mainnet" | "testnet";
+import ExplorerView from "./ExplorerView";
+import { PAGE_SIZE, parseExplorerTab, type ExplorerTab } from "./tabs";
 
 export const metadata = {
   title: "Explorer - ZcashNames",
@@ -26,7 +24,7 @@ export const metadata = {
     url: "https://www.zcashnames.com/explorer",
     images: [
       {
-        url: "https://www.zcashnames.com/og/explorer.png",
+        url: "/og/explorer.png",
         width: 1200,
         height: 630,
         alt: "ZcashNames explorer preview",
@@ -37,23 +35,12 @@ export const metadata = {
     card: "summary_large_image",
     title: "Name Explorer | ZcashNames",
     description: "Browse registered names, event history, and marketplace listings.",
-    images: ["https://www.zcashnames.com/og/explorer.png"],
+    images: ["/og/explorer.png"],
   },
 };
-function parseEnvironment(env: string | undefined): Environment {
-  if (env === "all" || env === "mainnet" || env === "testnet") return env;
-  return "mainnet";
-}
 
-function getNetworks(env: Environment): Network[] {
-  if (env === "all") return ["testnet", "mainnet"];
-  return [env];
-}
-
-function getEventActionFilter(tab: ExplorerTab): Event["action"] | undefined {
-  return ACTION_TYPES.includes(tab as typeof ACTION_TYPES[number])
-    ? (tab as Event["action"])
-    : undefined;
+function getEventActionFilter(tab: ExplorerTab): Action | undefined {
+  return (ACTIONS as readonly string[]).includes(tab) ? (tab as Action) : undefined;
 }
 
 export default async function ExplorerPage({
@@ -62,66 +49,45 @@ export default async function ExplorerPage({
   searchParams: Promise<{ env?: string; name?: string; tab?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const env = parseEnvironment(params.env);
+  const network: Network = params.env === "testnet" ? "testnet" : "mainnet";
   const tab = parseExplorerTab(params.tab);
-  const page = parseExplorerPage(params.page);
+  const rawPage = Number.parseInt(params.page ?? "", 10);
+  const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
   const nameQuery = params.name ?? "";
-  const networks = getNetworks(env);
-  const effectiveNetwork: Network = env === "all" ? "mainnet" : env;
   const action = getEventActionFilter(tab);
-  const shouldClientPaginateEvents = env === "all" || tab === "admin";
-  const eventLimit = shouldClientPaginateEvents ? EXPLORER_PAGE_SIZE * page : EXPLORER_PAGE_SIZE;
-  const eventOffset = shouldClientPaginateEvents ? 0 : getPaginationOffset(page, EXPLORER_PAGE_SIZE);
+  const offset = (page - 1) * PAGE_SIZE;
 
-  const [eventsResults, listingsResults, registrationsResults, mainnetStats, testnetStats] = await Promise.all([
-    Promise.all(
-      networks.map((n) =>
-        getEvents({ action, limit: eventLimit, offset: eventOffset }, n).then((r) => ({
-          events: r.events.map((ev: Event) => ({ ...ev, network: n })),
-          total: r.total,
-        }))
-      )
-    ),
-    Promise.all(
-      networks.map((n) =>
-        getListings(n).then((items) => items.map((l) => ({ ...l, network: n })))
-      )
-    ),
-    Promise.all(
-      networks.map((n) =>
-        getCurrentRegistrations(n).then((items) => items.map((r) => ({ ...r, network: n })))
-      )
-    ),
-    getHomeStats("mainnet"),
-    getHomeStats("testnet"),
+  let registrationsP: Promise<Registration[]> = Promise.resolve([]);
+  let listingsP: Promise<{ listings: Listing[]; total: number }> = Promise.resolve({ listings: [], total: 0 });
+  let eventsP: Promise<{ events: ZnsEvent[]; total: number }> = Promise.resolve({ events: [], total: 0 });
+  if (tab === "registered") {
+    registrationsP = getCurrentRegistrations(network, PAGE_SIZE, offset);
+  } else if (tab === "forsale") {
+    listingsP = getListings(network, PAGE_SIZE, offset);
+  } else {
+    eventsP = getEvents({ action, limit: PAGE_SIZE, offset }, network);
+  }
+
+  const [stats, registrations, listingsResult, eventsResult] = await Promise.all([
+    getChainStats(network),
+    registrationsP,
+    listingsP,
+    eventsP,
   ]);
-  const stats = effectiveNetwork === "mainnet" ? mainnetStats : testnetStats;
-  const uivks = {
-    mainnet: mainnetStats.uivk,
-    testnet: testnetStats.uivk,
-  };
-
-  const eventRows = eventsResults.flatMap((r) => r.events);
-  const scopedEvents = tab === "admin" ? eventRows.filter((ev) => ev.name === "") : eventRows;
-  const initialEvents = shouldClientPaginateEvents
-    ? paginateRows(scopedEvents, page, EXPLORER_PAGE_SIZE)
-    : scopedEvents;
-  const initialEventsTotal = tab === "admin"
-    ? scopedEvents.length
-    : eventsResults.reduce((sum, r) => sum + r.total, 0);
-  const initialListings = listingsResults.flat();
-  const initialRegistrations = registrationsResults.flat();
+  const listings = listingsResult.listings;
+  const initialEvents = eventsResult.events;
+  const initialEventsTotal = eventsResult.total;
 
   let nameResult: ResolveName | null = null;
   let nameEvents: typeof initialEvents = [];
   if (nameQuery) {
     try {
       const [resolved, evResult] = await Promise.all([
-        resolveName(nameQuery, effectiveNetwork),
-        getEvents({ name: nameQuery, limit: 20 }, effectiveNetwork),
+        resolveName(nameQuery, network),
+        getEvents({ name: nameQuery, limit: 20 }, network),
       ]);
       nameResult = resolved;
-      nameEvents = evResult.events.map((ev: Event) => ({ ...ev, network: effectiveNetwork }));
+      nameEvents = evResult.events;
     } catch {
       // name resolution failed (invalid name, indexer down, etc.)
     }
@@ -129,16 +95,13 @@ export default async function ExplorerPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-4 sm:px-6">
-      <ExplorerShell
+      <ExplorerView
         initialEvents={initialEvents}
         initialEventsTotal={initialEventsTotal}
-        initialListings={initialListings}
-        initialRegistrations={initialRegistrations}
+        initialListings={listings}
+        initialRegistrations={registrations}
         stats={stats}
-        uivks={uivks}
-        environment={env}
-        initialTab={tab}
-        initialPage={page}
+        network={network}
         nameQuery={nameQuery}
         nameResult={nameResult}
         nameEvents={nameEvents}
@@ -146,5 +109,3 @@ export default async function ExplorerPage({
     </main>
   );
 }
-
-

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { COMMUNITIES } from "@/lib/zns/brand";
 
+// Hand-curated SVG path data keyed by community label (X/Twitter, Discord, Telegram, Signal).
+// COMMUNITIES provides the label + href; SOCIAL_PATHS provides the matching icon geometry.
 const SOCIAL_PATHS: Record<string, string> = {
   "X / Twitter":
     "M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z",

@@ -1,3 +1,8 @@
+/**
+ * Indexers page — displays a community-run indexer registry.
+ * Server-rendered; queries the `indexer_registry` table from the local DB
+ * and renders a read-only table of endpoints, networks, submitters, and dates.
+ */
 import { db } from "@/lib/db";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 
