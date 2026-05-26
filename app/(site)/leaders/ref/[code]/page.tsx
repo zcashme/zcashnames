@@ -171,7 +171,7 @@ export default function ReferralDashboardPage() {
   const params = useParams<{ code: string }>();
   const referralCode = decodeURIComponent(typeof params?.code === "string" ? params.code : "");
   const installState = usePwaInstall();
-  const scope: ReferralScope = "all";
+  const scope: ReferralScope = "confirmed";
   const [data, setData] = useState<ReferralDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [projectionOpen, setProjectionOpen] = useState(false);
