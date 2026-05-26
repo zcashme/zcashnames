@@ -87,9 +87,7 @@ const nextConfig: NextConfig = {
     const connectSrc = [
       "'self'",
       "https://vitals.vercel-insights.com",
-      "https://light.zcash.me/zns-testnet",
-      "https://light.zcash.me/zns-mainnet",
-      "https://light.zcash.me/mempool-mainnet",
+      "https://light.zcash.me",
       ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*", "ws://localhost:*"] : []),
     ].join(" ");
     return [
