@@ -771,7 +771,11 @@ export default function Zip321Modal({
               <strong>{name}.zcash</strong> is reserved. Enter your unlock code to continue.
             </p>
             <input type="text" value={s.unlockCode} autoFocus
-              onChange={(e) => set({ unlockCode: e.target.value.toUpperCase(), unlockError: "" })}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 12);
+                const formatted = [raw.slice(0, 4), raw.slice(4, 8), raw.slice(8, 12)].filter(Boolean).join("-");
+                set({ unlockCode: formatted, unlockError: "" });
+              }}
               onKeyDown={(e) => { if (e.key === "Enter") handleUnlock(); }}
               placeholder="XXXX-XXXX-XXXX"
               className="w-full rounded-xl px-4 py-3 text-sm font-mono tracking-[0.15em] outline-none text-center"

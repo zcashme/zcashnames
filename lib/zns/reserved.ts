@@ -85,8 +85,8 @@ export function generateUnlockCode(name: string): string {
  * Timing-safe comparison to prevent side-channel attacks.
  */
 export function verifyUnlockCode(name: string, code: string): boolean {
-  const expected = generateUnlockCode(name);
-  const normalizedCode = code.trim().toUpperCase();
+  const expected = generateUnlockCode(name).replace(/-/g, "");
+  const normalizedCode = code.trim().toUpperCase().replace(/-/g, "");
   if (expected.length !== normalizedCode.length) return false;
   return crypto.timingSafeEqual(
     Buffer.from(expected, "utf-8"),
