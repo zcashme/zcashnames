@@ -77,7 +77,7 @@ export function inputDescription(action: Action, name: string, amount?: string):
 export function scanningStatusMessage(action: Action, scanState: ScanState): React.ReactNode {
   switch (scanState) {
     case "not_detected":
-      return <>Your {ACTION_NOUNS[action]} hasn&rsquo;t been detected yet.</>;
+      return <>Your {action === "BUY" ? "intent to purchase" : ACTION_NOUNS[action]} hasn&rsquo;t been detected yet.</>;
     case "in_mempool":
       return (
         <SentenceLines>
@@ -196,6 +196,9 @@ export function modalDescription(
     return <>The registry is waiting for your payment to the seller to confirm on-chain.</>;
   }
   if (state.address && state.settleState === "mined") return minedMessage("BUY", name, state.address);
+  if (action === "BUY") {
+    return <>Checking the mempool and resolver for your intent to purchase <NameBadge name={name} />.</>;
+  }
   return <>Checking the mempool and resolver to {ACTION_NOUNS[action]} <NameBadge name={name} />.</>;
 }
 
