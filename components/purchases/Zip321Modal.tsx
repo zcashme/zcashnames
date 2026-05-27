@@ -1078,10 +1078,18 @@ export default function Zip321Modal({
             >
               Passcode accepted.
             </p>
-            {s.otpError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{s.otpError}</p>}
-            {s.otpAttempts > 0 && (
-              <p className="text-xs" style={{ color: "var(--fg-muted)" }}>
-                Attempt {s.otpAttempts} of {getNetworkConstants(network).OTP_MAX_ATTEMPTS}
+            {(s.otpError || s.otpAttempts > 0) && (
+              <p className="m-0 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1">
+                {s.otpError && (
+                  <span className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
+                    {s.otpError}
+                  </span>
+                )}
+                {s.otpAttempts > 0 && (
+                  <span className="text-xs" style={{ color: "var(--fg-muted)" }}>
+                    Attempt {s.otpAttempts} of {getNetworkConstants(network).OTP_MAX_ATTEMPTS}
+                  </span>
+                )}
               </p>
             )}
             <div className="flex flex-wrap gap-3 w-full justify-between pt-1">
