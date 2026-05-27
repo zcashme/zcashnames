@@ -69,7 +69,7 @@ function CompactProgress({ snapshot, complete }: { snapshot: ResumeSnapshot; com
         : 0;
 
   return (
-    <div className="flex min-w-[7rem] shrink-0 justify-end" aria-label={`Progress step ${activeIndex + 1} of ${phases.length}`}>
+    <div className="flex min-w-[7rem] shrink-0 justify-start" aria-label={`Progress step ${activeIndex + 1} of ${phases.length}`}>
       <div className="flex max-w-full items-center gap-[3px]">
         {phases.map((step, i) => {
           const fill = complete ? 1 : progressFillForPhase(step, i, activeIndex, snapshot.scanState);
@@ -156,6 +156,9 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
   const clearWarning = isConfirm
     ? "Removes this prepared request. Sent payments cannot be undone."
     : "Payment processing, if any, cannot be cancelled. Tap to confirm.";
+  const clearWarningLines = clearWarning.split(". ").map((line, index, lines) =>
+    index < lines.length - 1 && !line.endsWith(".") ? `${line}.` : line
+  );
 
   function handleClear() {
     if (!confirmingClear) { setConfirmingClear(true); return; }
@@ -260,7 +263,11 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
               className="m-0 text-right text-sm font-medium leading-relaxed"
               style={{ color: "var(--home-result-status-negative-fg, #ff8a8a)" }}
             >
-              {clearWarning}
+              {clearWarningLines.map((line) => (
+                <span key={line} className="block">
+                  {line}
+                </span>
+              ))}
             </p>
           </>
         )}
