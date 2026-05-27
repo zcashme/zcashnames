@@ -182,11 +182,11 @@ export function modalDescription(
     return <>Sign this payload with your Ed25519 private key to authorize {ACTION_LABELS[action].toLowerCase()} for <NameBadge name={name} />.</>;
   }
   if (phase === "otp") {
-    return <>Send exact amount and memo to the address below to request a verification code.</>;
+    return <>Send exact amount and memo to address below to request verification code.</>;
   }
   if (phase === "confirm") {
     if (action === "BUY") return <>You&rsquo;ll pay the seller the listing price next.</>;
-    return <>Send exact amount and memo to the address below to complete the transaction.</>;
+    return <>Send exact amount and memo to address below to complete transaction.</>;
   }
   if (phase === "fund") {
     return <>Send <strong>{options?.listingPriceZec ?? 0} ZEC</strong> to <NameBadge name={name} />&rsquo;s transparent address.</>;
