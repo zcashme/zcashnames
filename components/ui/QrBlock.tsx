@@ -162,6 +162,7 @@ export function QrBlock({ address, amount, memo, size = 200 }: QrBlockProps) {
                   >
                     {showUri ? "Hide URI" : "Show URI"}
                   </button>
+                  <p className="m-0">Tap the QR to open in wallet or paste URI in To: field.</p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <button
@@ -172,6 +173,7 @@ export function QrBlock({ address, amount, memo, size = 200 }: QrBlockProps) {
                   >
                     Save QR
                   </button>
+                  <p className="m-0">Save the QR, then upload it from the wallet scanner.</p>
                 </div>
                 <p className="m-0">Manual entry: copy the address, memo, and amount into your wallet.</p>
                 {qrError && <p className="m-0" style={{ color: "var(--accent-red, #e05252)" }}>{qrError}</p>}
