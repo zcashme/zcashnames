@@ -133,6 +133,7 @@ type S = {
   otpLoading: boolean;
   otpSent: boolean;
   otpAttempts: number;
+  otpVerified: boolean;
   // sign phase
   signPubkey: string;
   signSignature: string;
@@ -159,7 +160,7 @@ const INIT: S = {
   unlockCode: "", unlockError: "", unlockLoading: false, unlockProof: "",
   addressInput: "", priceInput: "", inputError: "",
   otpMemo: "", otpUri: "", otpCode: "", otpError: "",
-  otpLoading: false, otpSent: false, otpAttempts: 0,
+  otpLoading: false, otpSent: false, otpAttempts: 0, otpVerified: false,
   sovereign: false,
   signPubkey: "", signSignature: "", signError: "", signLoading: false,
   scanState: "not_detected",
@@ -191,7 +192,7 @@ const PHASE_OWNS: Record<Phase, ReadonlyArray<keyof S>> = {
   input:    [],
   // Back-nav past otp burns the session (memo/uri/sent/attempts) so the next
   // forward pass requests a fresh passcode. handleOtpBack warns the user.
-  otp:      ["otpCode", "otpError", "otpMemo", "otpUri", "otpSent", "otpAttempts"],
+  otp:      ["otpCode", "otpError", "otpMemo", "otpUri", "otpSent", "otpAttempts", "otpVerified"],
   sign:     ["signSignature", "signError"],
   confirm:  ["uri", "memo", "paymentAddress", "amountZec"],
   scanning: ["scanState"],
@@ -231,6 +232,7 @@ export default function Zip321Modal({
       ...stored.state,
       unlockLoading: false,
       otpLoading: false,
+      otpVerified: false,
       signLoading: false,
       unlockError: "",
       inputError: "",
@@ -289,7 +291,7 @@ export default function Zip321Modal({
     return {
       otpMemo: memo,
       otpUri: zip321Uri(OTP_SIGNIN_ADDR, OTP_AMOUNT, memo).uri,
-      otpCode: "", otpError: "", otpSent: false, otpAttempts: 0,
+      otpCode: "", otpError: "", otpSent: false, otpAttempts: 0, otpVerified: false,
     };
   }
 
@@ -406,7 +408,7 @@ export default function Zip321Modal({
       const regAddr = "registration" in resolveResult ? resolveResult.registration.address : "";
       const result = await verifyOtp(s.otpMemo, code, regAddr);
       if (!result.ok) {
-        set({ otpAttempts: s.otpAttempts + 1, otpError: result.error, otpCode: "", otpLoading: false });
+        set({ otpAttempts: s.otpAttempts + 1, otpError: result.error, otpCode: "", otpLoading: false, otpVerified: false });
         return;
       }
 
@@ -417,10 +419,13 @@ export default function Zip321Modal({
         payTaddr: s.payTaddrInput,
       }, { owner: { kind: "otp", token: result.proof } });
 
-      if (!ar.ok) { set({ otpError: ar.error, otpLoading: false }); return; }
-      advance({ uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", otpLoading: false });
+      if (!ar.ok) { set({ otpError: ar.error, otpLoading: false, otpVerified: false }); return; }
+      set({ uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", otpLoading: false, otpVerified: true });
+      window.setTimeout(() => {
+        advance({ uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", otpVerified: false });
+      }, 650);
     } catch {
-      set({ otpError: "Something went wrong. Try again.", otpLoading: false });
+      set({ otpError: "Something went wrong. Try again.", otpLoading: false, otpVerified: false });
     }
   }
 
@@ -715,6 +720,8 @@ export default function Zip321Modal({
           border: "1px solid var(--faq-border)",
           boxShadow: "0 24px 64px rgba(0,0,0,0.45)",
           color: "var(--fg-body)",
+          height: modalContentHeight == null ? "auto" : `min(${modalContentHeight}px, calc(100vh - 2rem))`,
+          transition: "height 380ms ease",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -768,11 +775,7 @@ export default function Zip321Modal({
           );
         })()}
         <div
-          className="max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain rounded-2xl"
-          style={{
-            height: modalContentHeight == null ? "auto" : `min(${modalContentHeight}px, calc(100vh - 2rem))`,
-            transition: "height 380ms ease",
-          }}
+          className="h-full max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain rounded-2xl"
           onWheel={(e) => e.stopPropagation()}
         >
         <div ref={modalContentRef} className="p-8" style={{ paddingTop: phase === "unlock" ? undefined : "3rem" }}>
@@ -1033,6 +1036,8 @@ export default function Zip321Modal({
           </div>
         )}
         {phase === "otp" && (
+          (() => {
+            return (
           <div className="flex flex-col items-center gap-4 text-center">
             <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Verify Ownership</h2>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
@@ -1047,13 +1052,32 @@ export default function Zip321Modal({
               />
             )}
             {s.otpSent && (
+              <p className="m-0 text-sm" style={{ color: "var(--fg-body)" }}>
+                The registered owner will receive a code.
+              </p>
+            )}
+            {s.otpSent && (
               <input type="text" inputMode="numeric" maxLength={6} value={s.otpCode}
-                onChange={(e) => set({ otpCode: e.target.value.replace(/\D/g, "").slice(0, 6), otpError: "" })}
+                disabled={s.otpVerified}
+                onChange={(e) => set({ otpCode: e.target.value.replace(/\D/g, "").slice(0, 6), otpError: "", otpVerified: false })}
                 onKeyDown={(e) => { if (e.key === "Enter") handleVerifyOtp(); }}
                 placeholder="000000" autoFocus
-                className="w-full rounded-xl px-4 py-3 text-sm outline-none text-center tracking-[0.3em] font-mono"
+                className="w-full rounded-xl px-4 py-3 text-sm outline-none text-center tracking-[0.3em] font-mono disabled:opacity-70"
                 style={{ background: "var(--color-raised)", border: `1.5px solid ${s.otpError ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`, color: "var(--fg-heading)" }} />
             )}
+            <p
+              className="m-0 text-sm font-semibold transition-[opacity,transform,max-height] duration-[320ms] ease-out"
+              style={{
+                color: "var(--color-accent-green)",
+                maxHeight: s.otpVerified ? "2rem" : "0rem",
+                opacity: s.otpVerified ? 1 : 0,
+                transform: s.otpVerified ? "translateY(0)" : "translateY(-0.25rem)",
+                overflow: "hidden",
+              }}
+              aria-live="polite"
+            >
+              Passcode accepted.
+            </p>
             {s.otpError && <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>{s.otpError}</p>}
             {s.otpAttempts > 0 && (
               <p className="text-xs" style={{ color: "var(--fg-muted)" }}>
@@ -1068,20 +1092,24 @@ export default function Zip321Modal({
                   Back
                 </button>
               ) : <span />}
-              <button type="button" onClick={() => set({ otpSent: true, otpError: "" })}
+              <button type="button" onClick={() => set({ otpSent: true, otpError: "", otpVerified: false })}
                 disabled={s.otpSent}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>
                 I Sent It!
               </button>
               <button type="button" onClick={handleVerifyOtp}
-                disabled={!s.otpSent || !s.otpCode.trim() || s.otpLoading || s.otpAttempts >= getNetworkConstants(network).OTP_MAX_ATTEMPTS}
+                disabled={!s.otpSent || !s.otpCode.trim() || s.otpLoading || s.otpVerified || s.otpAttempts >= getNetworkConstants(network).OTP_MAX_ATTEMPTS}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-                {s.otpLoading ? "Verifying…" : "Verify Code"}
+                style={s.otpVerified
+                  ? { background: "var(--color-accent-green-light)", color: "var(--color-accent-green)", border: "1.5px solid var(--color-accent-green)" }
+                  : { background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
+                {s.otpVerified ? "Verified!" : s.otpLoading ? "Verifying…" : "Verify Code"}
               </button>
             </div>
           </div>
+            );
+          })()
         )}
         {phase === "confirm" && (
           <div className="flex flex-col items-center gap-4 text-center">
