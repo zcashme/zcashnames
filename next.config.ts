@@ -88,6 +88,7 @@ const nextConfig: NextConfig = {
       "'self'",
       "https://vitals.vercel-insights.com",
       "https://light.zcash.me",
+      "https://www.google.com/recaptcha/",
       ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*", "ws://localhost:*"] : []),
     ].join(" ");
     return [
