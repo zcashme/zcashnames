@@ -13,6 +13,7 @@
 // getWaitlistStats: aggregates total signups, referred count, and estimated rewards pot.
 "use server";
 
+import { createHash } from "crypto";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { sendFollowUp } from "@/lib/email/followup";
@@ -25,10 +26,21 @@ import {
 } from "@/lib/waitlist/confirm-token";
 import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
 import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
+import {
+  createWaitlistCaptchaChallenge,
+  verifyWaitlistCaptcha,
+  type WaitlistCaptchaChallenge,
+} from "@/lib/waitlist/simple-captcha";
 import { normalizeUsername } from "@/lib/zns/utils";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 const MAX_REFERRAL_CODE_RETRIES = 6;
+const CAPTCHA_IP_WINDOW_MS = 60 * 60 * 1000;
+const CAPTCHA_IP_LIMIT = 20;
+const CAPTCHA_EMAIL_WINDOW_MS = 60 * 60 * 1000;
+const CAPTCHA_EMAIL_LIMIT = 5;
+const CAPTCHA_GLOBAL_WINDOW_MS = 60 * 1000;
+const CAPTCHA_GLOBAL_LIMIT = 120;
 
 export interface WaitlistPayload {
   name: string;
@@ -36,47 +48,133 @@ export interface WaitlistPayload {
   newsletter: boolean;
   referral_code: string;
   referred_by: string | null;
-  recaptcha_token: string;
+  captcha_token: string;
+  captcha_answer: string;
 }
 
-async function verifyRecaptchaToken(
-  token: string,
-  remoteIp: string | null,
-): Promise<boolean> {
-  const secret = process.env.RECAPTCHA_SECRET_KEY;
+export async function getWaitlistCaptchaChallenge(): Promise<WaitlistCaptchaChallenge> {
+  return createWaitlistCaptchaChallenge();
+}
+
+function waitlistCaptchaSecret(): string {
+  const secret =
+    process.env.WAITLIST_CAPTCHA_SECRET ||
+    process.env.WAITLIST_CONFIRM_SECRET ||
+    process.env.BETA_GATE_SECRET ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!secret) {
-    console.error("reCAPTCHA verify skipped: RECAPTCHA_SECRET_KEY is not set");
-    return false;
+    throw new Error("Missing waitlist captcha throttle secret.");
   }
-  if (!token) return false;
+  return secret;
+}
 
-  const body = new URLSearchParams();
-  body.set("secret", secret);
-  body.set("response", token);
-  if (remoteIp) body.set("remoteip", remoteIp);
+function hashWaitlistCaptchaKey(value: string): string {
+  return createHash("sha256").update(`${waitlistCaptchaSecret()}:${value}`).digest("hex");
+}
 
-  try {
-    const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: body.toString(),
-    });
-    if (!res.ok) {
-      console.error("reCAPTCHA verify HTTP error:", res.status);
-      return false;
-    }
-    const data = (await res.json()) as {
-      success?: boolean;
-      "error-codes"?: string[];
-    };
-    if (!data.success) {
-      console.error("reCAPTCHA verify failed:", data["error-codes"]);
-    }
-    return Boolean(data.success);
-  } catch (err) {
-    console.error("reCAPTCHA verify error:", err);
-    return false;
+function normalizeWaitlistCaptchaIp(value: string | null): string {
+  const raw = value?.split(",")[0]?.trim();
+  return raw && raw.length > 0 ? raw : "unknown";
+}
+
+function waitlistCaptchaWindowStart(now: number, windowMs: number): string {
+  return new Date(Math.floor(now / windowMs) * windowMs).toISOString();
+}
+
+type WaitlistCaptchaThrottleRow = {
+  count: number | null;
+};
+
+async function recordWaitlistCaptchaAttempt({
+  scope,
+  key,
+  windowStartedAt,
+}: {
+  scope: "ip" | "email" | "global";
+  key: string;
+  windowStartedAt: string;
+}): Promise<number> {
+  const nowIso = new Date().toISOString();
+  let existingCount = 0;
+  let rowExists = false;
+  const readCurrent = async (): Promise<void> => {
+    const { data: current, error: currentError } = await db
+      .from("waitlist_captcha_attempts")
+      .select("count")
+      .eq("scope", scope)
+      .eq("key", key)
+      .eq("window_started_at", windowStartedAt)
+      .maybeSingle();
+
+    if (currentError) throw currentError;
+    rowExists = Boolean(current);
+    existingCount = Math.max(0, Number((current as WaitlistCaptchaThrottleRow | null)?.count ?? 0));
+  };
+
+  await readCurrent();
+
+  if (!rowExists) {
+    const { error: insertError } = await db
+      .from("waitlist_captcha_attempts")
+      .insert({
+        scope,
+        key,
+        window_started_at: windowStartedAt,
+        count: 1,
+        updated_at: nowIso,
+      });
+
+    if (!insertError) return 1;
+    if (insertError.code !== "23505") throw insertError;
+    await readCurrent();
   }
+
+  const nextCount = existingCount + 1;
+  const { error: updateError } = await db
+    .from("waitlist_captcha_attempts")
+    .update({ count: nextCount, updated_at: nowIso })
+    .eq("scope", scope)
+    .eq("key", key)
+    .eq("window_started_at", windowStartedAt);
+
+  if (updateError) throw updateError;
+  return nextCount;
+}
+
+async function recordAndCheckWaitlistCaptchaThrottle({
+  email,
+  remoteIp,
+  now,
+}: {
+  email: string;
+  remoteIp: string | null;
+  now: number;
+}): Promise<boolean> {
+  const ipKey = hashWaitlistCaptchaKey(normalizeWaitlistCaptchaIp(remoteIp));
+  const emailKey = hashWaitlistCaptchaKey(email);
+  const [ipCount, emailCount, globalCount] = await Promise.all([
+    recordWaitlistCaptchaAttempt({
+      scope: "ip",
+      key: ipKey,
+      windowStartedAt: waitlistCaptchaWindowStart(now, CAPTCHA_IP_WINDOW_MS),
+    }),
+    recordWaitlistCaptchaAttempt({
+      scope: "email",
+      key: emailKey,
+      windowStartedAt: waitlistCaptchaWindowStart(now, CAPTCHA_EMAIL_WINDOW_MS),
+    }),
+    recordWaitlistCaptchaAttempt({
+      scope: "global",
+      key: "global",
+      windowStartedAt: waitlistCaptchaWindowStart(now, CAPTCHA_GLOBAL_WINDOW_MS),
+    }),
+  ]);
+
+  return (
+    ipCount > CAPTCHA_IP_LIMIT ||
+    emailCount > CAPTCHA_EMAIL_LIMIT ||
+    globalCount > CAPTCHA_GLOBAL_LIMIT
+  );
 }
 
 export interface SurveyPayload {
@@ -146,6 +244,7 @@ export async function submitWaitlist(
   const normalizedName = normalizeUsername(payload.name);
   const normalizedEmail = normalizeEmail(payload.email);
   const normalizedReferredBy = await normalizeReferredBy(payload.referred_by);
+  const startedAt = Date.now();
 
   if (!isValidName(normalizedName) || !isValidEmail(normalizedEmail)) {
     return { error: GENERIC_ERROR };
@@ -157,7 +256,25 @@ export async function submitWaitlist(
     headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     headerStore.get("x-real-ip") ||
     null;
-  const captchaOk = await verifyRecaptchaToken(payload.recaptcha_token, remoteIp);
+  try {
+    const throttled = await recordAndCheckWaitlistCaptchaThrottle({
+      email: normalizedEmail,
+      remoteIp,
+      now: startedAt,
+    });
+    if (throttled) {
+      return { error: GENERIC_ERROR };
+    }
+  } catch (throttleError) {
+    console.error("Waitlist captcha throttle error:", throttleError);
+    return { error: GENERIC_ERROR };
+  }
+
+  const captchaOk = verifyWaitlistCaptcha({
+    token: String(payload.captcha_token ?? ""),
+    answer: String(payload.captcha_answer ?? ""),
+    now: startedAt,
+  });
   if (!captchaOk) {
     return { error: GENERIC_ERROR };
   }
