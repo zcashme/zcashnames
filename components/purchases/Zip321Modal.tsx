@@ -1065,19 +1065,19 @@ export default function Zip321Modal({
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none text-center tracking-[0.3em] font-mono disabled:opacity-70"
                 style={{ background: "var(--color-raised)", border: `1.5px solid ${s.otpError ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`, color: "var(--fg-heading)" }} />
             )}
-            <p
-              className="m-0 text-sm font-semibold transition-[opacity,transform,max-height] duration-[320ms] ease-out"
-              style={{
-                color: "var(--color-accent-green)",
-                maxHeight: s.otpVerified ? "2rem" : "0rem",
-                opacity: s.otpVerified ? 1 : 0,
-                transform: s.otpVerified ? "translateY(0)" : "translateY(-0.25rem)",
-                overflow: "hidden",
-              }}
-              aria-live="polite"
-            >
-              Passcode accepted.
-            </p>
+            {s.otpVerified && (
+              <p
+                className="m-0 text-sm font-semibold transition-[opacity,transform] duration-[320ms] ease-out"
+                style={{
+                  color: "var(--color-accent-green)",
+                  opacity: 1,
+                  transform: "translateY(0)",
+                }}
+                aria-live="polite"
+              >
+                Passcode accepted.
+              </p>
+            )}
             {(s.otpError || s.otpAttempts > 0) && (
               <p className="m-0 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1">
                 {s.otpError && (
