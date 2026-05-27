@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 import { ACTION_CAPS, ACTION_LABELS, getNetworkConstants, phasesFor } from "@/lib/types";
 import type { Action as ZnsAction, ActionAuth, Network, Phase, ResolveName, ScanState } from "@/lib/types";
 import { readLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
-import { RESUME_KEY, clearResume, notifyResumeChanged, type ResumeSnapshot } from "@/lib/purchases/resume";
+import { RESUME_KEY, clearResume, notifyPurchaseModalVisibility, notifyResumeChanged, type ResumeSnapshot } from "@/lib/purchases/resume";
 
 // Resume: the modal writes its full reducer state to localStorage on every
 // dispatch, keyed by {action,name,network}. Reopening the modal for the same
@@ -242,6 +242,11 @@ export default function Zip321Modal({
   });
   const phases: Phase[] = phasesFor(action, resolveResult, s.sovereign);
   const phase = phases[s.step] ?? phases[phases.length - 1];
+
+  useEffect(() => {
+    notifyPurchaseModalVisibility(true);
+    return () => notifyPurchaseModalVisibility(false);
+  }, []);
 
   useEffect(() => {
     const node = modalContentRef.current;

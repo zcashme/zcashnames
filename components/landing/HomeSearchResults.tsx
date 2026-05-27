@@ -6,9 +6,9 @@ import { buildCardProps } from "@/lib/zns/utils";
 import HomeResultCard from "./HomeResultCard";
 import SearchForm from "@/components/search/SearchForm";
 import Zip321Modal from "@/components/purchases/Zip321Modal";
-import ResumeBanner from "@/components/purchases/ResumeBanner";
-import { usePurchaseResume } from "@/components/hooks/usePurchaseResume";
-import { resolveName } from "@/lib/zns/resolve";
+import ResumeReplacementDialog from "@/components/purchases/ResumeReplacementDialog";
+import { getResumeToReplace } from "@/lib/purchases/resume";
+import type { ResumeSnapshot } from "@/lib/purchases/resume";
 import type { Action, ResolveName } from "@/lib/types";
 
 const POPULAR_NAMES = new Set([
@@ -20,16 +20,21 @@ const POPULAR_NAMES = new Set([
 export default function HomeSearchResults({ network }: { network: "mainnet" | "testnet" }) {
   const { input, results, searching, searchError, setInput, handleSearch, refreshResult, removeResult } = useSearchState();
   const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
-  const { snapshot, visible, dismiss } = usePurchaseResume();
+  const [pendingReplacement, setPendingReplacement] = useState<{
+    action: Action;
+    resolveResult: ResolveName;
+    existing: ResumeSnapshot;
+  } | null>(null);
 
   const mode = network;
 
-  async function handleResume() {
-    if (!snapshot) return;
-    // Refetch the latest registration state so the modal opens with truth,
-    // not a stale resolveResult from when the user first started the flow.
-    const fresh = await resolveName(snapshot.name, snapshot.network);
-    setModalState({ action: snapshot.action, resolveResult: fresh });
+  function handleAction(action: Action, resolveResult: ResolveName) {
+    const existing = getResumeToReplace({ action, name: resolveResult.query, network });
+    if (existing) {
+      setPendingReplacement({ action, resolveResult, existing });
+      return;
+    }
+    setModalState({ action, resolveResult });
   }
 
   return (
@@ -48,7 +53,7 @@ export default function HomeSearchResults({ network }: { network: "mainnet" | "t
                 network={mode}
                 {...props}
                 isPopularName={isPopular}
-                onAction={(action) => setModalState({ action, resolveResult: item })}
+                onAction={(action) => handleAction(action, item)}
                 onDismiss={() => removeResult(item.query)}
               />
             );
@@ -68,12 +73,14 @@ export default function HomeSearchResults({ network }: { network: "mainnet" | "t
           onSuccess={() => refreshResult(modalState.resolveResult.query)}
         />
       )}
-      {visible && snapshot && (
-        <ResumeBanner
-          snapshot={snapshot}
-          hiddenByFullModal={!!modalState}
-          onResume={handleResume}
-          onDismiss={dismiss}
+      {pendingReplacement && (
+        <ResumeReplacementDialog
+          existing={pendingReplacement.existing}
+          onCancel={() => setPendingReplacement(null)}
+          onContinue={() => {
+            setModalState({ action: pendingReplacement.action, resolveResult: pendingReplacement.resolveResult });
+            setPendingReplacement(null);
+          }}
         />
       )}
     </>

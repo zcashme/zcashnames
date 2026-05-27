@@ -12,14 +12,14 @@ import ExplorerToolbar from "./ExplorerToolbar";
 import { PAGE_SIZE, parseExplorerTab, type ExplorerTab } from "./tabs";
 import ExplorerNameDetail from "./ExplorerNameDetail";
 import Zip321Modal from "@/components/purchases/Zip321Modal";
-import ResumeBanner from "@/components/purchases/ResumeBanner";
-import { usePurchaseResume } from "@/components/hooks/usePurchaseResume";
-import { resolveName } from "@/lib/zns/resolve";
+import ResumeReplacementDialog from "@/components/purchases/ResumeReplacementDialog";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import ActionBadge from "@/components/ActionBadge";
 
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import CopyIconButton from "@/components/CopyIconButton";
+import { getResumeToReplace } from "@/lib/purchases/resume";
+import type { ResumeSnapshot } from "@/lib/purchases/resume";
 import { zatsToZec } from "@/lib/zns/utils";
 import type { Listing, Network, Registration, ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
@@ -156,13 +156,11 @@ export default function ExplorerView({
   const [uivkOpen, setUivkOpen] = useState(false);
   const [uivkCopied, setUivkCopied] = useState(false);
   const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
-  const { snapshot: resumeSnap, visible: resumeVisible, dismiss: resumeDismiss } = usePurchaseResume();
-
-  async function handleResume() {
-    if (!resumeSnap) return;
-    const fresh = await resolveName(resumeSnap.name, resumeSnap.network);
-    setModalState({ action: resumeSnap.action, resolveResult: fresh });
-  }
+  const [pendingReplacement, setPendingReplacement] = useState<{
+    action: Action;
+    resolveResult: ResolveName;
+    existing: ResumeSnapshot;
+  } | null>(null);
 
   const showNameDetail = !!selectedName;
   const nameDataReady = !!nameResult;
@@ -254,6 +252,11 @@ export default function ExplorerView({
 
   function handleDetailAction(action: Action) {
     if (!nameDataReady || !nameResult) return;
+    const existing = getResumeToReplace({ action, name: nameResult.query, network: optimisticNetwork });
+    if (existing) {
+      setPendingReplacement({ action, resolveResult: nameResult, existing });
+      return;
+    }
     setModalState({ action, resolveResult: nameResult });
   }
 
@@ -672,12 +675,14 @@ export default function ExplorerView({
           onSuccess={() => router.refresh()}
         />
       )}
-      {resumeVisible && resumeSnap && (
-        <ResumeBanner
-          snapshot={resumeSnap}
-          hiddenByFullModal={!!modalState}
-          onResume={handleResume}
-          onDismiss={resumeDismiss}
+      {pendingReplacement && (
+        <ResumeReplacementDialog
+          existing={pendingReplacement.existing}
+          onCancel={() => setPendingReplacement(null)}
+          onContinue={() => {
+            setModalState({ action: pendingReplacement.action, resolveResult: pendingReplacement.resolveResult });
+            setPendingReplacement(null);
+          }}
         />
       )}
     </div>

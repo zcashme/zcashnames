@@ -20,6 +20,12 @@ export const RESUME_KEY = "zns-modal-resume-v1";
 // listeners (the banner) update without polling storage. The browser's
 // native `storage` event only fires in other tabs.
 export const RESUME_EVENT = "zns:resume-changed";
+export const PURCHASE_MODAL_VISIBILITY_EVENT = "zns:purchase-modal-visibility";
+
+export function notifyPurchaseModalVisibility(open: boolean): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(PURCHASE_MODAL_VISIBILITY_EVENT, { detail: { open } }));
+}
 
 // What the banner needs. The modal's full state is included as a black box
 // (`state`) so the modal can rehydrate without a second migration path.
@@ -34,6 +40,20 @@ export interface ResumeSnapshot<S = unknown> {
   state: S;
 }
 
+export interface ResumeTarget {
+  action: Action;
+  name: string;
+  network: Network;
+}
+
+function sameResumeTarget(a: ResumeTarget, b: ResumeTarget): boolean {
+  return (
+    a.action === b.action &&
+    a.network === b.network &&
+    a.name.toLowerCase() === b.name.toLowerCase()
+  );
+}
+
 export function readResume<S = unknown>(): ResumeSnapshot<S> | null {
   if (typeof window === "undefined") return null;
   try {
@@ -43,6 +63,14 @@ export function readResume<S = unknown>(): ResumeSnapshot<S> | null {
   } catch {
     return null;
   }
+}
+
+// Product rule: one active minimized purchase action at a time. Starting a
+// different action should be intentional instead of silently replacing it.
+export function getResumeToReplace<S = unknown>(next: ResumeTarget): ResumeSnapshot<S> | null {
+  const existing = readResume();
+  if (!existing || sameResumeTarget(existing, next)) return null;
+  return existing as ResumeSnapshot<S>;
 }
 
 export function clearResume(): void {

@@ -25,6 +25,7 @@ import BetaApplyBar from "@/components/waitlist/BetaApplyBar";
 import { Analytics } from "@vercel/analytics/next";
 import { BRAND } from "@/lib/zns/brand";
 import PwaShellClient from "@/components/PwaShellClient";
+import PurchaseResumeShell from "@/components/purchases/PurchaseResumeShell";
 import "../globals.css";
 
 const uiSans = Manrope({
@@ -136,6 +137,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Header />
         </div>
         {children}
+        <PurchaseResumeShell />
         <div data-site-chrome="true">
         <Footer />
         </div>
@@ -147,4 +149,3 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     </html>
   );
 }
-

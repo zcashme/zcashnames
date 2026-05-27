@@ -155,7 +155,7 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
         : null;
   const clearWarning = isConfirm
     ? "Removes this prepared request. Sent payments cannot be undone."
-    : "Stops tracking only. It does not cancel any payment.";
+    : "Payment processing, if any, cannot be cancelled. Tap to confirm.";
 
   function handleClear() {
     if (!confirmingClear) { setConfirmingClear(true); return; }
@@ -187,15 +187,14 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
               {header}
               <LoadingEllipsis active={!isComplete} />
             </span>
-            <CompactProgress snapshot={snapshot} complete={isComplete} />
-          </div>
-          <div className="h-px w-full" style={{ background: "var(--leaders-card-border, var(--faq-border))" }} />
-          <div className="flex min-w-0 flex-col gap-1 text-left">
             {showStandaloneName && (
-              <span className="text-sm font-semibold text-fg-heading">
+              <span className="shrink-0 text-right text-sm font-semibold text-fg-heading">
                 <NameBadge name={snapshot.name} />
               </span>
             )}
+          </div>
+          <div className="h-px w-full" style={{ background: "var(--leaders-card-border, var(--faq-border))" }} />
+          <div className="flex min-w-0 flex-col gap-1 text-left">
             <p className="m-0 text-sm" style={{ color: "var(--fg-muted)" }}>{description}</p>
             {statusDetail && (
               <p className="m-0 text-sm" style={{ color: "var(--fg-muted)" }}>{statusDetail}</p>
@@ -203,9 +202,10 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+          <CompactProgress snapshot={snapshot} complete={isComplete} />
           {isComplete ? (
-            <>
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <a
                 href={explorerHref(snapshot)}
                 className="rounded-full px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
@@ -226,9 +226,9 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
               >
                 Dismiss
               </button>
-            </>
+            </div>
           ) : (
-            <>
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={handleClear}
@@ -249,7 +249,7 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
               >
                 {isConfirm ? "Resume" : "Watch"}
               </button>
-            </>
+            </div>
           )}
         </div>
 
