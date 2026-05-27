@@ -55,32 +55,27 @@ export default function BetaApplyPage() {
           Apply for the next beta cohort
         </h1>
         <p className="text-base" style={{ color: "var(--fg-body)", lineHeight: 1.65 }}>
-          This round focuses on wallet-connected ZcashNames flows: resolving names in wallets,
-          buying and selling them, receiving proceeds, and sending ZEC to names.
+          In this round, you will be: buying and selling names, viewing your personal collection, and
+          sending ZEC to names in wallets featuring ZNS. Anyone can apply. We&apos;re especially
+          looking for people who can spot confusing UX, explain bugs clearly, or both.
         </p>
         <p className="text-sm mt-3" style={{ color: "var(--fg-muted)" }}>
-          Need the full testing context first?{" "}
-          <Link href="/beta" className="underline" style={{ color: "var(--fg-body)" }}>
-            Read the beta brief
+          Need the full context first?{" "}
+          <Link href="/beta" style={{ color: "var(--fg-body)" }}>
+            Read the <span className="underline">beta brief</span>
+          </Link>
+          .
+          <br />
+          What happened last time?{" "}
+          <Link
+            href="https://x.com/ZcashNames/status/2052521176841494552?s=20"
+            style={{ color: "var(--fg-body)" }}
+          >
+            Read the <span className="underline">thread on X</span>
           </Link>
           .
         </p>
       </header>
-
-      <section
-        className="mb-8 rounded-2xl border px-5 py-4 text-left"
-        style={{
-          background: "var(--color-raised)",
-          borderColor: "var(--border-muted)",
-        }}
-      >
-        <p className="text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>
-          What we are looking for
-        </p>
-        <p className="mt-2 text-sm" style={{ color: "var(--fg-body)", lineHeight: 1.65 }}>
-          Everyone is welcome to apply but the most useful applicants usually have either strong user feedback instincts, strong debugging skills, or both.
-        </p>
-      </section>
 
       <BetaV2ApplicationForm />
     </div>

@@ -21,6 +21,44 @@ const APP_MIN_WHY = 20;
 const APP_MAX_WHY = 2000;
 const APP_MAX_TEXT = 2000;
 const APP_MAX_CONTACT = 200;
+const APP_MAX_WALLET_NAME = 200;
+const APP_MAX_WALLET_ROWS = 12;
+
+const PLANNED_WALLET_LABELS = {
+  desktop_zingo: "Desktop: Zingo!",
+  desktop_vizor: "Desktop: Vizor",
+  mobile_zingo: "Mobile: Zingo",
+  mobile_zkool: "Mobile: Zkool",
+  mobile_unstoppable: "Mobile: Unstoppable",
+  mobile_zodl: "Mobile: Zodl",
+  mobile_edge: "Mobile: Edge",
+  mobile_cake: "Mobile: Cake",
+  mobile_zipher: "Mobile: Zipher",
+  browser_brave: "Browser: Brave",
+  browser_noir: "Browser: Noir",
+  not_sure: "Not sure yet",
+} as const;
+
+type PlannedWallet = keyof typeof PLANNED_WALLET_LABELS;
+type OtherWalletDevice = "desktop" | "mobile" | "browser";
+type WalletDevice = OtherWalletDevice | "not_sure";
+type WalletDetail =
+  | {
+      device: WalletDevice;
+      choice: PlannedWallet;
+      value: PlannedWallet;
+      label: string;
+      isPrimary: boolean;
+    }
+  | {
+      device: OtherWalletDevice;
+      choice: "other";
+      otherName: string;
+      label: string;
+      isPrimary: boolean;
+    };
+
+const WALLET_DEVICES = new Set<string>(["not_sure", "desktop", "mobile", "browser"]);
 
 function slugifyId(displayName: string): string {
   const slug = displayName
@@ -58,6 +96,116 @@ function isValidEmail(v: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
+function isPlannedWallet(v: string): v is PlannedWallet {
+  return v in PLANNED_WALLET_LABELS;
+}
+
+function formatDeviceLabel(device: OtherWalletDevice): string {
+  return device.charAt(0).toUpperCase() + device.slice(1);
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function walletMatchesDevice(wallet: PlannedWallet, device: WalletDevice): boolean {
+  if (wallet === "not_sure") return true;
+  return wallet.startsWith(`${device}_`);
+}
+
+function parseWalletDetails(formData: FormData): { details: WalletDetail[] } | { error: string } {
+  const raw = String(formData.get("planned_wallets_detail") ?? "").trim();
+  const fallbackChoice = String(formData.get("planned_wallet_choice") ?? "").trim();
+
+  let rows: unknown[];
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return { error: "Pick a valid wallet option." };
+      rows = parsed;
+    } catch {
+      return { error: "Pick a valid wallet option." };
+    }
+  } else if (fallbackChoice) {
+    rows = [
+      {
+        device: fallbackChoice === "other"
+          ? String(formData.get("other_wallet_device") ?? "").trim()
+          : fallbackChoice === "not_sure"
+            ? "not_sure"
+            : fallbackChoice.split("_")[0],
+        choice: fallbackChoice,
+        other_name: String(formData.get("other_wallet_name") ?? "").trim(),
+      },
+    ];
+  } else {
+    return { error: "Pick which wallet you plan to use." };
+  }
+
+  if (rows.length === 0) return { error: "Add at least one planned wallet." };
+  if (rows.length > APP_MAX_WALLET_ROWS) return { error: "Too many planned wallets." };
+
+  const details: WalletDetail[] = [];
+  for (const [index, row] of rows.entries()) {
+    if (!isRecord(row)) return { error: "Pick a valid wallet option." };
+
+    const device = String(row.device ?? "").trim();
+    const choice = String(row.choice ?? "").trim();
+    const isPrimary = index === 0;
+
+    if (!WALLET_DEVICES.has(device)) {
+      return { error: "Pick a valid wallet category." };
+    }
+    const walletDevice = device as WalletDevice;
+
+    if (choice === "not_sure") {
+      details.push({
+        device: walletDevice,
+        choice: "not_sure",
+        value: "not_sure",
+        label: walletDevice === "not_sure"
+          ? PLANNED_WALLET_LABELS.not_sure
+          : `${formatDeviceLabel(walletDevice as OtherWalletDevice)}: Not sure yet`,
+        isPrimary,
+      });
+      continue;
+    }
+
+    if (walletDevice === "not_sure") return { error: "Pick a valid wallet option." };
+
+    if (choice === "other") {
+      const otherName = String(row.other_name ?? row.otherName ?? "").trim();
+      if (!otherName) return { error: "Enter the wallet name." };
+      if (otherName.length > APP_MAX_WALLET_NAME) {
+        return { error: "Wallet name is too long." };
+      }
+
+      details.push({
+        device: device as OtherWalletDevice,
+        choice: "other",
+        otherName,
+        label: `Other: ${formatDeviceLabel(device as OtherWalletDevice)} - ${otherName}`,
+        isPrimary,
+      });
+      continue;
+    }
+
+    if (!isPlannedWallet(choice) || !walletMatchesDevice(choice, device as WalletDevice)) {
+      return { error: "Pick a valid wallet option." };
+    }
+
+    details.push({
+      device: device as WalletDevice,
+      choice,
+      value: choice,
+      label: `${PLANNED_WALLET_LABELS[choice]} (${choice})`,
+      isPrimary,
+    });
+  }
+
+  return { details };
+}
+
 export async function submitBetaV2Application(
   formData: FormData,
 ): Promise<BetaV2ApplicationResult> {
@@ -84,6 +232,36 @@ export async function submitBetaV2Application(
   for (const [k, v] of [["experience", experience], ["referral_source", referralSource]] as const) {
     if (v.length > APP_MAX_TEXT) return { ok: false, error: `${k} is too long.` };
   }
+
+  const parsedWallets = parseWalletDetails(formData);
+  if ("error" in parsedWallets) return { ok: false, error: parsedWallets.error };
+
+  const primaryWallet = parsedWallets.details[0];
+  if (!primaryWallet) return { ok: false, error: "Add at least one planned wallet." };
+  const plannedWallet: PlannedWallet | null =
+    primaryWallet.choice === "other" ? null : primaryWallet.value;
+  const otherWalletDevice: OtherWalletDevice | null =
+    primaryWallet.choice === "other" ? primaryWallet.device : null;
+  const otherWalletNameForDb: string | null =
+    primaryWallet.choice === "other" ? primaryWallet.otherName : null;
+  const walletLabel = primaryWallet.label;
+  const plannedWalletsDetail = parsedWallets.details.map((wallet) =>
+    wallet.choice === "other"
+      ? {
+          device: wallet.device,
+          choice: wallet.choice,
+          other_name: wallet.otherName,
+          label: wallet.label,
+          is_primary: wallet.isPrimary,
+        }
+      : {
+          device: wallet.device,
+          choice: wallet.choice,
+          value: wallet.value,
+          label: wallet.label,
+          is_primary: wallet.isPrimary,
+        },
+  );
 
   const contacts: Record<ContactKind, string> = {
     email: "",
@@ -142,6 +320,10 @@ export async function submitBetaV2Application(
     contact_telegram: contacts.telegram || null,
     contact_forum: contacts.forum || null,
     best_contact_kind: bestContactKind,
+    planned_wallet: plannedWallet,
+    other_wallet_device: otherWalletDevice,
+    other_wallet_name: otherWalletNameForDb,
+    planned_wallets_detail: plannedWalletsDetail,
     ip_hash: hashIp(ip),
     user_agent: userAgent,
   });
@@ -161,6 +343,8 @@ export async function submitBetaV2Application(
     inviteCode,
     why,
     focusAreas,
+    plannedWallet: walletLabel,
+    plannedWallets: plannedWalletsDetail.map((wallet) => wallet.label),
     experience: experience || null,
     referralSource: referralSource || null,
     contacts: filledKinds.map((kind) => ({

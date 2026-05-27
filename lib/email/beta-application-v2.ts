@@ -12,6 +12,8 @@ interface BetaV2ApplicationNotice {
   inviteCode: string;
   why: string;
   focusAreas: ("user" | "sdk")[];
+  plannedWallet: string;
+  plannedWallets: string[];
   experience?: string | null;
   referralSource?: string | null;
   contacts: { kind: string; value: string; isBest: boolean }[];
@@ -38,6 +40,9 @@ export async function sendBetaV2ApplicationNotice(
   const focusBlock = notice.focusAreas.length
     ? notice.focusAreas.map((f) => FOCUS_LABEL[f]).join(", ")
     : "(none)";
+  const walletBlock = notice.plannedWallets.length
+    ? notice.plannedWallets.map((wallet, index) => `  - ${index === 0 ? "Primary: " : ""}${wallet}`).join("\n")
+    : "  (none)";
 
   const body = [
     `New beta v2 application: ${notice.displayName}`,
@@ -46,6 +51,10 @@ export async function sendBetaV2ApplicationNotice(
     `Invite code:  ${notice.inviteCode}`,
     `Submitted:    ${notice.submittedAt}`,
     `Focus areas:  ${focusBlock}`,
+    `Wallet:       ${notice.plannedWallet}`,
+    "",
+    "Planned wallets:",
+    walletBlock,
     "",
     "Contacts:",
     contactBlock || "  (none)",

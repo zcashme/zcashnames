@@ -1,6 +1,6 @@
 /**
- * Beta v2 application form. Collects display name, why, focus areas, experience,
- * referral source, and one or more contact methods (email, telegram, signal, etc.).
+ * Beta v2 application form. Collects display name, why, focus areas, planned
+ * wallet, experience, referral source, and one or more contact methods.
  * Assembles fields into FormData and calls submitBetaV2Application server action on submit.
  * Uses useTransition for optimistic pending state during submission.
  */
@@ -22,6 +22,46 @@ interface ContactRow {
 }
 
 type FocusArea = "user" | "sdk";
+type WalletChoice =
+  | "desktop_zingo"
+  | "desktop_vizor"
+  | "mobile_zingo"
+  | "mobile_zkool"
+  | "mobile_unstoppable"
+  | "mobile_zodl"
+  | "mobile_edge"
+  | "mobile_cake"
+  | "mobile_zipher"
+  | "browser_brave"
+  | "browser_noir"
+  | "not_sure";
+type WalletDevice = "not_sure" | "mobile" | "desktop" | "browser";
+type WalletRow = {
+  uid: string;
+  device: WalletDevice;
+  choice: WalletChoice | "other";
+  otherName: string;
+};
+
+const WALLET_OPTIONS: Record<Exclude<WalletDevice, "not_sure">, { label: string; value: WalletChoice }[]> = {
+  mobile: [
+    { label: "Edge (Recommended)", value: "mobile_edge" },
+    { label: "Cake", value: "mobile_cake" },
+    { label: "Unstoppable", value: "mobile_unstoppable" },
+    { label: "Zipher", value: "mobile_zipher" },
+    { label: "Zingo", value: "mobile_zingo" },
+    { label: "Zkool", value: "mobile_zkool" },
+    { label: "Zodl", value: "mobile_zodl" },
+  ],
+  desktop: [
+    { label: "Zingo! (Recommended)", value: "desktop_zingo" },
+    { label: "Vizor", value: "desktop_vizor" },
+  ],
+  browser: [
+    { label: "Noir (Recommended)", value: "browser_noir" },
+    { label: "Brave", value: "browser_brave" },
+  ],
+};
 
 /** Finds the first CONTACT_KINDS value not already used in the current contact rows. */
 function nextUnusedKind(rows: ContactRow[]): ContactKind | null {
@@ -30,6 +70,24 @@ function nextUnusedKind(rows: ContactRow[]): ContactKind | null {
 
 function buildUid() {
   return `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function defaultWalletChoice(device: WalletDevice): WalletChoice | "other" {
+  if (device === "not_sure") return "not_sure";
+  return WALLET_OPTIONS[device][0].value;
+}
+
+function walletWarning(device: WalletDevice, choice: WalletChoice | "other"): string | null {
+  if (
+    (device === "mobile" && (choice === "mobile_zodl" || choice === "mobile_zingo" || choice === "mobile_zkool")) ||
+    (device === "desktop" && choice === "desktop_vizor") ||
+    (device === "browser" && choice === "browser_brave")
+  ) {
+    const category = device.charAt(0).toUpperCase() + device.slice(1);
+    const wallet = WALLET_OPTIONS[device].find((option) => option.value === choice)?.label ?? "";
+    return `${category} wallet ${wallet} cannot send ZEC to names, yet. You can control names (claim, list for sale, buy, etc).`;
+  }
+  return null;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -63,11 +121,18 @@ const primaryBtnStyle: React.CSSProperties = {
   boxShadow: "var(--home-result-primary-shadow)",
 };
 
+const APP_MAX_WHY = 2000;
+const APP_MAX_TEXT = 2000;
+
 export default function BetaV2ApplicationForm() {
   const [displayName, setDisplayName] = useState("");
   const [why, setWhy] = useState("");
   const [focusUser, setFocusUser] = useState(false);
   const [focusSdk, setFocusSdk] = useState(false);
+  const [wallets, setWallets] = useState<WalletRow[]>([
+    { uid: "w0", device: "mobile", choice: "mobile_edge", otherName: "" },
+  ]);
+  const [bestWalletUid, setBestWalletUid] = useState("w0");
   const [experience, setExperience] = useState("");
   const [referralSource, setReferralSource] = useState("");
   const [contacts, setContacts] = useState<ContactRow[]>([
@@ -123,6 +188,47 @@ export default function BetaV2ApplicationForm() {
     });
   }
 
+  function addWallet() {
+    setWallets((prev) => [
+      ...prev,
+      { uid: buildUid(), device: "not_sure", choice: "not_sure", otherName: "" },
+    ]);
+  }
+
+  function removeWallet(uid: string) {
+    setWallets((prev) => {
+      const next = prev.filter((row) => row.uid !== uid);
+      if (uid === bestWalletUid && next.length > 0) {
+        setBestWalletUid(next[0].uid);
+      }
+      return next;
+    });
+  }
+
+  function updateWalletDevice(uid: string, device: WalletDevice) {
+    setWallets((prev) =>
+      prev.map((row) =>
+        row.uid === uid
+          ? { ...row, device, choice: defaultWalletChoice(device), otherName: "" }
+          : row,
+      ),
+    );
+  }
+
+  function updateWalletChoice(uid: string, choice: WalletChoice | "other") {
+    setWallets((prev) =>
+      prev.map((row) =>
+        row.uid === uid
+          ? { ...row, choice, otherName: choice === "other" ? row.otherName : "" }
+          : row,
+      ),
+    );
+  }
+
+  function updateOtherWalletName(uid: string, otherName: string) {
+    setWallets((prev) => prev.map((row) => (row.uid === uid ? { ...row, otherName } : row)));
+  }
+
   /** Validates, assembles FormData, and calls submitBetaV2Application server action. */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -137,8 +243,23 @@ export default function BetaV2ApplicationForm() {
       setError("Pick at least one thing you want to test.");
       return;
     }
+    if (wallets.length === 0) {
+      setError("Add at least one planned wallet.");
+      return;
+    }
+    for (const wallet of wallets) {
+      if (wallet.choice === "other" && !wallet.otherName.trim()) {
+        setError("Enter the wallet name.");
+        return;
+      }
+    }
 
     const best = filled.find((row) => row.uid === bestContactUid) ?? filled[0];
+    const preferredWallet = wallets.find((row) => row.uid === bestWalletUid) ?? wallets[0];
+    const orderedWallets = [
+      preferredWallet,
+      ...wallets.filter((wallet) => wallet.uid !== preferredWallet.uid),
+    ];
     const focus: FocusArea[] = [];
     if (focusUser) focus.push("user");
     if (focusSdk) focus.push("sdk");
@@ -149,6 +270,22 @@ export default function BetaV2ApplicationForm() {
       formData.set("display_name", displayName);
       formData.set("why", why);
       formData.set("focus_areas", focus.join(","));
+      formData.set(
+        "planned_wallets_detail",
+        JSON.stringify(
+          orderedWallets.map((wallet) => ({
+            device: wallet.device,
+            choice: wallet.choice,
+            other_name: wallet.choice === "other" ? wallet.otherName.trim() : "",
+          })),
+        ),
+      );
+      const primaryWallet = orderedWallets[0];
+      formData.set("planned_wallet_choice", primaryWallet.choice);
+      if (primaryWallet.choice === "other") {
+        formData.set("other_wallet_device", primaryWallet.device);
+        formData.set("other_wallet_name", primaryWallet.otherName.trim());
+      }
       formData.set("experience", experience);
       formData.set("referral_source", referralSource);
       formData.set("best_contact_kind", best.kind);
@@ -227,10 +364,16 @@ export default function BetaV2ApplicationForm() {
       </div>
 
       <div>
-        <label style={labelStyle}>How to reach you</label>
-        <p className="text-xs mb-2" style={{ color: "var(--fg-muted)", lineHeight: 1.5 }}>
-          Add one or more contact methods. Mark which one you&apos;d prefer we use.
-        </p>
+        <div className="mb-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <label style={{ ...labelStyle, marginBottom: 0 }}>
+            How should we reach you? <span style={{ color: "var(--accent-red, #e05252)" }}>*</span>
+          </label>
+          {contacts.length > 1 && (
+            <span className="text-xs" style={{ color: "var(--fg-muted)", lineHeight: 1.5 }}>
+              Mark which one you&apos;d prefer we use.
+            </span>
+          )}
+        </div>
         <div className="flex flex-col gap-2">
           {contacts.map((contact) => {
             const isBest = contact.uid === bestContactUid;
@@ -301,41 +444,156 @@ export default function BetaV2ApplicationForm() {
           <button
             type="button"
             onClick={addContact}
-            className="mt-2 cursor-pointer text-xs font-semibold underline"
+            className="mt-2 cursor-pointer text-xs font-semibold"
             style={{ color: "var(--fg-body)" }}
           >
-            + Add another contact method
+            <span>+ </span>
+            <span className="underline">Add another contact method</span>
           </button>
         )}
       </div>
 
       <div>
-        <label style={labelStyle}>
-          Why do you want to join? <span style={{ color: "var(--accent-red, #e05252)" }}>*</span>
-        </label>
-        <textarea
-          value={why}
-          onChange={(e) => setWhy(e.target.value)}
-          rows={4}
-          minLength={20}
-          maxLength={2000}
-          required
-          placeholder="Tell us what you want to test and why this next wallet-connected beta matters to you."
-          className="w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-y"
-          style={inputStyle}
-        />
-        <p className="text-xs mt-1" style={{ color: "var(--fg-muted)" }}>
-          {why.length} / 2000
-        </p>
+        <div className="mb-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <label style={{ ...labelStyle, marginBottom: 0 }}>
+            Which wallet do you plan to use? <span style={{ color: "var(--accent-red, #e05252)" }}>*</span>
+          </label>
+          {wallets.length > 1 && (
+            <span className="text-xs" style={{ color: "var(--fg-muted)", lineHeight: 1.5 }}>
+              Mark which one you&apos;d prefer we use.
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          {wallets.map((wallet) => {
+            const warning = walletWarning(wallet.device, wallet.choice);
+            const isBest = wallet.uid === bestWalletUid;
+            return (
+              <div key={wallet.uid}>
+                <div className="flex items-center gap-2">
+                  {wallets.length > 1 && (
+                    <label
+                      className="flex shrink-0 cursor-pointer items-center justify-center"
+                      title={isBest ? "Preferred wallet" : "Mark as preferred"}
+                      style={{ width: 24 }}
+                    >
+                      <input
+                        type="radio"
+                        name="best_wallet"
+                        checked={isBest}
+                        onChange={() => setBestWalletUid(wallet.uid)}
+                        className="sr-only"
+                      />
+                      <span
+                        className="block rounded-full transition-all"
+                        style={{
+                          width: 14,
+                          height: 14,
+                          border: `2px solid ${isBest ? "var(--color-accent-green)" : "var(--border-muted)"}`,
+                          background: isBest ? "var(--color-accent-green)" : "transparent",
+                          boxShadow: isBest ? "inset 0 0 0 2px var(--color-raised)" : "none",
+                        }}
+                      />
+                    </label>
+                  )}
+                  <select
+                    value={wallet.device}
+                    onChange={(e) => updateWalletDevice(wallet.uid, e.target.value as WalletDevice)}
+                    className="cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none"
+                    style={{ ...selectStyle, minWidth: 130 }}
+                  >
+                    <option value="mobile">Mobile</option>
+                    <option value="desktop">Desktop</option>
+                    <option value="browser">Browser</option>
+                    <option value="not_sure">Not sure yet</option>
+                  </select>
+
+                  {wallet.device === "not_sure" ? (
+                    <select
+                      value="not_sure"
+                      disabled
+                      className="min-w-0 flex-1 rounded-xl px-4 py-2.5 text-sm outline-none disabled:opacity-80"
+                      style={selectStyle}
+                    >
+                      <option value="not_sure">Not sure yet</option>
+                    </select>
+                  ) : (
+                    <select
+                      value={wallet.choice}
+                      onChange={(e) => updateWalletChoice(wallet.uid, e.target.value as WalletChoice | "other")}
+                      className="min-w-0 flex-1 cursor-pointer rounded-xl px-4 py-2.5 text-sm outline-none"
+                      style={selectStyle}
+                    >
+                      {WALLET_OPTIONS[wallet.device].map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                      <option value="other">Other</option>
+                      <option value="not_sure">Not sure yet</option>
+                    </select>
+                  )}
+
+                  {wallets.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeWallet(wallet.uid)}
+                      aria-label="Remove this planned wallet"
+                      className="cursor-pointer px-1 text-2xl leading-none opacity-60 hover:opacity-100"
+                      style={{ color: "var(--fg-body)" }}
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
+                {warning && (
+                  <p
+                    className="mt-1 text-center text-xs font-medium"
+                    style={{ color: "var(--accent-red, #e05252)", lineHeight: 1.45 }}
+                  >
+                    {warning}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {wallets.map((wallet) =>
+          wallet.choice === "other" && wallet.device !== "not_sure" ? (
+            <div key={`${wallet.uid}-other`} className="mt-2">
+              <label style={labelStyle}>
+                {wallet.device.charAt(0).toUpperCase() + wallet.device.slice(1)} wallet name
+              </label>
+              <input
+                type="text"
+                value={wallet.otherName}
+                onChange={(e) => updateOtherWalletName(wallet.uid, e.target.value)}
+                maxLength={200}
+                required
+                placeholder="Wallet name"
+                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+                style={inputStyle}
+              />
+            </div>
+          ) : null,
+        )}
+
+        <button
+          type="button"
+          onClick={addWallet}
+          className="mt-2 cursor-pointer text-xs font-semibold"
+          style={{ color: "var(--fg-body)" }}
+        >
+          <span>+ </span>
+          <span className="underline">Add another wallet</span>
+        </button>
       </div>
 
       <div>
         <label style={labelStyle}>
           What do you want to test? <span style={{ color: "var(--accent-red, #e05252)" }}>*</span>
         </label>
-        <p className="text-xs mb-2" style={{ color: "var(--fg-muted)", lineHeight: 1.55 }}>
-          Pick one or both.
-        </p>
         <div className="flex flex-col gap-2">
           <label
             className="flex items-start gap-3 rounded-xl px-3 py-2.5 cursor-pointer transition-colors"
@@ -416,12 +674,43 @@ export default function BetaV2ApplicationForm() {
       </div>
 
       <div>
-        <label style={labelStyle}>Zcash / development experience</label>
+        <div className="mb-1 flex items-baseline justify-between gap-3">
+          <label style={{ ...labelStyle, marginBottom: 0 }}>
+            Why do you want to join? <span style={{ color: "var(--accent-red, #e05252)" }}>*</span>
+          </label>
+          {APP_MAX_WHY - why.length <= 50 && (
+            <span className="shrink-0 text-xs" style={{ color: "var(--fg-muted)" }}>
+              {why.length} / {APP_MAX_WHY}
+            </span>
+          )}
+        </div>
+        <textarea
+          value={why}
+          onChange={(e) => setWhy(e.target.value)}
+          rows={4}
+          minLength={20}
+          maxLength={APP_MAX_WHY}
+          required
+          placeholder="Tell us what you want to test and why this matters to you."
+          className="w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-y"
+          style={inputStyle}
+        />
+      </div>
+
+      <div>
+        <div className="mb-1 flex items-baseline justify-between gap-3">
+          <label style={{ ...labelStyle, marginBottom: 0 }}>Zcash / development experience</label>
+          {APP_MAX_TEXT - experience.length <= APP_MAX_TEXT * 0.1 && (
+            <span className="shrink-0 text-xs" style={{ color: "var(--fg-muted)" }}>
+              {experience.length} / {APP_MAX_TEXT}
+            </span>
+          )}
+        </div>
         <textarea
           value={experience}
           onChange={(e) => setExperience(e.target.value)}
           rows={2}
-          maxLength={2000}
+          maxLength={APP_MAX_TEXT}
           placeholder="A sentence or two about your background"
           className="w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-y"
           style={inputStyle}
@@ -429,12 +718,19 @@ export default function BetaV2ApplicationForm() {
       </div>
 
       <div>
-        <label style={labelStyle}>Where did you hear about this?</label>
+        <div className="mb-1 flex items-baseline justify-between gap-3">
+          <label style={{ ...labelStyle, marginBottom: 0 }}>Where did you hear about this?</label>
+          {APP_MAX_TEXT - referralSource.length <= APP_MAX_TEXT * 0.1 && (
+            <span className="shrink-0 text-xs" style={{ color: "var(--fg-muted)" }}>
+              {referralSource.length} / {APP_MAX_TEXT}
+            </span>
+          )}
+        </div>
         <input
           type="text"
           value={referralSource}
           onChange={(e) => setReferralSource(e.target.value)}
-          maxLength={2000}
+          maxLength={APP_MAX_TEXT}
           className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
           style={inputStyle}
         />
@@ -456,7 +752,9 @@ export default function BetaV2ApplicationForm() {
       </button>
 
       <p className="text-xs text-center" style={{ color: "var(--fg-muted)", lineHeight: 1.6 }}>
-        We&apos;ll only contact you about this beta round. No spam.
+        We will only contact you about this beta round.
+        <br />
+        We will never ask you for your wallet passphrase.
       </p>
     </form>
   );

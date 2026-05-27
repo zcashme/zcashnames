@@ -10,7 +10,7 @@ export default function BetaApplyBar() {
 
   return (
     <Link
-      href="/indexerbb"
+      href="/beta/apply"
       className="flex w-full items-center justify-center gap-2 px-3 py-2 text-[0.72rem] sm:text-sm font-semibold transition-opacity hover:opacity-90 whitespace-nowrap"
       style={{
         background: "var(--announce-bar-bg)",
@@ -25,11 +25,10 @@ export default function BetaApplyBar() {
           color: "var(--announce-bar-pill-fg)",
         }}
       >
-        Bounty
+        Earn ZEC
       </span>
       <span className="truncate">
-        Find bugs in our indexer to earn ZEC.{" "}
-        <span className="font-bold underline">Learn more &rarr;</span>
+        Apply for the ZcashNames beta &rarr;
       </span>
     </Link>
   );
