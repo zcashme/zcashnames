@@ -28,6 +28,7 @@ export interface ResumeSnapshot<S = unknown> {
   name: string;
   network: Network;
   phase: Phase;
+  phases?: Phase[];
   // Useful subset surfaced for the banner; redundant with state but typed.
   scanState: ScanState;
   state: S;

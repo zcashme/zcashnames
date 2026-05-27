@@ -673,7 +673,12 @@ export default function ExplorerView({
         />
       )}
       {resumeVisible && resumeSnap && (
-        <ResumeBanner snapshot={resumeSnap} onResume={handleResume} onDismiss={resumeDismiss} />
+        <ResumeBanner
+          snapshot={resumeSnap}
+          hiddenByFullModal={!!modalState}
+          onResume={handleResume}
+          onDismiss={resumeDismiss}
+        />
       )}
     </div>
   );

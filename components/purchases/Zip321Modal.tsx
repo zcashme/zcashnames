@@ -29,6 +29,17 @@ import { generatePayload } from "@/lib/zns/payload";
 import { QrBlock } from "@/components/ui/QrBlock";
 import { useCopy } from "@/components/hooks/useCopy";
 import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
+import {
+  AddressBadge,
+  NameBadge,
+  inputDescription,
+  minedMessage,
+  modalDescription,
+  phaseHeader,
+  progressFillForPhase,
+  scanningStatusMessage,
+  settlingStatusMessage,
+} from "@/components/purchases/modalCopy";
 
 // ---- Helpers ---------------------------------------------------------------
 
@@ -55,37 +66,6 @@ function decodeBase64ToBytes(value: string): Uint8Array | null {
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-}
-
-function prepareDescription(action: ZnsAction, name: string, amount: string): React.ReactNode {
-  switch (action) {
-    case "BUY": return <>Purchase for <strong>{amount}</strong>.</>;
-    case "DELIST": return <>Remove from sale.</>;
-    case "RELEASE": return <>Allowing others to claim it.</>;
-    case "UPDATE": return <>Set a new address.</>;
-    case "LIST": return <>Set a price for <strong>{name}</strong>.</>;
-    case "CLAIM": return <><strong>{name}</strong></>;
-  }
-}
-
-const ACTION_NOUN: Record<ZnsAction, string> = {
-  CLAIM: "claim",
-  BUY: "purchase",
-  UPDATE: "address update",
-  LIST: "listing",
-  DELIST: "delist",
-  RELEASE: "release",
-};
-
-function minedMessage(action: ZnsAction, displayName: string): string {
-  switch (action) {
-    case "CLAIM":   return `${displayName} is yours. Claim confirmed on-chain.`;
-    case "BUY":     return `${displayName} is now yours. Purchase confirmed on-chain.`;
-    case "UPDATE":  return `Address updated. ${displayName} now resolves to your new address.`;
-    case "LIST":    return `${displayName} is now listed for sale.`;
-    case "DELIST":  return `${displayName} has been delisted.`;
-    case "RELEASE": return `${displayName} has been released.`;
-  }
 }
 
 // ---- Auth dispatch ---------------------------------------------------------
@@ -239,6 +219,8 @@ export default function Zip321Modal({
   onSuccess,
 }: Zip321ModalProps) {
   const payloadCopy = useCopy();
+  const modalContentRef = useRef<HTMLDivElement | null>(null);
+  const [modalContentHeight, setModalContentHeight] = useState<number | null>(null);
   const [s, dispatch] = useReducer(purchaseReducer, INIT, (init): S => {
     const stored = readLocalStorage<StoredResume | null>(RESUME_KEY, null);
     if (!stored || stored.action !== action || stored.name !== name || stored.network !== network) {
@@ -259,11 +241,23 @@ export default function Zip321Modal({
   const phases: Phase[] = phasesFor(action, resolveResult, s.sovereign);
   const phase = phases[s.step] ?? phases[phases.length - 1];
 
+  useEffect(() => {
+    const node = modalContentRef.current;
+    if (!node) return;
+
+    const measure = () => setModalContentHeight(node.scrollHeight);
+    measure();
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   // Persist on every state change. One effect; no wrapper hook.
   useEffect(() => {
     writeLocalStorage<StoredResume>(RESUME_KEY, {
       action, name, network,
-      phase, scanState: s.scanState, state: s,
+      phase, phases, scanState: s.scanState, state: s,
     });
     notifyResumeChanged();
   }, [s, action, name, network]);
@@ -667,8 +661,8 @@ export default function Zip321Modal({
           // unlock is non-interactive — re-entering re-dispatches CLAIM with a
           // fresh proof, and there's nothing the user can fix back there.
           const clickable = i < s.step && step !== "unlock";
-          let background = "var(--fg-heading)";
-          if (after) background = "var(--border-muted)";
+          const fill = progressFillForPhase(step, i, s.step, s.scanState);
+          const borderColor = fill > 0 || current ? "var(--fg-heading)" : "var(--border-muted)";
           return (
             <button
               key={`${step}-${i}`}
@@ -677,9 +671,24 @@ export default function Zip321Modal({
               aria-current={current ? "step" : undefined}
               disabled={!clickable}
               onClick={clickable ? () => goto(i) : undefined}
-              className={`block h-1.5 w-8 sm:w-[34px] p-0 border-0 ${clickable ? "cursor-pointer" : "cursor-default"}`}
-              style={{ clipPath: progressClipPath(i, phases.length), background }}
-            />
+              className={`relative block h-2 w-8 sm:w-[34px] overflow-hidden p-0 ${clickable ? "cursor-pointer" : "cursor-default"}`}
+              style={{
+                clipPath: progressClipPath(i, phases.length),
+                background: "transparent",
+                border: `1px solid ${borderColor}`,
+                transition: "border-color 450ms ease, background-color 450ms ease",
+              }}
+            >
+              <span
+                className="absolute inset-y-0 left-0 block"
+                style={{
+                  width: `${fill * 100}%`,
+                  background: "var(--fg-heading)",
+                  transition: "width 450ms ease, background-color 450ms ease",
+                }}
+              />
+              <span className="sr-only">{after ? "Pending" : current ? "Current" : "Complete"}</span>
+            </button>
           );
         })}
       </div>
@@ -759,16 +768,20 @@ export default function Zip321Modal({
           );
         })()}
         <div
-          className="max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain rounded-2xl p-8"
-          style={{ paddingTop: phase === "unlock" ? undefined : "3rem" }}
+          className="max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain rounded-2xl"
+          style={{
+            height: modalContentHeight == null ? "auto" : `min(${modalContentHeight}px, calc(100vh - 2rem))`,
+            transition: "height 380ms ease",
+          }}
           onWheel={(e) => e.stopPropagation()}
         >
+        <div ref={modalContentRef} className="p-8" style={{ paddingTop: phase === "unlock" ? undefined : "3rem" }}>
         {progressSegments && <div className="mb-5">{progressSegments}</div>}
         {phase === "unlock" && (
           <div className="flex flex-col gap-4">
             <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Reserved Name</h2>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              <strong>{name}.zcash</strong> is reserved. Enter your unlock code to continue.
+              {modalDescription(action, "unlock", name, s)}
             </p>
             <input type="text" value={s.unlockCode} autoFocus
               onChange={(e) => {
@@ -799,16 +812,20 @@ export default function Zip321Modal({
               ? resolveResult.pendingBuy
               : undefined;
           const isResume = !!pendingBuy;
+          const listingPriceZec =
+            action === "BUY" && resolveResult.status === "listed"
+              ? resolveResult.listingPrice.zec
+              : undefined;
           return (
           <div className="flex flex-col gap-4">
             <div className="text-center">
               <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
-                {isResume ? `Resume purchase of ${name}` : `${ACTION_LABELS[action]} ${name}`}
+                {isResume ? <>Resume purchase of <NameBadge name={name} /></> : <>{ACTION_LABELS[action]} <NameBadge name={name} /></>}
               </h2>
               <p className="text-sm mt-1" style={{ color: "var(--fg-body)" }}>
                 {isResume
-                  ? <>A purchase is already locked for this name. Enter the buyer&rsquo;s address to continue.</>
-                  : prepareDescription(action, name, "")}
+                  ? modalDescription(action, "input", name, s, { isResume: true })
+                  : inputDescription(action, name, listingPriceZec ? `${listingPriceZec} ZEC` : undefined)}
               </p>
             </div>
             {needsAddress && (() => {
@@ -942,7 +959,7 @@ export default function Zip321Modal({
             <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Sovereign Signature</h2>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               Sign this payload with your Ed25519 private key to authorize{" "}
-              <strong>{ACTION_LABELS[action].toLowerCase()}</strong> for <strong>{name}</strong>.
+              <strong>{ACTION_LABELS[action].toLowerCase()}</strong> for <NameBadge name={name} />.
             </p>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>Payload to Sign</label>
@@ -1069,12 +1086,10 @@ export default function Zip321Modal({
         {phase === "confirm" && (
           <div className="flex flex-col items-center gap-4 text-center">
             <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
-              {action === "BUY" ? "Pay the registry" : "Send Payment"}
+              {phaseHeader(action, "confirm")}
             </h2>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              {action === "BUY"
-                ? <>This is the registry commission only. You&rsquo;ll pay the seller the listing price next.</>
-                : "Send exact amount and memo to complete the transaction."}
+              {modalDescription(action, "confirm", name, s)}
             </p>
             {s.uri && s.paymentAddress && (
               <QrBlock
@@ -1121,11 +1136,11 @@ export default function Zip321Modal({
             <div className="flex flex-col items-center gap-4 text-center">
               <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Pay the seller</h2>
               <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-                Send <strong>{listed.listingPrice.zec} ZEC</strong> to <strong>{name}</strong>&rsquo;s transparent address.
+                {modalDescription(action, "fund", name, s, { listingPriceZec: listed.listingPrice.zec })}
               </p>
               {listed.pendingBuy && (
                 <p className="text-xs break-all" style={{ color: "#22c55e" }}>
-                  ✓ Locked to {listed.pendingBuy.buyer.slice(0, 12)}…{listed.pendingBuy.buyer.slice(-8)}
+                  Locked to <AddressBadge address={listed.pendingBuy.buyer} />
                 </p>
               )}
               <QrBlock
@@ -1146,7 +1161,7 @@ export default function Zip321Modal({
           <div className="flex flex-col items-center gap-4 text-center">
             <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Scanning</h2>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              Checking the mempool and resolver for <strong>{name}.zcash</strong>.
+              {modalDescription(action, "scanning", name, s)}
             </p>
             <div className="w-full rounded-xl p-5 flex flex-col items-center gap-3"
               style={{
@@ -1154,23 +1169,39 @@ export default function Zip321Modal({
                 border: `1.5px solid ${s.scanState === "in_mempool" || s.scanState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
               }}>
               <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-                {s.scanState === "not_detected" && <>Your {ACTION_NOUN[action]} hasn&rsquo;t been detected yet.</>}
-                {s.scanState === "in_mempool" && <>Your {ACTION_NOUN[action]} is in the mempool. Waiting to be mined.</>}
-                {s.scanState === "confirming" && <>Your {ACTION_NOUN[action]} is being mined. Hang tight &mdash; this should only take a moment.</>}
+                {scanningStatusMessage(action, s.scanState)}
               </p>
             </div>
-            <button type="button" onClick={onClose}
-              className="px-5 py-2.5 rounded-full text-sm font-semibold"
-              style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>
-              Close
-            </button>
+            <div className="flex items-center justify-center gap-3">
+              <span
+                className="inline-flex overflow-hidden transition-[max-width,opacity,margin] duration-[450ms] ease-out"
+                style={{
+                  maxWidth: s.scanState === "not_detected" && s.step > 0 ? "7rem" : "0rem",
+                  opacity: s.scanState === "not_detected" && s.step > 0 ? 1 : 0,
+                  pointerEvents: s.scanState === "not_detected" && s.step > 0 ? "auto" : "none",
+                }}
+                aria-hidden={s.scanState === "not_detected" && s.step > 0 ? undefined : "true"}
+              >
+                <button type="button" onClick={() => goto(s.step - 1)}
+                  tabIndex={s.scanState === "not_detected" && s.step > 0 ? 0 : -1}
+                  className="whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                  style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>
+                  Back
+                </button>
+              </span>
+              <button type="button" onClick={onClose}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold"
+                style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}>
+                Close
+              </button>
+            </div>
           </div>
         )}
         {phase === "scanning" && s.scanState === "mined" && action !== "BUY" && (
           <div className="flex flex-col items-center gap-5 text-center">
             <ZcashNamesLogoMark size={64} />
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              {minedMessage(action, `${name}.zcash`)}
+              {minedMessage(action, name, s.address)}
             </p>
             <div className="flex gap-3">
               <a
@@ -1194,7 +1225,7 @@ export default function Zip321Modal({
           <div className="flex flex-col items-center gap-4 text-center">
             <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Finalising your purchase</h2>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              The registry is waiting for your payment to the seller to confirm on-chain. Once it does, <strong>{name}.zcash</strong> transfers to your address.
+              {modalDescription(action, "settling", name, s)}
             </p>
             <div className="w-full rounded-xl p-5 flex flex-col items-center gap-3"
               style={{
@@ -1202,8 +1233,7 @@ export default function Zip321Modal({
                 border: `1.5px solid ${s.settleState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
               }}>
               <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-                {s.settleState === "not_detected" && <>Waiting for the registry to observe your seller payment&hellip;</>}
-                {s.settleState === "confirming" && <>Your payment is being processed. Hang tight &mdash; this should only take a moment.</>}
+                {settlingStatusMessage(action, s.settleState)}
               </p>
             </div>
             <button type="button" onClick={onClose}
@@ -1217,7 +1247,7 @@ export default function Zip321Modal({
           <div className="flex flex-col items-center gap-5 text-center">
             <ZcashNamesLogoMark size={64} />
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              {minedMessage("BUY", `${name}.zcash`)}
+              {minedMessage("BUY", name, s.address)}
             </p>
             <div className="flex gap-3">
               <a
@@ -1237,6 +1267,7 @@ export default function Zip321Modal({
             </div>
           </div>
         )}
+        </div>
         </div>
       </div>
     </div>,

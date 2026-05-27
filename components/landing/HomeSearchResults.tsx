@@ -69,7 +69,12 @@ export default function HomeSearchResults({ network }: { network: "mainnet" | "t
         />
       )}
       {visible && snapshot && (
-        <ResumeBanner snapshot={snapshot} onResume={handleResume} onDismiss={dismiss} />
+        <ResumeBanner
+          snapshot={snapshot}
+          hiddenByFullModal={!!modalState}
+          onResume={handleResume}
+          onDismiss={dismiss}
+        />
       )}
     </>
   );

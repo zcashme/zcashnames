@@ -1,18 +1,39 @@
 "use client";
 
-import { useState } from "react";
-import { ACTION_LABELS, ACTION_NOUNS } from "@/lib/types";
+import { useEffect, useMemo, useState } from "react";
+import type { Phase, ScanState } from "@/lib/types";
 import type { ResumeSnapshot } from "@/lib/purchases/resume";
+import {
+  NameBadge,
+  minedMessage,
+  modalDescription,
+  phaseHeader,
+  progressFillForPhase,
+  scanningStatusMessage,
+  settlingStatusMessage,
+} from "@/components/purchases/modalCopy";
 
-function describe(snap: ResumeSnapshot): string {
-  if (snap.phase === "confirm") return "Ready to send";
-  if (snap.phase === "fund") return "Waiting for payment";
-  switch (snap.scanState) {
-    case "not_detected": return "Waiting for detection";
-    case "in_mempool":   return "In mempool";
-    case "confirming":   return "Confirming";
-    case "mined":        return "Confirmed";
-  }
+type BannerState = {
+  step?: number;
+  address?: string;
+  price?: string;
+  priceInput?: string;
+  settleState?: ScanState;
+};
+
+const FALLBACK_PHASES: Phase[] = ["input", "confirm", "scanning", "fund", "settling"];
+
+function stateOf(snap: ResumeSnapshot): BannerState {
+  return (snap.state ?? {}) as BannerState;
+}
+
+function settleStateOf(snap: ResumeSnapshot): ScanState {
+  return stateOf(snap).settleState ?? "not_detected";
+}
+
+function isCompleteSnapshot(snap: ResumeSnapshot): boolean {
+  if (snap.phase === "settling") return settleStateOf(snap) === "mined";
+  return snap.phase === "scanning" && snap.action !== "BUY" && snap.scanState === "mined";
 }
 
 function explorerHref(snap: ResumeSnapshot): string {
@@ -21,20 +42,117 @@ function explorerHref(snap: ResumeSnapshot): string {
     : `/explorer?name=${encodeURIComponent(snap.name)}`;
 }
 
+function progressClipPath(i: number, n: number): string {
+  if (n <= 1) return "polygon(0 0, 100% 0, 100% 100%, 0 100%)";
+  if (i === 0) return "polygon(0 0, calc(100% - 5px) 0, 100% 100%, 0 100%)";
+  if (i === n - 1) return "polygon(0 0, 100% 0, 100% 100%, 5px 100%)";
+  return "polygon(0 0, calc(100% - 5px) 0, 100% 100%, 5px 100%)";
+}
+
+function CompactProgress({ snapshot, complete }: { snapshot: ResumeSnapshot; complete: boolean }) {
+  const phases = useMemo(() => {
+    const saved = snapshot.phases?.filter(Boolean);
+    if (saved?.length) return saved;
+    const phaseSet = new Set<Phase>(FALLBACK_PHASES);
+    phaseSet.add(snapshot.phase);
+    return Array.from(phaseSet);
+  }, [snapshot.phase, snapshot.phases]);
+
+  const stateStep = stateOf(snapshot).step;
+  const phaseIndex = phases.indexOf(snapshot.phase);
+  const activeIndex = complete
+    ? phases.length - 1
+    : phaseIndex >= 0
+      ? phaseIndex
+      : typeof stateStep === "number"
+        ? Math.max(0, Math.min(stateStep, phases.length - 1))
+        : 0;
+
+  return (
+    <div className="flex min-w-[7rem] shrink-0 justify-end" aria-label={`Progress step ${activeIndex + 1} of ${phases.length}`}>
+      <div className="flex max-w-full items-center gap-[3px]">
+        {phases.map((step, i) => {
+          const fill = complete ? 1 : progressFillForPhase(step, i, activeIndex, snapshot.scanState);
+          const borderColor = fill > 0 || i === activeIndex ? "var(--fg-heading)" : "var(--border-muted)";
+          return (
+            <span
+              key={`${step}-${i}`}
+              className="relative block h-2 w-5 overflow-hidden sm:w-6"
+              style={{
+                clipPath: progressClipPath(i, phases.length),
+                background: "transparent",
+                border: `1px solid ${borderColor}`,
+                transition: "border-color 450ms ease, background-color 450ms ease",
+              }}
+            >
+              <span
+                className="absolute inset-y-0 left-0 block"
+                style={{
+                  width: `${fill * 100}%`,
+                  background: "var(--fg-heading)",
+                  transition: "width 450ms ease, background-color 450ms ease",
+                }}
+              />
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function LoadingEllipsis({ active }: { active: boolean }) {
+  const [dotCount, setDotCount] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    const id = window.setInterval(() => {
+      setDotCount((current) => (current + 1) % 4);
+    }, 450);
+    return () => window.clearInterval(id);
+  }, [active]);
+
+  if (!active) return null;
+  return (
+    <span className="inline-block w-[1.5em] text-left" aria-hidden="true">
+      {".".repeat(dotCount)}
+    </span>
+  );
+}
+
 interface ResumeBannerProps {
   snapshot: ResumeSnapshot;
+  hiddenByFullModal?: boolean;
   onResume: () => void;
   onDismiss: () => void;
 }
 
-export default function ResumeBanner({ snapshot, onResume, onDismiss }: ResumeBannerProps) {
+export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onResume, onDismiss }: ResumeBannerProps) {
   const [confirmingClear, setConfirmingClear] = useState(false);
-  const label = ACTION_LABELS[snapshot.action];
-  const noun = ACTION_NOUNS[snapshot.action];
-  const status = describe(snapshot);
-  const isComplete = snapshot.scanState === "mined";
+  const snapshotState = stateOf(snapshot);
+  const header =
+    snapshot.phase === "input"
+      ? <>{phaseHeader(snapshot.action, snapshot.phase)} <NameBadge name={snapshot.name} /></>
+      : phaseHeader(snapshot.action, snapshot.phase);
+  const isComplete = isCompleteSnapshot(snapshot);
   const isConfirm = snapshot.phase === "confirm";
-  const secondaryText = isComplete ? `Your ${noun} is confirmed on-chain.` : null;
+  const description = isComplete
+    ? minedMessage(snapshot.action === "BUY" ? "BUY" : snapshot.action, snapshot.name, snapshotState.address)
+    : modalDescription(snapshot.action, snapshot.phase, snapshot.name, snapshotState);
+  const copyIncludesName =
+    isComplete ||
+    snapshot.phase === "unlock" ||
+    snapshot.phase === "input" ||
+    snapshot.phase === "sign" ||
+    snapshot.phase === "fund" ||
+    snapshot.phase === "scanning";
+  const showStandaloneName = !copyIncludesName;
+  const statusDetail =
+    snapshot.phase === "scanning" && !isComplete
+      ? scanningStatusMessage(snapshot.action, snapshot.scanState)
+      : snapshot.phase === "settling" && !isComplete
+        ? settlingStatusMessage(snapshot.action, settleStateOf(snapshot))
+        : null;
   const clearWarning = isConfirm
     ? "Removes this prepared request. Sent payments cannot be undone."
     : "Stops tracking only. It does not cancel any payment.";
@@ -52,28 +170,40 @@ export default function ResumeBanner({ snapshot, onResume, onDismiss }: ResumeBa
         background: "var(--leaders-card-bg-solid, var(--leaders-card-bg, var(--feature-card-bg)))",
         borderColor: "var(--leaders-card-border, var(--faq-border))",
         boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
+        opacity: hiddenByFullModal ? 0 : 1,
+        pointerEvents: hiddenByFullModal ? "none" : "auto",
+        transform: hiddenByFullModal ? "translateY(1rem)" : "translateY(0)",
+        transition: "opacity 320ms ease, transform 320ms ease",
       }}
+      aria-hidden={hiddenByFullModal ? "true" : undefined}
     >
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-2">
-          <span
-            className="text-[0.72rem] font-semibold uppercase tracking-[0.08em]"
-            style={{ color: isComplete ? "var(--home-result-status-positive-fg, #9de7cd)" : "var(--fg-muted)" }}
-          >
-            {status}
-          </span>
-          <div className="h-px w-full" style={{ background: "var(--leaders-card-border, var(--faq-border))" }} />
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-sm font-semibold text-fg-heading">
-              {label} {snapshot.name}.zcash
+          <div className="flex items-center justify-between gap-3">
+            <span
+              className="min-w-0 text-left text-[0.72rem] font-semibold uppercase tracking-[0.08em]"
+              style={{ color: isComplete ? "var(--home-result-status-positive-fg, #9de7cd)" : "var(--fg-muted)" }}
+            >
+              {header}
+              <LoadingEllipsis active={!isComplete} />
             </span>
-            {secondaryText && (
-              <p className="m-0 text-sm" style={{ color: "var(--fg-muted)" }}>{secondaryText}</p>
+            <CompactProgress snapshot={snapshot} complete={isComplete} />
+          </div>
+          <div className="h-px w-full" style={{ background: "var(--leaders-card-border, var(--faq-border))" }} />
+          <div className="flex min-w-0 flex-col gap-1 text-left">
+            {showStandaloneName && (
+              <span className="text-sm font-semibold text-fg-heading">
+                <NameBadge name={snapshot.name} />
+              </span>
+            )}
+            <p className="m-0 text-sm" style={{ color: "var(--fg-muted)" }}>{description}</p>
+            {statusDetail && (
+              <p className="m-0 text-sm" style={{ color: "var(--fg-muted)" }}>{statusDetail}</p>
             )}
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           {isComplete ? (
             <>
               <a
@@ -127,7 +257,7 @@ export default function ResumeBanner({ snapshot, onResume, onDismiss }: ResumeBa
           <>
             <div className="h-px w-full" style={{ background: "var(--leaders-card-border, var(--faq-border))" }} />
             <p
-              className="m-0 text-sm font-medium leading-relaxed"
+              className="m-0 text-right text-sm font-medium leading-relaxed"
               style={{ color: "var(--home-result-status-negative-fg, #ff8a8a)" }}
             >
               {clearWarning}
