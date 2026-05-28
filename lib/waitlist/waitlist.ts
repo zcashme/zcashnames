@@ -27,6 +27,11 @@ import {
 } from "@/lib/waitlist/confirm-token";
 import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
 import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
+import {
+  createWaitlistCaptcha,
+  verifyWaitlistCaptcha,
+  type WaitlistCaptchaChallenge,
+} from "@/lib/waitlist/captcha";
 import { normalizeUsername } from "@/lib/zns/utils";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
@@ -44,6 +49,12 @@ export interface WaitlistPayload {
   newsletter: boolean;
   referral_code: string;
   referred_by: string | null;
+  captcha_token: string;
+  captcha_answer: string;
+}
+
+export async function getWaitlistCaptcha(): Promise<WaitlistCaptchaChallenge> {
+  return createWaitlistCaptcha();
 }
 
 function waitlistCaptchaSecret(): string {
@@ -263,6 +274,15 @@ export async function submitWaitlist(
 
   if (!isValidName(normalizedName)) {
     return { error: GENERIC_ERROR };
+  }
+
+  const captchaOk = verifyWaitlistCaptcha({
+    token: String(payload.captcha_token ?? ""),
+    answer: String(payload.captcha_answer ?? ""),
+    now: startedAt,
+  });
+  if (!captchaOk) {
+    return { error: "Please solve the human check below." };
   }
 
   const emailCheck = await validateEmail(normalizedEmail);

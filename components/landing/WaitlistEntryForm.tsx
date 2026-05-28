@@ -18,7 +18,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { normalizeUsername } from "@/lib/zns/utils";
-import { submitWaitlist, getWaitlistCountForName } from "@/lib/waitlist/waitlist";
+import {
+  getWaitlistCaptcha,
+  getWaitlistCountForName,
+  submitWaitlist,
+} from "@/lib/waitlist/waitlist";
 import SurveyForm from "@/components/SurveyForm";
 
 function isValidEmail(v: string) {
@@ -82,6 +86,9 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [captchaChallenge, setCaptchaChallenge] = useState<{ image: string; token: string } | null>(null);
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
+  const [captchaLoading, setCaptchaLoading] = useState(false);
 
   // ── Modal state ──
   const [modalView, setModalView] = useState<ModalView>("confirm");
@@ -170,15 +177,43 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
     };
   }, [confirmedName]);
 
+  const loadCaptchaChallenge = useCallback(async () => {
+    setCaptchaLoading(true);
+    try {
+      const challenge = await getWaitlistCaptcha();
+      setCaptchaChallenge(challenge);
+      setCaptchaAnswer("");
+    } catch {
+      setCaptchaChallenge(null);
+    } finally {
+      setCaptchaLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!showResult) {
       setSubmitError("");
+      setCaptchaChallenge(null);
+      setCaptchaAnswer("");
+      return;
     }
-  }, [showResult]);
+    void loadCaptchaChallenge();
+  }, [showResult, loadCaptchaChallenge]);
 
-  const canSubmit = confirmedName.length > 0 && isValidEmail(email);
+  const canSubmit =
+    confirmedName.length > 0 &&
+    isValidEmail(email) &&
+    Boolean(captchaChallenge?.token) &&
+    captchaAnswer.trim().length > 0 &&
+    !captchaLoading;
 
   const submitWaitlistEntry = useCallback(async () => {
+    if (!captchaChallenge) {
+      setSubmitError("Please solve the human check below.");
+      setSubmitting(false);
+      return;
+    }
+
     const referralCode = generateReferralCode();
     const { error } = await submitWaitlist({
       name: confirmedName,
@@ -186,18 +221,21 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
       newsletter,
       referral_code: referralCode,
       referred_by: referredByRef.current || null,
+      captcha_token: captchaChallenge.token,
+      captcha_answer: captchaAnswer,
     });
 
     if (error) {
       setSubmitError(error);
       setSubmitting(false);
+      await loadCaptchaChallenge();
       return;
     }
 
     setMyReferralCode(referralCode);
     setSubmitting(false);
     setSubmitted(true);
-  }, [confirmedName, email, newsletter]);
+  }, [captchaAnswer, captchaChallenge, confirmedName, email, loadCaptchaChallenge, newsletter]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,6 +256,9 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
     setSubmitting(false);
     setModalView("confirm");
     setSurveyContactMsg(false);
+    setCaptchaChallenge(null);
+    setCaptchaAnswer("");
+    setCaptchaLoading(false);
   };
 
   const inputBase: React.CSSProperties = {
@@ -455,6 +496,58 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
                   </span>
                   Get newsletter
                 </label>
+              </div>
+
+              {/* Human check */}
+              <div className="flex flex-col gap-2 rounded-xl px-3 py-3" style={{ background: "var(--color-surface)", border: "1px solid var(--border-muted)" }}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label htmlFor="waitlist-captcha-answer" className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                    Type the characters you see
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void loadCaptchaChallenge()}
+                    disabled={captchaLoading || submitting}
+                    className="cursor-pointer text-xs font-semibold underline disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{ color: "var(--fg-body)" }}
+                  >
+                    Refresh
+                  </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  {captchaChallenge ? (
+                    <img
+                      src={captchaChallenge.image}
+                      alt="Captcha"
+                      width={150}
+                      height={50}
+                      className="rounded-md"
+                      style={{ background: "#fff", border: "1px solid var(--border-muted)" }}
+                    />
+                  ) : (
+                    <div
+                      className="flex items-center justify-center rounded-md text-xs"
+                      style={{ width: 150, height: 50, background: "var(--color-surface)", border: "1px solid var(--border-muted)", color: "var(--fg-muted)" }}
+                    >
+                      {captchaLoading ? "Loading…" : "Unavailable"}
+                    </div>
+                  )}
+                  <input
+                    id="waitlist-captcha-answer"
+                    type="text"
+                    value={captchaAnswer}
+                    onChange={(e) => setCaptchaAnswer(e.target.value)}
+                    placeholder="Answer"
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    disabled={!captchaChallenge || captchaLoading || submitting}
+                    required
+                    className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none transition-colors disabled:opacity-70"
+                    style={inputBase}
+                  />
+                </div>
               </div>
 
               {/* Submit */}
