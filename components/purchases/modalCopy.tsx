@@ -47,7 +47,6 @@ export function SentenceLines({ children }: { children: React.ReactNode }) {
 export function phaseHeader(action: Action, phase: Phase): string {
   if (phase === "unlock") return "Reserved Name";
   if (phase === "input") return `${ACTION_LABELS[action]}`;
-  if (phase === "sign") return "Sovereign Signature";
   if (phase === "otp") return "Verify Ownership";
   if (phase === "confirm") return action === "BUY" ? "Intent to Purchase" : "Send Payment";
   if (phase === "fund") return "Pay the seller";
@@ -177,9 +176,6 @@ export function modalDescription(
       );
     }
     return inputDescription(action, name, options?.listingPriceZec ? `${options.listingPriceZec} ZEC` : state.price);
-  }
-  if (phase === "sign") {
-    return <>Sign this payload with your Ed25519 private key to authorize {ACTION_LABELS[action].toLowerCase()} for <NameBadge name={name} />.</>;
   }
   if (phase === "otp") {
     return <>Send exact amount and memo to address below to request verification code.</>;

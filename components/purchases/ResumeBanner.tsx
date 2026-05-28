@@ -143,7 +143,6 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
     isComplete ||
     snapshot.phase === "unlock" ||
     snapshot.phase === "input" ||
-    snapshot.phase === "sign" ||
     snapshot.phase === "fund" ||
     snapshot.phase === "scanning";
   const showStandaloneName = !copyIncludesName;

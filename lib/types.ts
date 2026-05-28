@@ -90,7 +90,6 @@ export type Phase =
   | "unlock"
   | "input"
   | "otp"
-  | "sign"
   | "confirm"
   | "scanning"
   | "fund"
@@ -126,9 +125,7 @@ export const ACTION_CAPS: Record<Action, ActionCaps> = {
  * Rules:
  *   - Reserved CLAIM prepends `unlock`.
  *   - `input` appears if the action collects user data.
- *   - The auth phase appears if `needsAuth` (owner actions) or `allowsCommit && sovereign`
- *     (user-opted sovereign CLAIM/BUY). It's `sign` when the registration has a
- *     committed pubkey, or when the user opted into sovereign mode; otherwise `otp`.
+ *   - The `otp` phase appears for owner actions (needsAuth).
  *   - `confirm` always appears.
  *   - `scanning` always appears after `confirm` — watches the memo'd tx
  *     (registry commission for BUY, the action tx for everything else) to mine.
@@ -139,19 +136,13 @@ export const ACTION_CAPS: Record<Action, ActionCaps> = {
 export function phasesFor(
   action: Action,
   resolve: ResolveName,
-  sovereign: boolean,
 ): Phase[] {
   const caps = ACTION_CAPS[action];
   const phases: Phase[] = [];
 
   if (action === "CLAIM" && resolve.status === "reserved") phases.push("unlock");
   if (caps.needsInput) phases.push("input");
-
-  if (caps.needsAuth || (caps.allowsCommit && sovereign)) {
-    const hasPubkey = (resolve.status === "registered" || resolve.status === "listed")
-      && !!resolve.registration.pubkey;
-    phases.push(hasPubkey || sovereign ? "sign" : "otp");
-  }
+  if (caps.needsAuth) phases.push("otp");
 
   phases.push("confirm");
   phases.push("scanning");

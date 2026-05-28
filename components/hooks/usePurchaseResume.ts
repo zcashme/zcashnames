@@ -14,7 +14,7 @@ import {
 // like "minimize", not "abandon". The banner restores the modal at the same
 // step; only the explicit "Done" / "Abandon" controls clear the snapshot.
 const BANNER_PHASES = new Set([
-  "unlock", "input", "otp", "sign",
+  "unlock", "input", "otp",
   "confirm", "fund", "scanning", "settling",
 ]);
 
