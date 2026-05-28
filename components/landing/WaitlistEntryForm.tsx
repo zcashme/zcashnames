@@ -18,11 +18,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { normalizeUsername } from "@/lib/zns/utils";
-import {
-  getWaitlistCaptchaChallenge,
-  submitWaitlist,
-  getWaitlistCountForName,
-} from "@/lib/waitlist/waitlist";
+import { submitWaitlist, getWaitlistCountForName } from "@/lib/waitlist/waitlist";
 import SurveyForm from "@/components/SurveyForm";
 
 function isValidEmail(v: string) {
@@ -42,7 +38,6 @@ const COMMUNITY_LINKS = [
 ];
 
 type ModalView = "confirm" | "community" | "survey" | "thankyou";
-type CaptchaChallenge = Awaited<ReturnType<typeof getWaitlistCaptchaChallenge>>;
 
 const TRANSITION = "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)";
 
@@ -87,9 +82,6 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [captchaChallenge, setCaptchaChallenge] = useState<CaptchaChallenge | null>(null);
-  const [captchaAnswer, setCaptchaAnswer] = useState("");
-  const [captchaLoading, setCaptchaLoading] = useState(false);
 
   // ── Modal state ──
   const [modalView, setModalView] = useState<ModalView>("confirm");
@@ -178,44 +170,15 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
     };
   }, [confirmedName]);
 
-  const loadCaptchaChallenge = useCallback(async () => {
-    setCaptchaLoading(true);
-    try {
-      const challenge = await getWaitlistCaptchaChallenge();
-      setCaptchaChallenge(challenge);
-      setCaptchaAnswer("");
-    } catch {
-      setSubmitError("Could not load the human check. Please refresh and try again.");
-      setCaptchaChallenge(null);
-    } finally {
-      setCaptchaLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     if (!showResult) {
-      setCaptchaChallenge(null);
-      setCaptchaAnswer("");
       setSubmitError("");
-      return;
     }
-    void loadCaptchaChallenge();
-  }, [showResult, loadCaptchaChallenge]);
+  }, [showResult]);
 
-  const canSubmit =
-    confirmedName.length > 0 &&
-    isValidEmail(email) &&
-    Boolean(captchaChallenge?.token) &&
-    captchaAnswer.trim().length > 0 &&
-    !captchaLoading;
+  const canSubmit = confirmedName.length > 0 && isValidEmail(email);
 
   const submitWaitlistEntry = useCallback(async () => {
-    if (!captchaChallenge) {
-      setSubmitError("Could not load the human check. Please refresh and try again.");
-      setSubmitting(false);
-      return;
-    }
-
     const referralCode = generateReferralCode();
     const { error } = await submitWaitlist({
       name: confirmedName,
@@ -223,21 +186,18 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
       newsletter,
       referral_code: referralCode,
       referred_by: referredByRef.current || null,
-      captcha_token: captchaChallenge.token,
-      captcha_answer: captchaAnswer,
     });
 
     if (error) {
-      setSubmitError("Something went wrong. Please try again.");
+      setSubmitError(error);
       setSubmitting(false);
-      await loadCaptchaChallenge();
       return;
     }
 
     setMyReferralCode(referralCode);
     setSubmitting(false);
     setSubmitted(true);
-  }, [captchaAnswer, captchaChallenge, confirmedName, email, loadCaptchaChallenge, newsletter]);
+  }, [confirmedName, email, newsletter]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,9 +218,6 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
     setSubmitting(false);
     setModalView("confirm");
     setSurveyContactMsg(false);
-    setCaptchaChallenge(null);
-    setCaptchaAnswer("");
-    setCaptchaLoading(false);
   };
 
   const inputBase: React.CSSProperties = {
@@ -498,37 +455,6 @@ export default function WaitlistEntryForm({ onConfirm, onReset }: WaitlistEntryF
                   </span>
                   Get newsletter
                 </label>
-              </div>
-
-              {/* Human check */}
-              <div className="flex flex-col gap-2 rounded-xl px-3 py-3" style={{ background: "var(--color-surface)", border: "1px solid var(--border-muted)" }}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label htmlFor="waitlist-captcha-answer" className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
-                    {captchaLoading ? "Loading human check..." : captchaChallenge?.prompt ?? "Human check unavailable"}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => void loadCaptchaChallenge()}
-                    disabled={captchaLoading || submitting}
-                    className="cursor-pointer text-xs font-semibold underline disabled:cursor-not-allowed disabled:opacity-50"
-                    style={{ color: "var(--fg-body)" }}
-                  >
-                    New question
-                  </button>
-                </div>
-                <input
-                  id="waitlist-captcha-answer"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={captchaAnswer}
-                  onChange={(e) => setCaptchaAnswer(e.target.value.replace(/[^0-9]/g, ""))}
-                  placeholder="Answer"
-                  disabled={!captchaChallenge || captchaLoading || submitting}
-                  required
-                  className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-colors disabled:opacity-70"
-                  style={inputBase}
-                />
               </div>
 
               {/* Submit */}
