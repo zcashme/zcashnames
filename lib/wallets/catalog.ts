@@ -55,6 +55,11 @@ export type WalletBrandLogoAssets = {
   alt: string;
 };
 
+export type WalletBrandAppIcon = {
+  src: string;
+  alt: string;
+};
+
 export type WalletBrandSocial = {
   label: string;
   href: string;
@@ -106,6 +111,7 @@ export type WalletBrand = {
   intro: string;
   partner: boolean;
   logos?: WalletBrandLogoAssets;
+  appIcon?: WalletBrandAppIcon;
   websiteUrl?: string;
   supportGuideUrl?: string;
   announcementUrl?: string;
@@ -219,6 +225,7 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     intro: "Test ZcashNames where name resolution, sends, and market flows meet a mobile wallet.",
     partner: true,
     logos: walletLogos("edge", "Edge Wallet logo"),
+    appIcon: { src: "/icons/edge.png", alt: "Edge Wallet app icon" },
   },
   {
     slug: "cake",
@@ -227,6 +234,7 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     intro: "Test ZcashNames from a mobile wallet context and compare contact, URI, and receive flows.",
     partner: true,
     logos: walletLogos("cake", "Cake Wallet logo"),
+    appIcon: { src: "/wallets/cake/app-icon.png", alt: "Cake Wallet app icon" },
   },
   {
     slug: "unstoppable",
@@ -235,6 +243,7 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     intro: "Test ZcashNames from a mobile wallet context and compare contact, URI, and receive flows.",
     partner: true,
     logos: walletLogos("unstoppable", "Unstoppable Wallet logo"),
+    appIcon: { src: "/wallets/unstoppable/app-icon.png", alt: "Unstoppable Wallet app icon" },
   },
   {
     slug: "zipher",
@@ -243,6 +252,7 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     intro: "Test ZcashNames from an iOS wallet context and compare contact, URI, and receive flows.",
     partner: true,
     logos: walletLogos("zipher", "Zipher logo"),
+    appIcon: { src: "/wallets/zipher/app-icon.png", alt: "Zipher app icon" },
   },
   {
     slug: "zingo",
@@ -251,6 +261,7 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     intro: "Test ZcashNames wallet-side name control and desktop or mobile behavior.",
     partner: true,
     logos: walletLogos("zingo", "Zingo logo"),
+    appIcon: { src: "/wallets/zingo/app-icon.png", alt: "Zingo app icon" },
   },
   {
     slug: "zkool",
@@ -283,6 +294,7 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     intro: "Test ZcashNames from a browser wallet context and compare extension-based resolution behavior.",
     partner: true,
     logos: walletLogos("noir", "Noir logo"),
+    appIcon: { src: "/wallets/noir/app-icon.png", alt: "Noir app icon" },
   },
   {
     slug: "brave",

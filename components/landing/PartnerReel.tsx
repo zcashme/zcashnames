@@ -1,49 +1,29 @@
-import { WALLET_BRANDS, type WalletBrand, type WalletBrandLogoAssets } from "@/lib/wallets/catalog";
+import { WALLET_BRANDS, type WalletBrand, type WalletBrandAppIcon } from "@/lib/wallets/catalog";
 
-function isPartnerWithLogos(brand: WalletBrand): brand is WalletBrand & { logos: WalletBrandLogoAssets } {
-  return brand.partner && !!brand.logos;
+function isPartnerWithAppIcon(brand: WalletBrand): brand is WalletBrand & { appIcon: WalletBrandAppIcon } {
+  return brand.partner && !!brand.appIcon;
 }
 
-function ThemeLogoLayer({
-  logos,
-  src,
-  mode,
-}: {
-  logos: WalletBrandLogoAssets;
-  src: string;
-  mode: "dark" | "light" | "mono";
-}) {
-  const className =
-    mode === "dark"
-      ? "block [[data-theme=light]_&]:hidden [[data-theme=monochrome]_&]:hidden"
-      : mode === "light"
-        ? "hidden [[data-theme=light]_&]:block [[data-theme=monochrome]_&]:hidden"
-        : "hidden [[data-theme=monochrome]_&]:block";
-
+function PartnerIcon({ brand }: { brand: WalletBrand & { appIcon: WalletBrandAppIcon } }) {
   return (
-    <img
-      src={src}
-      alt={mode === "dark" ? logos.alt : ""}
-      aria-hidden={mode === "dark" ? undefined : true}
-      className={`${className} h-full w-auto object-contain`}
-      loading="lazy"
-      decoding="async"
-    />
-  );
-}
-
-function PartnerLogo({ logos }: { logos: WalletBrandLogoAssets }) {
-  return (
-    <span className="relative inline-flex h-7 shrink-0 items-center justify-center sm:h-8 md:h-9">
-      <ThemeLogoLayer logos={logos} src={logos.dark ?? logos.default} mode="dark" />
-      <ThemeLogoLayer logos={logos} src={logos.light ?? logos.default} mode="light" />
-      <ThemeLogoLayer logos={logos} src={logos.mono ?? logos.default} mode="mono" />
-    </span>
+    <div className="flex flex-col items-center gap-2.5 text-center">
+      <img
+        src={brand.appIcon.src}
+        alt=""
+        aria-hidden="true"
+        className="h-16 w-16 object-contain sm:h-20 sm:w-20"
+        loading="lazy"
+        decoding="async"
+      />
+      <span className="text-xs font-semibold leading-tight sm:text-sm" style={{ color: "var(--fg-muted)" }}>
+        {brand.displayName}
+      </span>
+    </div>
   );
 }
 
 export default function PartnerReel() {
-  const brands = WALLET_BRANDS.filter(isPartnerWithLogos);
+  const brands = WALLET_BRANDS.filter(isPartnerWithAppIcon);
 
   if (brands.length === 0) return null;
 
@@ -67,9 +47,9 @@ export default function PartnerReel() {
           aria-hidden="true"
         />
       </div>
-      <div className="mx-auto grid max-w-xl grid-cols-1 items-center justify-items-center gap-x-12 gap-y-6 sm:grid-cols-2 sm:gap-y-7 md:gap-y-8">
+      <div className="mx-auto grid max-w-sm grid-cols-2 items-start justify-items-center gap-x-12 gap-y-8 sm:max-w-md sm:gap-x-14 sm:gap-y-10">
         {brands.map((brand) => (
-          <PartnerLogo key={brand.slug} logos={brand.logos} />
+          <PartnerIcon key={brand.slug} brand={brand} />
         ))}
       </div>
     </section>

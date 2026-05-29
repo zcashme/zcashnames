@@ -55,6 +55,12 @@ const linkStyle: React.CSSProperties = {
   textDecoration: "underline",
 };
 
+const appIconStyle: React.CSSProperties = {
+  width: 96,
+  height: 96,
+  objectFit: "contain",
+};
+
 function communityLinks() {
   return BRAND.socials.filter((social) =>
     social.label === "Signal" || social.label === "Discord" || social.label === "Telegram"
@@ -112,7 +118,16 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
     <article className="max-w-3xl">
       <section id="whats-new">
         <div className="mb-5">
-          <WalletBrandLogo brand={brand} />
+          {brand.appIcon ? (
+            <img
+              src={brand.appIcon.src}
+              alt={brand.appIcon.alt}
+              style={appIconStyle}
+              className="rounded-[22px]"
+            />
+          ) : (
+            <WalletBrandLogo brand={brand} />
+          )}
         </div>
         <span
           className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3"
