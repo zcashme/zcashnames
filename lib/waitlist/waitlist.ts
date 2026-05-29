@@ -15,6 +15,7 @@
 
 import { createHash } from "crypto";
 import { headers } from "next/headers";
+import emailValidator from "node-email-verifier";
 import { db } from "@/lib/db";
 import { sendFollowUp } from "@/lib/email/followup";
 import { sendWaitlistConfirmationEmail } from "@/lib/email/waitlist";
@@ -27,10 +28,10 @@ import {
 import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
 import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
 import {
-  createWaitlistCaptchaChallenge,
+  createWaitlistCaptcha,
   verifyWaitlistCaptcha,
   type WaitlistCaptchaChallenge,
-} from "@/lib/waitlist/simple-captcha";
+} from "@/lib/waitlist/captcha";
 import { normalizeUsername } from "@/lib/zns/utils";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
@@ -52,8 +53,8 @@ export interface WaitlistPayload {
   captcha_answer: string;
 }
 
-export async function getWaitlistCaptchaChallenge(): Promise<WaitlistCaptchaChallenge> {
-  return createWaitlistCaptchaChallenge();
+export async function getWaitlistCaptcha(): Promise<WaitlistCaptchaChallenge> {
+  return createWaitlistCaptcha();
 }
 
 function waitlistCaptchaSecret(): string {
@@ -196,8 +197,33 @@ type WaitlistRow = {
   email_verified: boolean;
 };
 
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+async function validateEmail(email: string): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const res = await emailValidator(email, {
+      checkMx: true,
+      checkDisposable: true,
+      detailed: true,
+      timeout: "3s",
+    });
+    if (typeof res === "boolean") {
+      return res ? { valid: true } : { valid: false, error: "Please enter a valid email address." };
+    }
+    if (res.valid) return { valid: true };
+    if (res.format && !res.format.valid) {
+      return { valid: false, error: "Please enter a valid email address." };
+    }
+    if (res.disposable && !res.disposable.valid) {
+      return { valid: false, error: "Please use a non-disposable email address." };
+    }
+    if (res.mx && !res.mx.valid) {
+      return { valid: false, error: "We couldn't reach that email's mail server. Please double-check it." };
+    }
+    return { valid: false, error: "Please enter a valid email address." };
+  } catch (err) {
+    // DNS/network failure — don't block the user, the confirmation email is the backup gate.
+    console.error("Email validation error:", err);
+    return { valid: true };
+  }
 }
 
 function isValidName(name: string): boolean {
@@ -246,8 +272,22 @@ export async function submitWaitlist(
   const normalizedReferredBy = await normalizeReferredBy(payload.referred_by);
   const startedAt = Date.now();
 
-  if (!isValidName(normalizedName) || !isValidEmail(normalizedEmail)) {
+  if (!isValidName(normalizedName)) {
     return { error: GENERIC_ERROR };
+  }
+
+  const captchaOk = verifyWaitlistCaptcha({
+    token: String(payload.captcha_token ?? ""),
+    answer: String(payload.captcha_answer ?? ""),
+    now: startedAt,
+  });
+  if (!captchaOk) {
+    return { error: "Please solve the human check below." };
+  }
+
+  const emailCheck = await validateEmail(normalizedEmail);
+  if (!emailCheck.valid) {
+    return { error: emailCheck.error ?? GENERIC_ERROR };
   }
 
   const headerStore = await headers();
@@ -266,16 +306,7 @@ export async function submitWaitlist(
       return { error: GENERIC_ERROR };
     }
   } catch (throttleError) {
-    console.error("Waitlist captcha throttle error:", throttleError);
-    return { error: GENERIC_ERROR };
-  }
-
-  const captchaOk = verifyWaitlistCaptcha({
-    token: String(payload.captcha_token ?? ""),
-    answer: String(payload.captcha_answer ?? ""),
-    now: startedAt,
-  });
-  if (!captchaOk) {
+    console.error("Waitlist throttle error:", throttleError);
     return { error: GENERIC_ERROR };
   }
 
