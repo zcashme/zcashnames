@@ -14,6 +14,21 @@ import {
   CONTACT_PLACEHOLDER,
   type ContactKind,
 } from "@/lib/types";
+import {
+  defaultSubcategory,
+  defaultWalletChoice,
+  getRecommendedVariantForBrand,
+  getSubcategoryOptions,
+  getWalletBrand,
+  getWalletVariant,
+  getWalletVariantsForPlatform,
+  walletChoiceIsValid,
+  walletOptionLabel,
+  type WalletBrandSlug,
+  type WalletChoice,
+  type WalletDeviceChoice,
+  type WalletSubcategory,
+} from "@/lib/wallets/catalog";
 
 interface ContactRow {
   uid: string;
@@ -22,45 +37,12 @@ interface ContactRow {
 }
 
 type FocusArea = "user" | "sdk";
-type WalletChoice =
-  | "desktop_zingo"
-  | "desktop_vizor"
-  | "mobile_zingo"
-  | "mobile_zkool"
-  | "mobile_unstoppable"
-  | "mobile_zodl"
-  | "mobile_edge"
-  | "mobile_cake"
-  | "mobile_zipher"
-  | "browser_brave"
-  | "browser_noir"
-  | "not_sure";
-type WalletDevice = "not_sure" | "mobile" | "desktop" | "browser";
 type WalletRow = {
   uid: string;
-  device: WalletDevice;
+  device: WalletDeviceChoice;
+  subcategory: WalletSubcategory | "";
   choice: WalletChoice | "other";
   otherName: string;
-};
-
-const WALLET_OPTIONS: Record<Exclude<WalletDevice, "not_sure">, { label: string; value: WalletChoice }[]> = {
-  mobile: [
-    { label: "Edge (Recommended)", value: "mobile_edge" },
-    { label: "Cake", value: "mobile_cake" },
-    { label: "Unstoppable", value: "mobile_unstoppable" },
-    { label: "Zipher", value: "mobile_zipher" },
-    { label: "Zingo", value: "mobile_zingo" },
-    { label: "Zkool", value: "mobile_zkool" },
-    { label: "Zodl", value: "mobile_zodl" },
-  ],
-  desktop: [
-    { label: "Zingo! (Recommended)", value: "desktop_zingo" },
-    { label: "Vizor", value: "desktop_vizor" },
-  ],
-  browser: [
-    { label: "Noir (Recommended)", value: "browser_noir" },
-    { label: "Brave", value: "browser_brave" },
-  ],
 };
 
 /** Finds the first CONTACT_KINDS value not already used in the current contact rows. */
@@ -72,22 +54,14 @@ function buildUid() {
   return `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function defaultWalletChoice(device: WalletDevice): WalletChoice | "other" {
-  if (device === "not_sure") return "not_sure";
-  return WALLET_OPTIONS[device][0].value;
+function walletOptionsFor(device: WalletDeviceChoice, subcategory: WalletSubcategory | "") {
+  if (device === "not_sure" || !subcategory) return [];
+  return getWalletVariantsForPlatform(device, subcategory);
 }
 
-function walletWarning(device: WalletDevice, choice: WalletChoice | "other"): string | null {
-  if (
-    (device === "mobile" && (choice === "mobile_zodl" || choice === "mobile_zingo" || choice === "mobile_zkool")) ||
-    (device === "desktop" && choice === "desktop_vizor") ||
-    (device === "browser" && choice === "browser_brave")
-  ) {
-    const category = device.charAt(0).toUpperCase() + device.slice(1);
-    const wallet = WALLET_OPTIONS[device].find((option) => option.value === choice)?.label ?? "";
-    return `${category} wallet ${wallet} cannot send ZEC to names, yet. You can control names (claim, list for sale, buy, etc).`;
-  }
-  return null;
+function walletWarning(choice: WalletChoice | "other"): string | null {
+  if (choice === "other" || choice === "not_sure") return null;
+  return getWalletVariant(choice)?.warning ?? null;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -124,14 +98,32 @@ const primaryBtnStyle: React.CSSProperties = {
 const APP_MAX_WHY = 2000;
 const APP_MAX_TEXT = 2000;
 
-export default function BetaV2ApplicationForm() {
+interface BetaV2ApplicationFormProps {
+  brandSlug?: WalletBrandSlug;
+}
+
+function initialWalletForBrand(brandSlug?: WalletBrandSlug): WalletRow {
+  const variant = brandSlug ? getRecommendedVariantForBrand(brandSlug) : null;
+  if (!variant) {
+    return { uid: "w0", device: "mobile", subcategory: "ios", choice: "mobile_ios_edge", otherName: "" };
+  }
+
+  return {
+    uid: "w0",
+    device: variant.device,
+    subcategory: variant.subcategory,
+    choice: variant.variantId,
+    otherName: "",
+  };
+}
+
+export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFormProps) {
+  const brand = brandSlug ? getWalletBrand(brandSlug) : null;
   const [displayName, setDisplayName] = useState("");
   const [why, setWhy] = useState("");
   const [focusUser, setFocusUser] = useState(false);
   const [focusSdk, setFocusSdk] = useState(false);
-  const [wallets, setWallets] = useState<WalletRow[]>([
-    { uid: "w0", device: "mobile", choice: "mobile_edge", otherName: "" },
-  ]);
+  const [wallets, setWallets] = useState<WalletRow[]>([initialWalletForBrand(brandSlug)]);
   const [bestWalletUid, setBestWalletUid] = useState("w0");
   const [experience, setExperience] = useState("");
   const [referralSource, setReferralSource] = useState("");
@@ -191,7 +183,7 @@ export default function BetaV2ApplicationForm() {
   function addWallet() {
     setWallets((prev) => [
       ...prev,
-      { uid: buildUid(), device: "not_sure", choice: "not_sure", otherName: "" },
+      { uid: buildUid(), device: "not_sure", subcategory: "", choice: "not_sure", otherName: "" },
     ]);
   }
 
@@ -205,13 +197,34 @@ export default function BetaV2ApplicationForm() {
     });
   }
 
-  function updateWalletDevice(uid: string, device: WalletDevice) {
+  function updateWalletDevice(uid: string, device: WalletDeviceChoice) {
+    const subcategory = defaultSubcategory(device);
     setWallets((prev) =>
-      prev.map((row) =>
-        row.uid === uid
-          ? { ...row, device, choice: defaultWalletChoice(device), otherName: "" }
-          : row,
-      ),
+      prev.map((row) => {
+        if (row.uid !== uid) return row;
+
+        return {
+          ...row,
+          device,
+          subcategory,
+          choice: defaultWalletChoice(device, subcategory),
+          otherName: "",
+        };
+      }),
+    );
+  }
+
+  function updateWalletSubcategory(uid: string, subcategory: WalletSubcategory) {
+    setWallets((prev) =>
+      prev.map((row) => {
+        if (row.uid !== uid || row.device === "not_sure") return row;
+
+        const choice = walletChoiceIsValid(row.device, subcategory, row.choice)
+          ? row.choice
+          : defaultWalletChoice(row.device, subcategory);
+
+        return { ...row, subcategory, choice, otherName: choice === "other" ? row.otherName : "" };
+      }),
     );
   }
 
@@ -252,6 +265,10 @@ export default function BetaV2ApplicationForm() {
         setError("Enter the wallet name.");
         return;
       }
+      if (wallet.device !== "not_sure" && !wallet.subcategory) {
+        setError("Pick a platform for each planned wallet.");
+        return;
+      }
     }
 
     const best = filled.find((row) => row.uid === bestContactUid) ?? filled[0];
@@ -273,15 +290,28 @@ export default function BetaV2ApplicationForm() {
       formData.set(
         "planned_wallets_detail",
         JSON.stringify(
-          orderedWallets.map((wallet) => ({
-            device: wallet.device,
-            choice: wallet.choice,
-            other_name: wallet.choice === "other" ? wallet.otherName.trim() : "",
-          })),
+          orderedWallets.map((wallet) => {
+            const variant = wallet.choice !== "other" && wallet.choice !== "not_sure"
+              ? getWalletVariant(wallet.choice)
+              : null;
+
+            return {
+              device: wallet.device,
+              subcategory: wallet.device === "not_sure" ? null : wallet.subcategory,
+              choice: wallet.choice,
+              variant_id: variant?.variantId ?? null,
+              wallet_id: variant?.walletId ?? null,
+              brand_slug: variant?.brandSlug ?? null,
+              other_name: wallet.choice === "other" ? wallet.otherName.trim() : "",
+            };
+          }),
         ),
       );
       const primaryWallet = orderedWallets[0];
       formData.set("planned_wallet_choice", primaryWallet.choice);
+      if (brandSlug) {
+        formData.set("entry_brand_slug", brandSlug);
+      }
       if (primaryWallet.choice === "other") {
         formData.set("other_wallet_device", primaryWallet.device);
         formData.set("other_wallet_name", primaryWallet.otherName.trim());
@@ -466,11 +496,12 @@ export default function BetaV2ApplicationForm() {
         </div>
         <div className="flex flex-col gap-2">
           {wallets.map((wallet) => {
-            const warning = walletWarning(wallet.device, wallet.choice);
+            const warning = walletWarning(wallet.choice);
             const isBest = wallet.uid === bestWalletUid;
+            const walletOptions = walletOptionsFor(wallet.device, wallet.subcategory);
             return (
               <div key={wallet.uid}>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {wallets.length > 1 && (
                     <label
                       className="flex shrink-0 cursor-pointer items-center justify-center"
@@ -498,7 +529,7 @@ export default function BetaV2ApplicationForm() {
                   )}
                   <select
                     value={wallet.device}
-                    onChange={(e) => updateWalletDevice(wallet.uid, e.target.value as WalletDevice)}
+                    onChange={(e) => updateWalletDevice(wallet.uid, e.target.value as WalletDeviceChoice)}
                     className="cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none"
                     style={{ ...selectStyle, minWidth: 130 }}
                   >
@@ -506,6 +537,24 @@ export default function BetaV2ApplicationForm() {
                     <option value="desktop">Desktop</option>
                     <option value="browser">Browser</option>
                     <option value="not_sure">Not sure yet</option>
+                  </select>
+
+                  <select
+                    value={wallet.subcategory}
+                    onChange={(e) => updateWalletSubcategory(wallet.uid, e.target.value as WalletSubcategory)}
+                    disabled={wallet.device === "not_sure"}
+                    className="cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none disabled:opacity-80"
+                    style={{ ...selectStyle, minWidth: 130 }}
+                  >
+                    {wallet.device === "not_sure" ? (
+                      <option value="">No platform</option>
+                    ) : (
+                      getSubcategoryOptions(wallet.device).map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))
+                    )}
                   </select>
 
                   {wallet.device === "not_sure" ? (
@@ -524,9 +573,9 @@ export default function BetaV2ApplicationForm() {
                       className="min-w-0 flex-1 cursor-pointer rounded-xl px-4 py-2.5 text-sm outline-none"
                       style={selectStyle}
                     >
-                      {WALLET_OPTIONS[wallet.device].map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
+                      {walletOptions.map((option) => (
+                        <option key={option.variantId} value={option.variantId}>
+                          {walletOptionLabel(option)}
                         </option>
                       ))}
                       <option value="other">Other</option>
@@ -551,7 +600,11 @@ export default function BetaV2ApplicationForm() {
                     className="mt-1 text-center text-xs font-medium"
                     style={{ color: "var(--accent-red, #e05252)", lineHeight: 1.45 }}
                   >
-                    {warning}
+                    {warning.split("\n").map((line) => (
+                      <span key={line} className="block">
+                        {line}
+                      </span>
+                    ))}
                   </p>
                 )}
               </div>
@@ -594,6 +647,12 @@ export default function BetaV2ApplicationForm() {
         <label style={labelStyle}>
           What do you want to test? <span style={{ color: "var(--accent-red, #e05252)" }}>*</span>
         </label>
+        {brand && (
+          <p className="mb-2 text-xs" style={{ color: "var(--fg-muted)", lineHeight: 1.55 }}>
+            This application is tagged for {brand.displayName}; you can still add another wallet if
+            you plan to test more than one.
+          </p>
+        )}
         <div className="flex flex-col gap-2">
           <label
             className="flex items-start gap-3 rounded-xl px-3 py-2.5 cursor-pointer transition-colors"

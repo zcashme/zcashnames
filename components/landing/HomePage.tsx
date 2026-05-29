@@ -6,6 +6,7 @@ import AnimatedHeadline from "@/components/landing/AnimatedHeadline";
 import MarketStats from "@/components/landing/MarketStats";
 import HowItWorks from "@/components/landing/HowItWorks";
 import FAQ from "@/components/landing/FAQ";
+import PartnerReel from "@/components/landing/PartnerReel";
 import type { NetworkStats as Stats } from "@/lib/network-stats";
 
 const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
@@ -97,6 +98,7 @@ export default function HomePage({ form, actionLink, stats, subtitle, collapsed 
       <div className="relative z-[2] -mt-4 mb-2 flex justify-center">
         {actionLink}
       </div>
+      <PartnerReel />
       <HowItWorks />
       <FAQ />
 

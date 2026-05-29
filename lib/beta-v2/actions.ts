@@ -11,6 +11,23 @@ import { CONTACT_KINDS, type ContactKind } from "@/lib/types";
 import { sendBetaV2ApplicationNotice } from "@/lib/email/beta-application-v2";
 import { sendBetaInviteEmail } from "@/lib/email/beta-invite";
 import { setTesterCookie, setStageCookie } from "@/lib/beta/gate";
+import {
+  deviceLabel,
+  findVariantByWalletIdAndPlatform,
+  getWalletVariant,
+  isWalletDevice,
+  isWalletDeviceChoice,
+  isWalletSubcategory,
+  isWalletVariantId,
+  subcategoryLabel,
+  walletVariantLabel,
+  type WalletBrandSlug,
+  type WalletChoice,
+  type WalletDevice,
+  type WalletDeviceChoice,
+  type WalletSubcategory,
+  type WalletVariantId,
+} from "@/lib/wallets/catalog";
 
 export type BetaV2ApplicationResult =
   | { ok: true }
@@ -24,41 +41,33 @@ const APP_MAX_CONTACT = 200;
 const APP_MAX_WALLET_NAME = 200;
 const APP_MAX_WALLET_ROWS = 12;
 
-const PLANNED_WALLET_LABELS = {
-  desktop_zingo: "Desktop: Zingo!",
-  desktop_vizor: "Desktop: Vizor",
-  mobile_zingo: "Mobile: Zingo",
-  mobile_zkool: "Mobile: Zkool",
-  mobile_unstoppable: "Mobile: Unstoppable",
-  mobile_zodl: "Mobile: Zodl",
-  mobile_edge: "Mobile: Edge",
-  mobile_cake: "Mobile: Cake",
-  mobile_zipher: "Mobile: Zipher",
-  browser_brave: "Browser: Brave",
-  browser_noir: "Browser: Noir",
-  not_sure: "Not sure yet",
-} as const;
-
-type PlannedWallet = keyof typeof PLANNED_WALLET_LABELS;
-type OtherWalletDevice = "desktop" | "mobile" | "browser";
-type WalletDevice = OtherWalletDevice | "not_sure";
 type WalletDetail =
   | {
-      device: WalletDevice;
-      choice: PlannedWallet;
-      value: PlannedWallet;
+      device: WalletDeviceChoice;
+      subcategory: WalletSubcategory | null;
+      choice: "not_sure";
+      value: "not_sure";
       label: string;
       isPrimary: boolean;
     }
   | {
-      device: OtherWalletDevice;
+      device: WalletDevice;
+      subcategory: WalletSubcategory;
       choice: "other";
       otherName: string;
       label: string;
       isPrimary: boolean;
+    }
+  | {
+      device: WalletDevice;
+      subcategory: WalletSubcategory;
+      choice: WalletVariantId;
+      value: WalletVariantId;
+      walletId: string;
+      brandSlug: WalletBrandSlug;
+      label: string;
+      isPrimary: boolean;
     };
-
-const WALLET_DEVICES = new Set<string>(["not_sure", "desktop", "mobile", "browser"]);
 
 function slugifyId(displayName: string): string {
   const slug = displayName
@@ -96,21 +105,37 @@ function isValidEmail(v: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
-function isPlannedWallet(v: string): v is PlannedWallet {
-  return v in PLANNED_WALLET_LABELS;
-}
-
-function formatDeviceLabel(device: OtherWalletDevice): string {
-  return device.charAt(0).toUpperCase() + device.slice(1);
-}
-
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-function walletMatchesDevice(wallet: PlannedWallet, device: WalletDevice): boolean {
-  if (wallet === "not_sure") return true;
-  return wallet.startsWith(`${device}_`);
+function normalizeSubcategory(value: string): string {
+  return value === "chrome_extension" ? "chrome" : value;
+}
+
+function inferFallbackRow(choice: string, formData: FormData): Record<string, unknown> {
+  if (choice === "other") {
+    return {
+      device: String(formData.get("other_wallet_device") ?? "").trim(),
+      choice,
+      other_name: String(formData.get("other_wallet_name") ?? "").trim(),
+    };
+  }
+  if (choice === "not_sure") return { device: "not_sure", choice };
+
+  const variant = getWalletVariant(choice);
+  if (variant) {
+    return {
+      device: variant.device,
+      subcategory: variant.subcategory,
+      choice: variant.variantId,
+      variant_id: variant.variantId,
+      wallet_id: variant.walletId,
+      brand_slug: variant.brandSlug,
+    };
+  }
+
+  return { choice };
 }
 
 function parseWalletDetails(formData: FormData): { details: WalletDetail[] } | { error: string } {
@@ -127,17 +152,7 @@ function parseWalletDetails(formData: FormData): { details: WalletDetail[] } | {
       return { error: "Pick a valid wallet option." };
     }
   } else if (fallbackChoice) {
-    rows = [
-      {
-        device: fallbackChoice === "other"
-          ? String(formData.get("other_wallet_device") ?? "").trim()
-          : fallbackChoice === "not_sure"
-            ? "not_sure"
-            : fallbackChoice.split("_")[0],
-        choice: fallbackChoice,
-        other_name: String(formData.get("other_wallet_name") ?? "").trim(),
-      },
-    ];
+    rows = [inferFallbackRow(fallbackChoice, formData)];
   } else {
     return { error: "Pick which wallet you plan to use." };
   }
@@ -150,28 +165,41 @@ function parseWalletDetails(formData: FormData): { details: WalletDetail[] } | {
     if (!isRecord(row)) return { error: "Pick a valid wallet option." };
 
     const device = String(row.device ?? "").trim();
+    const subcategoryRaw = row.subcategory == null ? "" : normalizeSubcategory(String(row.subcategory).trim());
     const choice = String(row.choice ?? "").trim();
+    const variantId = String(row.variant_id ?? row.variantId ?? choice).trim();
     const isPrimary = index === 0;
 
-    if (!WALLET_DEVICES.has(device)) {
+    if (!isWalletDeviceChoice(device)) {
       return { error: "Pick a valid wallet category." };
     }
-    const walletDevice = device as WalletDevice;
 
     if (choice === "not_sure") {
+      if (device === "not_sure" && subcategoryRaw) {
+        return { error: "Pick a valid wallet platform." };
+      }
+      if (device !== "not_sure" && !isWalletSubcategory(subcategoryRaw)) {
+        return { error: "Pick a valid wallet platform." };
+      }
+      const subcategory = device === "not_sure" ? null : (subcategoryRaw as WalletSubcategory);
       details.push({
-        device: walletDevice,
+        device,
+        subcategory,
         choice: "not_sure",
         value: "not_sure",
-        label: walletDevice === "not_sure"
-          ? PLANNED_WALLET_LABELS.not_sure
-          : `${formatDeviceLabel(walletDevice as OtherWalletDevice)}: Not sure yet`,
+        label: device === "not_sure"
+          ? "Not sure yet"
+          : `${deviceLabel(device)} ${subcategoryLabel(subcategory as WalletSubcategory)}: Not sure yet`,
         isPrimary,
       });
       continue;
     }
 
-    if (walletDevice === "not_sure") return { error: "Pick a valid wallet option." };
+    if (device === "not_sure") return { error: "Pick a valid wallet option." };
+    if (!isWalletSubcategory(subcategoryRaw)) {
+      return { error: "Pick a valid wallet platform." };
+    }
+    const subcategory = subcategoryRaw;
 
     if (choice === "other") {
       const otherName = String(row.other_name ?? row.otherName ?? "").trim();
@@ -181,24 +209,33 @@ function parseWalletDetails(formData: FormData): { details: WalletDetail[] } | {
       }
 
       details.push({
-        device: device as OtherWalletDevice,
+        device,
+        subcategory,
         choice: "other",
         otherName,
-        label: `Other: ${formatDeviceLabel(device as OtherWalletDevice)} - ${otherName}`,
+        label: `Other: ${deviceLabel(device)} ${subcategoryLabel(subcategory)} - ${otherName}`,
         isPrimary,
       });
       continue;
     }
 
-    if (!isPlannedWallet(choice) || !walletMatchesDevice(choice, device as WalletDevice)) {
+    let variant = isWalletVariantId(variantId) ? getWalletVariant(variantId) : null;
+    if (!variant && isWalletDevice(device)) {
+      variant = findVariantByWalletIdAndPlatform(choice, device, subcategory);
+    }
+
+    if (!variant || variant.device !== device || variant.subcategory !== subcategory) {
       return { error: "Pick a valid wallet option." };
     }
 
     details.push({
-      device: device as WalletDevice,
-      choice,
-      value: choice,
-      label: `${PLANNED_WALLET_LABELS[choice]} (${choice})`,
+      device,
+      subcategory,
+      choice: variant.variantId,
+      value: variant.variantId,
+      walletId: variant.walletId,
+      brandSlug: variant.brandSlug,
+      label: `${walletVariantLabel(variant)} (${variant.variantId})`,
       isPrimary,
     });
   }
@@ -238,30 +275,54 @@ export async function submitBetaV2Application(
 
   const primaryWallet = parsedWallets.details[0];
   if (!primaryWallet) return { ok: false, error: "Add at least one planned wallet." };
-  const plannedWallet: PlannedWallet | null =
+  const plannedWallet: WalletChoice | null =
     primaryWallet.choice === "other" ? null : primaryWallet.value;
-  const otherWalletDevice: OtherWalletDevice | null =
+  const otherWalletDevice: WalletDevice | null =
     primaryWallet.choice === "other" ? primaryWallet.device : null;
   const otherWalletNameForDb: string | null =
     primaryWallet.choice === "other" ? primaryWallet.otherName : null;
   const walletLabel = primaryWallet.label;
-  const plannedWalletsDetail = parsedWallets.details.map((wallet) =>
-    wallet.choice === "other"
-      ? {
-          device: wallet.device,
-          choice: wallet.choice,
-          other_name: wallet.otherName,
-          label: wallet.label,
-          is_primary: wallet.isPrimary,
-        }
-      : {
-          device: wallet.device,
-          choice: wallet.choice,
-          value: wallet.value,
-          label: wallet.label,
-          is_primary: wallet.isPrimary,
-        },
-  );
+  const plannedWalletsDetail = parsedWallets.details.map((wallet) => {
+    if (wallet.choice === "other") {
+      return {
+        device: wallet.device,
+        subcategory: wallet.subcategory,
+        choice: wallet.choice,
+        variant_id: null,
+        wallet_id: null,
+        brand_slug: null,
+        other_name: wallet.otherName,
+        label: wallet.label,
+        is_primary: wallet.isPrimary,
+      };
+    }
+
+    if (wallet.choice === "not_sure") {
+      return {
+        device: wallet.device,
+        subcategory: wallet.subcategory,
+        choice: wallet.choice,
+        variant_id: null,
+        wallet_id: null,
+        brand_slug: null,
+        value: wallet.value,
+        label: wallet.label,
+        is_primary: wallet.isPrimary,
+      };
+    }
+
+    return {
+      device: wallet.device,
+      subcategory: wallet.subcategory,
+      choice: wallet.choice,
+      variant_id: wallet.value,
+      wallet_id: wallet.walletId,
+      brand_slug: wallet.brandSlug,
+      value: wallet.value,
+      label: wallet.label,
+      is_primary: wallet.isPrimary,
+    };
+  });
 
   const contacts: Record<ContactKind, string> = {
     email: "",

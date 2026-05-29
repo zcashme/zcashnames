@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="96" viewBox="0 0 420 96" role="img" aria-labelledby="title">
+  <title id="title">Brave placeholder logo</title>
+  <rect width="420" height="96" fill="none"/>
+  <circle cx="48" cy="48" r="30" fill="none" stroke="#f8fafc" stroke-width="6"/>
+  <path d="M34 50h28M48 34v28" stroke="#f8fafc" stroke-width="6" stroke-linecap="round"/>
+  <text x="96" y="58" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700">Brave</text>
+</svg>

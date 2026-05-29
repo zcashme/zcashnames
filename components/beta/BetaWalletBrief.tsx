@@ -1,7 +1,19 @@
 import Link from "next/link";
+import WalletBrandLogo from "@/components/wallets/WalletBrandLogo";
+import WalletFeatureMatrix from "@/components/wallets/WalletFeatureMatrix";
 import { BRAND } from "@/lib/zns/brand";
+import {
+  deviceLabel,
+  getWalletBrand,
+  getWalletVariantsForBrand,
+  subcategoryLabel,
+  walletVariantLabel,
+  type WalletBrand,
+  type WalletBrandSlug,
+  type WalletVariant,
+} from "@/lib/wallets/catalog";
 
-export const BETA_V2_SECTIONS: { id: string; label: string }[] = [
+export const BETA_WALLET_BRIEF_SECTIONS = [
   { id: "whats-new", label: "What's New" },
   { id: "reporting-rewards", label: "Reporting and Rewards" },
   { id: "you-should-know", label: "You Should Know" },
@@ -48,12 +60,60 @@ function communityLinks() {
     social.label === "Signal" || social.label === "Discord" || social.label === "Telegram"
   );
 }
-export default function BetaV2Brief() {
+
+function platformList(variants: readonly WalletVariant[]): string {
+  const platforms = Array.from(
+    new Set(variants.map((variant) => `${deviceLabel(variant.device)} ${subcategoryLabel(variant.subcategory)}`)),
+  );
+  return platforms.join(", ");
+}
+
+function featureSummary(variants: readonly WalletVariant[]): string {
+  const features = [
+    variants.some((variant) => variant.features.resolveName) ? "name resolution" : null,
+    variants.some((variant) => variant.features.nameActions.buy) ? "name purchases" : null,
+    variants.some((variant) => variant.features.nameActions.list) ? "listings" : null,
+    variants.some((variant) => variant.features.viewCollection) ? "collection views" : null,
+    variants.some((variant) => variant.features.receiveUaddr || variant.features.receiveTaddr)
+      ? "receive flows"
+      : null,
+    variants.some((variant) => variant.features.scanURI || variant.features.tapURI || variant.features.pasteURI)
+      ? "URI handling"
+      : null,
+  ].filter(Boolean);
+
+  if (features.length === 0) return "its platform-specific ZNS behavior";
+  if (features.length === 1) return features[0] ?? "its platform-specific ZNS behavior";
+  return `${features.slice(0, -1).join(", ")} and ${features[features.length - 1]}`;
+}
+
+function brandedReadMoreLinks(brand: WalletBrand) {
+  return [
+    brand.supportGuideUrl ? { label: `${brand.displayName} support guide`, href: brand.supportGuideUrl } : null,
+    brand.announcementUrl ? { label: `${brand.displayName} x ZcashNames announcement`, href: brand.announcementUrl } : null,
+    brand.websiteUrl ? { label: `${brand.displayName} website`, href: brand.websiteUrl } : null,
+    brand.liveDiscussionUrl ? { label: `${brand.displayName} x ZcashNames live discussion`, href: brand.liveDiscussionUrl } : null,
+    brand.demoUrl ? { label: `${brand.displayName} demo`, href: brand.demoUrl } : null,
+    ...(brand.socials ?? []).map((social) => ({ label: `${brand.displayName} on ${social.label}`, href: social.href })),
+  ].filter((link): link is { label: string; href: string } => !!link);
+}
+
+export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandSlug }) {
+  const brand = getWalletBrand(brandSlug);
+  const variants = getWalletVariantsForBrand(brandSlug);
   const community = communityLinks();
 
+  if (!brand) return null;
+
+  const readMoreLinks = brandedReadMoreLinks(brand);
+  const getStartedUrl = brand.downloadUrl ?? brand.demoUrl ?? brand.websiteUrl;
+
   return (
-    <article className="max-w-2xl">
+    <article className="max-w-3xl">
       <section id="whats-new">
+        <div className="mb-5">
+          <WalletBrandLogo brand={brand} />
+        </div>
         <span
           className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3"
           style={{
@@ -74,11 +134,20 @@ export default function BetaV2Brief() {
           sends reach the right shielded addresses, sales complete cleanly, and proceeds arrive in
           the correct wallet.
         </p>
-        <p style={p}>
-          There are several wallets available across mobile, desktop, and browser environments.
-          Each integration supports different features and workflows. For the full feature matrix,
-          see <Link href="/beta/wallets" style={linkStyle}>/beta/wallets</Link>.
-        </p>
+        {brand.partner ? (
+          <p style={p}>
+            That's why ZcashNames is partnering with {brand.displayName} to offer{" "}
+            {variants.map((variant) => variant.variantId).join(", ")} on {platformList(variants)}.
+            It is especially useful for testing {featureSummary(variants)}.
+          </p>
+        ) : (
+          <p style={p}>
+            {brand.displayName} is included in the beta plan as{" "}
+            {variants.map((variant) => variant.variantId).join(", ")} on {platformList(variants)}.
+            It is especially useful for testing {featureSummary(variants)}.
+          </p>
+        )}
+        <WalletFeatureMatrix variants={variants} />
       </section>
 
       <hr style={divider} />
@@ -144,9 +213,17 @@ export default function BetaV2Brief() {
       <section id="ready">
         <h2 style={h2}>Ready? Get Set</h2>
         <p style={p}>
-          <Link href="/beta/apply" style={linkStyle}>Apply today</Link>. If selected, you will
-          receive an access code and further instructions through your preferred contact method.
+          <Link href={`/beta/apply/${brand.slug}`} style={linkStyle}>Apply today</Link>. If
+          selected, you will receive an access code and further instructions through your preferred
+          contact method.
         </p>
+        {getStartedUrl && (
+          <p style={p}>
+            <a href={getStartedUrl} target="_blank" rel="noreferrer" style={linkStyle}>
+              Download {brand.displayName} and get a feel for it today.
+            </a>
+          </p>
+        )}
       </section>
 
       <hr style={divider} />
@@ -154,14 +231,18 @@ export default function BetaV2Brief() {
       <section id="read-more">
         <h2 style={h2}>Read more</h2>
         <ul className="list-disc pl-5">
-          <li style={li}>
-            <Link href="/docs/zns-developer-guide" style={linkStyle}>Developer guide</Link>
-          </li>
-          <li style={li}>
-            <a href="https://github.com/zcashme/ZNS" target="_blank" rel="noreferrer" style={linkStyle}>
-              Code
-            </a>
-          </li>
+          {variants.map((variant) => (
+            <li key={variant.variantId} style={li}>
+              {walletVariantLabel(variant)}
+            </li>
+          ))}
+          {readMoreLinks.map((link) => (
+            <li key={link.href} style={li}>
+              <a href={link.href} target="_blank" rel="noreferrer" style={linkStyle}>
+                {link.label}
+              </a>
+            </li>
+          ))}
         </ul>
       </section>
     </article>
