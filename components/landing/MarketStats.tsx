@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { NetworkStats } from "@/lib/network-stats";
 
 type StatKey = "claimed" | "forSale" | "syncedHeight" | "waitlist" | "referred" | "rewardsPot";
@@ -11,6 +11,8 @@ type StatItem = {
   value: string;
   helpText: string;
 };
+
+const PROXIMITY_RADIUS = 170;
 
 function buildItems(stats: NetworkStats): StatItem[] {
   if (stats.mode === "waitlist") {
@@ -30,19 +32,56 @@ function buildItems(stats: NetworkStats): StatItem[] {
 export default function MarketStats({ stats }: { stats: NetworkStats }) {
   const [activeKey, setActiveKey] = useState<StatKey | null>(null);
   const [hoverKey, setHoverKey] = useState<StatKey | null>(null);
+  const itemRefs = useRef(new Map<StatKey, HTMLButtonElement>());
 
   const items = buildItems(stats);
   const activeItem = items.find((item) => item.key === activeKey);
   const isHelpVisible = Boolean(activeItem);
 
+  const register = (key: StatKey, node: HTMLButtonElement | null) => {
+    if (node) {
+      itemRefs.current.set(key, node);
+      return;
+    }
+    itemRefs.current.delete(key);
+  };
+
+  const resetItems = () => {
+    for (const node of itemRefs.current.values()) {
+      node.style.setProperty("--stats-scale", "1");
+      node.style.setProperty("--stats-shadow-opacity", "0");
+    }
+  };
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.pointerType === "touch") return;
+
+    for (const node of itemRefs.current.values()) {
+      const rect = node.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+      const influence = Math.max(0, 1 - distance / PROXIMITY_RADIUS);
+      const eased = influence * influence;
+
+      node.style.setProperty("--stats-scale", `${1 + eased * 0.08}`);
+      node.style.setProperty("--stats-shadow-opacity", `${eased * 0.22}`);
+    }
+  };
+
   return (
-    <section className="relative z-[2] w-full px-4 pb-10 sm:px-6 sm:pb-12 max-[700px]:pb-8">
+    <section
+      className="relative z-[2] w-full px-4 pb-10 sm:px-6 sm:pb-12 max-[700px]:pb-8"
+      onPointerMove={handlePointerMove}
+      onPointerLeave={resetItems}
+    >
       <div className="mx-auto w-full max-w-2xl rounded-[24px] p-3 sm:max-w-3xl sm:p-4 xl:max-w-4xl">
         <div className="grid grid-cols-3">
           {items.map((item, index) => {
             const isHighlighted = hoverKey === item.key || activeKey === item.key;
             return (
               <button
+                ref={(node) => register(item.key, node)}
                 key={item.key}
                 type="button"
                 aria-pressed={activeKey === item.key}
@@ -52,8 +91,12 @@ export default function MarketStats({ stats }: { stats: NetworkStats }) {
                 onMouseLeave={() => setHoverKey((curr) => curr === item.key ? null : curr)}
                 onFocus={() => setHoverKey(item.key)}
                 onBlur={() => setHoverKey((curr) => curr === item.key ? null : curr)}
-                className={`cursor-pointer px-3 py-2 text-center transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)] sm:px-5 sm:py-3 ${index > 0 ? "border-l" : ""}`}
-                style={{ borderColor: "var(--partner-card-border)" }}
+                className={`cursor-pointer px-3 py-2 text-center transition-[transform,box-shadow,border-color] duration-200 ease-out will-change-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)] sm:px-5 sm:py-3 ${index > 0 ? "border-l" : ""}`}
+                style={{
+                  borderColor: "var(--partner-card-border)",
+                  transform: "translateZ(0) scale(var(--stats-scale, 1))",
+                  boxShadow: "0 18px 36px rgba(0, 0, 0, var(--stats-shadow-opacity, 0))",
+                }}
               >
                 <div
                   className="mx-1 rounded-[0.8rem] px-2 py-2 transition-colors duration-200 ease-out sm:px-3 sm:py-2.5"

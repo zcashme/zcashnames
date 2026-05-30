@@ -2,6 +2,7 @@
 
 import type React from "react";
 import type { Action, NameAvailabilityState } from "@/lib/types";
+import { usePointerProximity } from "@/components/hooks/usePointerProximity";
 
 // Internal badge shell: maps a semantic variant (positive/negative/neutral) to
 // CSS token classes consumed by the theme system.
@@ -165,14 +166,30 @@ export function NameStatusButtons({
   hasPendingBuy?: boolean;
 }) {
   const justifyClass = align === "center" ? "justify-center" : "justify-start";
+  const proximity = usePointerProximity<HTMLButtonElement>({
+    radius: 145,
+    maxScaleBoost: 0.05,
+    maxShadowOpacity: 0.14,
+  });
+
+  const buttonStyle: React.CSSProperties = {
+    transform: "translateZ(0) scale(var(--prox-scale, 1))",
+    boxShadow: "0 14px 28px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
+  };
 
   if (status === "available") {
     return (
-      <div className={`relative z-[1] mt-3 flex items-center gap-2 ${justifyClass} max-[700px]:flex-wrap`}>
+      <div
+        className={`relative z-[1] mt-3 flex items-center gap-2 ${justifyClass} max-[700px]:flex-wrap`}
+        onPointerMove={proximity.handlePointerMove}
+        onPointerLeave={proximity.handlePointerLeave}
+      >
         <button
+          ref={(node) => proximity.register("claim", node)}
           type="button"
           className="home-result-action is-primary"
           onClick={() => onAction("CLAIM")}
+          style={buttonStyle}
         >
           Claim Name
         </button>
@@ -182,27 +199,37 @@ export function NameStatusButtons({
 
   if (status === "forsale") {
     return (
-      <div className={`relative z-[1] mt-3 flex items-center gap-2 ${justifyClass} max-[700px]:flex-wrap`}>
+      <div
+        className={`relative z-[1] mt-3 flex items-center gap-2 ${justifyClass} max-[700px]:flex-wrap`}
+        onPointerMove={proximity.handlePointerMove}
+        onPointerLeave={proximity.handlePointerLeave}
+      >
         <button
+          ref={(node) => proximity.register("buy", node)}
           type="button"
           className="home-result-action is-primary"
           onClick={() => onAction("BUY")}
+          style={buttonStyle}
         >
           Buy Now
         </button>
         <button
+          ref={(node) => proximity.register("delist", node)}
           type="button"
           className="home-result-action is-secondary"
           onClick={() => onAction("DELIST")}
-                        disabled={hasPendingBuy}
-                        title={hasPendingBuy ? "Cannot delist while a purchase is pending" : "Remove this name from the marketplace"}
+          disabled={hasPendingBuy}
+          title={hasPendingBuy ? "Cannot delist while a purchase is pending" : "Remove this name from the marketplace"}
+          style={buttonStyle}
         >
           Delist from Sale
         </button>
         <button
+          ref={(node) => proximity.register("release", node)}
           type="button"
           className="home-result-action is-secondary"
           onClick={() => onAction("RELEASE")}
+          style={buttonStyle}
         >
           Release Name
         </button>
@@ -212,25 +239,35 @@ export function NameStatusButtons({
 
   if (status === "unavailable") {
     return (
-      <div className={`relative z-[1] mt-3 flex items-center gap-2 ${justifyClass} max-[700px]:flex-wrap`}>
+      <div
+        className={`relative z-[1] mt-3 flex items-center gap-2 ${justifyClass} max-[700px]:flex-wrap`}
+        onPointerMove={proximity.handlePointerMove}
+        onPointerLeave={proximity.handlePointerLeave}
+      >
         <button
+          ref={(node) => proximity.register("update", node)}
           type="button"
           className="home-result-action is-secondary"
           onClick={() => onAction("UPDATE")}
+          style={buttonStyle}
         >
           Update Address
         </button>
         <button
+          ref={(node) => proximity.register("list", node)}
           type="button"
           className="home-result-action is-secondary"
           onClick={() => onAction("LIST")}
+          style={buttonStyle}
         >
           List for Sale
         </button>
         <button
+          ref={(node) => proximity.register("release", node)}
           type="button"
           className="home-result-action is-secondary"
           onClick={() => onAction("RELEASE")}
+          style={buttonStyle}
         >
           Release Name
         </button>
@@ -240,11 +277,17 @@ export function NameStatusButtons({
 
   if (status === "reserved") {
     return (
-      <div className={`relative z-[1] mt-3 flex items-center gap-2 ${justifyClass} max-[700px]:flex-wrap`}>
+      <div
+        className={`relative z-[1] mt-3 flex items-center gap-2 ${justifyClass} max-[700px]:flex-wrap`}
+        onPointerMove={proximity.handlePointerMove}
+        onPointerLeave={proximity.handlePointerLeave}
+      >
         <button
+          ref={(node) => proximity.register("claim", node)}
           type="button"
           className="home-result-action is-primary"
           onClick={() => onAction("CLAIM")}
+          style={buttonStyle}
         >
           Claim Name
         </button>

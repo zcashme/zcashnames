@@ -1,10 +1,15 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { usePointerProximity } from "@/components/hooks/usePointerProximity";
+
 // Static marketing section: 3-step process diagram (responsive arrows: vertical on mobile,
 // horizontal on desktop) followed by a BenefitsBento sub-component.
 // No state, no data fetching — pure presentation.
 // Shares heading style with FAQ via the same CSS variable tokens.
 type Benefit = {
   title: string;
-  description: React.ReactNode;
+  description: ReactNode;
   soon?: boolean;
 };
 
@@ -64,8 +69,18 @@ const benefitGroups: BenefitGroup[] = [
 ];
 
 function BenefitsBento() {
+  const proximity = usePointerProximity<HTMLDivElement>({
+    radius: 180,
+    maxScaleBoost: 0.03,
+    maxShadowOpacity: 0.18,
+  });
+
   return (
-    <div className="flex flex-col gap-10">
+    <div
+      className="flex flex-col gap-10"
+      onPointerMove={proximity.handlePointerMove}
+      onPointerLeave={proximity.handlePointerLeave}
+    >
       {benefitGroups.map((group, gi) => (
         <div key={gi}>
           <h3
@@ -78,8 +93,14 @@ function BenefitsBento() {
             {group.items.map((b, i) => (
               <div
                 key={i}
+                ref={(node) => proximity.register(`${group.title}-${b.title}`, node)}
                 className="relative rounded-xl p-6 overflow-hidden"
-                style={{ border: "1px solid var(--faq-border)" }}
+                style={{
+                  border: "1px solid var(--faq-border)",
+                  background: "transparent",
+                  transform: "translateZ(0) scale(var(--prox-scale, 1))",
+                  boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
+                }}
               >
                 <div
                   className="absolute inset-0 pointer-events-none opacity-20"
@@ -117,6 +138,12 @@ function BenefitsBento() {
 }
 
 export default function HowItWorks() {
+  const proximity = usePointerProximity<HTMLDivElement>({
+    radius: 180,
+    maxScaleBoost: 0.035,
+    maxShadowOpacity: 0.2,
+  });
+
   return (
     <section className="w-full max-w-4xl mx-auto px-6 py-24">
       {/* Section heading - same style as FAQ */}
@@ -138,12 +165,22 @@ export default function HowItWorks() {
       </div>
 
       {/* Step boxes with arrows - side-by-side on desktop, stacked on mobile */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr] items-stretch gap-4 md:gap-0 mb-14">
+      <div
+        className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr] items-stretch gap-4 md:gap-0 mb-14"
+        onPointerMove={proximity.handlePointerMove}
+        onPointerLeave={proximity.handlePointerLeave}
+      >
         {/* Step 1 */}
         <div className="flex flex-col">
           <div
+            ref={(node) => proximity.register("step-1", node)}
             className="rounded-xl p-6 flex-1"
-            style={{ border: "1px solid var(--faq-border)" }}
+            style={{
+              border: "1px solid var(--faq-border)",
+              background: "transparent",
+              transform: "translateZ(0) scale(var(--prox-scale, 1))",
+              boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
+            }}
           >
             <div
               className="mb-3 text-3xl font-bold italic leading-none"
@@ -178,8 +215,14 @@ export default function HowItWorks() {
         {/* Step 2 */}
         <div className="flex flex-col">
           <div
+            ref={(node) => proximity.register("step-2", node)}
             className="rounded-xl p-6 flex-1"
-            style={{ border: "1px solid var(--faq-border)" }}
+            style={{
+              border: "1px solid var(--faq-border)",
+              background: "transparent",
+              transform: "translateZ(0) scale(var(--prox-scale, 1))",
+              boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
+            }}
           >
             <div
               className="mb-3 text-3xl font-bold italic leading-none"
@@ -214,8 +257,14 @@ export default function HowItWorks() {
         {/* Step 3 */}
         <div className="flex flex-col">
           <div
+            ref={(node) => proximity.register("step-3", node)}
             className="rounded-xl p-6 flex-1"
-            style={{ border: "1px solid var(--faq-border)" }}
+            style={{
+              border: "1px solid var(--faq-border)",
+              background: "transparent",
+              transform: "translateZ(0) scale(var(--prox-scale, 1))",
+              boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
+            }}
           >
             <div
               className="mb-3 text-3xl font-bold italic leading-none"

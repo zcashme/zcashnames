@@ -7,6 +7,7 @@
 import Image from "next/image";
 import type { Action, Network, NameAvailabilityState } from "@/lib/types";
 import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
+import { usePointerProximity } from "@/components/hooks/usePointerProximity";
 import {
   NameStatusBadge,
   NameStatusButtons,
@@ -47,6 +48,11 @@ export default function HomeResultCard({
   const isForSale = availabilityState === "forsale";
   const isUnavailable = availabilityState === "unavailable";
   const showFeatureChips = isAvailable || isForSale;
+  const linkProximity = usePointerProximity<HTMLAnchorElement>({
+    radius: 145,
+    maxScaleBoost: 0.05,
+    maxShadowOpacity: 0.12,
+  });
   const footerChips = isAvailable
     ? [
         `${charCount} characters`,
@@ -121,21 +127,35 @@ export default function HomeResultCard({
             </div>
           )}
           {showFooterLinks && (
-            <div className="home-result-links">
+            <div
+              className="home-result-links"
+              onPointerMove={linkProximity.handlePointerMove}
+              onPointerLeave={linkProximity.handlePointerLeave}
+            >
               <a
+                ref={(node) => linkProximity.register(`explorer-${displayName}`, node)}
                 href={explorerUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="home-result-link inline-flex items-center gap-1.5 whitespace-nowrap leading-none"
+                style={{
+                  transform: "translateZ(0) scale(var(--prox-scale, 1))",
+                  boxShadow: "0 12px 26px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
+                }}
               >
                 <ZcashNamesLogoMark alt="Explorer logo" size={18} className="theme-media-home" />
                 <span className="inline-flex items-center leading-none">View in Explorer</span>
               </a>
               <a
+                ref={(node) => linkProximity.register(`zcashme-${displayName}`, node)}
                 href={zcashMeUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="home-result-link inline-flex items-center gap-1.5 whitespace-nowrap leading-none"
+                style={{
+                  transform: "translateZ(0) scale(var(--prox-scale, 1))",
+                  boxShadow: "0 12px 26px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
+                }}
               >
                 <Image
                   src="/assets/icons/zcashme-favicon-64.png"

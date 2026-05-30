@@ -15,8 +15,20 @@ type ShareDropdownProps = {
   systemShareLabel?: string;
   buttonClassName?: string;
   menuAlign?: "left" | "right";
+  menuDirection?: "down" | "up";
   showTriggerIcon?: boolean;
 };
+
+function buildShareMessageWithLink(message: string, shareUrl: string): string {
+  const trimmedMessage = message.trim();
+  const trimmedShareUrl = shareUrl.trim();
+
+  if (!trimmedShareUrl) return trimmedMessage;
+  if (trimmedMessage.includes(trimmedShareUrl)) return trimmedMessage;
+  if (!trimmedMessage) return trimmedShareUrl;
+
+  return `${trimmedMessage}\n${trimmedShareUrl}`;
+}
 
 export function ShareTriggerIcon() {
   return (
@@ -120,6 +132,7 @@ export default function ShareDropdown({
   systemShareLabel = "More ways",
   buttonClassName,
   menuAlign = "right",
+  menuDirection = "down",
   showTriggerIcon = true,
 }: ShareDropdownProps) {
   const { resolvedTheme } = useTheme();
@@ -128,6 +141,7 @@ export default function ShareDropdown({
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [open, setOpen] = useState(false);
   const copyState = useCopy();
+  const shareMessageWithLink = buildShareMessageWithLink(message, shareUrl);
 
   function clearCloseTimeout() {
     if (closeTimeoutRef.current) {
@@ -165,7 +179,7 @@ export default function ShareDropdown({
 
   async function handleCopy() {
     clearCloseTimeout();
-    await copyState.copy(message);
+    await copyState.copy(shareMessageWithLink);
     setOpen(true);
     closeTimeoutRef.current = setTimeout(() => {
       setOpen(false);
@@ -179,7 +193,7 @@ export default function ShareDropdown({
     }
 
     try {
-      await navigator.share({ text: message, url: shareUrl });
+      await navigator.share({ text: shareMessageWithLink });
       setOpen(false);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
@@ -192,11 +206,21 @@ export default function ShareDropdown({
     buttonClassName ??
     "inline-flex min-h-11 items-center gap-2 rounded-md border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading";
   const menuPositionClassName = menuAlign === "left" ? "left-0" : "right-0";
+  const menuDirectionClassName = menuDirection === "up" ? "bottom-full mb-2" : "top-full mt-2";
+  const hiddenOffsetClassName = menuDirection === "up" ? "translate-y-1" : "-translate-y-1";
   const rootAlignmentClassName = menuAlign === "left" ? "items-start" : "items-end";
   const triggerRowClassName = menuAlign === "left" ? "items-start" : "items-end";
   const menuClassName = monochrome
     ? "border-[rgba(155,188,15,0.62)] bg-[rgba(15,56,15,0.96)] shadow-[0_18px_40px_rgba(15,56,15,0.62)]"
     : "border-border-muted bg-[var(--color-card)] shadow-lg";
+  const menuItems = [
+    <MenuItem key="copy" onClick={() => void handleCopy()} icon={<ShareCopyIcon />} label={copyState.copied ? copiedLabel : copyLabel} monochrome={monochrome} />,
+    <MenuItem key="email" href={buildEmailShareHref(emailSubject, shareMessageWithLink)} icon={<EmailIcon />} label="Email" monochrome={monochrome} />,
+    <MenuItem key="telegram" href={buildTelegramShareHref(shareMessageWithLink)} icon={<TelegramIcon />} label="Telegram" monochrome={monochrome} />,
+    <MenuItem key="x" href={buildXShareHref(shareMessageWithLink)} icon={<XIcon />} label="X" monochrome={monochrome} />,
+    <MenuItem key="system" onClick={() => void handleSystemShare()} icon={<MoreIcon />} label={systemShareLabel} monochrome={monochrome} />,
+  ];
+  const orderedMenuItems = menuDirection === "up" ? [...menuItems].reverse() : menuItems;
 
   return (
     <div ref={rootRef} className={`relative flex flex-col gap-2 ${rootAlignmentClassName}`}>
@@ -217,17 +241,13 @@ export default function ShareDropdown({
       </div>
 
       <div
-        className={`absolute top-full z-20 mt-2 flex min-w-[220px] flex-col rounded-lg border p-2 transition-all duration-200 ease-out ${menuPositionClassName} ${menuClassName} ${
-          open ? "visible translate-y-0 opacity-100" : "pointer-events-none invisible -translate-y-1 opacity-0"
+        className={`absolute z-20 flex min-w-[220px] flex-col rounded-lg border p-2 transition-all duration-200 ease-out ${menuPositionClassName} ${menuDirectionClassName} ${menuClassName} ${
+          open ? "visible translate-y-0 opacity-100" : `pointer-events-none invisible ${hiddenOffsetClassName} opacity-0`
         }`}
         role="menu"
         aria-hidden={!open}
       >
-        <MenuItem onClick={() => void handleCopy()} icon={<ShareCopyIcon />} label={copyState.copied ? copiedLabel : copyLabel} monochrome={monochrome} />
-        <MenuItem href={buildEmailShareHref(emailSubject, message)} icon={<EmailIcon />} label="Email" monochrome={monochrome} />
-        <MenuItem href={buildTelegramShareHref(message)} icon={<TelegramIcon />} label="Telegram" monochrome={monochrome} />
-        <MenuItem href={buildXShareHref(message)} icon={<XIcon />} label="X" monochrome={monochrome} />
-        <MenuItem onClick={() => void handleSystemShare()} icon={<MoreIcon />} label={systemShareLabel} monochrome={monochrome} />
+        {orderedMenuItems}
       </div>
     </div>
   );

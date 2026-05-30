@@ -30,6 +30,7 @@ import {
   useSensors,
   useDraggable,
 } from "@dnd-kit/core";
+import { usePointerProximity } from "@/components/hooks/usePointerProximity";
 /* Security badge icons */
 
 function UserIcon() {
@@ -157,20 +158,24 @@ function SecurityBadge({
 
 /* Draggable chip */
 
-function DraggableChip({ chip, tiltClassName, offset, isBeingDragged }: {
+function DraggableChip({ chip, tiltClassName, offset, isBeingDragged, register }: {
   chip: ChipDef; tiltClassName: string;
   offset: { x: number; y: number }; isBeingDragged: boolean;
+  register: (key: string, node: HTMLDivElement | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: chip.id });
   const tx = offset.x + (transform?.x ?? 0);
   const ty = offset.y + (transform?.y ?? 0);
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        register(chip.id, node);
+      }}
       className="touch-none select-none outline-none"
       style={{
-        transform: `translate(${tx}px, ${ty}px)`,
-        filter: isBeingDragged ? "drop-shadow(0 16px 48px rgba(0,0,0,0.45))" : undefined,
+        transform: `translate(${tx}px, ${ty}px) scale(var(--prox-scale, 1))`,
+        filter: isBeingDragged ? "drop-shadow(0 16px 48px rgba(0,0,0,0.45))" : "drop-shadow(0 16px 40px rgba(0,0,0,var(--prox-shadow-opacity, 0)))",
         cursor: isBeingDragged ? "grabbing" : "grab",
       }}
       {...listeners}
@@ -512,6 +517,11 @@ export default function PhoneStage({ embedded = false, phoneSuffixMode = null }:
   );
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
   const [chipAnnouncement, setChipAnnouncement] = useState("");
+  const chipProximity = usePointerProximity<HTMLDivElement>({
+    radius: 190,
+    maxScaleBoost: 0.08,
+    maxShadowOpacity: 0.22,
+  });
 
   const chipSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
@@ -665,7 +675,11 @@ export default function PhoneStage({ embedded = false, phoneSuffixMode = null }:
     : "relative flex justify-center items-start h-[640px] md:h-[700px] pt-14 md:pt-20";
 
   const carouselContent = (
-    <div className="relative isolate w-full overflow-visible">
+    <div
+      className="relative isolate w-full overflow-visible"
+      onPointerMove={chipProximity.handlePointerMove}
+      onPointerLeave={chipProximity.handlePointerLeave}
+    >
       <StageGlow />
 
       <DndContext sensors={chipSensors} onDragStart={handleChipDragStart} onDragEnd={handleChipDragEnd}>
@@ -683,6 +697,7 @@ export default function PhoneStage({ embedded = false, phoneSuffixMode = null }:
                 tiltClassName={slot.tiltClassName}
                 offset={chipOffsets[chip.id]}
                 isBeingDragged={isBeingDragged}
+                register={chipProximity.register}
               />
             </div>
           );

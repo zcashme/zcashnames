@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePointerProximity } from "@/components/hooks/usePointerProximity";
 import FeedbackPanelBody from "./FeedbackPanelBody";
 
 interface Props {
@@ -36,6 +37,11 @@ export default function FeedbackModal({ network, initialTesterName }: Props) {
   const [isWide, setIsWide] = useState(false);
   const [tooltipStep, setTooltipStep] = useState<TooltipStep | null>(null);
   const [hasShownTooltipSequence, setHasShownTooltipSequence] = useState(false);
+  const proximity = usePointerProximity<HTMLButtonElement>({
+    radius: 170,
+    maxScaleBoost: 0.06,
+    maxShadowOpacity: 0.16,
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -77,20 +83,31 @@ export default function FeedbackModal({ network, initialTesterName }: Props) {
     <>
       {/* Floating launcher — hidden while the panel is open */}
       {!open && (
-        <button
-          type="button"
-          onClick={openPanel}
-          className="fixed bottom-5 right-5 z-[9999] flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer transition-transform hover:-translate-y-px"
-          style={primaryBtnStyle}
+        <div
+          className="fixed bottom-5 right-5 z-[9999]"
+          onPointerMove={proximity.handlePointerMove}
+          onPointerLeave={proximity.handlePointerLeave}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 scale-x-[-1]" aria-hidden="true">
-            <rect x="3" y="4" width="18" height="16" rx="2" />
-            <path d="M15 4v16" />
-            <path d="M8 12h5" />
-            <path d="M11 9l3 3-3 3" />
-          </svg>
-          Submit Feedback
-        </button>
+          <button
+            ref={(node) => proximity.register("feedback-launcher", node)}
+            type="button"
+            onClick={openPanel}
+            className="flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer transition-[transform,box-shadow] duration-150"
+            style={{
+              ...primaryBtnStyle,
+              transform: "translateZ(0) scale(var(--prox-scale, 1))",
+              boxShadow: "0 16px 34px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 scale-x-[-1]" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M15 4v16" />
+              <path d="M8 12h5" />
+              <path d="M11 9l3 3-3 3" />
+            </svg>
+            Submit Feedback
+          </button>
+        </div>
       )}
 
       {mounted &&

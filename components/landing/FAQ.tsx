@@ -1,5 +1,5 @@
 // FAQ accordion with grouped questions (basics, privacy, access, community).
-// Questions/answers are static data defined as a constant array — no API calls.
+// Questions/answers are static data defined as a constant array - no API calls.
 // Single openKey state enforces one-open-at-a-time.
 // Expand/collapse uses max-height + opacity transitions; active item gets a left border accent.
 "use client";
@@ -17,7 +17,6 @@ type FAQGroup = {
   items: FAQItem[];
 };
 
-// Static FAQ content — edits here reflect immediately on the landing page.
 const groups: FAQGroup[] = [
   {
     title: "The basics",
@@ -62,7 +61,7 @@ const groups: FAQGroup[] = [
       {
         question: "Does linking my name to an address hurt my privacy?",
         answer:
-          "No. Zcash shielded transactions keep amounts and addresses off the public ledger, so even someone who knows your .zcash name can\u2019t see your balance or activity. It\u2019s like sharing your email - people can reach you, but they can\u2019t read your inbox.",
+          "No. Zcash shielded transactions keep amounts and addresses off the public ledger, so even someone who knows your .zcash name can't see your balance or activity. It's like sharing your email - people can reach you, but they can't read your inbox.",
       },
       {
         question: "Can people pay me with other cryptocurrencies?",
@@ -174,7 +173,9 @@ export default function FAQ() {
         <p
           className="relative z-[1] whitespace-nowrap px-3.5 m-0 bg-clip-text text-transparent type-kicker"
           style={{ backgroundImage: "var(--feature-heading-gradient)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
-        >Frequently Asked Questions</p>
+        >
+          Frequently Asked Questions
+        </p>
         <span
           className="block shrink-0 w-[clamp(24px,9vw,96px)] h-px"
           style={{ background: "linear-gradient(90deg, var(--feature-heading-line-to) 0%, var(--feature-heading-line-from) 100%)" }}
@@ -216,14 +217,14 @@ export default function FAQ() {
                           ? "3px solid var(--faq-active-border)"
                           : "3px solid transparent",
                       }}
-                      onMouseEnter={(e) => {
+                      onMouseEnter={(event) => {
                         if (!isOpen) {
-                          e.currentTarget.style.borderLeftColor = "var(--faq-active-border)";
+                          event.currentTarget.style.borderLeftColor = "var(--faq-active-border)";
                         }
                       }}
-                      onMouseLeave={(e) => {
+                      onMouseLeave={(event) => {
                         if (!isOpen) {
-                          e.currentTarget.style.borderLeftColor = "transparent";
+                          event.currentTarget.style.borderLeftColor = "transparent";
                         }
                       }}
                     >
