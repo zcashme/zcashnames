@@ -28,6 +28,7 @@ import {
   type WeeklyRow,
 } from "@/lib/leaders/rankings";
 import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
+import { resolveSiteUrl } from "@/lib/site-url";
 
 export type { DailyRow, RankingEntry, WeeklyRow } from "@/lib/leaders/rankings";
 export type { ReferralDashboardData } from "@/lib/leaders/referral-dashboard";
@@ -137,16 +138,6 @@ function formatUnknownError(error: unknown): string {
   } catch {
     return String(error);
   }
-}
-
-function resolveBaseUrl(headerStore: { get(name: string): string | null }): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
-
-  const proto = headerStore.get("x-forwarded-proto") || "https";
-  const host = headerStore.get("x-forwarded-host") || headerStore.get("host");
-  if (host) return `${proto}://${host}`;
-  return "https://zcashnames.com";
 }
 
 function wasCommissionPinSentToday(value: unknown): boolean {
@@ -710,7 +701,7 @@ export async function requestReferralCommissionPin(
       name: String(resolved.row.name || "there"),
       pin: getCommissionPin(ensured.canonicalCode),
       referralCode: ensured.preferredCode,
-      baseUrl: resolveBaseUrl(headerStore),
+      baseUrl: resolveSiteUrl(headerStore),
     });
 
     const { error: updateError } = await db

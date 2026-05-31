@@ -33,6 +33,7 @@ import {
   type WaitlistCaptchaChallenge,
 } from "@/lib/waitlist/captcha";
 import { normalizeUsername } from "@/lib/zns/utils";
+import { resolveSiteUrl } from "@/lib/site-url";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
 const MAX_REFERRAL_CODE_RETRIES = 6;
@@ -382,7 +383,8 @@ export async function submitWaitlist(
     waitlistId,
     email: normalizedEmail,
   });
-  const confirmUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/waitlist?token=${encodeURIComponent(confirmToken)}`;
+  const baseUrl = resolveSiteUrl(headerStore);
+  const confirmUrl = `${baseUrl}/waitlist?token=${encodeURIComponent(confirmToken)}`;
 
   try {
     await sendWaitlistConfirmationEmail({
@@ -534,7 +536,7 @@ export async function confirmWaitlistEmail(
       name: row.name,
       canonicalReferralCode: ensured.canonicalCode,
       preferredReferralCode: ensured.preferredCode,
-      baseUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "",
+      baseUrl: resolveSiteUrl(),
     });
   } catch (emailError) {
     console.error("Waitlist welcome email error:", emailError);

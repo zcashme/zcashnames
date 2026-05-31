@@ -11,6 +11,7 @@ import { CONTACT_KINDS, type ContactKind } from "@/lib/types";
 import { sendBetaV2ApplicationNotice } from "@/lib/email/beta-application-v2";
 import { sendBetaInviteEmail } from "@/lib/email/beta-invite";
 import { setTesterCookie, setStageCookie } from "@/lib/beta/gate";
+import { resolveSiteUrl } from "@/lib/site-url";
 import {
   deviceLabel,
   findVariantByWalletIdAndPlatform,
@@ -442,7 +443,7 @@ export async function sendBetaInvite(testerId: string): Promise<SendBetaInviteRe
   if (data.status === "revoked") return { ok: false, error: "Applicant is revoked." };
   if (!data.contact_email) return { ok: false, error: "No email address on file." };
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.zcashnames.com";
+  const baseUrl = resolveSiteUrl();
 
   await sendBetaInviteEmail({
     email: data.contact_email as string,

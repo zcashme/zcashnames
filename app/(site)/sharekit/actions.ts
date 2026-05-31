@@ -24,6 +24,7 @@ import {
   shareKitRecoveryThrottleConfig,
   shareKitRecoveryWindowStart,
 } from "@/lib/sharekit-recovery-throttle";
+import { resolveSiteUrl } from "@/lib/site-url";
 
 export type ShareKitReferralLookupResult =
   | { ok: true; referralCode: string; referralName: string | null }
@@ -38,16 +39,6 @@ type ShareKitRecoveryRow = {
   email_verified: boolean;
   referral_email_resent_at: string | null;
 };
-
-function resolveBaseUrl(headerStore: { get(name: string): string | null }): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
-
-  const proto = headerStore.get("x-forwarded-proto") || "https";
-  const host = headerStore.get("x-forwarded-host") || headerStore.get("host");
-  if (host) return `${proto}://${host}`;
-  return "https://zcashnames.com";
-}
 
 type ShareKitRecoveryThrottleRow = {
   count: number | null;
@@ -248,7 +239,7 @@ export async function recoverShareKitReferralByEmail(input: string): Promise<Sha
       name: row.name?.trim() || "there",
       canonicalReferralCode: ensured.canonicalCode,
       preferredReferralCode: ensured.preferredCode,
-      baseUrl: resolveBaseUrl(headerStore),
+      baseUrl: resolveSiteUrl(headerStore),
     });
 
     console.info("[sharekit-recovery] classified request:", "confirmed_resent" satisfies ShareKitRecoveryInternalStatus);
