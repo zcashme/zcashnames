@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTheme } from "next-themes";
 import ShareDropdown from "@/components/ShareDropdown";
 import { usePointerProximity } from "@/components/hooks/usePointerProximity";
 import { BRAND } from "@/lib/zns/brand";
@@ -24,6 +25,51 @@ const SOCIAL_PATHS: Record<string, string> = {
   GitHub:
     "M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.84 1.236 1.84 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.605-2.665-.3-5.467-1.332-5.467-5.93 0-1.31.467-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.3 1.23a11.48 11.48 0 0 1 3-.404c1.02.005 2.045.138 3 .404 2.29-1.552 3.295-1.23 3.295-1.23.653 1.653.242 2.873.12 3.176.77.84 1.232 1.91 1.232 3.22 0 4.61-2.807 5.625-5.48 5.92.43.372.823 1.103.823 2.222 0 1.606-.015 2.898-.015 3.293 0 .322.216.695.825.577C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12",
 };
+
+const BRANDED_SOCIAL_ICON_SRCS: Record<string, string> = {
+  Discord: "/icons/discord.svg",
+  Telegram: "/icons/telegram.svg",
+  Signal: "/icons/signal.svg",
+};
+
+const HIDDEN_COMMUNITY_CARD_IDS = new Set(["ambassador", "newsletter"]);
+
+const LARGE_CARD_ICON_NAMES = new Set([
+  "Zcash.me",
+  "Zingo Wallet",
+  "Cake Wallet",
+  "Unstoppable Wallet",
+  "Zipher Wallet",
+  "Zcash Network School",
+  "Noir Wallet",
+]);
+
+const ICON_CLASS_BY_NAME: Record<string, string> = {
+  "Zcash.me": "h-[3.2rem] w-[3.2rem] object-contain object-center theme-media-home",
+  "Zingo Wallet": "h-[3.2rem] w-[3.2rem] object-contain theme-media-home",
+  "Cake Wallet": "h-[3.2rem] w-[3.2rem] object-contain theme-media-home",
+  "Unstoppable Wallet": "h-[3.2rem] w-[3.2rem] object-contain theme-media-home",
+  "Zipher Wallet": "h-[3.2rem] w-[3.2rem] object-contain theme-media-home",
+  "Zcash Network School": "h-[3.2rem] w-[3.2rem] object-contain theme-media-home",
+  "Noir Wallet": "h-[3.2rem] w-[3.2rem] translate-x-[1px] object-contain theme-media-home",
+};
+
+function formatCommunityCardHref(href: string) {
+  if (!href) return "/";
+
+  if (isExternalHref(href)) {
+    try {
+      const url = new URL(href);
+      const host = url.hostname.replace(/^www\./, "");
+      const suffix = `${url.pathname}${url.search}${url.hash}`.replace(/\/$/, "");
+      return `${host}${suffix}` || host;
+    } catch {
+      return href.replace(/^https?:\/\//, "").replace(/^www\./, "");
+    }
+  }
+
+  return href;
+}
 
 export default function CommunityPageClient() {
   return (
@@ -86,6 +132,8 @@ function SectionPills() {
 }
 
 function CommunitySectionGroup({ section }: { section: CommunitySection }) {
+  const visibleCards = section.cards.filter((card) => !HIDDEN_COMMUNITY_CARD_IDS.has(card.id));
+
   return (
     <div id={section.slug} className="flex flex-col gap-6 scroll-mt-24">
       <div className="flex items-center gap-4">
@@ -97,7 +145,7 @@ function CommunitySectionGroup({ section }: { section: CommunitySection }) {
         <div className="h-px flex-1 bg-border-muted" />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {section.cards.map((card) => (
+        {visibleCards.map((card) => (
           <CommunityCardTile key={card.id} card={card} />
         ))}
       </div>
@@ -106,6 +154,7 @@ function CommunitySectionGroup({ section }: { section: CommunitySection }) {
 }
 
 function CommunityCardTile({ card }: { card: CommunityCard }) {
+  const { resolvedTheme } = useTheme();
   const proximity = usePointerProximity<HTMLElement>({
     radius: 180,
     maxScaleBoost: 0.025,
@@ -113,6 +162,7 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
   });
   const shareUrl = `${BRAND.url}/community#${card.id}`;
   const external = isExternalHref(card.href);
+  const footerHref = formatCommunityCardHref(card.href);
 
   return (
     <article
@@ -131,7 +181,7 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
       <div className="pointer-events-none relative z-[2] flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-start gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border-muted bg-transparent">
-            {renderCardIcon(card)}
+            {renderCardIcon(card, resolvedTheme === "monochrome")}
           </div>
           <div className="flex min-w-0 flex-col gap-1.5">
             <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-fg-muted">{card.label}</p>
@@ -149,14 +199,16 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
 
       <div className="pointer-events-none relative z-[2] border-t border-border-muted" aria-hidden="true" />
 
-      <p className="pointer-events-none relative z-[2] text-sm leading-relaxed text-fg-body">
-        {card.description}
-      </p>
+      <div className="pointer-events-none relative z-[2] flex min-h-[4.8rem] flex-1 items-start">
+        <p className="text-sm leading-relaxed text-fg-body">
+          {card.description}
+        </p>
+      </div>
 
       <div className="pointer-events-none relative z-[2] border-t border-border-muted" aria-hidden="true" />
 
       <div className="pointer-events-none relative z-[3] mt-auto flex items-center justify-between gap-3">
-        <span className="min-w-0 truncate text-xs text-fg-muted">{card.detail}</span>
+        <span className="min-w-0 truncate text-xs text-fg-muted">{footerHref}</span>
         <div
           className="pointer-events-auto"
           onClick={(event) => event.stopPropagation()}
@@ -199,19 +251,36 @@ function CardOverlayLink({ card, external }: { card: CommunityCard; external: bo
   return <Link href={card.href} aria-label={label} className={className} />;
 }
 
-function renderCardIcon(card: CommunityCard) {
+function renderCardIcon(card: CommunityCard, monochrome: boolean) {
+  const brandedSocialIconSrc = BRANDED_SOCIAL_ICON_SRCS[card.name];
+
+  if (brandedSocialIconSrc) {
+    return monochrome
+      ? (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="h-[1.65rem] w-[1.65rem] text-fg-heading" aria-hidden="true">
+          <path d={SOCIAL_PATHS[card.name]} />
+        </svg>
+      )
+      : <img src={brandedSocialIconSrc} alt="" className="h-9 w-9 object-contain" aria-hidden="true" />;
+  }
+
   const socialPath = SOCIAL_PATHS[card.name];
 
   if (socialPath) {
     return (
-      <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-fg-muted" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor" className="h-[1.65rem] w-[1.65rem] text-fg-heading" aria-hidden="true">
         <path d={socialPath} />
       </svg>
     );
   }
 
   if (card.iconSrc) {
-    return <img src={card.iconSrc} alt="" className="h-9 w-9 object-contain theme-media-home" aria-hidden="true" />;
+    const iconClassName = ICON_CLASS_BY_NAME[card.name]
+      ?? (LARGE_CARD_ICON_NAMES.has(card.name)
+        ? "h-[3.2rem] w-[3.2rem] object-contain theme-media-home"
+        : "h-9 w-9 object-contain theme-media-home");
+
+    return <img src={card.iconSrc} alt="" className={iconClassName} aria-hidden="true" />;
   }
 
   return <span className="text-sm font-bold tracking-[0.04em] text-fg-heading">{card.initials}</span>;
