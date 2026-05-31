@@ -14,7 +14,7 @@ type OgRenderOptions = {
   pillTextTransform?: "uppercase" | "lowercase" | "none";
 };
 
-const BASE = "https://www.zcashnames.com/brandkit";
+const BASE = "/brandkit";
 const BG = {
   light: `${BASE}/zcashnames-brand-lockups-stacked-primary-logo-light-landscape-16x9-1920x1080.png`,
   dark: `${BASE}/zcashnames-brand-lockups-stacked-primary-logo-dark-landscape-16x9-1920x1080.png`,
