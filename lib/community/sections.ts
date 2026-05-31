@@ -151,17 +151,6 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         initials: "BT",
       },
       {
-        id: "namepost",
-        name: "Address Me By My Name",
-        label: "Meme generator",
-        description:
-          "Create a custom 'Address Me By My Name' image with your name, share it on social media.",
-        href: "/namepost",
-        shareText: "Create and share your `Address Me By My Name` promo.",
-        detail: "Share memes",
-        initials: "AM",
-      },
-      {
         id: "sharekit",
         name: "Share Kit",
         label: "Campaign assets",
@@ -171,6 +160,28 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         shareText: "Use the ZcashNames Share Kit to promote your referral link and outreach posts.",
         detail: "Ready-made posts and referral copy",
         initials: "SK",
+      },
+      {
+        id: "referrals-dashboard",
+        name: "Referrals Dashboard",
+        label: "Growth tools",
+        description:
+          "Enter a referral code to view referrals, projected rewards, and dashboard details.",
+        href: "/leaders/ref",
+        shareText: "Track ZcashNames referrals from the community dashboard.",
+        detail: "Referral code dashboard",
+        initials: "RD",
+      },
+      {
+        id: "namepost",
+        name: "Address Me By My Name",
+        label: "Meme generator",
+        description:
+          "Create a custom 'Address Me By My Name' image with your name, share it on social media.",
+        href: "/namepost",
+        shareText: "Create and share your `Address Me By My Name` promo.",
+        detail: "Share memes",
+        initials: "AM",
       },
       {
         id: "newsletter",
@@ -215,17 +226,6 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       "Community-facing tools for tracking growth, sharing referrals, and exploring the registry.",
     cards: [
       {
-        id: "referrals-dashboard",
-        name: "Referrals Dashboard",
-        label: "Growth tools",
-        description:
-          "Enter a referral code to view referrals, projected rewards, and dashboard details.",
-        href: "/leaders/ref",
-        shareText: "Track ZcashNames referrals from the community dashboard.",
-        detail: "Referral code dashboard",
-        initials: "RD",
-      },
-      {
         id: "leaderboard",
         name: "Leaderboard",
         label: "Community rank",
@@ -255,28 +255,6 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
     description:
       "Meetups, calls, and sponsorship paths for bringing ZcashNames into real community spaces.",
     cards: [
-      {
-        id: "host-local-meetup",
-        name: "Host a Local Meetup",
-        label: "Local events",
-        description:
-          "Bring ZcashNames to your city with demos, onboarding, and practical wallet education.",
-        href: ambassadorForm,
-        shareText: "Host a local ZcashNames meetup.",
-        detail: "Meetups, demos, and onboarding",
-        initials: "HM",
-      },
-      {
-        id: "community-call",
-        name: "Join a Community Call",
-        label: "Live sessions",
-        description:
-          "Join community conversations around product feedback, integrations, and launch planning.",
-        href: communityHref("Discord"),
-        shareText: "Join a ZcashNames community call.",
-        detail: "Community calls and planning",
-        initials: "CC",
-      },
       {
         id: "zcash-network-school",
         name: "Zcash Network School",

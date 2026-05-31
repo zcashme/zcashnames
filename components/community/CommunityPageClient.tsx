@@ -163,6 +163,7 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
   const shareUrl = `${BRAND.url}/community#${card.id}`;
   const external = isExternalHref(card.href);
   const footerHref = formatCommunityCardHref(card.href);
+  const cardSurfaceClassName = resolvedTheme === "monochrome" ? "bg-transparent" : "bg-[var(--color-raised)]";
 
   return (
     <article
@@ -170,7 +171,7 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
       ref={(node) => proximity.register(card.id, node)}
       onPointerMove={proximity.handlePointerMove}
       onPointerLeave={proximity.handlePointerLeave}
-      className="community-card group relative flex flex-col gap-5 overflow-visible rounded-[20px] border border-border-muted px-5 py-5 transition-[transform,box-shadow,border-color] duration-200 ease-out"
+      className={`community-card group relative flex flex-col gap-5 overflow-visible rounded-[20px] border border-border-muted px-5 py-5 transition-[transform,box-shadow,border-color] duration-200 ease-out ${cardSurfaceClassName}`}
       style={{
         transform: "translateZ(0) scale(var(--prox-scale, 1))",
         boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",

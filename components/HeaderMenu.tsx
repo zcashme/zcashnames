@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "next-themes";
 import {
   COMMUNITY_SECTIONS,
   communitySectionHref,
@@ -114,6 +115,8 @@ function cardMenuDisplayPath(card: CommunityCard): string {
 }
 
 export default function HeaderMenu() {
+  const { resolvedTheme } = useTheme();
+  const monochrome = resolvedTheme === "monochrome";
   const [open, setOpen] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -187,7 +190,11 @@ export default function HeaderMenu() {
           id="site-header-menu"
           aria-label="Site menu"
           aria-hidden={!open}
-          className={`absolute left-0 top-11 z-50 w-[min(calc(100vw-2rem),360px)] overflow-hidden rounded-lg border border-border-muted bg-[var(--color-raised)] shadow-2xl transition-all duration-200 ease-out ${
+          className={`absolute left-0 top-11 z-50 w-[min(calc(100vw-2rem),360px)] overflow-hidden rounded-lg border transition-all duration-200 ease-out ${
+            monochrome
+              ? "border-[rgba(155,188,15,0.62)] bg-[rgba(15,56,15,0.96)] shadow-[0_18px_40px_rgba(15,56,15,0.62)]"
+              : "border-border-muted bg-[var(--color-raised)] shadow-2xl"
+          } ${
             open
               ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
               : "pointer-events-none -translate-y-1 scale-[0.985] opacity-0"
@@ -198,6 +205,7 @@ export default function HeaderMenu() {
               <MenuItem
                 key={item.label}
                 item={item}
+                monochrome={monochrome}
                 expanded={expandedSection === item.label}
                 onToggle={() => setExpandedSection((section) => (section === item.label ? null : item.label))}
                 onNavigate={() => {
@@ -215,18 +223,20 @@ export default function HeaderMenu() {
 
 function MenuItem({
   item,
+  monochrome,
   expanded,
   onToggle,
   onNavigate,
 }: {
   item: MenuLink;
+  monochrome: boolean;
   expanded: boolean;
   onToggle: () => void;
   onNavigate: () => void;
 }) {
   return (
-    <div className="border-b border-border-muted last:border-b-0">
-      <MenuAnchor item={item} expanded={expanded} onToggle={onToggle} onNavigate={onNavigate} primary />
+    <div className={`border-b last:border-b-0 ${monochrome ? "border-b-[rgba(155,188,15,0.32)]" : "border-border-muted"}`}>
+      <MenuAnchor item={item} monochrome={monochrome} expanded={expanded} onToggle={onToggle} onNavigate={onNavigate} primary />
       {item.children && (
         <div
           className={`grid transition-all duration-200 ease-out ${expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
@@ -238,6 +248,7 @@ function MenuItem({
                 <MenuAnchor
                   key={`${item.label}-${child.label}`}
                   item={child}
+                  monochrome={monochrome}
                   onNavigate={onNavigate}
                   parentPath={item.displayPath ?? item.href}
                   hidden={!expanded}
@@ -253,6 +264,7 @@ function MenuItem({
 
 function MenuAnchor({
   item,
+  monochrome,
   expanded = false,
   onToggle,
   onNavigate,
@@ -261,6 +273,7 @@ function MenuAnchor({
   hidden = false,
 }: {
   item: MenuLink;
+  monochrome: boolean;
   expanded?: boolean;
   onToggle?: () => void;
   onNavigate: () => void;
@@ -272,12 +285,16 @@ function MenuAnchor({
     ? `flex w-full items-center rounded-md px-3 py-2.5 text-left text-base font-bold transition-colors focus-visible:outline-none ${
         item.featured
           ? "bg-[color-mix(in_srgb,var(--color-accent-green)_18%,transparent)] text-fg-heading ring-1 ring-inset ring-[color-mix(in_srgb,var(--color-accent-green)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-accent-green)_26%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--color-accent-green)_26%,transparent)]"
-          : "text-fg-heading hover:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)]"
+          : monochrome
+            ? "text-fg-heading hover:bg-[rgba(155,188,15,0.16)] hover:text-[var(--mono-3)] focus-visible:bg-[rgba(155,188,15,0.16)] focus-visible:text-[var(--mono-3)]"
+            : "text-fg-heading hover:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)]"
       }`
     : `flex w-full items-center gap-3 rounded-md py-2 pl-16 pr-3 text-left text-[0.95rem] font-semibold transition-colors focus-visible:outline-none ${
         item.disabled
           ? "cursor-not-allowed text-fg-muted/60"
-          : "text-fg-muted hover:bg-[color-mix(in_srgb,var(--fg-heading)_12%,transparent)] hover:text-fg-heading focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_12%,transparent)] focus-visible:text-fg-heading"
+          : monochrome
+            ? "text-fg-muted hover:bg-[rgba(155,188,15,0.16)] hover:text-[var(--mono-3)] focus-visible:bg-[rgba(155,188,15,0.16)] focus-visible:text-[var(--mono-3)]"
+            : "text-fg-muted hover:bg-[color-mix(in_srgb,var(--fg-heading)_12%,transparent)] hover:text-fg-heading focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_12%,transparent)] focus-visible:text-fg-heading"
       }`;
   const pathLabel = displayPath(item, parentPath);
   const toggle = item.children ? (
@@ -290,7 +307,11 @@ function MenuAnchor({
         event.stopPropagation();
         onToggle?.();
       }}
-      className="mx-3 flex cursor-pointer h-7 w-7 shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-[color-mix(in_srgb,var(--fg-heading)_16%,transparent)] hover:text-fg-heading focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_16%,transparent)] focus-visible:text-fg-heading focus-visible:outline-none"
+      className={`mx-3 flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus-visible:outline-none ${
+        monochrome
+          ? "text-fg-heading hover:bg-[rgba(155,188,15,0.16)] hover:text-[var(--mono-3)] focus-visible:bg-[rgba(155,188,15,0.16)] focus-visible:text-[var(--mono-3)]"
+          : "text-fg-muted hover:bg-[color-mix(in_srgb,var(--fg-heading)_16%,transparent)] hover:text-fg-heading focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_16%,transparent)] focus-visible:text-fg-heading"
+      }`}
     >
       <span className="text-lg font-bold leading-none" aria-hidden="true">
         {expanded ? "-" : "+"}
