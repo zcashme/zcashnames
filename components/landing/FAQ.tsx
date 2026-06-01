@@ -108,12 +108,13 @@ const groups: FAQGroup[] = [
     title: "Community, builders & team",
     items: [
       {
-        question: "How do I become an ambassador?",
+        question: "How do I join the beta?",
         answer: (
           <>
-            The Ambassador Program is for people who want to grow adoption in their region, host community events, and help onboard new users. Fill out the interest form{" "}
-            <a href="https://form.typeform.com/to/oBd1YeoI" target="_blank" rel="noopener noreferrer" className="underline">here</a>{" "}
-            to get started.
+            Visit{" "}
+            <a href="/beta" className="underline">/beta</a>{" "}
+            to review the current beta details, supported wallets, and testing expectations. If you want access, apply at{" "}
+            <a href="/beta/apply" className="underline">/beta/apply</a>.
           </>
         ),
       },
@@ -136,18 +137,6 @@ const groups: FAQGroup[] = [
             or{" "}
             <a href="mailto:partner@zcash.me" className="underline">email us</a>{" "}
             to start the conversation.
-          </>
-        ),
-      },
-      {
-        question: "Who is building and supporting ZcashNames?",
-        answer: (
-          <>
-            ZcashNames is built by Zechariah (Founder) and craftsoldier (Engineer), with support from collaborators across the ecosystem including{" "}
-            <a href="https://cipherscan.app" target="_blank" rel="noopener noreferrer" className="underline">CipherScan</a>{" "}
-            (block explorer),{" "}
-            <a href="https://zcash.me" target="_blank" rel="noopener noreferrer" className="underline">Zcash.me</a>{" "}
-            (profiles), Cake Labs (wallets), ZecHub (community), ambassadors like CriptoWilli, Jenkins, and ZcashRu, and investors and advisors including Balaji Srinivasan. Additional wallet integrations with Zingo!, Zucchini, and Zodl are on the wishlist.
           </>
         ),
       },
