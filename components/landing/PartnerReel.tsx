@@ -13,13 +13,13 @@ type PartnerReelItem = {
 type PartnerIconLayout = { scale: number; x?: number; y?: number };
 
 const PARTNER_ICON_LAYOUT_BY_ID: Partial<Record<string, PartnerIconLayout>> = {
-  edge: { scale: 0.60, y: 1 },
+  edge: { scale: 0.70, y: 1 },
   cake: { scale: 0.98, x: 1, y: 1 },
   unstoppable: { scale: 0.62 },
-  zipher: { scale: 1.1 },
-  zingo: { scale: 1.1, x: 2, y: 1 },
-  noir: { scale: 1 },
-  cipherscan: { scale: 0.7 },
+  zipher: { scale: 1.25, y: -1},
+  zingo: { scale: 1.2, x: 2, y: 1 },
+  noir: { scale: 1.2 },
+  cipherscan: { scale: 0.65 },
 };
 
 function isPartnerWithAppIcon(brand: WalletBrand): brand is WalletBrand & { appIcon: WalletBrandAppIcon } {
