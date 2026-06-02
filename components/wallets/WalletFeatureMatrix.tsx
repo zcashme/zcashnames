@@ -241,8 +241,9 @@ export default function WalletFeatureMatrix({ variants }: { variants: readonly W
       </div>
       {controlNamesExpanded ? (
         <p className="text-sm" style={{ color: "var(--fg-muted)", lineHeight: 1.6 }}>
-          Claiming means registering an available name. Buying means purchasing a name listed by
-          another tester.
+          By default, you can control names on ZcashNames.com. Wallets may also support name
+          controls in the app. Claiming registers an available name. Buying purchases a name listed
+          by another tester.
         </p>
       ) : null}
     </div>

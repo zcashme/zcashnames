@@ -347,6 +347,8 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     partner: true,
     logos: walletLogos("noir", "Noir logo"),
     appIcon: { src: "/wallets/noir/app-icon.png", alt: "Noir app icon" },
+    websiteUrl: "https://www.zknoir.com/",
+    xUrl: "https://x.com/noir_wallet",
   },
   {
     slug: "brave",
@@ -609,7 +611,15 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "chrome",
     recommended: true,
     sortOrder: 100,
-    features: browserResolverFeatures,
+    features: {
+      ...baseWalletFeatures,
+      resolveName: true,
+      tapURI: true,
+      pasteURI: true,
+      uploadQR: true,
+      receiveTaddr: true,
+      receiveUaddr: true,
+    },
   },
   {
     variantId: "browser_chrome_brave",
