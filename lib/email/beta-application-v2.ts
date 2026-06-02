@@ -10,6 +10,7 @@ interface BetaV2ApplicationNotice {
   testerId: string;
   displayName: string;
   inviteCode: string;
+  entryBrandSlug?: string | null;
   why: string;
   focusAreas: ("user" | "sdk")[];
   plannedWallet: string;
@@ -50,6 +51,7 @@ export async function sendBetaV2ApplicationNotice(
     `Tester id:    ${notice.testerId}`,
     `Invite code:  ${notice.inviteCode}`,
     `Submitted:    ${notice.submittedAt}`,
+    row("Entry brand", notice.entryBrandSlug).trimEnd(),
     `Focus areas:  ${focusBlock}`,
     `Wallet:       ${notice.plannedWallet}`,
     "",

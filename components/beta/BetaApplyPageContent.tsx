@@ -12,7 +12,15 @@ export default function BetaApplyPageContent({ brandSlug }: { brandSlug?: Wallet
       <header className="mb-6 text-center">
         {brand && (
           <div className="mb-5 flex justify-center">
-            <WalletBrandLogo brand={brand} />
+            {brand.appIcon ? (
+              <img
+                src={brand.appIcon.src}
+                alt={brand.appIcon.alt}
+                className="h-24 w-24 rounded-[22px] object-contain"
+              />
+            ) : (
+              <WalletBrandLogo brand={brand} />
+            )}
           </div>
         )}
         <span
@@ -32,22 +40,13 @@ export default function BetaApplyPageContent({ brandSlug }: { brandSlug?: Wallet
         </h1>
         <p className="text-base" style={{ color: "var(--fg-body)", lineHeight: 1.65 }}>
           {brand
-            ? `${brand.intro} We are especially looking for people who can spot confusing UX, explain bugs clearly, or both.`
+            ? `${brand.intro ? `${brand.intro} ` : ""}We are looking for people who can spot confusing UX, explain bugs clearly, or both.`
             : "In this round, you will be: buying and selling names, viewing your personal collection, and sending ZEC to names in wallets featuring ZNS. Anyone can apply. We're especially looking for people who can spot confusing UX, explain bugs clearly, or both."}
         </p>
         <p className="text-sm mt-3" style={{ color: "var(--fg-muted)" }}>
-          Need the full context first?{" "}
+          Need some context first?{" "}
           <Link href={briefHref} style={{ color: "var(--fg-body)" }}>
-            Read the <span className="underline">{brand ? `${brand.displayName} beta brief` : "beta brief"}</span>
-          </Link>
-          .
-          <br />
-          What happened last time?{" "}
-          <Link
-            href="https://x.com/ZcashNames/status/2052521176841494552?s=20"
-            style={{ color: "var(--fg-body)" }}
-          >
-            Read the <span className="underline">thread on X</span>
+            <span className="underline">Read the brief</span>
           </Link>
           .
         </p>

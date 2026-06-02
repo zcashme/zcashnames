@@ -29,7 +29,7 @@ export default function BetaWalletsPage() {
       <main className="max-w-5xl">
         <p style={p}>
           Each planned wallet value is platform-specific. Use this matrix to compare the mobile,
-          desktop, and browser integrations available during Beta 2.
+          desktop, and browser integrations available during mainnet testing.
         </p>
         <p style={p}>
           Ready to test? <Link href="/beta/apply" style={linkStyle}>Apply today</Link>.

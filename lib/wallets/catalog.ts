@@ -65,6 +65,13 @@ export type WalletBrandSocial = {
   href: string;
 };
 
+export type WalletBrandDownloadBadge = {
+  alt: string;
+  href: string;
+  label: string;
+  src: string;
+};
+
 export type WalletFeatures = {
   resolveName: boolean;
   reverseLookup: boolean;
@@ -118,6 +125,7 @@ export type WalletBrand = {
   liveDiscussionUrl?: string;
   demoUrl?: string;
   downloadUrl?: string;
+  downloadBadges?: readonly WalletBrandDownloadBadge[];
   socials?: readonly WalletBrandSocial[];
 };
 
@@ -217,15 +225,45 @@ function walletLogos(slug: WalletBrandSlug, alt: string): WalletBrandLogoAssets 
   };
 }
 
+function downloadBadge(
+  label: string,
+  src: string,
+  href: string,
+  alt = label,
+): WalletBrandDownloadBadge {
+  return { alt, href, label, src };
+}
+
 export const WALLET_BRANDS: readonly WalletBrand[] = [
   {
     slug: "edge",
     brandName: "Edge",
     displayName: "Edge Wallet",
-    intro: "Test ZcashNames where name resolution, sends, and market flows meet a mobile wallet.",
+    intro: "",
     partner: true,
     logos: walletLogos("edge", "Edge Wallet logo"),
     appIcon: { src: "/icons/edge.png", alt: "Edge Wallet app icon" },
+    websiteUrl: "https://edge.app/",
+    downloadBadges: [
+      downloadBadge(
+        "Google Play",
+        "https://dl.edge.app/assets/get-it-on-google-play.webp",
+        "https://play.google.com/store/apps/details?id=co.edgesecure.app",
+        "Get Edge Wallet on Google Play",
+      ),
+      downloadBadge(
+        "App Store",
+        "https://dl.edge.app/assets/download-on-the-app-store.webp",
+        "https://itunes.apple.com/us/app/edge-bitcoin-wallet/id1344400091",
+        "Download Edge Wallet on the App Store",
+      ),
+      downloadBadge(
+        "Direct APK",
+        "https://dl.edge.app/assets/android-direct-download-apk.webp",
+        "https://apk.edge.app/?af=edge-app",
+        "Download Edge Wallet APK directly",
+      ),
+    ],
   },
   {
     slug: "cake",

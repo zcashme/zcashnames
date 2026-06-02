@@ -16,6 +16,7 @@ import {
   deviceLabel,
   findVariantByWalletIdAndPlatform,
   getWalletVariant,
+  isWalletBrandSlug,
   isWalletDevice,
   isWalletDeviceChoice,
   isWalletSubcategory,
@@ -248,6 +249,7 @@ export async function submitBetaV2Application(
   formData: FormData,
 ): Promise<BetaV2ApplicationResult> {
   const displayName = String(formData.get("display_name") ?? "").trim();
+  const rawEntryBrandSlug = String(formData.get("entry_brand_slug") ?? "").trim();
   const why = String(formData.get("why") ?? "").trim();
   const focusRaw = String(formData.get("focus_areas") ?? "").trim();
   const focusAreas: ("user" | "sdk")[] = focusRaw
@@ -256,6 +258,9 @@ export async function submitBetaV2Application(
     .filter((s): s is "user" | "sdk" => s === "user" || s === "sdk");
   const experience = String(formData.get("experience") ?? "").trim();
   const referralSource = String(formData.get("referral_source") ?? "").trim();
+  const entryBrandSlug = rawEntryBrandSlug
+    ? (isWalletBrandSlug(rawEntryBrandSlug) ? rawEntryBrandSlug : null)
+    : null;
 
   if (!displayName) return { ok: false, error: "Display name is required." };
   if (displayName.length > APP_MAX_NAME) return { ok: false, error: "Display name is too long." };
@@ -364,7 +369,7 @@ export async function submitBetaV2Application(
   const submittedAtIso = new Date().toISOString();
   const { ip, userAgent } = await readClientMeta();
 
-  const { error: insertError } = await db.from("beta_testers_v2").insert({
+  const insertPayload = {
     id: testerId,
     display_name: displayName,
     code_hash: codeHash,
@@ -386,9 +391,19 @@ export async function submitBetaV2Application(
     other_wallet_device: otherWalletDevice,
     other_wallet_name: otherWalletNameForDb,
     planned_wallets_detail: plannedWalletsDetail,
+    entry_brand_slug: entryBrandSlug,
     ip_hash: hashIp(ip),
     user_agent: userAgent,
-  });
+  };
+
+  let { error: insertError } = await db.from("beta_testers_v2").insert(insertPayload);
+
+  // Older databases may not have the attribution column yet. Keep the apply flow
+  // working while allowing upgraded schemas to retain branded entry provenance.
+  if ((insertError as { code?: string } | null)?.code === "42703") {
+    const { entry_brand_slug: _entryBrandSlug, ...legacyInsertPayload } = insertPayload;
+    ({ error: insertError } = await db.from("beta_testers_v2").insert(legacyInsertPayload));
+  }
 
   if (insertError) {
     const code = (insertError as { code?: string }).code;
@@ -403,6 +418,7 @@ export async function submitBetaV2Application(
     testerId,
     displayName,
     inviteCode,
+    entryBrandSlug,
     why,
     focusAreas,
     plannedWallet: walletLabel,

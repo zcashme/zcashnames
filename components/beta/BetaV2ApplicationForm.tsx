@@ -66,7 +66,7 @@ function walletWarning(choice: WalletChoice | "other"): string | null {
 
 const inputStyle: React.CSSProperties = {
   background: "var(--color-raised)",
-  border: "1.5px solid var(--faq-border)",
+  border: "1.5px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
   color: "var(--fg-heading)",
 };
 
@@ -344,7 +344,7 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
         className="rounded-2xl p-8 flex flex-col items-center text-center gap-4"
         style={{
           background: "var(--feature-card-bg)",
-          border: "1px solid var(--faq-border)",
+          border: "1px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
         }}
       >
         <span
@@ -376,7 +376,7 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
       className="rounded-2xl p-6 md:p-8 flex flex-col gap-5"
       style={{
         background: "var(--feature-card-bg)",
-        border: "1px solid var(--faq-border)",
+        border: "1px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
       }}
     >
       <div>

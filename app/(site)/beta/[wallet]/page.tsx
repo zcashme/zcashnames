@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import BetaV2Brief, { BETA_V2_SECTIONS } from "@/components/beta/BetaV2Brief";
 import BetaV2Toc from "@/components/beta/BetaV2Toc";
-import BetaWalletBrief, { BETA_WALLET_BRIEF_SECTIONS } from "@/components/beta/BetaWalletBrief";
+import BetaWalletBrief, { getBetaWalletBriefSections } from "@/components/beta/BetaWalletBrief";
+import WalletBrandLogo from "@/components/wallets/WalletBrandLogo";
 import { getWalletBrand, isWalletBrandSlug } from "@/lib/wallets/catalog";
 
 interface Props {
@@ -19,11 +20,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  const pageTitle = `Test ZcashNames in ${brand.displayName}`;
+
   return {
-    title: `${brand.displayName} Beta - ZcashNames`,
+    title: `${pageTitle} - ZcashNames`,
     description: `Read the ${brand.displayName} ZcashNames beta brief.`,
     openGraph: {
-      title: `${brand.displayName} Beta Invitation`,
+      title: pageTitle,
       description: `Read the ${brand.displayName} ZcashNames beta brief.`,
       url: `https://www.zcashnames.com/beta/${brand.slug}`,
       images: [
@@ -37,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${brand.displayName} Beta Invitation`,
+      title: pageTitle,
       description: `Read the ${brand.displayName} ZcashNames beta brief.`,
       images: ["/og/beta.png"],
     },
@@ -49,13 +52,28 @@ export default async function BrandedBetaBriefPage({ params }: Props) {
   const { wallet } = await params;
   const knownBrand = isWalletBrandSlug(wallet);
   const brand = getWalletBrand(wallet);
-  const sections = knownBrand ? BETA_WALLET_BRIEF_SECTIONS : BETA_V2_SECTIONS;
+  const sections = knownBrand && brand ? getBetaWalletBriefSections(brand) : BETA_V2_SECTIONS;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-10">
-      <SiteRouteTitle title={brand ? `${brand.displayName} Beta` : "Beta"} />
+      <SiteRouteTitle title={brand ? `Test ZcashNames in ${brand.displayName}` : "Beta"} />
       <div className="flex flex-col md:flex-row gap-10">
         <aside className="contents md:block md:w-56 md:shrink-0 md:sticky md:top-24 md:self-start">
+          {knownBrand && brand ? (
+            <div className="hidden md:flex md:mb-5 md:min-h-24 md:items-center md:justify-start">
+              {brand.appIcon ? (
+                <img
+                  src={brand.appIcon.src}
+                  alt={brand.appIcon.alt}
+                  className={brand.slug === "zingo"
+                    ? "h-28 w-28 rounded-[18px] object-contain"
+                    : "h-20 w-20 rounded-[18px] object-contain"}
+                />
+              ) : (
+                <WalletBrandLogo brand={brand} />
+              )}
+            </div>
+          ) : null}
           <BetaV2Toc sections={sections} />
         </aside>
         <main className="flex-1 min-w-0">
