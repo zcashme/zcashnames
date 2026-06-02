@@ -124,6 +124,8 @@ export type WalletBrand = {
   announcementUrl?: string;
   liveDiscussionUrl?: string;
   demoUrl?: string;
+  githubUrl?: string;
+  discordUrl?: string;
   linkedinUrl?: string;
   telegramUrl?: string;
   youtubeUrl?: string;
@@ -314,6 +316,13 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     partner: true,
     logos: walletLogos("zingo", "Zingo logo"),
     appIcon: { src: "/wallets/zingo/app-icon.png", alt: "Zingo app icon" },
+    websiteUrl: "https://zingolabs.org/",
+    supportGuideUrl: "https://zingolabs.org/support/",
+    announcementUrl: "https://x.com/ZingoLabs/status/2056422696049607101?s=20",
+    githubUrl: "https://github.com/zingolabs",
+    discordUrl: "https://zingolabs.org/zingo/#",
+    telegramUrl: "https://t.me/zingolabs/",
+    xUrl: "https://zingolabs.org/zingo/#",
   },
   {
     slug: "zkool",
@@ -508,8 +517,8 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "ios",
     recommended: false,
     sortOrder: 50,
-    features: controlOnlyFeatures,
-    warning: "Mobile wallet Zingo cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc).",
+    features: baseWalletFeatures,
+    warning: "Mobile wallet Zingo cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc) via ZcashNames.com.",
   },
   {
     variantId: "mobile_android_zingo",
@@ -521,8 +530,8 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "android",
     recommended: false,
     sortOrder: 51,
-    features: controlOnlyFeatures,
-    warning: "Mobile wallet Zingo cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc).",
+    features: baseWalletFeatures,
+    warning: "Mobile wallet Zingo cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc) via ZcashNames.com.",
   },
   {
     variantId: "mobile_ios_zkool",
@@ -599,7 +608,20 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "pc",
     recommended: true,
     sortOrder: 90,
-    features: controlOnlyFeatures,
+    features: {
+      ...baseWalletFeatures,
+      resolveName: true,
+      reverseLookup: true,
+      viewCollection: true,
+      importContact: true,
+      exportContact: true,
+      viewProfile: true,
+      viewExplorer: true,
+      tapURI: true,
+      pasteURI: true,
+      receiveTaddr: true,
+      receiveUaddr: true,
+    },
   },
   {
     variantId: "browser_chrome_noir",

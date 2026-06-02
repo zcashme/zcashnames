@@ -113,6 +113,8 @@ function brandResourceLinks(brand: WalletBrand) {
     brand.websiteUrl ? { label: `${brand.displayName} website`, href: brand.websiteUrl } : null,
     brand.liveDiscussionUrl ? { label: `${brand.displayName} live discussion`, href: brand.liveDiscussionUrl } : null,
     brand.demoUrl ? { label: `${brand.displayName} demo`, href: brand.demoUrl } : null,
+    brand.githubUrl ? { label: `${brand.displayName} GitHub`, href: brand.githubUrl } : null,
+    brand.discordUrl ? { label: `${brand.displayName} Discord`, href: brand.discordUrl } : null,
     brand.linkedinUrl ? { label: `${brand.displayName} LinkedIn`, href: brand.linkedinUrl } : null,
     brand.telegramUrl ? { label: `${brand.displayName} Telegram`, href: brand.telegramUrl } : null,
     brand.youtubeUrl ? { label: `${brand.displayName} YouTube`, href: brand.youtubeUrl } : null,
