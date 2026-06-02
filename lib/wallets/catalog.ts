@@ -247,6 +247,7 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     logos: walletLogos("edge", "Edge Wallet logo"),
     appIcon: { src: "/icons/edge.png", alt: "Edge Wallet app icon" },
     websiteUrl: "https://edge.app/",
+    supportGuideUrl: "https://support.edge.app/en/articles/14900026-how-to-send-to-a-zcash-name",
     linkedinUrl: "https://www.linkedin.com/company/edgeapp/jobs/",
     youtubeUrl: "https://www.youtube.com/c/Edgewallet",
     xUrl: "https://x.com/EdgeWallet",
