@@ -124,6 +124,9 @@ export type WalletBrand = {
   announcementUrl?: string;
   liveDiscussionUrl?: string;
   demoUrl?: string;
+  linkedinUrl?: string;
+  youtubeUrl?: string;
+  xUrl?: string;
   downloadUrl?: string;
   downloadBadges?: readonly WalletBrandDownloadBadge[];
   socials?: readonly WalletBrandSocial[];
@@ -244,6 +247,9 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     logos: walletLogos("edge", "Edge Wallet logo"),
     appIcon: { src: "/icons/edge.png", alt: "Edge Wallet app icon" },
     websiteUrl: "https://edge.app/",
+    linkedinUrl: "https://www.linkedin.com/company/edgeapp/jobs/",
+    youtubeUrl: "https://www.youtube.com/c/Edgewallet",
+    xUrl: "https://x.com/EdgeWallet",
     downloadBadges: [
       downloadBadge(
         "Google Play",
@@ -368,7 +374,17 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "ios",
     recommended: true,
     sortOrder: 10,
-    features: fullWalletFeatures,
+    features: {
+      ...baseWalletFeatures,
+      resolveName: true,
+      viewProfile: true,
+      viewExplorer: true,
+      scanURI: true,
+      pasteURI: true,
+      uploadQR: true,
+      receiveTaddr: true,
+      receiveUaddr: true,
+    },
   },
   {
     variantId: "mobile_android_edge",
@@ -380,7 +396,17 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "android",
     recommended: true,
     sortOrder: 11,
-    features: fullWalletFeatures,
+    features: {
+      ...baseWalletFeatures,
+      resolveName: true,
+      viewProfile: true,
+      viewExplorer: true,
+      scanURI: true,
+      pasteURI: true,
+      uploadQR: true,
+      receiveTaddr: true,
+      receiveUaddr: true,
+    },
   },
   {
     variantId: "mobile_ios_cake",
