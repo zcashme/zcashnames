@@ -60,7 +60,7 @@ export default async function BrandedBetaBriefPage({ params }: Props) {
       <div className="flex flex-col md:flex-row gap-10">
         <aside className="contents md:block md:w-56 md:shrink-0 md:sticky md:top-24 md:self-start">
           {knownBrand && brand ? (
-            <div className="hidden md:flex md:mb-5 md:min-h-24 md:items-center md:justify-start">
+            <div className="mb-5 flex min-h-24 items-center justify-center md:justify-start">
               {brand.appIcon ? (
                 <img
                   src={brand.appIcon.src}

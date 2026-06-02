@@ -38,7 +38,7 @@ export default function BetaV2Toc({ sections }: { sections: Section[] }) {
   }, [sections]);
 
   return (
-    <nav className="flex flex-col gap-1.5" aria-label="Section table of contents">
+    <nav className="flex flex-col items-center gap-1.5 text-center md:items-start md:text-left" aria-label="Section table of contents">
       {sections.map(({ id, label }) => (
         <a
           key={id}

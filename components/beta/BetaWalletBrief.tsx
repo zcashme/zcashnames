@@ -1,5 +1,6 @@
 import Link from "next/link";
 import WalletBrandLogo from "@/components/wallets/WalletBrandLogo";
+import { hasWalletFaq } from "@/lib/beta/walletFaq";
 import WalletFeatureMatrix from "@/components/wallets/WalletFeatureMatrix";
 import { BRAND } from "@/lib/zns/brand";
 import {
@@ -106,11 +107,15 @@ function brandDownloadBadges(brand: WalletBrand): readonly WalletBrandDownloadBa
 
 function brandResourceLinks(brand: WalletBrand) {
   return [
+    hasWalletFaq(brand.slug) ? { label: `${brand.displayName} FAQ`, href: `/beta/${brand.slug}/faq` } : null,
     brand.supportGuideUrl ? { label: `${brand.displayName} support guide`, href: brand.supportGuideUrl } : null,
     brand.announcementUrl ? { label: `Official ${brand.displayName} announcement`, href: brand.announcementUrl } : null,
     brand.websiteUrl ? { label: `${brand.displayName} website`, href: brand.websiteUrl } : null,
     brand.liveDiscussionUrl ? { label: `${brand.displayName} live discussion`, href: brand.liveDiscussionUrl } : null,
     brand.demoUrl ? { label: `${brand.displayName} demo`, href: brand.demoUrl } : null,
+    brand.linkedinUrl ? { label: `${brand.displayName} LinkedIn`, href: brand.linkedinUrl } : null,
+    brand.youtubeUrl ? { label: `${brand.displayName} YouTube`, href: brand.youtubeUrl } : null,
+    brand.xUrl ? { label: `${brand.displayName} X`, href: brand.xUrl } : null,
   ].filter((link): link is { label: string; href: string } => !!link);
 }
 
@@ -371,9 +376,15 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
           <ul className="list-disc pl-5">
             {resourceLinks.map((link) => (
               <li key={link.href} style={li}>
-                <a href={link.href} target="_blank" rel="noreferrer" style={linkStyle}>
-                  {link.label}
-                </a>
+                {link.href.startsWith("/") ? (
+                  <Link href={link.href} style={linkStyle}>
+                    {link.label}
+                  </Link>
+                ) : (
+                  <a href={link.href} target="_blank" rel="noreferrer" style={linkStyle}>
+                    {link.label}
+                  </a>
+                )}
               </li>
             ))}
           </ul>
