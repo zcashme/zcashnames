@@ -114,8 +114,10 @@ function brandResourceLinks(brand: WalletBrand) {
     brand.liveDiscussionUrl ? { label: `${brand.displayName} live discussion`, href: brand.liveDiscussionUrl } : null,
     brand.demoUrl ? { label: `${brand.displayName} demo`, href: brand.demoUrl } : null,
     brand.linkedinUrl ? { label: `${brand.displayName} LinkedIn`, href: brand.linkedinUrl } : null,
+    brand.telegramUrl ? { label: `${brand.displayName} Telegram`, href: brand.telegramUrl } : null,
     brand.youtubeUrl ? { label: `${brand.displayName} YouTube`, href: brand.youtubeUrl } : null,
     brand.xUrl ? { label: `${brand.displayName} X`, href: brand.xUrl } : null,
+    brand.emailAddr ? { label: `${brand.displayName} email`, href: `mailto:${brand.emailAddr}` } : null,
   ].filter((link): link is { label: string; href: string } => !!link);
 }
 

@@ -125,8 +125,10 @@ export type WalletBrand = {
   liveDiscussionUrl?: string;
   demoUrl?: string;
   linkedinUrl?: string;
+  telegramUrl?: string;
   youtubeUrl?: string;
   xUrl?: string;
+  emailAddr?: string;
   downloadUrl?: string;
   downloadBadges?: readonly WalletBrandDownloadBadge[];
   socials?: readonly WalletBrandSocial[];
@@ -289,6 +291,11 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     partner: true,
     logos: walletLogos("unstoppable", "Unstoppable Wallet logo"),
     appIcon: { src: "/wallets/unstoppable/app-icon.png", alt: "Unstoppable Wallet app icon" },
+    websiteUrl: "https://unstoppable.money/",
+    supportGuideUrl: "https://unstoppable.money/faq",
+    telegramUrl: "https://t.me/unstoppable_announcements",
+    xUrl: "https://x.com/unstoppablebyhs",
+    emailAddr: "hello@horizontalsystems.io",
   },
   {
     slug: "zipher",
@@ -443,7 +450,17 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "ios",
     recommended: false,
     sortOrder: 30,
-    features: receiveOnlyMobileFeatures,
+    features: {
+      ...baseWalletFeatures,
+      resolveName: true,
+      importContact: true,
+      exportContact: true,
+      scanURI: true,
+      pasteURI: true,
+      uploadQR: true,
+      receiveTaddr: true,
+      receiveUaddr: true,
+    },
   },
   {
     variantId: "mobile_android_unstoppable",
@@ -455,7 +472,17 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "android",
     recommended: false,
     sortOrder: 31,
-    features: receiveOnlyMobileFeatures,
+    features: {
+      ...baseWalletFeatures,
+      resolveName: true,
+      importContact: true,
+      exportContact: true,
+      scanURI: true,
+      pasteURI: true,
+      uploadQR: true,
+      receiveTaddr: true,
+      receiveUaddr: true,
+    },
   },
   {
     variantId: "mobile_ios_zipher",
