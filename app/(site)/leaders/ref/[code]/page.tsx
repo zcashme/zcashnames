@@ -139,6 +139,46 @@ interface ReferralChartPoint {
   rewardsDelta?: number;
 }
 
+function calculateNumericDomain(
+  values: number[],
+  { floorAtZero = false, integer = false }: { floorAtZero?: boolean; integer?: boolean } = {},
+): [number, number] {
+  if (values.length === 0) return [0, 1];
+
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+
+  if (min === max) {
+    const padding = min === 0 ? 1 : Math.max(Math.abs(min) * 0.1, integer ? 1 : 0.1);
+    min -= padding;
+    max += padding;
+  } else {
+    const padding = Math.max((max - min) * 0.08, integer ? 1 : 0.1);
+    min -= padding;
+    max += padding;
+  }
+
+  min = Math.max(0, min);
+  if (integer) {
+    min = Math.floor(min);
+    max = Math.ceil(max);
+  }
+
+  return [min, max];
+}
+
+function calculateStackedDomain(
+  values: Array<{ base: number; total: number }>,
+  { integer = false }: { integer?: boolean } = {},
+): [number, number] {
+  if (values.length === 0) return [0, 1];
+
+  return calculateNumericDomain(
+    values.flatMap(({ base, total }) => [base, total]),
+    { floorAtZero: true, integer },
+  );
+}
+
 function ZecSymbol({ className }: { className?: string }) {
   return (
     <svg
@@ -524,25 +564,27 @@ export default function ReferralDashboardPage() {
   return (
     <main className={`mx-auto w-full max-w-5xl px-4 pb-20 sm:px-6 ${installState.standalone ? "pt-5" : "pt-4"}`}>
       {!installState.standalone && (
-        <div className="mb-4 grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
-          <div className="justify-self-start">
+        <div className="mb-4 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
+          <div className="min-w-0 justify-self-start">
             <BackLink />
           </div>
-          <div className="justify-self-center">
+          <div className="min-w-0 justify-self-center">
             {showInstallCardTeaser && (
               <button
                 type="button"
                 onClick={restoreInstallCard}
-                className="cursor-pointer text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
+                aria-label="Add to Home Screen"
+                className="cursor-pointer whitespace-nowrap text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
               >
-                Add to Home Screen
+                <span className="sm:hidden">Add to...</span>
+                <span className="hidden sm:inline">Add to Home Screen</span>
               </button>
             )}
           </div>
-          <div className="justify-self-start sm:justify-self-end">
+          <div className="min-w-0 justify-self-end">
             <Link
               href={`/sharekit?ref=${encodeURIComponent(data.referralCode)}`}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
             >
               Share your reflink
               <ShareIcon className="h-4 w-4 shrink-0" />
@@ -1206,7 +1248,7 @@ function InstallHomeScreenCard({
 
 function BackLink() {
   return (
-    <Link href="/leaders" className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline">
+    <Link href="/leaders" className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline">
       <DashboardIcon className="h-4 w-4 shrink-0" />
       Back to Leaders
     </Link>
@@ -1253,6 +1295,21 @@ function ReferralGrowthChart({
 
     return `${delta >= 0 ? "+" : ""}${delta.toLocaleString()} over ${rangeLabel}`;
   }, [chartRange, data]);
+  const rewardsDomain = useMemo(
+    () => calculateNumericDomain(data.map((point) => point.rewards), { floorAtZero: true }),
+    [data],
+  );
+  const referralsDomain = useMemo(
+    () =>
+      calculateStackedDomain(
+        data.map((point) => ({
+          base: point.direct,
+          total: point.direct + point.indirect,
+        })),
+        { integer: true },
+      ),
+    [data],
+  );
 
   return (
     <div className="mt-6 border-t pt-5" style={{ borderColor: "var(--leaders-card-border)" }}>
@@ -1318,6 +1375,8 @@ function ReferralGrowthChart({
                 tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
+                domain={rewardsDomain}
+                allowDataOverflow
                 tickFormatter={formatRewardAxisTick}
               />
               <YAxis
@@ -1326,6 +1385,8 @@ function ReferralGrowthChart({
                 tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
+                domain={referralsDomain}
+                allowDataOverflow
                 allowDecimals={false}
               />
               <Tooltip content={<ReferralChartTooltip />} />

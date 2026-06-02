@@ -154,12 +154,10 @@ function formatGrowthMetric(count: number, growthPct: number): string {
 }
 
 function calculateNumericDomain(values: number[], { floorAtZero = false, integer = false }: { floorAtZero?: boolean; integer?: boolean } = {}): [number, number] {
-  if (values.length === 0) return floorAtZero ? [0, 1] : [0, 1];
+  if (values.length === 0) return [0, 1];
 
   let min = Math.min(...values);
   let max = Math.max(...values);
-
-  if (floorAtZero) min = Math.min(0, min);
 
   if (min === max) {
     const padding = min === 0 ? 1 : Math.max(Math.abs(min) * 0.1, integer ? 1 : 0.1);
@@ -171,13 +169,25 @@ function calculateNumericDomain(values: number[], { floorAtZero = false, integer
     max += padding;
   }
 
-  if (floorAtZero) min = Math.max(0, min);
+  min = Math.max(0, min);
   if (integer) {
     min = Math.floor(min);
     max = Math.ceil(max);
   }
 
   return [min, max];
+}
+
+function calculateStackedDomain(
+  values: Array<{ base: number; total: number }>,
+  { integer = false }: { integer?: boolean } = {},
+): [number, number] {
+  if (values.length === 0) return [0, 1];
+
+  return calculateNumericDomain(
+    values.flatMap(({ base, total }) => [base, total]),
+    { floorAtZero: true, integer },
+  );
 }
 
 function EmailConfirmedIcon({ className }: { className?: string }) {
@@ -428,13 +438,16 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
     return `${delta >= 0 ? "+" : ""}${delta.toLocaleString()} over ${rangeLabel}`;
   }, [chartRange, chartTimeSeries]);
   const rewardsDomain = useMemo(
-    () => calculateNumericDomain(chartTimeSeries.map((point) => point.rewardsPot)),
+    () => calculateNumericDomain(chartTimeSeries.map((point) => point.rewardsPot), { floorAtZero: true }),
     [chartTimeSeries],
   );
   const waitlistDomain = useMemo(
     () =>
-      calculateNumericDomain(
-        chartTimeSeries.map((point) => point.referred + point.nonReferred),
+      calculateStackedDomain(
+        chartTimeSeries.map((point) => ({
+          base: point.referred,
+          total: point.referred + point.nonReferred,
+        })),
         { integer: true },
       ),
     [chartTimeSeries],
@@ -651,6 +664,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
                 domain={rewardsDomain}
+                allowDataOverflow
                 tickFormatter={(value) => `${Math.round(Number(value))}`}
               />
               <YAxis
@@ -660,6 +674,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
                 domain={waitlistDomain}
+                allowDataOverflow
                 allowDecimals={false}
               />
               <Tooltip content={<ChartTooltip />} />
