@@ -8,11 +8,26 @@ import { getWalletFaqSections, hasWalletFaq } from "@/lib/beta/walletFaq";
 import { getWalletBrand, isWalletBrandSlug } from "@/lib/wallets/catalog";
 
 interface Props {
-  params: Promise<{ wallet: string }>;
+  params?: Promise<{ wallet: string }>;
+}
+
+async function readWalletParam(params?: Promise<{ wallet: string }>): Promise<string | null> {
+  try {
+    const resolved = await params;
+    return typeof resolved?.wallet === "string" ? resolved.wallet : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { wallet } = await params;
+  const wallet = await readWalletParam(params);
+  if (!wallet) {
+    return {
+      title: "Beta FAQ - ZcashNames",
+      robots: { index: false, follow: false, nocache: true },
+    };
+  }
   const brand = getWalletBrand(wallet);
   const hasFaq = brand && isWalletBrandSlug(wallet) && hasWalletFaq(wallet);
 
@@ -53,9 +68,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function BrandedBetaFaqPage({ params }: Props) {
-  const { wallet } = await params;
+  const wallet = await readWalletParam(params);
 
-  if (!isWalletBrandSlug(wallet) || !hasWalletFaq(wallet)) {
+  if (!wallet || !isWalletBrandSlug(wallet) || !hasWalletFaq(wallet)) {
     notFound();
   }
 
