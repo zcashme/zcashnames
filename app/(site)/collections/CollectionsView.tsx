@@ -109,6 +109,14 @@ export default function CollectionsView({
 
   const isEmpty = urlNames.length === 0;
 
+  const allNames = collection.clusters.flatMap((c) => c.names);
+  const stats = {
+    total: allNames.length,
+    forSale: allNames.filter((n) => n.forSale).length,
+    registered: allNames.filter((n) => !n.forSale && !n.unregistered).length,
+    available: collection.seeds.filter((s) => s.status === "unregistered").length,
+  };
+
   // The expanded search pill. `autoFocus` is used when it's revealed by the
   // collapsed Add button on the rendered collection, so the cursor lands ready.
   const renderPill = (autoFocus: boolean) => (
@@ -210,6 +218,17 @@ export default function CollectionsView({
               </div>
             )}
           </div>
+
+          {/* Stats */}
+          {stats.total > 0 && (
+            <p className="text-[0.78rem] font-semibold text-fg-muted">
+              <span style={{ color: "var(--fg-heading)" }}>{stats.total}</span> names
+              {" · "}
+              <span style={{ color: "var(--fg-heading)" }}>{stats.registered}</span> registered
+              {stats.forSale > 0 && <> · <span style={{ color: "var(--home-result-status-forsale-fg)" }}>{stats.forSale}</span> for sale</>}
+              {stats.available > 0 && <> · <span style={{ color: "var(--fg-muted)" }}>{stats.available}</span> available</>}
+            </p>
+          )}
 
           {/* The graph — every collected name on one canvas */}
           {collection.clusters.length > 0 && (
