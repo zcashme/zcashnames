@@ -65,14 +65,16 @@ function NameNodeView({ data }: NodeProps<NameNode>) {
       title={isUnregistered ? `${name.name} — not registered yet` : isHistorical ? `${name.name} — historical link` : name.forSale ? `${name.name} — listed for sale` : name.name}
       className="inline-flex max-w-[9rem] cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5"
       style={{
-        background: "var(--color-raised)",
-        opacity: isUnregistered || isHistorical ? 0.5 : 1,
+        background: isUnregistered ? "var(--home-result-status-positive-bg)" : "var(--color-raised)",
+        opacity: isHistorical ? 0.5 : 1,
         borderStyle: isUnregistered ? "dashed" : isHistorical ? "dotted" : "solid",
         borderColor: selected
           ? "var(--hero-headline-accent)"
-          : name.forSale
-            ? "var(--home-result-status-forsale-border)"
-            : "var(--leaders-card-border)",
+          : isUnregistered
+            ? "var(--home-result-status-positive-fg)"
+            : name.forSale
+              ? "var(--home-result-status-forsale-border)"
+              : "var(--leaders-card-border)",
         boxShadow: selected
           ? "0 0 0 2px var(--hero-headline-accent)"
           : isStar && !isUnregistered && !isHistorical
@@ -90,7 +92,7 @@ function NameNodeView({ data }: NodeProps<NameNode>) {
       )}
       <span
         className={`truncate text-[0.8rem] ${isStar && !isUnregistered && !isHistorical ? "font-bold" : "font-semibold"}`}
-        style={{ color: isStar && !isUnregistered && !isHistorical ? "var(--fg-heading)" : "var(--fg-muted)" }}
+        style={{ color: isUnregistered ? "var(--home-result-status-positive-fg)" : isStar && !isHistorical ? "var(--fg-heading)" : "var(--fg-muted)" }}
       >
         {name.name}
       </span>
