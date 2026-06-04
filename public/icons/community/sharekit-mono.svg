@@ -1,0 +1,9 @@
+<svg width="79" height="84" viewBox="0 0 79 84" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Lock with share icon">
+  <path d="M24.5 31V27.5C24.5 16.2 32.7 8.5 43.5 8.5C54.3 8.5 62.5 16.2 62.5 27.5V31" fill="none" stroke="#000" stroke-width="7" stroke-linecap="butt"/>
+  <rect x="6" y="30" width="69" height="49" rx="7" fill="black"/>
+  <g fill="none" stroke="#000" stroke-width="5.25" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M29 58.5V68.5H52V58.5"/>
+    <path d="M40.5 63V43"/>
+    <path d="M32.5 51L40.5 43L48.5 51"/>
+  </g>
+</svg>

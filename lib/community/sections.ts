@@ -12,6 +12,11 @@ export type CommunityCard = {
   shareText: string;
   detail: string;
   iconSrc?: string;
+  themedIconSrc?: {
+    dark: string;
+    light: string;
+    mono: string;
+  };
   initials?: string;
 };
 
@@ -148,7 +153,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         href: "/beta/apply",
         shareText: "Apply to beta test ZcashNames before release.",
         detail: "Try the product before release",
-        initials: "BT",
+        themedIconSrc: themedCommunityIcon("beta-test"),
       },
       {
         id: "sharekit",
@@ -159,7 +164,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         href: "/sharekit",
         shareText: "Use the ZcashNames Share Kit to promote your referral link and outreach posts.",
         detail: "Ready-made posts and referral copy",
-        initials: "SK",
+        themedIconSrc: themedCommunityIcon("sharekit"),
       },
       {
         id: "referrals-dashboard",
@@ -170,7 +175,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         href: "/leaders/ref",
         shareText: "Track ZcashNames referrals from the community dashboard.",
         detail: "Referral code dashboard",
-        initials: "RD",
+        themedIconSrc: themedCommunityIcon("referrals-dashboard"),
       },
       {
         id: "namepost",
@@ -181,7 +186,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         href: "/namepost",
         shareText: "Create and share your `Address Me By My Name` promo.",
         detail: "Share memes",
-        initials: "AM",
+        themedIconSrc: themedCommunityIcon("namepost"),
       },
       {
         id: "newsletter",
@@ -234,7 +239,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         href: "/leaders",
         shareText: "Follow the ZcashNames community leaderboard.",
         detail: "Community ranking",
-        initials: "LB",
+        themedIconSrc: themedCommunityIcon("leaderboard"),
       },
       {
         id: "explorer",
@@ -245,7 +250,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         href: "/explorer",
         shareText: "Explore ZcashNames registry activity.",
         detail: "Names, events, and listings",
-        initials: "EX",
+        themedIconSrc: themedCommunityIcon("explorer"),
       },
     ],
   },
@@ -265,7 +270,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         shareText:
           "Zcash Network School is bringing privacy education and wallet onboarding to Southeast Asia.",
         detail: "Network School, Malaysia",
-        iconSrc: "/icons/network-school.png",
+        themedIconSrc: themedCommunityIcon("network-school"),
       },
       {
         id: "sponsor-event",
@@ -276,7 +281,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         href: "https://cal.com/zcash",
         shareText: "Sponsor a ZcashNames community event.",
         detail: "Sponsorship and event support",
-        initials: "SE",
+        themedIconSrc: themedCommunityIcon("events"),
       },
     ],
   },
@@ -295,7 +300,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         href: "/docs",
         shareText: "@ZcashNames blog updates are live. Follow along for product notes and resources.",
         detail: "Product resources",
-        initials: "ZU",
+        themedIconSrc: themedCommunityIcon("updates"),
       },
       {
         id: "launch-notes",
@@ -306,7 +311,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         href: "/docs/learn/pricing",
         shareText: "@ZcashNames launch notes are live. Follow along for rollout updates.",
         detail: "Pricing and rollout context",
-        initials: "LN",
+        themedIconSrc: themedCommunityIcon("launch-notes"),
       },
       {
         id: "builder-stories",
@@ -317,7 +322,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         href: "/docs/integrate",
         shareText: "@ZcashNames builder stories are live. Follow along for wallet, app, and integration updates.",
         detail: "Wallets, apps, and integrations",
-        initials: "BS",
+        themedIconSrc: themedCommunityIcon("builder-stories"),
       },
     ],
   },
@@ -366,5 +371,13 @@ function communityCard(
     shareText: `Join ZcashNames on ${name}.`,
     detail: community ? displayHost(community.href) : "Community channel",
     iconSrc: `/icons/${iconFile}`,
+  };
+}
+
+function themedCommunityIcon(name: string): NonNullable<CommunityCard["themedIconSrc"]> {
+  return {
+    dark: `/icons/community/${name}-dark.svg`,
+    light: `/icons/community/${name}-light.svg`,
+    mono: `/icons/community/${name}-mono.svg`,
   };
 }

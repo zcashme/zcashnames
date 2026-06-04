@@ -54,6 +54,22 @@ const ICON_CLASS_BY_NAME: Record<string, string> = {
   "Noir Wallet": "h-[3.2rem] w-[3.2rem] translate-x-[1px] object-contain theme-media-home",
 };
 
+const THEMED_ICON_CLASS_BY_ID: Record<string, string> = {
+  "beta-test": "h-10 w-10",
+  "builder-stories": "h-10 w-10",
+  events: "h-10 w-10",
+  explorer: "h-10 w-10",
+  "launch-notes": "h-10 w-10",
+  leaderboard: "h-10 w-10",
+  namepost: "h-10 w-10",
+  "zcash-network-school": "h-10 w-10",
+  "referrals-dashboard": "h-10 w-10",
+  sharekit: "h-10 w-10",
+  updates: "h-10 w-10",
+};
+
+const DIRECT_MONO_ICON_IDS = new Set(["leaderboard", "explorer", "builder-stories"]);
+
 function formatCommunityCardHref(href: string) {
   if (!href) return "/";
 
@@ -275,6 +291,17 @@ function renderCardIcon(card: CommunityCard, monochrome: boolean) {
     );
   }
 
+  if (card.themedIconSrc) {
+    return (
+      <ThemeAdaptiveCardIcon
+        cardId={card.id}
+        icon={card.themedIconSrc}
+        alt={card.name}
+        className={THEMED_ICON_CLASS_BY_ID[card.id] ?? "h-10 w-10"}
+      />
+    );
+  }
+
   if (card.iconSrc) {
     const iconClassName = ICON_CLASS_BY_NAME[card.name]
       ?? (LARGE_CARD_ICON_NAMES.has(card.name)
@@ -285,4 +312,54 @@ function renderCardIcon(card: CommunityCard, monochrome: boolean) {
   }
 
   return <span className="text-sm font-bold tracking-[0.04em] text-fg-heading">{card.initials}</span>;
+}
+
+function ThemeAdaptiveCardIcon({
+  cardId,
+  icon,
+  alt,
+  className,
+}: {
+  cardId: string;
+  icon: NonNullable<CommunityCard["themedIconSrc"]>;
+  alt: string;
+  className?: string;
+}) {
+  const useDirectMonoImage = DIRECT_MONO_ICON_IDS.has(cardId);
+
+  return (
+    <span className={`relative block shrink-0 ${className ?? "h-10 w-10"}`.trim()} aria-hidden="true">
+      <img
+        src={icon.dark}
+        alt={alt}
+        className="block h-full w-full object-contain invert brightness-110 [[data-theme=light]_&]:hidden [[data-theme=monochrome]_&]:hidden"
+      />
+      <img
+        src={icon.light}
+        alt=""
+        className="hidden h-full w-full object-contain [[data-theme=light]_&]:block [[data-theme=monochrome]_&]:hidden"
+      />
+      {useDirectMonoImage ? (
+        <img
+          src={icon.mono}
+          alt=""
+          className="hidden h-full w-full object-contain [[data-theme=monochrome]_&]:block"
+        />
+      ) : null}
+      <span
+        className={`absolute inset-0 hidden [[data-theme=monochrome]_&]:block ${useDirectMonoImage ? "[[data-theme=monochrome]_&]:hidden" : ""}`.trim()}
+        style={{
+          background: "var(--fg-heading)",
+          WebkitMaskImage: `url('${icon.mono}')`,
+          maskImage: `url('${icon.mono}')`,
+          WebkitMaskSize: "contain",
+          maskSize: "contain",
+          WebkitMaskRepeat: "no-repeat",
+          maskRepeat: "no-repeat",
+          WebkitMaskPosition: "center",
+          maskPosition: "center",
+        }}
+      />
+    </span>
+  );
 }
