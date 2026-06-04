@@ -52,12 +52,15 @@ type NameNode = Node<NameNodeData, "name">;
 function NameNodeView({ data }: NodeProps<NameNode>) {
   const { name, variant, selected } = data;
   const isStar = variant === "star";
+  const isUnregistered = !!name.unregistered;
   return (
     <div
-      title={name.forSale ? `${name.name} — listed for sale` : name.name}
+      title={isUnregistered ? `${name.name} — not registered yet` : name.forSale ? `${name.name} — listed for sale` : name.name}
       className="inline-flex max-w-[9rem] cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5"
       style={{
-        background: isStar ? "var(--market-stats-segment-active-bg)" : "var(--color-raised)",
+        background: "var(--color-raised)",
+        opacity: isUnregistered ? 0.5 : 1,
+        borderStyle: isUnregistered ? "dashed" : "solid",
         borderColor: selected
           ? "var(--hero-headline-accent)"
           : name.forSale
@@ -65,7 +68,7 @@ function NameNodeView({ data }: NodeProps<NameNode>) {
             : "var(--leaders-card-border)",
         boxShadow: selected
           ? "0 0 0 2px var(--hero-headline-accent)"
-          : isStar
+          : isStar && !isUnregistered
             ? "0 8px 22px rgba(0,0,0,0.2)"
             : undefined,
       }}
@@ -79,8 +82,8 @@ function NameNodeView({ data }: NodeProps<NameNode>) {
         />
       )}
       <span
-        className={`truncate text-[0.8rem] ${isStar ? "font-bold" : "font-semibold"}`}
-        style={{ color: isStar ? "var(--fg-heading)" : "var(--fg-muted)" }}
+        className={`truncate text-[0.8rem] ${isStar && !isUnregistered ? "font-bold" : "font-semibold"}`}
+        style={{ color: isStar && !isUnregistered ? "var(--fg-heading)" : "var(--fg-muted)" }}
       >
         {name.name}
       </span>

@@ -33,13 +33,15 @@ import type { Network, Registration } from "@/lib/types";
 /** One name inside a cluster. The node the UI draws. */
 export interface CollectionName {
   name: string;
-  /** The UA this name resolves to. Glue, not a display node. */
+  /** The UA this name resolves to. Glue, not a display node. Empty for unregistered names. */
   address: string;
   forSale: boolean;
   listingPriceZats: number | null;
   height: number;
   /** True when the user typed this exact name as a seed — the cluster's "star". */
   isSeed: boolean;
+  /** True when the name exists but has not been registered yet. */
+  unregistered?: boolean;
 }
 
 /** A group of names that share one unified address. */
@@ -167,6 +169,18 @@ export async function buildCollection(
   for (const seed of seeds) {
     if (seed.kind === "address" && !populatedAddrs.has(seed.seed)) {
       seed.status = "empty";
+    }
+  }
+
+  // Unregistered name seeds get a synthetic singleton cluster so they appear in
+  // the graph as isolated nodes (no edges, distinct styling).
+  for (const seed of seeds) {
+    if (seed.kind === "name" && seed.status === "unregistered") {
+      clusters.push({
+        key: `name:${seed.seed}`,
+        address: "",
+        names: [{ name: seed.seed, address: "", forSale: false, listingPriceZats: null, height: 0, isSeed: true, unregistered: true }],
+      });
     }
   }
 

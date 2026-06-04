@@ -72,6 +72,7 @@ export default function CollectionsView({
     const next = urlNames.some((s) => s.toLowerCase() === key) ? urlNames : [...urlNames, t];
     startTransition(() => router.push(urlFor(next, selected)));
     setInput("");
+    setAddOpen(false);
   }
 
   function removeSeed(seed: string) {
@@ -162,17 +163,14 @@ export default function CollectionsView({
             </h1>
             <div className="max-w-xl">
               {addOpen ? (
-                renderPill(true)
+                <div className="animate-in fade-in slide-in-from-left-2 duration-200">
+                  {renderPill(true)}
+                </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => setAddOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[0.85rem] font-semibold text-fg-heading transition-colors hover:opacity-80"
-                  style={{
-                    background: "var(--color-raised)",
-                    borderColor: "var(--leaders-card-border)",
-                    boxShadow: "0 6px 18px rgba(0,0,0,0.10)",
-                  }}
+                  className="home-result-action is-primary inline-flex items-center gap-2"
                 >
                   <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4" aria-hidden="true">
                     <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
