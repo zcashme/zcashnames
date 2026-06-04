@@ -38,7 +38,7 @@ export const metadata = {
 export default async function CollectionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ c?: string; name?: string }>;
+  searchParams: Promise<{ c?: string; name?: string; history?: string }>;
 }) {
   const params = await searchParams;
   const network: Network = (await readCurrentStage()) ?? "mainnet";
@@ -47,7 +47,7 @@ export default async function CollectionsPage({
   const names = decodeNames(params.c).slice(0, 50);
 
   const collection = names.length > 0
-    ? await buildCollection(names, network)
+    ? await buildCollection(names, network, params.history !== undefined)
     : { seeds: [], clusters: [] };
 
   // Pick the selected name: the ?name= value if it's in the collection (registered

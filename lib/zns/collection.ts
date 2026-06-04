@@ -1,6 +1,6 @@
 "use server";
 
-import { getNamesForAddress, resolveName } from "@/lib/zns/resolve";
+import { getNamesForAddress, resolveName, getEvents } from "@/lib/zns/resolve";
 import {
   normalizeUsername,
   isValidUsername,
@@ -42,6 +42,8 @@ export interface CollectionName {
   isSeed: boolean;
   /** True when the name exists but has not been registered yet. */
   unregistered?: boolean;
+  /** True when the name appears only via a historical address link, not current ownership. */
+  historical?: boolean;
 }
 
 /** A group of names that share one unified address. */
@@ -72,7 +74,7 @@ export interface Collection {
   clusters: CollectionCluster[];
 }
 
-function toCollectionName(reg: Registration, seedNames: Set<string>): CollectionName {
+function toCollectionName(reg: Registration, seedNames: Set<string>, historical = false): CollectionName {
   return {
     name: reg.name,
     address: reg.address,
@@ -80,6 +82,7 @@ function toCollectionName(reg: Registration, seedNames: Set<string>): Collection
     listingPriceZats: reg.listing ? reg.listing.price : null,
     height: reg.height,
     isSeed: seedNames.has(reg.name),
+    historical: historical || undefined,
   };
 }
 
@@ -124,6 +127,7 @@ async function classifySeed(
 export async function buildCollection(
   rawSeeds: string[],
   network: Network = "testnet",
+  includeHistory = false,
 ): Promise<Collection> {
   // Normalise + de-duplicate seeds while preserving order.
   const seen = new Set<string>();
@@ -150,6 +154,30 @@ export async function buildCollection(
     }
   }
 
+  // Historical mode: fetch event logs for all found name seeds and collect
+  // past UA addresses not already in the current pool.
+  const historicalAddrs = new Set<string>();
+  if (includeHistory) {
+    const foundSeeds = classified
+      .filter((c) => c.resolved.kind === "name" && c.resolved.status === "found")
+      .map((c) => c.resolved.seed);
+    const eventResults = await Promise.all(
+      foundSeeds.map((name) => getEvents({ name, limit: 100 }, network)),
+    );
+    for (const result of eventResults) {
+      for (const ev of result.events) {
+        if (ev.ua) {
+          const ua = ev.ua.toLowerCase();
+          if (!addrSeen.has(ua)) {
+            addrSeen.add(ua);
+            historicalAddrs.add(ua);
+            addresses.push(ev.ua);
+          }
+        }
+      }
+    }
+  }
+
   const lookups = await Promise.all(
     addresses.map((addr) => getNamesForAddress(addr, network, 500)),
   );
@@ -158,7 +186,7 @@ export async function buildCollection(
     .map((address, i) => ({
       key: address.toLowerCase(),
       address,
-      names: lookups[i].map((reg) => toCollectionName(reg, seedNames)),
+      names: lookups[i].map((reg) => toCollectionName(reg, seedNames, historicalAddrs.has(address.toLowerCase()))),
     }))
     // A UA seed can come back empty (no names point at it) — drop those clusters;
     // the seed's "empty" status is reported separately below.

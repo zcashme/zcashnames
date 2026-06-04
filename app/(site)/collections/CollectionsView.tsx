@@ -51,6 +51,7 @@ export default function CollectionsView({
   const [isPending, startTransition] = useTransition();
 
   const urlNames = decodeNames(searchParams.get("c"));
+  const includeHistory = searchParams.has("history");
   const [input, setInput] = useState("");
   // On the rendered collection, the add control starts collapsed and expands
   // into the search bar on click (and stays open). The hero is always open.
@@ -67,12 +68,13 @@ export default function CollectionsView({
     }
   }
 
-  // The name list rides in one base64url ?c= token; selection stays a plain param.
-  function urlFor(names: string[], selected?: string | null) {
+  // The name list rides in one base64url ?c= token; selection and history stay plain params.
+  function urlFor(names: string[], selected?: string | null, history = includeHistory) {
     const parts: string[] = [];
     if (selected) parts.push(`name=${encodeURIComponent(selected)}`);
     const token = encodeNames(names);
     if (token) parts.push(`c=${token}`);
+    if (history) parts.push(`history=1`);
     return parts.length > 0 ? `/collections?${parts.join("&")}` : "/collections";
   }
 
@@ -221,13 +223,23 @@ export default function CollectionsView({
 
           {/* Stats */}
           {stats.total > 0 && (
-            <p className="text-[0.78rem] font-semibold text-fg-muted">
-              <span style={{ color: "var(--fg-heading)" }}>{stats.total}</span> names
-              {" · "}
-              <span style={{ color: "var(--fg-heading)" }}>{stats.registered}</span> registered
-              {stats.forSale > 0 && <> · <span style={{ color: "var(--home-result-status-forsale-fg)" }}>{stats.forSale}</span> for sale</>}
-              {stats.available > 0 && <> · <span style={{ color: "var(--fg-muted)" }}>{stats.available}</span> available</>}
-            </p>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[0.78rem] font-semibold text-fg-muted">
+                <span style={{ color: "var(--fg-heading)" }}>{stats.total}</span> names
+                {" · "}
+                <span style={{ color: "var(--fg-heading)" }}>{stats.registered}</span> registered
+                {stats.forSale > 0 && <> · <span style={{ color: "var(--home-result-status-forsale-fg)" }}>{stats.forSale}</span> for sale</>}
+                {stats.available > 0 && <> · <span style={{ color: "var(--fg-muted)" }}>{stats.available}</span> available</>}
+              </p>
+              <button
+                type="button"
+                onClick={() => startTransition(() => router.push(urlFor(urlNames, searchParams.get("name"), !includeHistory)))}
+                className="shrink-0 cursor-pointer text-[0.72rem] font-semibold uppercase tracking-[0.08em] transition-colors"
+                style={{ color: includeHistory ? "var(--hero-headline-accent)" : "var(--fg-muted)" }}
+              >
+                {includeHistory ? "History on" : "History off"}
+              </button>
+            </div>
           )}
 
           {/* The graph — every collected name on one canvas */}
