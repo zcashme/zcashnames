@@ -12,7 +12,7 @@
  */
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import ExplorerNameDetail from "@/app/(site)/explorer/ExplorerNameDetail";
@@ -54,7 +54,6 @@ export default function CollectionsView({
   // On the rendered collection, the add control starts collapsed and expands
   // into the search bar on click (and stays open). The hero is always open.
   const [addOpen, setAddOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // The name list rides in one base64url ?c= token; focus stays a plain param.
   function urlFor(names: string[], focus?: string | null) {
@@ -92,30 +91,6 @@ export default function CollectionsView({
     const params = new URLSearchParams({ name: focused });
     if (network !== "mainnet") params.set("env", network);
     router.push(`/explorer?${params.toString()}#${action.toLowerCase()}`);
-  }
-
-  function exportCollection() {
-    const blob = new Blob([JSON.stringify({ version: 1, network, names: urlNames }, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "zcashnames-collection.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  async function importCollection(file: File) {
-    try {
-      const data = JSON.parse(await file.text());
-      const incoming: string[] = Array.isArray(data.names)
-        ? data.names.filter((s: unknown): s is string => typeof s === "string")
-        : [];
-      startTransition(() => router.push(urlFor(Array.from(new Set([...urlNames, ...incoming])))));
-    } catch {
-      /* invalid file — ignore */
-    }
   }
 
   const badSeeds = collection.seeds.filter((s) => s.status !== "found");
@@ -263,27 +238,6 @@ export default function CollectionsView({
             />
           )}
 
-          {/* Quiet backup row */}
-          <div className="flex items-center gap-3 pt-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-            <button type="button" onClick={exportCollection} className="cursor-pointer transition-colors hover:text-fg-heading">
-              Export
-            </button>
-            <span style={{ color: "var(--fg-dim)" }}>·</span>
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="cursor-pointer transition-colors hover:text-fg-heading">
-              Import
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) importCollection(file);
-                e.target.value = "";
-              }}
-            />
-          </div>
         </div>
       )}
     </div>
