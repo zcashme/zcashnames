@@ -50,12 +50,17 @@ export default async function CollectionsPage({
     ? await buildCollection(names, network)
     : { seeds: [], clusters: [] };
 
-  // Pick the selected name: the ?name= value if it's actually in the collection,
-  // else the first resolved name we can find. Its full detail panel is resolved
-  // exactly like the explorer does, so we reuse ExplorerNameDetail downstream.
+  // Pick the selected name: the ?name= value if it's in the collection (registered
+  // or unregistered), else the first resolved name. Unregistered names are valid
+  // selections — resolveName returns status "available" and ExplorerNameDetail
+  // renders the full panel with claim button.
   const allNames = collection.clusters.flatMap((c) => c.names.map((n) => n.name));
+  const unregisteredNames = collection.seeds
+    .filter((s) => s.kind === "name" && s.status === "unregistered")
+    .map((s) => s.seed);
+  const selectableNames = [...allNames, ...unregisteredNames];
   const selected =
-    (params.name && allNames.includes(params.name) ? params.name : null) ??
+    (params.name && selectableNames.includes(params.name) ? params.name : null) ??
     collection.seeds.find((s) => s.kind === "name" && s.status === "found")?.seed ??
     allNames[0] ??
     null;

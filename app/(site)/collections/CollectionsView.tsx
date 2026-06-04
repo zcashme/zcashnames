@@ -93,7 +93,6 @@ export default function CollectionsView({
     router.push(`/explorer?${params.toString()}#${action.toLowerCase()}`);
   }
 
-  const badSeeds = collection.seeds.filter((s) => s.status !== "found");
   const isEmpty = urlNames.length === 0;
 
   // The expanded search pill. `autoFocus` is used when it's revealed by the
@@ -206,20 +205,6 @@ export default function CollectionsView({
               </span>
             ))}
           </div>
-
-          {/* Names that didn't resolve */}
-          {badSeeds.length > 0 && (
-            <div className="flex flex-col gap-1 text-[0.78rem] text-fg-muted">
-              {badSeeds.map((s) => (
-                <p key={s.seed}>
-                  <span className="font-mono font-semibold">{s.seed}</span>{" "}
-                  {s.status === "unregistered" && "— valid name, not registered yet."}
-                  {s.status === "empty" && "— no names point at this address."}
-                  {s.status === "invalid" && "— not a valid name or unified address."}
-                </p>
-              ))}
-            </div>
-          )}
 
           {/* The graph — every collected name on one canvas */}
           {collection.clusters.length > 0 && (
