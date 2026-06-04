@@ -4,7 +4,7 @@
  * Every name lands on one canvas. Names that share an owner form a constellation
  * (a star with its co-owned siblings); names with a different owner become their
  * own constellation in the same space. The address is never drawn — it's the
- * invisible glue between siblings. Tapping a node focuses it, driving the detail
+ * invisible glue between siblings. Tapping a node selects it, driving the detail
  * panel above.
  *
  * Nodes are our own React components, so the themed chips carry over verbatim;
@@ -32,9 +32,9 @@ function siblingCap(clusterCount: number): number {
   return clusterCount === 1 ? 16 : 8;
 }
 
-function starOf(cluster: CollectionCluster, focused: string | null): CollectionName {
+function starOf(cluster: CollectionCluster, selected: string | null): CollectionName {
   return (
-    cluster.names.find((n) => n.name === focused) ??
+    cluster.names.find((n) => n.name === selected) ??
     cluster.names.find((n) => n.isSeed) ??
     cluster.names[0]
   );
@@ -43,14 +43,14 @@ function starOf(cluster: CollectionCluster, focused: string | null): CollectionN
 type NameNodeData = {
   name: CollectionName;
   variant: "star" | "node";
-  focused: boolean;
+  selected: boolean;
 };
 type NameNode = Node<NameNodeData, "name">;
 
 // The node renderer — our themed chip. Hidden handles give React Flow something
 // to anchor the edges to without drawing connection dots.
 function NameNodeView({ data }: NodeProps<NameNode>) {
-  const { name, variant, focused } = data;
+  const { name, variant, selected } = data;
   const isStar = variant === "star";
   return (
     <div
@@ -58,12 +58,12 @@ function NameNodeView({ data }: NodeProps<NameNode>) {
       className="inline-flex max-w-[9rem] cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5"
       style={{
         background: isStar ? "var(--market-stats-segment-active-bg)" : "var(--color-raised)",
-        borderColor: focused
+        borderColor: selected
           ? "var(--hero-headline-accent)"
           : name.forSale
             ? "var(--home-result-status-forsale-border)"
             : "var(--leaders-card-border)",
-        boxShadow: focused
+        boxShadow: selected
           ? "0 0 0 2px var(--hero-headline-accent)"
           : isStar
             ? "0 8px 22px rgba(0,0,0,0.2)"
@@ -93,11 +93,11 @@ const nodeTypes: NodeTypes = { name: NameNodeView };
 
 export default function CollectionGraph({
   clusters,
-  focused,
+  selected,
   onNameClick,
 }: {
   clusters: CollectionCluster[];
-  focused: string | null;
+  selected: string | null;
   onNameClick: (name: string) => void;
 }) {
   const { nodes, edges } = useMemo(() => {
@@ -117,13 +117,13 @@ export default function CollectionGraph({
 
     clusters.forEach((cluster, i) => {
       const anchor = anchorFor(i);
-      const star = starOf(cluster, focused);
+      const star = starOf(cluster, selected);
       const starId = `${cluster.key}:${star.name}`;
       nodes.push({
         id: starId,
         type: "name",
         position: anchor,
-        data: { name: star, variant: "star", focused: star.name === focused },
+        data: { name: star, variant: "star", selected: star.name === selected },
         draggable: false,
       });
 
@@ -137,7 +137,7 @@ export default function CollectionGraph({
           id,
           type: "name",
           position: { x: anchor.x + rx * Math.cos(angle), y: anchor.y + ry * Math.sin(angle) },
-          data: { name: sib, variant: "node", focused: sib.name === focused },
+          data: { name: sib, variant: "node", selected: sib.name === selected },
           draggable: false,
         });
         edges.push({
@@ -151,7 +151,7 @@ export default function CollectionGraph({
     });
 
     return { nodes, edges };
-  }, [clusters, focused]);
+  }, [clusters, selected]);
 
   return (
     <div

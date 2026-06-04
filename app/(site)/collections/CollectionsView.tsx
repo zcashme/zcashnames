@@ -2,9 +2,9 @@
  * CollectionsView — client orchestrator for the collections page.
  *
  * The names you're collecting live in the URL (?names=) so a collection is a
- * shareable link, resolved server-side into one graph. ?focus= picks the name
+ * shareable link, resolved server-side into one graph. ?name= picks the name
  * whose full detail panel shows (reusing the explorer's ExplorerNameDetail);
- * tapping a node in the graph just changes the focus, in place.
+ * tapping a node in the graph just changes the selection, in place.
  *
  * Empty state is a full hero (headline + a single search pill); once there are
  * results it collapses to a compact header so the graph gets the room. Network
@@ -34,13 +34,13 @@ function isValidSeed(raw: string): boolean {
 export default function CollectionsView({
   network,
   collection,
-  focused,
+  selected,
   nameResult,
   nameEvents,
 }: {
   network: Network;
   collection: Collection;
-  focused: string | null;
+  selected: string | null;
   nameResult: ResolveName | null;
   nameEvents: ZnsEvent[];
 }) {
@@ -55,12 +55,12 @@ export default function CollectionsView({
   // into the search bar on click (and stays open). The hero is always open.
   const [addOpen, setAddOpen] = useState(false);
 
-  // The name list rides in one base64url ?c= token; focus stays a plain param.
-  function urlFor(names: string[], focus?: string | null) {
+  // The name list rides in one base64url ?c= token; selection stays a plain param.
+  function urlFor(names: string[], selected?: string | null) {
     const parts: string[] = [];
+    if (selected) parts.push(`name=${encodeURIComponent(selected)}`);
     const token = encodeNames(names);
     if (token) parts.push(`c=${token}`);
-    if (focus) parts.push(`focus=${encodeURIComponent(focus)}`);
     return parts.length > 0 ? `/collections?${parts.join("&")}` : "/collections";
   }
 
@@ -68,9 +68,9 @@ export default function CollectionsView({
     const t = raw.trim();
     if (!isValidSeed(t)) return;
     const key = t.toLowerCase();
-    const focus = validateAddress(t).status === "unified" ? undefined : normalizeUsername(t);
+    const selected = validateAddress(t).status === "unified" ? undefined : normalizeUsername(t);
     const next = urlNames.some((s) => s.toLowerCase() === key) ? urlNames : [...urlNames, t];
-    startTransition(() => router.push(urlFor(next, focus)));
+    startTransition(() => router.push(urlFor(next, selected)));
     setInput("");
   }
 
@@ -79,16 +79,16 @@ export default function CollectionsView({
     startTransition(() => router.push(urlFor(urlNames.filter((s) => s.toLowerCase() !== key))));
   }
 
-  // A node tap focuses that name (in place) — the detail panel above follows.
-  function focusName(name: string) {
+  // A node tap selects that name (in place) — the detail panel above follows.
+  function selectName(name: string) {
     startTransition(() => router.push(urlFor(urlNames, name)));
   }
 
   // Detail-panel actions (list/update/buy) hand off to the explorer, where the
   // Zip321Modal flow already lives — Collections triggers, never reimplements.
   function openInExplorer(action: Action) {
-    if (!focused) return;
-    const params = new URLSearchParams({ name: focused });
+    if (!selected) return;
+    const params = new URLSearchParams({ name: selected });
     if (network !== "mainnet") params.set("env", network);
     router.push(`/explorer?${params.toString()}#${action.toLowerCase()}`);
   }
@@ -223,13 +223,13 @@ export default function CollectionsView({
 
           {/* The graph — every collected name on one canvas */}
           {collection.clusters.length > 0 && (
-            <CollectionGraph clusters={collection.clusters} focused={focused} onNameClick={focusName} />
+            <CollectionGraph clusters={collection.clusters} selected={selected} onNameClick={selectName} />
           )}
 
           {/* Focused name detail (reuses the explorer's panel) */}
-          {nameResult && focused && (
+          {nameResult && selected && (
             <ExplorerNameDetail
-              query={focused}
+              query={selected}
               result={nameResult}
               events={nameEvents}
               isPending={isPending && !nameResult}

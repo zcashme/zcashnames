@@ -3,7 +3,7 @@
  *
  * Names you're collecting live in the URL (?names=alice,bob,u1...) so a
  * collection is a shareable link, resolved server-side into co-owned clusters.
- * ?focus= picks which name's full detail panel to render (defaults to the first
+ * ?name= picks which name's full detail panel to render (defaults to the first
  * resolved name); the same ExplorerNameDetail the explorer uses is reused here.
  *
  * Network is inherited from the shared stage cookie (set on the home page).
@@ -38,7 +38,7 @@ export const metadata = {
 export default async function CollectionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ c?: string; focus?: string }>;
+  searchParams: Promise<{ c?: string; name?: string }>;
 }) {
   const params = await searchParams;
   const network: Network = (await readCurrentStage()) ?? "mainnet";
@@ -50,23 +50,23 @@ export default async function CollectionsPage({
     ? await buildCollection(names, network)
     : { seeds: [], clusters: [] };
 
-  // Pick the focused name: the ?focus= value if it's actually in the collection,
+  // Pick the selected name: the ?name= value if it's actually in the collection,
   // else the first resolved name we can find. Its full detail panel is resolved
   // exactly like the explorer does, so we reuse ExplorerNameDetail downstream.
   const allNames = collection.clusters.flatMap((c) => c.names.map((n) => n.name));
-  const focused =
-    (params.focus && allNames.includes(params.focus) ? params.focus : null) ??
+  const selected =
+    (params.name && allNames.includes(params.name) ? params.name : null) ??
     collection.seeds.find((s) => s.kind === "name" && s.status === "found")?.seed ??
     allNames[0] ??
     null;
 
   let nameResult: ResolveName | null = null;
   let nameEvents: ZnsEvent[] = [];
-  if (focused) {
+  if (selected) {
     try {
       const [resolved, ev] = await Promise.all([
-        resolveName(focused, network),
-        getEvents({ name: focused, limit: 20 }, network),
+        resolveName(selected, network),
+        getEvents({ name: selected, limit: 20 }, network),
       ]);
       nameResult = resolved;
       nameEvents = ev.events;
@@ -80,7 +80,7 @@ export default async function CollectionsPage({
       <CollectionsView
         network={network}
         collection={collection}
-        focused={focused}
+        selected={selected}
         nameResult={nameResult}
         nameEvents={nameEvents}
       />
