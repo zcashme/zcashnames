@@ -1,7 +1,7 @@
 /**
  * CollectionsView — client orchestrator for the collections page.
  *
- * The names you're collecting live in the URL (?names=) so a collection is a
+ * The names you're collecting live in the URL (?c=) so a collection is a
  * shareable link, resolved server-side into one graph. ?name= picks the name
  * whose full detail panel shows (reusing the explorer's ExplorerNameDetail);
  * tapping a node in the graph just changes the selection, in place.
@@ -16,6 +16,7 @@ import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import ExplorerNameDetail from "@/app/(site)/explorer/ExplorerNameDetail";
+import CopyIconButton from "@/components/CopyIconButton";
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import CollectionGraph from "./CollectionGraph";
 import { encodeNames, decodeNames } from "./codec";
@@ -54,6 +55,17 @@ export default function CollectionsView({
   // On the rendered collection, the add control starts collapsed and expands
   // into the search bar on click (and stays open). The hero is always open.
   const [addOpen, setAddOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  }
 
   // The name list rides in one base64url ?c= token; selection stays a plain param.
   function urlFor(names: string[], selected?: string | null) {
@@ -66,11 +78,12 @@ export default function CollectionsView({
 
   function addSeed(raw: string) {
     const t = raw.trim();
-    if (!isValidSeed(t)) return;
+    const isUnified = validateAddress(t).status === "unified";
+    if (!isUnified && !isValidUsername(normalizeUsername(t))) return;
     const key = t.toLowerCase();
-    const selected = validateAddress(t).status === "unified" ? undefined : normalizeUsername(t);
+    const autoSelect = isUnified ? undefined : normalizeUsername(t);
     const next = urlNames.some((s) => s.toLowerCase() === key) ? urlNames : [...urlNames, t];
-    startTransition(() => router.push(urlFor(next, selected)));
+    startTransition(() => router.push(urlFor(next, autoSelect)));
     setInput("");
     setAddOpen(false);
   }
@@ -121,6 +134,7 @@ export default function CollectionsView({
         type="text"
         value={input}
         onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Escape") { setAddOpen(false); setInput(""); } }}
         placeholder="Search a name or address"
         aria-label="Add a name or address"
         className="min-w-0 flex-1 bg-transparent py-2 text-[0.98rem] outline-none placeholder:text-fg-dim"
@@ -128,6 +142,16 @@ export default function CollectionsView({
       />
       <button type="submit" disabled={!isValidSeed(input)} className="home-result-action is-primary shrink-0 disabled:cursor-not-allowed disabled:opacity-40">
         Add
+      </button>
+      <button
+        type="button"
+        onClick={() => { setAddOpen(false); setInput(""); }}
+        className="mr-1 shrink-0 cursor-pointer text-fg-muted transition-colors hover:text-fg-heading"
+        aria-label="Close"
+      >
+        <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4" aria-hidden="true">
+          <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
       </button>
     </form>
   );
@@ -157,16 +181,16 @@ export default function CollectionsView({
         /* ── Results ──────────────────────────────────────────────────────── */
         <div className={`flex flex-col gap-6 pt-2 transition-opacity ${isPending ? "opacity-60" : ""}`}>
           <div className="flex flex-col gap-4">
-            <h1 className="font-bold" style={{ fontSize: "clamp(1.7rem, 3vw, 2.4rem)", letterSpacing: "-0.02em" }}>
-              <span className="hero-headline-primary">Your </span>
-              <span className="hero-headline-accent">collection</span>
-            </h1>
-            <div className="max-w-xl">
-              {addOpen ? (
-                <div className="animate-in fade-in slide-in-from-left-2 duration-200">
-                  {renderPill(true)}
-                </div>
-              ) : (
+            {addOpen ? (
+              <div className="animate-in fade-in slide-in-from-left-2 duration-200 max-w-xl">
+                {renderPill(true)}
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-3">
+                <h1 className="font-bold" style={{ fontSize: "clamp(1.7rem, 3vw, 2.4rem)", letterSpacing: "-0.02em" }}>
+                  <span className="hero-headline-primary">Your </span>
+                  <span className="hero-headline-accent">collection</span>
+                </h1>
                 <button
                   type="button"
                   onClick={() => setAddOpen(true)}
@@ -177,31 +201,14 @@ export default function CollectionsView({
                   </svg>
                   Add a name
                 </button>
-              )}
-            </div>
-          </div>
-
-          {/* Active names */}
-          <div className="flex flex-wrap items-center gap-2">
-            {urlNames.map((seed) => (
-              <span
-                key={seed}
-                className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.78rem] font-semibold text-fg-heading"
-                style={{ borderColor: "var(--leaders-card-border)", background: "var(--color-raised)" }}
-              >
-                <span className="max-w-[12rem] truncate">{seed}</span>
-                <button
-                  type="button"
-                  onClick={() => removeSeed(seed)}
-                  className="cursor-pointer text-fg-muted transition-colors hover:text-fg-heading"
-                  aria-label={`Remove ${seed}`}
-                >
-                  <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
-                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  </svg>
-                </button>
-              </span>
-            ))}
+                <CopyIconButton
+                  copied={copied}
+                  onClick={() => void copyLink()}
+                  ariaLabel="Copy collection link"
+                  title={copied ? "Copied!" : "Copy link to this collection"}
+                />
+              </div>
+            )}
           </div>
 
           {/* The graph — every collected name on one canvas */}
@@ -211,14 +218,25 @@ export default function CollectionsView({
 
           {/* Focused name detail (reuses the explorer's panel) */}
           {nameResult && selected && (
-            <ExplorerNameDetail
-              query={selected}
-              result={nameResult}
-              events={nameEvents}
-              isPending={isPending && !nameResult}
-              usdPerZec={usdPerZec}
-              onAction={openInExplorer}
-            />
+            <div className="flex flex-col gap-2">
+              <ExplorerNameDetail
+                query={selected}
+                result={nameResult}
+                events={nameEvents}
+                isPending={isPending}
+                usdPerZec={usdPerZec}
+                onAction={openInExplorer}
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => removeSeed(selected)}
+                  className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-red-400 cursor-pointer"
+                >
+                  Remove from collection
+                </button>
+              </div>
+            </div>
           )}
 
         </div>

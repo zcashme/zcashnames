@@ -32,6 +32,12 @@ function siblingCap(clusterCount: number): number {
   return clusterCount === 1 ? 16 : 8;
 }
 
+function anchorFor(i: number, k: number) {
+  if (k <= 1) return { x: 0, y: 0 };
+  const theta = (i / k) * Math.PI * 2 - Math.PI / 2;
+  return { x: 200 * Math.cos(theta), y: 200 * Math.sin(theta) };
+}
+
 function starOf(cluster: CollectionCluster, selected: string | null): CollectionName {
   return (
     cluster.names.find((n) => n.name === selected) ??
@@ -104,22 +110,15 @@ export default function CollectionGraph({
   onNameClick: (name: string) => void;
 }) {
   const { nodes, edges } = useMemo(() => {
-    const k = clusters.length;
+    const real = clusters.filter((c) => !c.names[0]?.unregistered);
+    const ghosts = clusters.filter((c) => c.names[0]?.unregistered);
+    const k = real.length;
     const cap = siblingCap(k);
     const nodes: NameNode[] = [];
     const edges: Edge[] = [];
 
-    // Constellation centre (in flow px). fitView scales the whole thing to fit,
-    // so absolute values only need to be internally consistent.
-    function anchorFor(i: number) {
-      if (k === 1) return { x: 0, y: 0 };
-      const R = 340;
-      const theta = (i / k) * Math.PI * 2 - Math.PI / 2;
-      return { x: R * Math.cos(theta), y: R * Math.sin(theta) };
-    }
-
-    clusters.forEach((cluster, i) => {
-      const anchor = anchorFor(i);
+    real.forEach((cluster, i) => {
+      const anchor = anchorFor(i, k);
       const star = starOf(cluster, selected);
       const starId = `${cluster.key}:${star.name}`;
       nodes.push({
@@ -131,8 +130,8 @@ export default function CollectionGraph({
       });
 
       const siblings = cluster.names.filter((n) => n !== star).slice(0, cap);
-      const rx = k === 1 ? 230 : 150;
-      const ry = k === 1 ? 160 : 130;
+      const rx = k <= 1 ? 160 : 110;
+      const ry = k <= 1 ? 110 : 85;
       siblings.forEach((sib, j) => {
         const angle = (j / siblings.length) * Math.PI * 2 - Math.PI / 2;
         const id = `${cluster.key}:${sib.name}`;
@@ -153,13 +152,28 @@ export default function CollectionGraph({
       });
     });
 
+    // Unregistered singletons in a horizontal strip below the registered clusters.
+    const stripY = k === 0 ? 0 : 260;
+    const stripGap = 160;
+    const stripOffsetX = ((ghosts.length - 1) / 2) * stripGap;
+    ghosts.forEach((cluster, i) => {
+      const ghost = cluster.names[0];
+      nodes.push({
+        id: `${cluster.key}:${ghost.name}`,
+        type: "name",
+        position: { x: i * stripGap - stripOffsetX, y: stripY },
+        data: { name: ghost, variant: "node", selected: ghost.name === selected },
+        draggable: false,
+      });
+    });
+
     return { nodes, edges };
   }, [clusters, selected]);
 
   return (
     <div
       className="overflow-hidden rounded-2xl border"
-      style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)", height: 440 }}
+      style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)", height: 480 }}
     >
       <ReactFlow
         nodes={nodes}
@@ -167,14 +181,14 @@ export default function CollectionGraph({
         nodeTypes={nodeTypes}
         onNodeClick={(_, node) => onNameClick((node as NameNode).data.name.name)}
         fitView
-        fitViewOptions={{ padding: 0.25 }}
+        fitViewOptions={{ padding: 0.12, minZoom: 0.5 }}
         nodesDraggable={false}
         nodesConnectable={false}
         zoomOnScroll={false}
         panOnScroll={false}
         preventScrolling={false}
         proOptions={{ hideAttribution: false }}
-        minZoom={0.2}
+        minZoom={0.5}
         maxZoom={1.5}
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="var(--leaders-card-border)" />
