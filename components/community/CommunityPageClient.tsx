@@ -68,7 +68,7 @@ const THEMED_ICON_CLASS_BY_ID: Record<string, string> = {
   updates: "h-10 w-10",
 };
 
-const DIRECT_MONO_ICON_IDS = new Set(["leaderboard", "explorer", "builder-stories"]);
+const DIRECT_MONO_ICON_IDS = new Set(["leaderboard", "explorer", "builder-stories", "sharekit"]);
 
 function formatCommunityCardHref(href: string) {
   if (!href) return "/";
