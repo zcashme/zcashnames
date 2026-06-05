@@ -39,9 +39,9 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "cipherscan-app",
         name: "Cipherscan",
-        label: "Explorer partner",
+        label: "Explorers",
         description:
-          "Privacy-first Zcash explorer for names, blocks, transactions, and network analytics.",
+          "Search blocks, transactions, and addresses on the Zcash blockchain. Track shielded pool activity, privacy scores, and network health in real time.",
         href: "https://cipherscan.app",
         shareText: "CipherScan supports exploring ZcashNames and Zcash network activity.",
         detail: "cipherscan.app",
@@ -50,9 +50,9 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "edge-wallet",
         name: "Edge Wallet",
-        label: "Wallet partner",
+        label: "Wallets",
         description:
-          "Intuitive self-custody wallet with Zcash support - send and receive ZEC privately from anywhere.",
+          "A non-custodial, multi-currency mobile cryptocurrency wallet that allows users to securely buy, sell, exchange, and store digital assets on their iOS or Android devices.",
         href: "https://edge.app/",
         shareText: "Edge Wallet now supports ZcashNames - send ZEC to a personal name.",
         detail: "edge.app",
@@ -61,10 +61,10 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "zingo-wallet",
         name: "Zingo Wallet",
-        label: "Wallet partner",
+        label: "Wallets",
         description:
-          "Mobile and desktop Zcash wallet for private sends, receives, and name-based flows.",
-        href: "https://zingo.pm/",
+          "A self-custody, Zcash-only, shielded wallet that gives you a way to send, receive, and spend ZEC.",
+        href: "https://zingolabs.org/",
         shareText: "Zingo Wallet now supports ZcashNames - send ZEC to a personal name.",
         detail: "zingo.pm",
         iconSrc: "/wallets/zingo/app-icon.png",
@@ -72,9 +72,9 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "cake-wallet",
         name: "Cake Wallet",
-        label: "Wallet partner",
+        label: "Wallets",
         description:
-          "Privacy-focused multi-currency wallet bringing ZcashNames into everyday mobile wallet usage.",
+          "A popular, open-source, non-custodial cryptocurrency wallet that supports Zcash with rotating addresses and in-app swaps.",
         href: "https://cakewallet.com/",
         shareText: "Cake Wallet now supports ZcashNames - send ZEC to a personal name.",
         detail: "cakewallet.com",
@@ -83,9 +83,9 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "unstoppable-wallet",
         name: "Unstoppable Wallet",
-        label: "Wallet partner",
+        label: "Wallets",
         description:
-          "Multi-currency decentralized wallet built for privacy-conscious crypto management.",
+          "A highly secure, non-custodial multi-coin mobile app known for its strong emphasis on user privacy and financial sovereignty.",
         href: "https://unstoppable.money/",
         shareText: "Unstoppable Wallet now resolves ZcashNames - send to a personal name.",
         detail: "unstoppable.money",
@@ -94,10 +94,10 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "zipher-wallet",
         name: "Zipher Wallet",
-        label: "Wallet partner",
+        label: "Wallets",
         description:
-          "Private Zcash wallet focused on new transfer models and mobile-first privacy experiences.",
-        href: "https://zipher.app/",
+          "A Zcash wallet for humans, merchants, and AI agents. It has a mobile app, a CLI, and an MCP server for agent workflows.",
+        href: "https://zipher.to/",
         shareText: "Zipher Wallet now supports ZcashNames - send ZEC to a personal name.",
         detail: "zipher.app",
         iconSrc: "/wallets/zipher/app-icon.png",
@@ -105,7 +105,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "noir-wallet",
         name: "Noir Wallet",
-        label: "Wallet partner",
+        label: "Wallets",
         description:
           "Browser wallet bringing shielded privacy and native Zcash DeFi access into extension-based flows.",
         href: "http://zknoir.com",
@@ -116,7 +116,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "zcashme",
         name: "Zcash.me",
-        label: "Profile partner",
+        label: "Profiles",
         description:
           "Profile infrastructure for connecting names, identity, and public Zcash presence.",
         href: "https://zcash.me",
@@ -147,9 +147,9 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "beta-test",
         name: "Beta Test",
-        label: "Product access",
+        label: "Product",
         description:
-          "Try ZcashNames before release, test real workflows, and send high-signal feedback to the team.",
+          "Try ZcashNames before release, test real workflows, and send feedback to the team.",
         href: "/beta/apply",
         shareText: "Apply to beta test ZcashNames before release.",
         detail: "Try the product before release",
@@ -158,7 +158,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "sharekit",
         name: "Share Kit",
-        label: "Campaign assets",
+        label: "Campaign",
         description:
           "Use ready-made posts and referral messaging to promote ZcashNames across social channels.",
         href: "/sharekit",
@@ -169,7 +169,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "referrals-dashboard",
         name: "Referrals Dashboard",
-        label: "Growth tools",
+        label: "Campaign",
         description:
           "Enter a referral code to view referrals, projected rewards, and dashboard details.",
         href: "/leaders/ref",
@@ -180,7 +180,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "namepost",
         name: "Address Me By My Name",
-        label: "Meme generator",
+        label: "Campaign",
         description:
           "Create a custom 'Address Me By My Name' image with your name, share it on social media.",
         href: "/namepost",
@@ -294,7 +294,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "zcashnames-updates",
         name: "ZcashNames Updates",
-        label: "Product notes",
+        label: "Company",
         description:
           "Follow the core docs and product resources as ZcashNames moves toward release.",
         href: "/docs",
@@ -305,7 +305,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "launch-notes",
         name: "Launch Notes",
-        label: "Release context",
+        label: "Product",
         description:
           "Read pricing, rollout, and beta context for the current ZcashNames release phase.",
         href: "/docs/learn/pricing",
@@ -316,7 +316,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "builder-stories",
         name: "Builder Stories",
-        label: "Developer resources",
+        label: "Product",
         description:
           "Explore integration paths for wallets, explorers, apps, and ecosystem builders.",
         href: "/docs/integrate",
