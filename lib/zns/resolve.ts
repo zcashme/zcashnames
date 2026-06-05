@@ -7,7 +7,7 @@ import {
   isValidUsername,
   zatsToZec,
 } from "@/lib/zns/utils";
-import type { Network, Action, ResolveName } from "@/lib/types";
+import type { Network, Action, ResolveName, Registration } from "@/lib/types";
 import { getReservedName } from "@/lib/zns/reserved";
 import { getNamePricing } from "@/lib/network-stats";
 
@@ -109,6 +109,24 @@ export async function resolveName(
   };
 }
 
+
+// Reverse lookup: every name currently pointing at a unified address. This is
+// the read primitive behind Collections — a UA is the only thing that clusters
+// a person's names, since the chain never links one human's addresses together.
+// Returns [] on any failure (invalid address, indexer down) to keep callers simple.
+export async function getNamesForAddress(
+  address: string,
+  network: Network = "testnet",
+  limit?: number,
+  offset?: number,
+): Promise<Registration[]> {
+  try {
+    const regs = await getZns(network).resolveAddress(address, limit, offset);
+    return [...regs].sort((a, b) => a.name.localeCompare(b.name));
+  } catch {
+    return [];
+  }
+}
 
 export async function getListings(
   network: Network = "testnet",

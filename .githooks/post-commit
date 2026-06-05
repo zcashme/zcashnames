@@ -1,0 +1,22 @@
+#!/bin/sh
+# Keep the codesearch semantic index fresh after each commit.
+# Runs in the background so the commit returns immediately, and never
+# fails the commit. Silently skips if codesearch isn't installed, so
+# teammates without it are unaffected.
+
+# Resolve the binary: prefer PATH, fall back to the cargo install location
+# (git hooks run with a minimal PATH that often omits ~/.cargo/bin).
+codesearch_bin=$(command -v codesearch 2>/dev/null)
+if [ -z "$codesearch_bin" ] && [ -x "$HOME/.cargo/bin/codesearch" ]; then
+  codesearch_bin="$HOME/.cargo/bin/codesearch"
+fi
+
+[ -z "$codesearch_bin" ] && exit 0
+
+repo_root=$(git rev-parse --show-toplevel)
+log="$repo_root/.codesearch-index.log"
+
+# Incremental reindex, detached so the commit prompt returns immediately.
+( cd "$repo_root" && "$codesearch_bin" index >>"$log" 2>&1 ) &
+
+exit 0
