@@ -364,7 +364,7 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
         </p>
         <Link
           href={`/beta/apply/${brand.slug}`}
-          className="mb-6 inline-flex items-center justify-center gap-3 rounded-full border border-[var(--announce-bar-bg)] bg-transparent px-5 py-3 text-sm font-semibold text-[var(--fg-heading)] transition-colors hover:border-[var(--announce-bar-bg)] hover:bg-[var(--announce-bar-bg)] hover:text-[var(--announce-bar-fg)]"
+          className="mb-6 inline-flex items-center justify-center gap-2.5 rounded-full border border-[var(--announce-bar-bg)] bg-transparent px-5 py-2.5 text-sm font-semibold text-[var(--fg-heading)] transition-colors hover:border-[var(--announce-bar-bg)] hover:bg-[var(--announce-bar-bg)] hover:text-[var(--announce-bar-fg)]"
           style={{
             textDecoration: "none",
           }}
@@ -374,14 +374,14 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
               src={brand.appIcon.src}
               alt={brand.appIcon.alt}
               className={brand.slug === "zingo"
-                ? "h-10 w-10 rounded-[8px] object-contain"
-                : "h-6 w-6 rounded-[8px] object-contain"}
+                ? "h-8 w-8 rounded-[8px] object-contain"
+                : "h-5 w-5 rounded-[8px] object-contain"}
             />
           ) : (
             <span
               className={brand.slug === "zingo"
-                ? "flex h-10 w-10 items-center justify-center overflow-hidden rounded-[8px]"
-                : "flex h-6 w-6 items-center justify-center overflow-hidden rounded-[8px]"}
+                ? "flex h-8 w-8 items-center justify-center overflow-hidden rounded-[8px]"
+                : "flex h-5 w-5 items-center justify-center overflow-hidden rounded-[8px]"}
             >
               <WalletBrandLogo brand={brand} />
             </span>

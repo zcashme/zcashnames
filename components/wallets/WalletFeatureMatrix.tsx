@@ -3,6 +3,7 @@
 import { Fragment, useState, type CSSProperties } from "react";
 
 import {
+  compareWalletVariantsByFeatureSupport,
   subcategoryLabel,
   type WalletFeatures,
   type WalletVariant,
@@ -26,6 +27,12 @@ type FeatureGroup = {
   id: string;
   label: string;
   rows: readonly MatrixRow[];
+};
+
+type MatrixVariantColumn = {
+  key: string;
+  platformLabel: string;
+  variant: WalletVariant;
 };
 
 const FEATURE_GROUPS: readonly FeatureGroup[] = [
@@ -64,7 +71,7 @@ const FEATURE_GROUPS: readonly FeatureGroup[] = [
   },
   {
     id: "control-names",
-    label: "Control Names",
+    label: "In-App Controls",
     rows: [
       { kind: "action", key: "claim", label: "Claim name" },
       { kind: "action", key: "release", label: "Release name" },
@@ -75,9 +82,12 @@ const FEATURE_GROUPS: readonly FeatureGroup[] = [
   },
 ];
 
+const FIRST_COLUMN_WIDTH = 220;
+
 const tableStyle: CSSProperties = {
   width: "100%",
-  borderCollapse: "collapse",
+  borderCollapse: "separate",
+  borderSpacing: 0,
   color: "var(--fg-body)",
   fontSize: "0.86rem",
 };
@@ -91,6 +101,36 @@ const cellStyle: CSSProperties = {
 
 const groupHeaderStyle: CSSProperties = {
   background: "color-mix(in srgb, var(--color-surface-elevated) 88%, black 12%)",
+};
+
+const groupSummaryCellStyle: CSSProperties = {
+  ...groupHeaderStyle,
+  color: "var(--fg-heading)",
+  fontWeight: 700,
+};
+
+const stickyFirstColumnStyle: CSSProperties = {
+  left: 0,
+  position: "sticky",
+  zIndex: 1,
+  boxShadow: "1px 0 0 var(--faq-border)",
+  backgroundClip: "padding-box",
+  isolation: "isolate",
+  overflow: "hidden",
+  minWidth: FIRST_COLUMN_WIDTH,
+  width: FIRST_COLUMN_WIDTH,
+};
+
+const stickyFirstHeaderStyle: CSSProperties = {
+  ...stickyFirstColumnStyle,
+  backgroundColor: "var(--color-surface)",
+  zIndex: 10,
+};
+
+const stickyFirstRowStyle: CSSProperties = {
+  ...stickyFirstColumnStyle,
+  backgroundColor: "var(--color-surface)",
+  zIndex: 8,
 };
 
 function SupportMark({ value }: { value: boolean }) {
@@ -120,13 +160,64 @@ function supportedCount(variant: WalletVariant, group: FeatureGroup): number {
   return group.rows.reduce((count, row) => count + Number(rowSupported(variant, row)), 0);
 }
 
+function sameFeatureSet(a: WalletVariant, b: WalletVariant): boolean {
+  return JSON.stringify(a.features) === JSON.stringify(b.features);
+}
+
+function matrixColumns(variants: readonly WalletVariant[]): MatrixVariantColumn[] {
+  const sortedVariants = [...variants].sort(compareWalletVariantsByFeatureSupport);
+  const consumed = new Set<string>();
+  const columns: MatrixVariantColumn[] = [];
+
+  for (const variant of sortedVariants) {
+    if (consumed.has(variant.variantId)) continue;
+
+    const equivalentMobilePeer = sortedVariants.find((candidate) =>
+      candidate.variantId !== variant.variantId &&
+      !consumed.has(candidate.variantId) &&
+      candidate.displayName === variant.displayName &&
+      candidate.device === "mobile" &&
+      variant.device === "mobile" &&
+      (
+        (candidate.subcategory === "android" && variant.subcategory === "ios") ||
+        (candidate.subcategory === "ios" && variant.subcategory === "android")
+      ) &&
+      sameFeatureSet(candidate, variant),
+    );
+
+    if (equivalentMobilePeer) {
+      consumed.add(variant.variantId);
+      consumed.add(equivalentMobilePeer.variantId);
+      columns.push({
+        key: `${variant.displayName}-android-ios`,
+        platformLabel: "Android, iOS",
+        variant,
+      });
+      continue;
+    }
+
+    consumed.add(variant.variantId);
+    columns.push({
+      key: variant.variantId,
+      platformLabel: subcategoryLabel(variant.subcategory),
+      variant,
+    });
+  }
+
+  return columns;
+}
+
 export default function WalletFeatureMatrix({ variants }: { variants: readonly WalletVariant[] }) {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(FEATURE_GROUPS.map((group) => [group.id, false])),
+    Object.fromEntries(FEATURE_GROUPS.map((group) => [
+      group.id,
+      group.id === "interact-with-names" || group.id === "manage-names",
+    ])),
   );
-  const controlNamesExpanded = expandedGroups["control-names"] ?? false;
 
   if (variants.length === 0) return null;
+
+  const columns = matrixColumns(variants);
 
   return (
     <div className="flex flex-col gap-3">
@@ -137,6 +228,7 @@ export default function WalletFeatureMatrix({ variants }: { variants: readonly W
               <th
                 style={{
                   ...cellStyle,
+                  ...stickyFirstHeaderStyle,
                   borderTop: "none",
                   color: "var(--fg-heading)",
                   paddingLeft: "2.2rem",
@@ -144,14 +236,14 @@ export default function WalletFeatureMatrix({ variants }: { variants: readonly W
               >
                 Feature
               </th>
-              {variants.map((variant) => (
+              {columns.map(({ key, platformLabel, variant }) => (
                 <th
-                  key={variant.variantId}
+                  key={key}
                   style={{ ...cellStyle, borderTop: "none", color: "var(--fg-heading)", minWidth: 130 }}
                 >
                   <span className="block">{variant.displayName}</span>
                   <span className="block text-xs font-normal" style={{ color: "var(--fg-muted)" }}>
-                    {subcategoryLabel(variant.subcategory)}
+                    {platformLabel}
                   </span>
                 </th>
               ))}
@@ -163,8 +255,16 @@ export default function WalletFeatureMatrix({ variants }: { variants: readonly W
 
               return (
                 <Fragment key={group.id}>
-                  <tr style={groupHeaderStyle}>
-                    <th scope="row" style={{ ...cellStyle, color: "var(--fg-heading)", fontWeight: 700 }}>
+                  <tr>
+                    <th
+                      scope="row"
+                      style={{
+                        ...cellStyle,
+                        ...stickyFirstRowStyle,
+                        color: "var(--fg-heading)",
+                        fontWeight: 700,
+                      }}
+                    >
                       <button
                         type="button"
                         aria-expanded={expanded}
@@ -203,10 +303,10 @@ export default function WalletFeatureMatrix({ variants }: { variants: readonly W
                         <span />
                       </button>
                     </th>
-                    {variants.map((variant) => (
+                    {columns.map(({ key, variant }) => (
                       <td
-                        key={`${variant.variantId}-${group.id}`}
-                        style={{ ...cellStyle, color: "var(--fg-heading)", fontWeight: 700 }}
+                        key={`${key}-${group.id}`}
+                        style={{ ...cellStyle, ...groupSummaryCellStyle }}
                       >
                         {supportedCount(variant, group)} / {group.rows.length}
                       </td>
@@ -219,15 +319,16 @@ export default function WalletFeatureMatrix({ variants }: { variants: readonly W
                           scope="row"
                           style={{
                             ...cellStyle,
+                            ...stickyFirstRowStyle,
                             color: "var(--fg-heading)",
-                            fontWeight: 600,
+                            fontWeight: 400,
                             paddingLeft: "2.2rem",
                           }}
                         >
                           {row.label}
                         </th>
-                        {variants.map((variant) => (
-                          <td key={`${variant.variantId}-${group.id}-${row.key}`} style={cellStyle}>
+                        {columns.map(({ key, variant }) => (
+                          <td key={`${key}-${group.id}-${row.key}`} style={cellStyle}>
                             <SupportMark value={rowSupported(variant, row)} />
                           </td>
                         ))}
@@ -239,13 +340,6 @@ export default function WalletFeatureMatrix({ variants }: { variants: readonly W
           </tbody>
         </table>
       </div>
-      {controlNamesExpanded ? (
-        <p className="text-sm" style={{ color: "var(--fg-muted)", lineHeight: 1.6 }}>
-          By default, you can control names on ZcashNames.com. Wallets may also support name
-          controls in the app. Claiming registers an available name. Buying purchases a name listed
-          by another tester.
-        </p>
-      ) : null}
     </div>
   );
 }

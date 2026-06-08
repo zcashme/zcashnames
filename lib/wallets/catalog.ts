@@ -111,6 +111,32 @@ export type WalletFeatures = {
   receiveUaddr: boolean;
 };
 
+const WALLET_FEATURE_KEYS = [
+  "resolveName",
+  "reverseLookup",
+  "viewCollection",
+  "importContact",
+  "exportContact",
+  "viewProfile",
+  "viewExplorer",
+  "scanURI",
+  "tapURI",
+  "pasteURI",
+  "uploadQR",
+  "rotateTaddr",
+  "rotateUaddr",
+  "receiveTaddr",
+  "receiveUaddr",
+] as const satisfies readonly (keyof Omit<WalletFeatures, "nameActions">)[];
+
+const WALLET_NAME_ACTION_KEYS = [
+  "list",
+  "claim",
+  "delist",
+  "release",
+  "buy",
+] as const satisfies readonly (keyof WalletFeatures["nameActions"])[];
+
 export type WalletVariant = {
   variantId: WalletVariantId;
   walletId: WalletId;
@@ -425,6 +451,7 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     logos: walletLogos("noir", "Noir logo"),
     appIcon: { src: "/wallets/noir/app-icon.png", alt: "Noir app icon" },
     websiteUrl: "https://www.zknoir.com/",
+    announcementUrl: "https://x.com/noir_wallet/status/2063194993083441275?s=20",
     xUrl: "https://x.com/noir_wallet",
     platformDownloads: [
       {
@@ -767,14 +794,46 @@ export function getWalletVariantsForBrand(brandSlug: WalletBrandSlug): WalletVar
     .sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+export function countSupportedWalletFeatures(features: WalletFeatures): number {
+  const featureCount = WALLET_FEATURE_KEYS.reduce(
+    (count, key) => count + Number(features[key]),
+    0,
+  );
+  const actionCount = WALLET_NAME_ACTION_KEYS.reduce(
+    (count, key) => count + Number(features.nameActions[key]),
+    0,
+  );
+
+  return featureCount + actionCount;
+}
+
+export function compareWalletVariantsByFeatureSupport(a: WalletVariant, b: WalletVariant): number {
+  const resolveNameDifference = Number(b.features.resolveName) - Number(a.features.resolveName);
+  if (resolveNameDifference !== 0) return resolveNameDifference;
+
+  const totalDifference = countSupportedWalletFeatures(b.features) - countSupportedWalletFeatures(a.features);
+  if (totalDifference !== 0) return totalDifference;
+
+  const nameDifference = a.displayName.localeCompare(b.displayName);
+  if (nameDifference !== 0) return nameDifference;
+
+  return subcategoryLabel(a.subcategory).localeCompare(subcategoryLabel(b.subcategory));
+}
+
+export function sortWalletVariantsByFeatureSupport(
+  variants: readonly WalletVariant[],
+): WalletVariant[] {
+  return [...variants].sort(compareWalletVariantsByFeatureSupport);
+}
+
 export function getWalletPlatformDownloadsForBrand(brandSlug: WalletBrandSlug): WalletPlatformDownload[] {
   const brand = getWalletBrand(brandSlug);
   if (!brand?.platformDownloads?.length) return [];
 
   const variantOrder = new Map(
-    getWalletVariantsForBrand(brandSlug).map((variant) => [
+    sortWalletVariantsByFeatureSupport(getWalletVariantsForBrand(brandSlug)).map((variant, index) => [
       `${variant.device}:${variant.subcategory}`,
-      variant.sortOrder,
+      index,
     ] as const),
   );
 
