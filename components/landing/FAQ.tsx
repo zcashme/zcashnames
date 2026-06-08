@@ -22,15 +22,15 @@ const groups: FAQGroup[] = [
     title: "The basics",
     items: [
       {
-        question: "What is a .zcash name?",
+        question: "What is a Zcash name?",
         answer:
-          ".zcash is a human-readable name that maps to a Zcash address and profile links. Instead of sharing a long cryptographic address, you share something like yourname.zcash.",
+          "Zcash names are a human-readable names that maps to a Zcash address and profile links. Instead of sharing a long cryptographic address, you share something like yourname.zcash.",
       },
       {
-        question: "What can I do with my .zcash name?",
+        question: "What can I do with my Zcash name?",
         answer: (
           <>
-            Your .zcash name replaces long wallet addresses with a simple, human-readable name for sending and receiving payments.
+            Your Zcash name replaces long wallet addresses with a simple, human-readable name for sending and receiving payments.
             Each name can be linked to a{" "}
             <a href="https://zcash.me" target="_blank" rel="noopener noreferrer" className="underline">Zcash.me</a>{" "}
             profile so others can verify who they&rsquo;re transacting with.
@@ -44,7 +44,7 @@ const groups: FAQGroup[] = [
           "Yes. Your name is registered on an on-chain registry linked to your address. There are no renewal fees - stay active once every 180 days to maintain it. You can sell, transfer, or buy additional names at any time.",
       },
       {
-        question: "How do I keep my .zcash name active?",
+        question: "How do I keep my Zcash name active?",
         answer:
           "There are no renewal fees - you just need to sign in at least once every 6 months. Any activity counts: updating your Zcash.me profile, changing the address your name points to, or simply starting the verification process without making any changes. As long as you check in within the window, your name stays yours.",
       },
@@ -61,7 +61,7 @@ const groups: FAQGroup[] = [
       {
         question: "Does linking my name to an address hurt my privacy?",
         answer:
-          "No. Zcash shielded transactions keep amounts and addresses off the public ledger, so even someone who knows your .zcash name can't see your balance or activity. It's like sharing your email - people can reach you, but they can't read your inbox.",
+          "No. Zcash shielded transactions keep amounts and addresses off the public ledger, so even someone who knows your Zcash name can't see your balance or activity. It's like sharing your email - people can reach you, but they can't read your inbox.",
       },
       {
         question: "Can people pay me with other cryptocurrencies?",
@@ -71,7 +71,7 @@ const groups: FAQGroup[] = [
       {
         question: "How does Log in with Zcash work?",
         answer:
-          "Your .zcash name resolves to an address. That address receives a one-time passcode. Replying with the one-time passcode proves you own that address. No passwords or third-party accounts are required - just your name.",
+          "Your Zcash name resolves to an address. That address receives a one-time passcode. Replying with the one-time passcode proves you own that address. No passwords or third-party accounts are required - just your name.",
       },
     ],
   },
@@ -171,6 +171,16 @@ export default function FAQ() {
           aria-hidden="true"
         />
       </div>
+      <p
+        className="type-section-subtitle mx-auto -mt-8 mb-14 max-w-2xl text-center"
+        style={{ color: "var(--fg-muted)" }}
+      >
+        Answers to the most common questions. If yours is not covered, join the{" "}
+        <a href="/community" className="underline" style={{ color: "var(--fg-body)" }}>
+          community
+        </a>{" "}
+        and ask us directly.
+      </p>
 
       <div className="flex flex-col gap-10">
         {groups.map((group, groupIndex) => (

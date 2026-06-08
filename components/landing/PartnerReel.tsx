@@ -154,6 +154,16 @@ export default function PartnerReel() {
           aria-hidden="true"
         />
       </div>
+      <p
+        className="type-section-subtitle mx-auto mb-10 max-w-2xl text-center"
+        style={{ color: "var(--fg-muted)" }}
+      >
+        Wallets, apps, and ecosystem teams already helping bring Zcash names to life. To integrate, visit the{" "}
+        <a href="/docs/zns-developer-guide" className="underline" style={{ color: "var(--fg-body)" }}>
+          developer guide
+        </a>
+        .
+      </p>
       <div className="mx-auto grid max-w-[28rem] grid-cols-6 items-start justify-items-center gap-x-6 gap-y-8 sm:max-w-[34rem] sm:gap-x-8 sm:gap-y-10">
         {partners.map((item, index) => (
           <div key={item.id} className={partnerRowClasses(index, partners.length)}>
