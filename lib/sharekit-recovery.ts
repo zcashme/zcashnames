@@ -20,7 +20,7 @@ export type ShareKitRecoveryRow = {
 export const SHAREKIT_RECOVERY_RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
 export const SHAREKIT_RECOVERY_MIN_RESPONSE_MS = 600;
 export const SHAREKIT_RECOVERY_ACCEPTED_MESSAGE =
-  "If this email is eligible for referral recovery, we’ll send the referral email to that inbox. If you don’t receive anything, check spam or join the waitlist again.";
+  "If this email matches verified waitlist entries, we’ll send a recovery email listing every verified name and referral code tied to that inbox. If you don’t receive anything, check spam.";
 export const SHAREKIT_RECOVERY_INVALID_EMAIL_MESSAGE =
   "Enter the email address you used to join the waitlist.";
 export const SHAREKIT_RECOVERY_ERROR_MESSAGE =
@@ -42,15 +42,18 @@ export function wasShareKitRecoveryEmailSentToday(value: unknown, now = Date.now
 }
 
 export function resolveShareKitRecoveryInternalStatus(
-  row: ShareKitRecoveryRow | null,
+  rows: ShareKitRecoveryRow[],
   now = Date.now(),
 ): ShareKitRecoveryInternalStatus {
-  if (!row) return "not_found";
-  if (!row.email_verified) return "unconfirmed";
-  if (wasShareKitRecoveryEmailSentToday(row.referral_email_resent_at, now)) {
-    return "confirmed_rate_limited";
-  }
-  return "confirmed_resent";
+  if (rows.length === 0) return "not_found";
+
+  const verifiedRows = rows.filter((row) => row.email_verified);
+  if (verifiedRows.length === 0) return "unconfirmed";
+
+  const hasRecoverableEntry = verifiedRows.some(
+    (row) => !wasShareKitRecoveryEmailSentToday(row.referral_email_resent_at, now),
+  );
+  return hasRecoverableEntry ? "confirmed_resent" : "confirmed_rate_limited";
 }
 
 export function sleep(ms: number): Promise<void> {

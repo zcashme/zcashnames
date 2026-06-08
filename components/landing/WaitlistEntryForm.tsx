@@ -257,7 +257,7 @@ export default function WaitlistEntryForm({
     }
 
     const referralCode = generateReferralCode();
-    const { error } = await submitWaitlist({
+    const result = await submitWaitlist({
       name: confirmedName,
       email,
       newsletter,
@@ -267,8 +267,15 @@ export default function WaitlistEntryForm({
       captcha_answer: captchaAnswer,
     });
 
-    if (error) {
-      setSubmitError(error);
+    if (result.status === "error") {
+      setSubmitError(result.error);
+      setSubmitting(false);
+      await loadCaptchaChallenge();
+      return;
+    }
+
+    if (result.status === "resent" || result.status === "already") {
+      setSubmitError(result.message);
       setSubmitting(false);
       await loadCaptchaChallenge();
       return;

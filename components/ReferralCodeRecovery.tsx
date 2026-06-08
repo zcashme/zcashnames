@@ -70,7 +70,8 @@ export default function ReferralCodeRecovery({
           style={isSharekit ? undefined : { borderColor: "var(--leaders-card-border)" }}
         >
           <label htmlFor={`${panelId}-input`} className="text-sm font-semibold text-fg-heading">
-            Enter the email address you used to join the waitlist.
+            Enter the email address you used to join the waitlist. We&rsquo;ll email every verified name and referral
+            code tied to that inbox.
           </label>
           <input
             id={`${panelId}-input`}
@@ -92,7 +93,7 @@ export default function ReferralCodeRecovery({
               className={buttonClassNameBase}
               style={isSharekit ? undefined : { borderColor: "var(--leaders-card-border)" }}
             >
-              {recovering ? "Checking..." : "Recover link"}
+              {recovering ? "Checking..." : "Recover codes"}
             </button>
           </div>
           {message ? (

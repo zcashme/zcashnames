@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
+import { sendWaitlistReferralRecoveryEmail } from "@/lib/email/waitlist";
 import { extractReferralCode } from "@/lib/referral-code";
 import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
 import {
@@ -38,6 +38,7 @@ type ShareKitRecoveryRow = {
   human_referral_code?: string | null;
   email_verified: boolean;
   referral_email_resent_at: string | null;
+  created_at: string;
 };
 
 type ShareKitRecoveryThrottleRow = {
@@ -173,25 +174,21 @@ export async function recoverShareKitReferralByEmail(input: string): Promise<Sha
 
     const { data, error } = await db
       .from("zn_waitlist")
-      .select("id, name, email, referral_code, human_referral_code, email_verified, referral_email_resent_at")
+      .select("id, name, email, referral_code, human_referral_code, email_verified, referral_email_resent_at, created_at")
       .eq("email", email)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("[sharekit-recovery] waitlist lookup failed:", error);
       return { status: "error", message: SHAREKIT_RECOVERY_ERROR_MESSAGE };
     }
 
-    const row = (data as ShareKitRecoveryRow | null) ?? null;
+    const rows = (data as ShareKitRecoveryRow[] | null) ?? [];
     const status = resolveShareKitRecoveryInternalStatus(
-      row
-        ? {
-            email_verified: Boolean(row.email_verified),
-            referral_email_resent_at: row.referral_email_resent_at,
-          }
-        : null,
+      rows.map((row) => ({
+        email_verified: Boolean(row.email_verified),
+        referral_email_resent_at: row.referral_email_resent_at,
+      })),
     );
 
     if (status === "not_found" || status === "unconfirmed" || status === "confirmed_rate_limited") {
@@ -200,46 +197,65 @@ export async function recoverShareKitReferralByEmail(input: string): Promise<Sha
       return acceptedRecoveryResult();
     }
 
-    if (!row?.referral_code) {
-      console.error("[sharekit-recovery] confirmed row missing referral code");
+    const verifiedRows = rows.filter(
+      (row): row is ShareKitRecoveryRow & { referral_code: string } =>
+        Boolean(row.email_verified) && Boolean(row.referral_code),
+    );
+
+    if (verifiedRows.length === 0) {
+      console.error("[sharekit-recovery] verified rows missing referral codes");
       return { status: "error", message: SHAREKIT_RECOVERY_ERROR_MESSAGE };
     }
 
     const cutoffIso = new Date(startedAt - 24 * 60 * 60 * 1000).toISOString();
     const resendAt = new Date(startedAt).toISOString();
-    const { data: updatedRow, error: updateError } = await db
+    const { data: updatedRows, error: updateError } = await db
       .from("zn_waitlist")
       .update({ referral_email_resent_at: resendAt })
-      .eq("id", row.id)
+      .eq("email", email)
       .eq("email_verified", true)
       .or(`referral_email_resent_at.is.null,referral_email_resent_at.lt."${cutoffIso}"`)
-      .select("id")
-      .maybeSingle();
+      .select("id");
 
     if (updateError) {
       console.error("[sharekit-recovery] atomic resend update failed:", updateError);
       return { status: "error", message: SHAREKIT_RECOVERY_ERROR_MESSAGE };
     }
 
-    if (!updatedRow) {
+    if (!updatedRows || updatedRows.length === 0) {
       console.info("[sharekit-recovery] classified request:", "confirmed_rate_limited" satisfies ShareKitRecoveryInternalStatus);
       await applyMinimumResponseDelay(startedAt);
       return acceptedRecoveryResult();
     }
 
-    const ensured = await ensureHumanReferralCode({
-      id: row.id,
-      name: row.name,
-      referral_code: row.referral_code,
-      human_referral_code: row.human_referral_code ?? null,
+    const ensuredEntries = await Promise.all(
+      verifiedRows.map(async (row) => {
+        const ensured = await ensureHumanReferralCode({
+          id: row.id,
+          name: row.name,
+          referral_code: row.referral_code,
+          human_referral_code: row.human_referral_code ?? null,
+        });
+
+        return {
+          name: row.name?.trim() || ensured.preferredCode,
+          canonicalReferralCode: ensured.canonicalCode,
+          preferredReferralCode: ensured.preferredCode,
+          createdAt: row.created_at,
+        };
+      }),
+    );
+
+    ensuredEntries.sort((a, b) => {
+      const nameCompare = a.name.localeCompare(b.name);
+      if (nameCompare !== 0) return nameCompare;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
 
-    await sendWaitlistWelcomeEmail({
+    await sendWaitlistReferralRecoveryEmail({
       email,
-      name: row.name?.trim() || "there",
-      canonicalReferralCode: ensured.canonicalCode,
-      preferredReferralCode: ensured.preferredCode,
       baseUrl: resolveSiteUrl(headerStore),
+      entries: ensuredEntries.map(({ createdAt: _createdAt, ...entry }) => entry),
     });
 
     console.info("[sharekit-recovery] classified request:", "confirmed_resent" satisfies ShareKitRecoveryInternalStatus);

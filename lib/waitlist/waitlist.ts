@@ -1,7 +1,9 @@
 // Waitlist server actions — the primary entry point for the public waitlist page.
 //
-// submitWaitlist: upsert-like flow. If email exists unverified → update row & re-send
-//   confirmation. If new → insert + generate unique 8-char referral code.
+// submitWaitlist: keyed by normalized (email, name). If the exact pair exists
+//   unverified → re-send confirmation. If the exact pair exists verified →
+//   return an already-submitted status. If the email exists on a different
+//   name → insert a new row + generate a unique 8-char referral code.
 //   Sends confirmation email with a signed token (confirm-token.ts → email/waitlist.ts).
 //
 // submitSurvey: updates survey fields by referral_code, optionally triggers a follow-up
@@ -53,6 +55,12 @@ export interface WaitlistPayload {
   captcha_token: string;
   captcha_answer: string;
 }
+
+export type SubmitWaitlistResult =
+  | { status: "submitted" }
+  | { status: "resent"; message: string }
+  | { status: "already"; message: string }
+  | { status: "error"; error: string };
 
 export async function getWaitlistCaptcha(): Promise<WaitlistCaptchaChallenge> {
   return createWaitlistCaptcha();
@@ -198,6 +206,35 @@ type WaitlistRow = {
   email_verified: boolean;
 };
 
+function isUniqueViolation(error: { code?: string } | null | undefined): boolean {
+  return error?.code === "23505";
+}
+
+async function findWaitlistEntryByEmailAndName({
+  email,
+  name,
+}: {
+  email: string;
+  name: string;
+}): Promise<{ row: WaitlistRow | null; error: string | null }> {
+  const { data: existingRows, error: existingError } = await db
+    .from("zn_waitlist")
+    .select("id, name, email, referral_code, referred_by, email_verified")
+    .eq("email", email)
+    .eq("name", name)
+    .order("created_at", { ascending: false });
+
+  if (existingError) {
+    console.error("Waitlist lookup error:", existingError.message);
+    return { row: null, error: GENERIC_ERROR };
+  }
+
+  return {
+    row: (existingRows?.[0] as WaitlistRow | undefined) ?? null,
+    error: null,
+  };
+}
+
 async function validateEmail(email: string): Promise<{ valid: boolean; error?: string }> {
   try {
     const res = await emailValidator(email, {
@@ -267,14 +304,14 @@ async function normalizeReferredBy(input: string | null): Promise<string | null>
 
 export async function submitWaitlist(
   payload: WaitlistPayload,
-): Promise<{ error: string | null }> {
+): Promise<SubmitWaitlistResult> {
   const normalizedName = normalizeUsername(payload.name);
   const normalizedEmail = normalizeEmail(payload.email);
   const normalizedReferredBy = await normalizeReferredBy(payload.referred_by);
   const startedAt = Date.now();
 
   if (!isValidName(normalizedName)) {
-    return { error: GENERIC_ERROR };
+    return { status: "error", error: GENERIC_ERROR };
   }
 
   const captchaOk = verifyWaitlistCaptcha({
@@ -283,12 +320,12 @@ export async function submitWaitlist(
     now: startedAt,
   });
   if (!captchaOk) {
-    return { error: "Please solve the human check below." };
+    return { status: "error", error: "Please solve the human check below." };
   }
 
   const emailCheck = await validateEmail(normalizedEmail);
   if (!emailCheck.valid) {
-    return { error: emailCheck.error ?? GENERIC_ERROR };
+    return { status: "error", error: emailCheck.error ?? GENERIC_ERROR };
   }
 
   const headerStore = await headers();
@@ -304,33 +341,33 @@ export async function submitWaitlist(
       now: startedAt,
     });
     if (throttled) {
-      return { error: GENERIC_ERROR };
+      return { status: "error", error: GENERIC_ERROR };
     }
   } catch (throttleError) {
     console.error("Waitlist throttle error:", throttleError);
-    return { error: GENERIC_ERROR };
+    return { status: "error", error: GENERIC_ERROR };
   }
 
-  const { data: existingRows, error: existingError } = await db
-    .from("zn_waitlist")
-    .select("id, name, email, referral_code, referred_by, email_verified")
-    .eq("email", normalizedEmail)
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  if (existingError) {
-    console.error("Waitlist lookup error:", existingError.message);
-    return { error: GENERIC_ERROR };
+  const existingLookup = await findWaitlistEntryByEmailAndName({
+    email: normalizedEmail,
+    name: normalizedName,
+  });
+  if (existingLookup.error) {
+    return { status: "error", error: existingLookup.error };
   }
 
-  const existing = (existingRows?.[0] as WaitlistRow | undefined) ?? null;
+  let existing = existingLookup.row;
+  let existingMatch = Boolean(existing);
 
   let waitlistId: string;
   let referralCode: string;
 
   if (existing) {
     if (existing.email_verified) {
-      return { error: null };
+      return {
+        status: "already",
+        message: "You're already on the waitlist for this name.",
+      };
     }
 
     referralCode = isValidReferralCode(existing.referral_code)
@@ -351,7 +388,7 @@ export async function submitWaitlist(
 
     if (updateError) {
       console.error("Waitlist update error:", updateError.message);
-      return { error: GENERIC_ERROR };
+      return { status: "error", error: GENERIC_ERROR };
     }
 
     waitlistId = existing.id;
@@ -372,11 +409,59 @@ export async function submitWaitlist(
       .single();
 
     if (insertError || !inserted?.id) {
-      console.error("Waitlist insert error:", insertError?.message ?? "Missing inserted id");
-      return { error: GENERIC_ERROR };
-    }
+      if (isUniqueViolation(insertError)) {
+        const racedLookup = await findWaitlistEntryByEmailAndName({
+          email: normalizedEmail,
+          name: normalizedName,
+        });
+        if (racedLookup.error) {
+          return { status: "error", error: racedLookup.error };
+        }
 
-    waitlistId = inserted.id as string;
+        existing = racedLookup.row;
+        existingMatch = Boolean(existing);
+
+        if (existing) {
+          if (existing.email_verified) {
+            return {
+              status: "already",
+              message: "You're already on the waitlist for this name.",
+            };
+          }
+
+          referralCode = isValidReferralCode(existing.referral_code)
+            ? existing.referral_code
+            : await generateUniqueReferralCode();
+
+          const nextReferredBy = existing.referred_by ?? normalizedReferredBy;
+
+          const { error: updateError } = await db
+            .from("zn_waitlist")
+            .update({
+              name: normalizedName,
+              newsletter: Boolean(payload.newsletter),
+              referred_by: nextReferredBy,
+              referral_code: referralCode,
+            })
+            .eq("id", existing.id);
+
+          if (updateError) {
+            console.error("Waitlist update error after raced insert:", updateError.message);
+            return { status: "error", error: GENERIC_ERROR };
+          }
+
+          waitlistId = existing.id;
+        } else {
+          console.error("Waitlist insert unique violation but no matching row was found.");
+          return { status: "error", error: GENERIC_ERROR };
+        }
+      } else {
+        console.error("Waitlist insert error:", insertError?.message ?? "Missing inserted id");
+        return { status: "error", error: GENERIC_ERROR };
+      }
+    } else {
+      waitlistId = inserted.id as string;
+    }
   }
 
   const confirmToken = buildWaitlistConfirmToken({
@@ -403,10 +488,17 @@ export async function submitWaitlist(
     }
   } catch (emailError) {
     console.error("Waitlist confirmation email error:", emailError);
-    return { error: GENERIC_ERROR };
+    return { status: "error", error: GENERIC_ERROR };
   }
 
-  return { error: null };
+  if (existingMatch) {
+    return {
+      status: "resent",
+      message: "You're already on the waitlist for this name. Check your email for the confirmation link.",
+    };
+  }
+
+  return { status: "submitted" };
 }
 
 export async function submitSurvey(
