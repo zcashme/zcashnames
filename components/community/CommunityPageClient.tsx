@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import ShareDropdown from "@/components/ShareDropdown";
+import ShareDropdown, { DownloadDropdown, DownloadTriggerIcon, type ActionDropdownItem } from "@/components/ShareDropdown";
 import { usePointerProximity } from "@/components/hooks/usePointerProximity";
+import { getWalletPlatformDownloadsForBrand, subcategoryLabel } from "@/lib/wallets/catalog";
 import { BRAND } from "@/lib/zns/brand";
 import {
   COMMUNITY_SECTIONS,
@@ -57,6 +58,7 @@ const ICON_CLASS_BY_NAME: Record<string, string> = {
 const THEMED_ICON_CLASS_BY_ID: Record<string, string> = {
   "beta-test": "h-10 w-10",
   "builder-stories": "h-10 w-10",
+  collections: "h-10 w-10",
   events: "h-10 w-10",
   explorer: "h-10 w-10",
   "launch-notes": "h-10 w-10",
@@ -180,6 +182,15 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
   const external = isExternalHref(card.href);
   const footerHref = formatCommunityCardHref(card.href);
   const cardSurfaceClassName = resolvedTheme === "monochrome" ? "bg-transparent" : "bg-[var(--color-raised)]";
+  const platformDownloads = card.walletBrandSlug
+    ? getWalletPlatformDownloadsForBrand(card.walletBrandSlug)
+    : [];
+  const downloadItems: ActionDropdownItem[] = platformDownloads.map((download) => ({
+    key: `${download.device}:${download.subcategory}`,
+    label: subcategoryLabel(download.subcategory),
+    href: download.href,
+  }));
+  const actionButtonClassName = "inline-flex items-center gap-2 rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading";
 
   return (
     <article
@@ -187,7 +198,7 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
       ref={(node) => proximity.register(card.id, node)}
       onPointerMove={proximity.handlePointerMove}
       onPointerLeave={proximity.handlePointerLeave}
-      className={`community-card group relative flex flex-col gap-5 overflow-visible rounded-[20px] border border-border-muted px-5 py-5 transition-[transform,box-shadow,border-color] duration-200 ease-out ${cardSurfaceClassName}`}
+      className={`community-card group relative flex min-h-[17.5rem] flex-col gap-5 overflow-visible rounded-[20px] border border-border-muted px-5 py-5 transition-[transform,box-shadow,border-color] duration-200 ease-out sm:min-h-0 ${cardSurfaceClassName}`}
       style={{
         transform: "translateZ(0) scale(var(--prox-scale, 1))",
         boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
@@ -227,10 +238,33 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
       <div className="pointer-events-none relative z-[3] mt-auto flex items-center justify-between gap-3">
         <span className="min-w-0 truncate text-xs text-fg-muted">{footerHref}</span>
         <div
-          className="pointer-events-auto"
+          className="pointer-events-auto flex items-center gap-2"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
         >
+          {downloadItems.length === 1 ? (
+            <a
+              href={downloadItems[0].href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Download ${card.name} for ${downloadItems[0].label}`}
+              title={`Download for ${downloadItems[0].label}`}
+              className={actionButtonClassName}
+            >
+              <DownloadTriggerIcon />
+              <span>Download</span>
+            </a>
+          ) : null}
+          {downloadItems.length > 1 ? (
+            <DownloadDropdown
+              label="Download"
+              items={downloadItems}
+              menuAlign="right"
+              menuDirection="up"
+              showTriggerIcon={true}
+              buttonClassName={actionButtonClassName}
+            />
+          ) : null}
           <ShareDropdown
             label="Share"
             message={card.shareText}
@@ -241,7 +275,7 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
             menuAlign="right"
             menuDirection="up"
             showTriggerIcon={true}
-            buttonClassName="inline-flex items-center gap-2 rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+            buttonClassName={actionButtonClassName}
           />
         </div>
       </div>

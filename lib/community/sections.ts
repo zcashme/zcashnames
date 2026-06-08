@@ -1,4 +1,5 @@
 import { BRAND, COMMUNITIES } from "@/lib/zns/brand";
+import type { WalletBrandSlug } from "@/lib/wallets/catalog";
 
 // CommunityCard represents a single community channel, event, or feature entry.
 // Rendered as cards on the /community page, grouped by CommunitySection.
@@ -17,6 +18,7 @@ export type CommunityCard = {
     light: string;
     mono: string;
   };
+  walletBrandSlug?: WalletBrandSlug;
   initials?: string;
 };
 
@@ -57,6 +59,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         shareText: "Edge Wallet now supports ZcashNames - send ZEC to a personal name.",
         detail: "edge.app",
         iconSrc: "/icons/edge.png",
+        walletBrandSlug: "edge",
       },
       {
         id: "zingo-wallet",
@@ -68,6 +71,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         shareText: "Zingo Wallet now supports ZcashNames - send ZEC to a personal name.",
         detail: "zingo.pm",
         iconSrc: "/wallets/zingo/app-icon.png",
+        walletBrandSlug: "zingo",
       },
       {
         id: "cake-wallet",
@@ -79,6 +83,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         shareText: "Cake Wallet now supports ZcashNames - send ZEC to a personal name.",
         detail: "cakewallet.com",
         iconSrc: "/wallets/cake/app-icon.png",
+        walletBrandSlug: "cake",
       },
       {
         id: "unstoppable-wallet",
@@ -90,6 +95,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         shareText: "Unstoppable Wallet now resolves ZcashNames - send to a personal name.",
         detail: "unstoppable.money",
         iconSrc: "/icons/unstoppable.png",
+        walletBrandSlug: "unstoppable",
       },
       {
         id: "zipher-wallet",
@@ -101,17 +107,19 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         shareText: "Zipher Wallet now supports ZcashNames - send ZEC to a personal name.",
         detail: "zipher.app",
         iconSrc: "/wallets/zipher/app-icon.png",
+        walletBrandSlug: "zipher",
       },
       {
         id: "noir-wallet",
         name: "Noir Wallet",
         label: "Wallets",
         description:
-          "Browser wallet bringing shielded privacy and native Zcash DeFi access into extension-based flows.",
+          "Browser wallet bringing shielded privacy to native Zcash DeFi. Access cross-chain swaps, bridges, lending protocols and more.",
         href: "http://zknoir.com",
-        shareText: "Noir Wallet is bringing ZcashNames into browser wallet and DeFi flows.",
+        shareText: "Noir Wallet is bringing ZcashNames into the browser to access DeFi.",
         detail: "zknoir.com",
         iconSrc: "/wallets/noir/app-icon.png",
+        walletBrandSlug: "noir",
       },
       {
         id: "zcashme",
@@ -233,9 +241,9 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "leaderboard",
         name: "Leaderboard",
-        label: "Community rank",
+        label: "Rankings",
         description:
-          "See who is growing the waitlist and compare community momentum over time.",
+          "See who is growing the waitlist and compare momentum over time.",
         href: "/leaders",
         shareText: "Follow the ZcashNames community leaderboard.",
         detail: "Community ranking",
@@ -244,13 +252,24 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       {
         id: "explorer",
         name: "Explorer",
-        label: "Registry activity",
+        label: "Registry",
         description:
           "Search names, review events, and browse registry activity across ZcashNames.",
         href: "/explorer",
         shareText: "Explore ZcashNames registry activity.",
         detail: "Names, events, and listings",
         themedIconSrc: themedCommunityIcon("explorer"),
+      },
+      {
+        id: "collections",
+        name: "Collections",
+        label: "Inventory",
+        description:
+          "Track the names you own and the names you're watching, no account required.",
+        href: "/collections",
+        shareText: "Track the names you own and watch with ZcashNames Collections.",
+        detail: "Owned and watched names",
+        themedIconSrc: themedCommunityIcon("collections"),
       },
     ],
   },

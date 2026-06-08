@@ -4,11 +4,12 @@ import { hasWalletFaq } from "@/lib/beta/walletFaq";
 import WalletFeatureMatrix from "@/components/wallets/WalletFeatureMatrix";
 import { BRAND } from "@/lib/zns/brand";
 import {
+  getWalletBetaDownloadItemsForBrand,
   getWalletBrand,
   getWalletVariantsForBrand,
   subcategoryLabel,
   type WalletBrand,
-  type WalletBrandDownloadBadge,
+  type WalletBetaDownloadItem,
   type WalletBrandSlug,
   type WalletVariant,
 } from "@/lib/wallets/catalog";
@@ -101,8 +102,8 @@ function platformSummary(variants: readonly WalletVariant[]): string {
   return joinLabels(platforms) || "its supported platforms";
 }
 
-function brandDownloadBadges(brand: WalletBrand): readonly WalletBrandDownloadBadge[] {
-  return brand.downloadBadges ?? [];
+function brandDownloadBadges(brand: WalletBrand): readonly WalletBetaDownloadItem[] {
+  return getWalletBetaDownloadItemsForBrand(brand.slug);
 }
 
 function brandResourceLinks(brand: WalletBrand) {
@@ -162,6 +163,46 @@ function SubsectionTitle({ title }: { title: string }) {
       <h3 style={h3}>{title}</h3>
       <div style={sectionHeaderRule} aria-hidden="true" />
     </div>
+  );
+}
+
+function DownloadBadge({ item }: { item: WalletBetaDownloadItem }) {
+  return (
+    <a
+      href={item.href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={item.alt}
+      title={item.label}
+      className="inline-flex overflow-hidden rounded-[8px]"
+      style={{
+        background: "transparent",
+        border: "none",
+        boxShadow: "none",
+        isolation: "isolate",
+      }}
+    >
+      <img
+        src={item.src}
+        alt={item.alt}
+        className={item.monoSrc
+          ? "block h-14 w-auto object-contain [[data-theme=monochrome]_&]:hidden"
+          : "block h-14 w-auto object-contain"}
+        loading="lazy"
+        decoding="async"
+        style={{ filter: "none", mixBlendMode: "normal" }}
+      />
+      {item.monoSrc ? (
+        <img
+          src={item.monoSrc}
+          alt=""
+          className="hidden h-14 w-auto object-contain [[data-theme=monochrome]_&]:block"
+          loading="lazy"
+          decoding="async"
+          style={{ filter: "none", mixBlendMode: "normal" }}
+        />
+      ) : null}
+    </a>
   );
 }
 
@@ -288,39 +329,14 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
           <div>
             <SubsectionTitle title={`Download ${brand.displayName}`} />
             <div className="flex flex-wrap items-center gap-3">
-              {downloads.map((badge) => (
-                <a
-                  key={badge.href}
-                  href={badge.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={badge.alt}
-                  title={badge.label}
-                  className="inline-flex overflow-hidden rounded-[8px]"
-                  style={{
-                    background: "#3a3a3a",
-                    border: "1px solid rgba(255,255,255,0.28)",
-                    boxShadow: "none",
-                    isolation: "isolate",
-                  }}
-                >
-                  <img
-                    src={badge.src}
-                    alt={badge.alt}
-                    className="block h-14 w-auto object-contain"
-                    loading="lazy"
-                    decoding="async"
-                    style={{ filter: "none", mixBlendMode: "normal" }}
-                  />
-                </a>
-              ))}
+              {downloads.map((badge) => <DownloadBadge key={badge.href} item={badge} />)}
             </div>
           </div>
         )}
         <SubsectionTitle title="Security and Support" />
         <p style={p}>
-          We will only contact you about this beta round. We will never ask for your wallet
-          passphrase.
+          We will never ask for your wallet passphrase. 
+          We will only contact you about this beta round. 
         </p>
         <p style={p}>
           Join{" "}

@@ -5,6 +5,26 @@ import { useTheme } from "next-themes";
 import { useCopy } from "@/components/hooks/useCopy";
 import { buildEmailShareHref, buildTelegramShareHref, buildXShareHref } from "@/lib/share";
 
+export type ActionDropdownItem = {
+  href?: string;
+  icon?: ReactNode;
+  key: string;
+  label: string;
+  onClick?: () => void;
+};
+
+type ActionDropdownProps = {
+  buttonClassName?: string;
+  items: readonly ActionDropdownItem[];
+  label: string;
+  menuAlign?: "left" | "right";
+  menuDirection?: "down" | "up";
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
+  showTriggerIcon?: boolean;
+  triggerIcon?: ReactNode;
+};
+
 type ShareDropdownProps = {
   label?: string;
   message: string;
@@ -38,6 +58,16 @@ export function ShareTriggerIcon() {
       <circle cx="18" cy="19" r="3" />
       <path d="m8.6 13.5 6.8 4" />
       <path d="m15.4 6.5-6.8 4" />
+    </svg>
+  );
+}
+
+export function DownloadTriggerIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+      <path d="M12 4v10" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 19h14" />
     </svg>
   );
 }
@@ -94,7 +124,7 @@ function MenuItem({
 }: {
   href?: string;
   onClick?: () => void;
-  icon: ReactNode;
+  icon?: ReactNode;
   label: string;
   monochrome?: boolean;
 }) {
@@ -108,7 +138,7 @@ function MenuItem({
   if (href) {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" className={className} role="menuitem">
-        <span className={iconClassName}>{icon}</span>
+        {icon ? <span className={iconClassName}>{icon}</span> : null}
         <span>{label}</span>
       </a>
     );
@@ -116,38 +146,35 @@ function MenuItem({
 
   return (
     <button type="button" onClick={onClick} className={`cursor-pointer ${className}`} role="menuitem">
-      <span className={iconClassName}>{icon}</span>
+      {icon ? <span className={iconClassName}>{icon}</span> : null}
       <span>{label}</span>
     </button>
   );
 }
 
-export default function ShareDropdown({
-  label = "Share",
-  message,
-  shareUrl,
-  emailSubject = "ZcashNames",
-  copyLabel = "Copy Link",
-  copiedLabel = "Copied!",
-  systemShareLabel = "More ways",
+export function ActionDropdown({
   buttonClassName,
+  items,
+  label,
   menuAlign = "right",
   menuDirection = "down",
+  onOpenChange,
+  open: controlledOpen,
   showTriggerIcon = true,
-}: ShareDropdownProps) {
+  triggerIcon,
+}: ActionDropdownProps) {
   const { resolvedTheme } = useTheme();
   const monochrome = resolvedTheme === "monochrome";
   const rootRef = useRef<HTMLDivElement>(null);
-  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [open, setOpen] = useState(false);
-  const copyState = useCopy();
-  const shareMessageWithLink = buildShareMessageWithLink(message, shareUrl);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
 
-  function clearCloseTimeout() {
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current);
-      closeTimeoutRef.current = null;
+  function setOpen(next: boolean | ((current: boolean) => boolean)) {
+    const resolvedNext = typeof next === "function" ? next(open) : next;
+    if (controlledOpen === undefined) {
+      setUncontrolledOpen(resolvedNext);
     }
+    onOpenChange?.(resolvedNext);
   }
 
   useEffect(() => {
@@ -173,12 +200,116 @@ export default function ShareDropdown({
     };
   }, [open]);
 
+  const triggerClassName =
+    buttonClassName ??
+    "inline-flex min-h-11 items-center gap-2 rounded-md border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading";
+  const menuPositionClassName = menuAlign === "left" ? "left-0" : "right-0";
+  const menuDirectionClassName = menuDirection === "up" ? "bottom-full mb-2" : "top-full mt-2";
+  const hiddenOffsetClassName = menuDirection === "up" ? "translate-y-1" : "-translate-y-1";
+  const rootAlignmentClassName = menuAlign === "left" ? "items-start" : "items-end";
+  const triggerRowClassName = menuAlign === "left" ? "items-start" : "items-end";
+  const menuClassName = monochrome
+    ? "border-[rgba(155,188,15,0.62)] bg-[rgba(15,56,15,0.96)] shadow-[0_18px_40px_rgba(15,56,15,0.62)]"
+    : "border-border-muted bg-[var(--color-card)] shadow-lg";
+  const menuItems = items.map((item) => (
+    <MenuItem
+      key={item.key}
+      href={item.href}
+      icon={item.icon}
+      label={item.label}
+      monochrome={monochrome}
+      onClick={item.onClick}
+    />
+  ));
+  const orderedMenuItems = menuDirection === "up" ? [...menuItems].reverse() : menuItems;
+
+  return (
+    <div ref={rootRef} className={`relative flex flex-col gap-2 ${rootAlignmentClassName}`}>
+      <div className={`flex flex-col gap-2 ${triggerRowClassName}`}>
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          aria-expanded={open}
+          aria-haspopup="menu"
+          className={triggerClassName}
+        >
+          {showTriggerIcon ? triggerIcon : null}
+          <span>{label}</span>
+        </button>
+      </div>
+
+      <div
+        className={`absolute z-20 flex min-w-[220px] flex-col rounded-lg border p-2 transition-all duration-200 ease-out ${menuPositionClassName} ${menuDirectionClassName} ${menuClassName} ${
+          open ? "visible translate-y-0 opacity-100" : `pointer-events-none invisible ${hiddenOffsetClassName} opacity-0`
+        }`}
+        role="menu"
+        aria-hidden={!open}
+      >
+        {orderedMenuItems}
+      </div>
+    </div>
+  );
+}
+
+export function DownloadDropdown({
+  buttonClassName,
+  items,
+  label = "Download",
+  menuAlign = "right",
+  menuDirection = "down",
+  showTriggerIcon = true,
+}: {
+  buttonClassName?: string;
+  items: readonly ActionDropdownItem[];
+  label?: string;
+  menuAlign?: "left" | "right";
+  menuDirection?: "down" | "up";
+  showTriggerIcon?: boolean;
+}) {
+  return (
+    <ActionDropdown
+      buttonClassName={buttonClassName}
+      items={items}
+      label={label}
+      menuAlign={menuAlign}
+      menuDirection={menuDirection}
+      showTriggerIcon={showTriggerIcon}
+      triggerIcon={<DownloadTriggerIcon />}
+    />
+  );
+}
+
+export default function ShareDropdown({
+  label = "Share",
+  message,
+  shareUrl,
+  emailSubject = "ZcashNames",
+  copyLabel = "Copy Link",
+  copiedLabel = "Copied!",
+  systemShareLabel = "More ways",
+  buttonClassName,
+  menuAlign = "right",
+  menuDirection = "down",
+  showTriggerIcon = true,
+}: ShareDropdownProps) {
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyState = useCopy();
+  const shareMessageWithLink = buildShareMessageWithLink(message, shareUrl);
+  const [open, setOpen] = useState(false);
+
   useEffect(() => {
-    return () => clearCloseTimeout();
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
+    };
   }, []);
 
   async function handleCopy() {
-    clearCloseTimeout();
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
     await copyState.copy(shareMessageWithLink);
     setOpen(true);
     closeTimeoutRef.current = setTimeout(() => {
@@ -202,53 +333,56 @@ export default function ShareDropdown({
     }
   }
 
-  const triggerClassName =
-    buttonClassName ??
-    "inline-flex min-h-11 items-center gap-2 rounded-md border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading";
-  const menuPositionClassName = menuAlign === "left" ? "left-0" : "right-0";
-  const menuDirectionClassName = menuDirection === "up" ? "bottom-full mb-2" : "top-full mt-2";
-  const hiddenOffsetClassName = menuDirection === "up" ? "translate-y-1" : "-translate-y-1";
-  const rootAlignmentClassName = menuAlign === "left" ? "items-start" : "items-end";
-  const triggerRowClassName = menuAlign === "left" ? "items-start" : "items-end";
-  const menuClassName = monochrome
-    ? "border-[rgba(155,188,15,0.62)] bg-[rgba(15,56,15,0.96)] shadow-[0_18px_40px_rgba(15,56,15,0.62)]"
-    : "border-border-muted bg-[var(--color-card)] shadow-lg";
-  const menuItems = [
-    <MenuItem key="copy" onClick={() => void handleCopy()} icon={<ShareCopyIcon />} label={copyState.copied ? copiedLabel : copyLabel} monochrome={monochrome} />,
-    <MenuItem key="email" href={buildEmailShareHref(emailSubject, shareMessageWithLink)} icon={<EmailIcon />} label="Email" monochrome={monochrome} />,
-    <MenuItem key="telegram" href={buildTelegramShareHref(shareMessageWithLink)} icon={<TelegramIcon />} label="Telegram" monochrome={monochrome} />,
-    <MenuItem key="x" href={buildXShareHref(shareMessageWithLink)} icon={<XIcon />} label="X" monochrome={monochrome} />,
-    <MenuItem key="system" onClick={() => void handleSystemShare()} icon={<MoreIcon />} label={systemShareLabel} monochrome={monochrome} />,
+  const items: ActionDropdownItem[] = [
+    {
+      key: "copy",
+      label: copyState.copied ? copiedLabel : copyLabel,
+      icon: <ShareCopyIcon />,
+      onClick: () => void handleCopy(),
+    },
+    {
+      key: "email",
+      label: "Email",
+      icon: <EmailIcon />,
+      href: buildEmailShareHref(emailSubject, shareMessageWithLink),
+    },
+    {
+      key: "telegram",
+      label: "Telegram",
+      icon: <TelegramIcon />,
+      href: buildTelegramShareHref(shareMessageWithLink),
+    },
+    {
+      key: "x",
+      label: "X",
+      icon: <XIcon />,
+      href: buildXShareHref(shareMessageWithLink),
+    },
+    {
+      key: "system",
+      label: systemShareLabel,
+      icon: <MoreIcon />,
+      onClick: () => void handleSystemShare(),
+    },
   ];
-  const orderedMenuItems = menuDirection === "up" ? [...menuItems].reverse() : menuItems;
 
   return (
-    <div ref={rootRef} className={`relative flex flex-col gap-2 ${rootAlignmentClassName}`}>
-      <div className={`flex flex-col gap-2 ${triggerRowClassName}`}>
-        <button
-          type="button"
-          onClick={() => {
-            clearCloseTimeout();
-            setOpen((current) => !current);
-          }}
-          aria-expanded={open}
-          aria-haspopup="menu"
-          className={triggerClassName}
-        >
-          {showTriggerIcon ? <ShareTriggerIcon /> : null}
-          <span>{label}</span>
-        </button>
-      </div>
-
-      <div
-        className={`absolute z-20 flex min-w-[220px] flex-col rounded-lg border p-2 transition-all duration-200 ease-out ${menuPositionClassName} ${menuDirectionClassName} ${menuClassName} ${
-          open ? "visible translate-y-0 opacity-100" : `pointer-events-none invisible ${hiddenOffsetClassName} opacity-0`
-        }`}
-        role="menu"
-        aria-hidden={!open}
-      >
-        {orderedMenuItems}
-      </div>
-    </div>
+    <ActionDropdown
+      buttonClassName={buttonClassName}
+      items={items}
+      label={label}
+      menuAlign={menuAlign}
+      menuDirection={menuDirection}
+      onOpenChange={(nextOpen) => {
+        if (closeTimeoutRef.current) {
+          clearTimeout(closeTimeoutRef.current);
+          closeTimeoutRef.current = null;
+        }
+        setOpen(nextOpen);
+      }}
+      open={open}
+      showTriggerIcon={showTriggerIcon}
+      triggerIcon={<ShareTriggerIcon />}
+    />
   );
 }

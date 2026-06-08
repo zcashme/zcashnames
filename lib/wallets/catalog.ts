@@ -72,6 +72,20 @@ export type WalletBrandDownloadBadge = {
   src: string;
 };
 
+export type WalletPlatformDownload = {
+  device: WalletDevice;
+  subcategory: WalletSubcategory;
+  href: string;
+};
+
+export type WalletBetaDownloadItem = {
+  alt: string;
+  href: string;
+  label: string;
+  monoSrc?: string;
+  src: string;
+};
+
 export type WalletFeatures = {
   resolveName: boolean;
   reverseLookup: boolean;
@@ -133,6 +147,7 @@ export type WalletBrand = {
   emailAddr?: string;
   downloadUrl?: string;
   downloadBadges?: readonly WalletBrandDownloadBadge[];
+  platformDownloads?: readonly WalletPlatformDownload[];
   socials?: readonly WalletBrandSocial[];
 };
 
@@ -273,7 +288,19 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
         "https://dl.edge.app/assets/android-direct-download-apk.webp",
         "https://apk.edge.app/?af=edge-app",
         "Download Edge Wallet APK directly",
-      ),
+        ),
+      ],
+    platformDownloads: [
+      {
+        device: "mobile",
+        subcategory: "ios",
+        href: "https://itunes.apple.com/us/app/edge-bitcoin-wallet/id1344400091",
+      },
+      {
+        device: "mobile",
+        subcategory: "android",
+        href: "https://play.google.com/store/apps/details?id=co.edgesecure.app",
+      },
     ],
   },
   {
@@ -284,6 +311,18 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     partner: true,
     logos: walletLogos("cake", "Cake Wallet logo"),
     appIcon: { src: "/wallets/cake/app-icon.png", alt: "Cake Wallet app icon" },
+    platformDownloads: [
+      {
+        device: "mobile",
+        subcategory: "ios",
+        href: "https://cakewallet.com/ios",
+      },
+      {
+        device: "mobile",
+        subcategory: "android",
+        href: "https://cakewallet.com/gp",
+      },
+    ],
   },
   {
     slug: "unstoppable",
@@ -298,6 +337,18 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     telegramUrl: "https://t.me/unstoppable_announcements",
     xUrl: "https://x.com/unstoppablebyhs",
     emailAddr: "hello@horizontalsystems.io",
+    platformDownloads: [
+      {
+        device: "mobile",
+        subcategory: "ios",
+        href: "https://apps.apple.com/us/app/unstoppable-crypto-wallet/id1447619907",
+      },
+      {
+        device: "mobile",
+        subcategory: "android",
+        href: "https://play.google.com/store/apps/details?id=io.horizontalsystems.bankwallet",
+      },
+    ],
   },
   {
     slug: "zipher",
@@ -323,6 +374,23 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     discordUrl: "https://zingolabs.org/zingo/#",
     telegramUrl: "https://t.me/zingolabs/",
     xUrl: "https://zingolabs.org/zingo/#",
+    platformDownloads: [
+      {
+        device: "mobile",
+        subcategory: "ios",
+        href: "https://apps.apple.com/us/app/zingo/id1668209531",
+      },
+      {
+        device: "mobile",
+        subcategory: "android",
+        href: "https://play.google.com/store/apps/details?id=org.ZingoLabs.Zingo",
+      },
+      {
+        device: "desktop",
+        subcategory: "pc",
+        href: "https://github.com/zingolabs/zingo-pc/releases",
+      },
+    ],
   },
   {
     slug: "zkool",
@@ -358,6 +426,13 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     appIcon: { src: "/wallets/noir/app-icon.png", alt: "Noir app icon" },
     websiteUrl: "https://www.zknoir.com/",
     xUrl: "https://x.com/noir_wallet",
+    platformDownloads: [
+      {
+        device: "browser",
+        subcategory: "chrome",
+        href: "https://chromewebstore.google.com/detail/noir-wallet/mfoghjbpfanobmnoemoepenjjcmfpmdn",
+      },
+    ],
   },
   {
     slug: "brave",
@@ -690,6 +765,110 @@ export function getWalletVariantsForBrand(brandSlug: WalletBrandSlug): WalletVar
   return WALLET_VARIANTS
     .filter((variant) => variant.brandSlug === brandSlug)
     .sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export function getWalletPlatformDownloadsForBrand(brandSlug: WalletBrandSlug): WalletPlatformDownload[] {
+  const brand = getWalletBrand(brandSlug);
+  if (!brand?.platformDownloads?.length) return [];
+
+  const variantOrder = new Map(
+    getWalletVariantsForBrand(brandSlug).map((variant) => [
+      `${variant.device}:${variant.subcategory}`,
+      variant.sortOrder,
+    ] as const),
+  );
+
+  return [...brand.platformDownloads]
+    .filter((download) => variantOrder.has(`${download.device}:${download.subcategory}`))
+    .sort((a, b) => {
+      const aOrder = variantOrder.get(`${a.device}:${a.subcategory}`) ?? Number.MAX_SAFE_INTEGER;
+      const bOrder = variantOrder.get(`${b.device}:${b.subcategory}`) ?? Number.MAX_SAFE_INTEGER;
+      return aOrder - bOrder;
+    });
+}
+
+function deriveBetaDownloadItem(download: WalletPlatformDownload): WalletBetaDownloadItem | null {
+  if (download.device === "mobile" && download.subcategory === "ios") {
+    return {
+      alt: "Download on the App Store",
+      href: download.href,
+      label: "App Store",
+      monoSrc: "/wallets/download-badges/app-store-mono.svg",
+      src: "/wallets/download-badges/app-store.svg",
+    };
+  }
+
+  if (download.device === "mobile" && download.subcategory === "android") {
+    return {
+      alt: "Get it on Google Play",
+      href: download.href,
+      label: "Google Play",
+      monoSrc: "/wallets/download-badges/google-play-mono.svg",
+      src: "/wallets/download-badges/google-play.svg",
+    };
+  }
+
+  if (download.device === "browser" && download.subcategory === "chrome") {
+    return {
+      alt: "Get it on Chrome Web Store",
+      href: download.href,
+      label: "Chrome Web Store",
+      monoSrc: "/wallets/download-badges/chrome-web-store-mono.svg",
+      src: "/wallets/download-badges/chrome-web-store.svg",
+    };
+  }
+
+  if (download.device === "desktop" && download.subcategory === "mac") {
+    return {
+      alt: "Download for Mac",
+      href: download.href,
+      label: "Mac",
+      monoSrc: "/wallets/download-badges/mac-mono.svg",
+      src: "/wallets/download-badges/mac.svg",
+    };
+  }
+
+  if (download.device === "desktop" && download.subcategory === "pc") {
+    return {
+      alt: "Download for Windows",
+      href: download.href,
+      label: "Windows",
+      monoSrc: "/wallets/download-badges/windows-mono.svg",
+      src: "/wallets/download-badges/windows.svg",
+    };
+  }
+
+  if (download.device === "desktop" && download.subcategory === "linux") {
+    return {
+      alt: "Download for Linux",
+      href: download.href,
+      label: "Linux",
+      monoSrc: "/wallets/download-badges/linux-mono.svg",
+      src: "/wallets/download-badges/linux.svg",
+    };
+  }
+
+  return null;
+}
+
+export function getWalletBetaDownloadItemsForBrand(brandSlug: WalletBrandSlug): WalletBetaDownloadItem[] {
+  const brand = getWalletBrand(brandSlug);
+  if (!brand) return [];
+
+  const platformItems = getWalletPlatformDownloadsForBrand(brandSlug)
+    .map(deriveBetaDownloadItem)
+    .filter((item): item is WalletBetaDownloadItem => !!item);
+
+  if (platformItems.length > 0) {
+    return platformItems;
+  }
+
+  return (brand.downloadBadges ?? []).map((badge) => ({
+    alt: badge.alt,
+    href: badge.href,
+    label: badge.label,
+    src: badge.src,
+  }));
 }
 
 export function getRecommendedVariantForBrand(brandSlug: WalletBrandSlug): WalletVariant | null {
