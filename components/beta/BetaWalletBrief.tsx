@@ -108,6 +108,7 @@ function brandDownloadBadges(brand: WalletBrand): readonly WalletBetaDownloadIte
 
 function brandResourceLinks(brand: WalletBrand) {
   return [
+    { label: "Beta instructions", href: "/beta/instructions" },
     hasWalletFaq(brand.slug) ? { label: `${brand.displayName} FAQ`, href: `/beta/${brand.slug}/faq` } : null,
     brand.supportGuideUrl ? { label: `${brand.displayName} support guide`, href: brand.supportGuideUrl } : null,
     brand.announcementUrl ? { label: `Official ${brand.displayName} announcement`, href: brand.announcementUrl } : null,
@@ -131,9 +132,7 @@ export function getBetaWalletBriefSections(brand: WalletBrand) {
       : section,
   );
 
-  if (brandResourceLinks(brand).length > 0) {
-    sections.push({ id: "resources", label: "Resources" });
-  }
+  sections.push({ id: "resources", label: "Resources" });
 
   return sections;
 }
@@ -390,26 +389,24 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
         </Link>
       </section>
 
-      {resourceLinks.length > 0 && (
-        <section>
-          <SectionTitle id="resources" title="Resources" />
-          <ul className="list-disc pl-5">
-            {resourceLinks.map((link) => (
-              <li key={link.href} style={li}>
-                {link.href.startsWith("/") ? (
-                  <Link href={link.href} style={linkStyle}>
-                    {link.label}
-                  </Link>
-                ) : (
-                  <a href={link.href} target="_blank" rel="noreferrer" style={linkStyle}>
-                    {link.label}
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <section>
+        <SectionTitle id="resources" title="Resources" />
+        <ul className="list-disc pl-5">
+          {resourceLinks.map((link) => (
+            <li key={link.href} style={li}>
+              {link.href.startsWith("/") ? (
+                <Link href={link.href} style={linkStyle}>
+                  {link.label}
+                </Link>
+              ) : (
+                <a href={link.href} target="_blank" rel="noreferrer" style={linkStyle}>
+                  {link.label}
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
     </article>
   );
 }

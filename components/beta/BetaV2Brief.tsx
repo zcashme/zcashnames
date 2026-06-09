@@ -185,6 +185,9 @@ export default function BetaV2Brief() {
         <h2 style={h2}>Resources</h2>
         <ul className="list-disc pl-5">
           <li style={li}>
+            <Link href="/beta/instructions" style={linkStyle}>Beta instructions</Link>
+          </li>
+          <li style={li}>
             <Link href="/docs/zns-developer-guide" style={linkStyle}>Developer guide</Link>
           </li>
           <li style={li}>

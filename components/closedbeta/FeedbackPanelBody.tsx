@@ -242,8 +242,8 @@ export default function FeedbackPanelBody({
   );
 
   const readMeLinks = [
-    { label: "Instructions", href: "/closedbeta" },
-    { label: "User Guide", href: "/closedbeta#userguide" },
+    { label: "Instructions", href: "/beta/instructions" },
+    { label: "Beta Overview", href: "/beta" },
     { label: "Developer Guide", href: "/docs/zns-developer-guide" },
   ];
 
