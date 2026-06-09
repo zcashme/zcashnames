@@ -20,12 +20,36 @@ import {
 } from "@react-email/components";
 import type { ReactNode } from "react";
 import { FROM_EMAIL, SOCIALS } from "@/lib/email/constants";
+import { SOCIAL_ICON_PATHS } from "@/lib/social-icons";
 import {
   body as bodyStyle,
   container as containerStyle,
   heading as headingStyle,
   divider as dividerStyle,
 } from "@/lib/email/styles";
+
+function EmailSocialIcon({
+  path,
+  alt,
+}: {
+  path: string;
+  alt: string;
+}) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      role="img"
+      aria-label={alt}
+      style={{ display: "block", color: "#d4d4d8" }}
+    >
+      <title>{alt}</title>
+      <path d={path} fill="currentColor" />
+    </svg>
+  );
+}
 
 export function EmailLayout({
   preview,
@@ -67,16 +91,10 @@ export function EmailLayout({
             <table role="presentation" style={{ margin: "0 auto", borderCollapse: "collapse" }}>
               <tbody>
                 <tr>
-                  {SOCIALS.map(({ href, icon, alt }) => (
+                  {SOCIALS.map(({ href, iconKey, alt }) => (
                     <td key={alt} style={{ padding: "0 8px" }}>
                       <Link href={href} style={{ textDecoration: "none", display: "inline-block" }}>
-                        <Img
-                          src={`https://zcashnames.com/icons/${icon}.svg`}
-                          alt={alt}
-                          width="20"
-                          height="20"
-                          style={{ display: "block" }}
-                        />
+                        <EmailSocialIcon path={SOCIAL_ICON_PATHS[iconKey]} alt={alt} />
                       </Link>
                     </td>
                   ))}
