@@ -46,6 +46,7 @@ export const dynamic = "force-dynamic";
 
 export default async function BrandedBetaApplyPage({ params }: Props) {
   const { wallet } = await params;
+  const brand = getWalletBrand(wallet);
 
-  return <BetaApplyPageContent brandSlug={isWalletBrandSlug(wallet) ? wallet : undefined} />;
+  return <BetaApplyPageContent brandSlug={brand && isWalletBrandSlug(brand.slug) ? brand.slug : undefined} />;
 }

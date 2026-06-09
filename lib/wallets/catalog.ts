@@ -776,12 +776,18 @@ export function isWalletVariantId(value: string): value is WalletVariantId {
   return WALLET_VARIANTS.some((variant) => variant.variantId === value);
 }
 
+function normalizeWalletBrandSlugInput(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 export function isWalletBrandSlug(value: string): value is WalletBrandSlug {
-  return WALLET_BRANDS.some((brand) => brand.slug === value);
+  const normalized = normalizeWalletBrandSlugInput(value);
+  return WALLET_BRANDS.some((brand) => brand.slug === normalized);
 }
 
 export function getWalletBrand(slug: string): WalletBrand | null {
-  return WALLET_BRANDS.find((brand) => brand.slug === slug) ?? null;
+  const normalized = normalizeWalletBrandSlugInput(slug);
+  return WALLET_BRANDS.find((brand) => brand.slug === normalized) ?? null;
 }
 
 export function getWalletVariant(variantId: string): WalletVariant | null {

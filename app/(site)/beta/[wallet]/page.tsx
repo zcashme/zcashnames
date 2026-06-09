@@ -50,8 +50,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BrandedBetaBriefPage({ params }: Props) {
   const { wallet } = await params;
-  const knownBrand = isWalletBrandSlug(wallet);
   const brand = getWalletBrand(wallet);
+  const brandSlug = brand?.slug;
+  const knownBrand = brandSlug ? isWalletBrandSlug(brandSlug) : false;
   const sections = knownBrand && brand ? getBetaWalletBriefSections(brand) : BETA_V2_SECTIONS;
 
   return (
@@ -77,7 +78,7 @@ export default async function BrandedBetaBriefPage({ params }: Props) {
           <BetaV2Toc sections={sections} />
         </aside>
         <main className="flex-1 min-w-0">
-          {knownBrand ? <BetaWalletBrief brandSlug={wallet} /> : <BetaV2Brief />}
+          {brandSlug ? <BetaWalletBrief brandSlug={brandSlug} /> : <BetaV2Brief />}
         </main>
       </div>
     </div>

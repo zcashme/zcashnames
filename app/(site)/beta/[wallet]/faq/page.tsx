@@ -29,7 +29,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
   const brand = getWalletBrand(wallet);
-  const hasFaq = brand && isWalletBrandSlug(wallet) && hasWalletFaq(wallet);
+  const brandSlug = brand?.slug;
+  const hasFaq = brandSlug ? isWalletBrandSlug(brandSlug) && hasWalletFaq(brandSlug) : false;
 
   if (!brand || !hasFaq) {
     return {
@@ -69,15 +70,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BrandedBetaFaqPage({ params }: Props) {
   const wallet = await readWalletParam(params);
+  const brand = wallet ? getWalletBrand(wallet) : null;
+  const brandSlug = brand?.slug;
 
-  if (!wallet || !isWalletBrandSlug(wallet) || !hasWalletFaq(wallet)) {
+  if (!brandSlug || !isWalletBrandSlug(brandSlug) || !hasWalletFaq(brandSlug)) {
     notFound();
   }
 
-  const brand = getWalletBrand(wallet);
   if (!brand) notFound();
 
-  const sections = getWalletFaqSections(wallet);
+  const sections = getWalletFaqSections(brandSlug);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 md:px-8">
@@ -100,7 +102,7 @@ export default async function BrandedBetaFaqPage({ params }: Props) {
           <BetaV2Toc sections={sections} />
         </aside>
         <main className="min-w-0 flex-1">
-          <BetaWalletFaq brandSlug={wallet} />
+          <BetaWalletFaq brandSlug={brandSlug} />
         </main>
       </div>
     </div>
