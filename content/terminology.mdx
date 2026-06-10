@@ -10,7 +10,7 @@ A single-page glossary for ZcashNames and ZNS. When the docs use a term that has
 
 **Name** is a 1 to 62 character lowercase ASCII string of letters and digits. The on-chain canonical form. See [Name Validation](/docs/protocol/name-validation).
 
-**`.zcash` and `.zec` suffixes** are display-only labels used by the website and wallets. They are interchangeable, never stored on chain, and stripped before any RPC call.
+**`.zcash` and `.zec` suffixes** are display-only labels used by the website and wallets. They are interchangeable and never stored on chain. The SDKs strip them automatically — `resolveName("Alice.zcash")` resolves `alice` — but they must never appear in a memo or a raw RPC query.
 
 **Registration** is the row in the indexer's `registrations` table for a claimed name. It binds a name to a Zcash address with a signature, a nonce, and a `last_action`.
 

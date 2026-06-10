@@ -26,12 +26,6 @@ Only lowercase ASCII letters and digits. No hyphens, no underscores, no dots, no
 
 The OpenRPC schema and every SDK port enforce this same pattern.
 
-## Normalization
-
-Clients should lowercase and trim whitespace before constructing a memo. The web interface does this automatically. The indexer does **no** normalization - it enforces the rules byte-for-byte. An invalid name in a memo is silently ignored (memo unparsed, transaction still settles as a normal Zcash payment).
-
-The `.zcash` and `.zec` suffixes are **display-only**. They are never stored on-chain or in the registry and must never appear in a memo.
-
 ## Examples
 
 | Input | Valid | Reason |

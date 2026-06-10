@@ -17,18 +17,20 @@ A name is 1 to 62 lowercase ASCII letters and digits. Anything else is not a nam
 ^[a-z0-9]{1,62}$
 ```
 
-In a recipient field, treat input as a name when it matches that pattern, optionally followed by `.zcash` or `.zec`. Both suffixes are display-only and must be stripped before you call the resolver. They never appear on chain.
+In a recipient field, treat input as a name when it matches that pattern, optionally followed by `.zcash` or `.zec` in any case. Both suffixes are display-only and never appear on chain.
+
+You do not need to strip them yourself. The SDK normalizes every name input — trims whitespace, lowercases, and strips one trailing `.zcash`/`.zec` — so `Alice.zcash`, `aLice.Zec`, and `alice` all resolve the same name (zcashname-sdk ≥ 0.11.0; Dart `zcashname_sdk` ≥ 0.6.0). To run the same normalization in your own detection logic, the SDK exports it:
 
 ```typescript
-function extractName(input: string): string | null {
-  const trimmed = input.trim().toLowerCase().replace(/\.(zcash|zec)$/, "");
-  return /^[a-z0-9]{1,62}$/.test(trimmed) ? trimmed : null;
+const name = zns.normalizeName(input); // "  Alice.zcash " → "alice"
+if (zns.isValidName(name)) {
+  // treat as a name lookup
 }
 ```
 
-If the input does not match, fall through to your existing Zcash address parser. Anything starting with `u`, `zs`, or `t` is a regular address and should skip the resolver entirely. Lowercase before matching: users will paste `Alice.zcash` from the address bar of a directory site, and the canonical form is lowercase.
+If the input does not match after normalization, fall through to your existing Zcash address parser. Anything starting with `u`, `zs`, or `t` is a regular address and should skip the resolver entirely.
 
-The indexer enforces the regex byte-for-byte and never normalizes. If you do not strip the suffix, the lookup will fail. The full rules live at [Name Validation](/docs/protocol/name-validation).
+The indexer itself enforces the regex byte-for-byte and never normalizes — normalization happens client-side in the SDK. If you call the [RPC directly](/docs/sdk/direct-rpc), strip the suffix and lowercase before querying. The full rules live at [Name Validation](/docs/protocol/name-validation).
 
 ## Resolve a name
 
@@ -40,10 +42,9 @@ import { ZNS } from "zcashname-sdk";
 const zns = new ZNS();
 
 async function resolveRecipient(input: string): Promise<string | null> {
-  const name = input.trim().toLowerCase().replace(/\.(zcash|zec)$/, "");
-  if (!zns.isValidName(name)) return null;
-
-  const reg = await zns.resolveName(name);
+  // resolveName normalizes the input itself: "Alice.zcash" → "alice".
+  // Invalid input returns null without a network round trip.
+  const reg = await zns.resolveName(input);
   // reg is { name, address, txid, height, nonce, signature, last_action, listing } | null
   return reg?.address ?? null;
 }
@@ -65,9 +66,9 @@ Show the original name in the confirmation screen alongside the underlying addre
 
 There are three cases to handle around the `resolveName` call.
 
-`isValidName` returns `false`. The input is not a syntactically valid name. Don't call the resolver - fall back to your address parser or show a validation error.
+`isValidName(zns.normalizeName(input))` returns `false`. The input is not a valid name even after normalization. Don't call the resolver - fall back to your address parser or show a validation error. (If you skip this check, `resolveName` returns `null` for invalid input without a network call, so nothing breaks - you just can't distinguish "invalid" from "not registered".)
 
-`resolveName` returns `null`. The name passed validation but is not currently registered. Show "name not found" in the recipient field. A released name returns `null` the same way a never-claimed name does.
+`resolveName` returns `null`. The name is not currently registered. Show "name not found" in the recipient field. A released name returns `null` the same way a never-claimed name does.
 
 `resolveName` throws. The indexer is unreachable or returned an error. Surface a transient failure to the user and let them retry.
 
