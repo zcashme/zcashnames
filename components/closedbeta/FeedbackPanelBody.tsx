@@ -1,67 +1,98 @@
 /**
- * Shared body for both the docked side panel (FeedbackModal, mode="panel") and the
- * standalone popout window (/closedbeta/feedback, mode="popout"). Contains the
- * Checklist and Report tabs, a top progress bar, and bottom controls (Read Me,
- * Contact, sign out).
- *
- * State lift: checklist expansion state (sub-lists, nested sections) lives here so
- * it survives tab switches — the checklist body unmounts when the user switches to
- * Report, but expansion preference is preserved.
- *
- * Tester data: in popout mode, initialTesterName and initialFocus are server-rendered
- * props. In panel mode they are fetched lazily via getCurrentTesterName/getCurrentTesterFocus
- * when the panel first opens.
+ * Shared body for both the docked side panel and the standalone popout window.
+ * Contains the Checklist and Report tabs, a top progress bar, and bottom
+ * controls for wallet selection, docs, contact, and sign-out.
  */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import FeedbackForm from "./FeedbackForm";
-import FeedbackChecklist, { initialChecklistExpansion, type SubListId } from "./FeedbackChecklist";
+import FeedbackChecklist, { initialChecklistExpansion } from "./FeedbackChecklist";
 import { useChecklistProgress } from "@/components/hooks/useChecklistProgress";
 import {
-  getCurrentTesterFocus,
   getCurrentTesterName,
+  getCurrentTesterPreferredWalletVariantId,
   signOutBetaTester,
 } from "@/lib/beta/actions";
 import { BETA_CHECKLIST } from "@/lib/beta/checklist";
+import {
+  hasWalletFaq,
+} from "@/lib/beta/walletFaq";
+import {
+  getWalletBrand,
+  getWalletPlatformDownloadsForBrand,
+  getWalletVariant,
+  subcategoryLabel,
+  WALLET_VARIANTS,
+  type WalletVariantId,
+} from "@/lib/wallets/catalog";
 import { COMMUNITIES } from "@/lib/zns/brand";
 
-// Shared body for both the docked side panel (FeedbackModal) and the standalone
-// popout window (/closedbeta/feedback). Same tabs, same banner, same bottom
-// progress bar — only the surrounding container differs.
-//
-// `mode` controls the affordances in the header:
-//   - "panel"  : collapse button (left), docs link, popout button
-//   - "popout" : no collapse button, no popout button (we're already in it)
-
 type Tab = "checklist" | "report";
-export type TooltipStep = "popout" | "report" | "checkbox" | "readme" | "contact" | "collapse";
+export type TooltipStep =
+  | "popout"
+  | "report"
+  | "checkbox"
+  | "wallet"
+  | "readme"
+  | "contact"
+  | "collapse"
+  | "tooltips";
 
 export interface FeedbackPanelBodyProps {
-  /** Active stage from the home page network toggle. */
   stage: "testnet" | "mainnet";
   mode: "panel" | "popout";
-  /** Pre-loaded tester name (server-rendered for popout, lazy for panel). */
   initialTesterName?: string | null;
-  /** Pre-loaded focus areas. Same lazy/eager rule as testerName. */
-  initialFocus?: ("user" | "sdk")[];
-  /** Panel-mode only: collapses the side dock. */
   onClose?: () => void;
-  /** Panel-mode only: current onboarding tooltip step. */
   tooltipStep?: TooltipStep | null;
-  /** Advances the panel onboarding tooltip sequence. */
   onTooltipNext?: () => void;
-  /** Closes the panel onboarding tooltip sequence. */
   onTooltipClose?: () => void;
-  /** Restarts the panel onboarding tooltip sequence. */
   onTooltipRestart?: () => void;
+}
+
+function walletSummary(variantId: WalletVariantId | null): string {
+  if (!variantId) return "Wallet";
+  const variant = getWalletVariant(variantId);
+  if (!variant) return "Wallet";
+  return `${variant.displayName} / ${subcategoryLabel(variant.subcategory)}`;
+}
+
+function walletFieldValue(variantId: WalletVariantId | null): string {
+  if (!variantId) return "";
+  const variant = getWalletVariant(variantId);
+  if (!variant) return "";
+  return `${variant.displayName} on ${subcategoryLabel(variant.subcategory)}`;
+}
+
+function resolveWalletDownloadHref(variantId: WalletVariantId | null): string | null {
+  if (!variantId) return null;
+  const variant = getWalletVariant(variantId);
+  if (!variant) return null;
+
+  const platformMatch = getWalletPlatformDownloadsForBrand(variant.brandSlug).find(
+    (download) =>
+      download.device === variant.device && download.subcategory === variant.subcategory,
+  );
+  if (platformMatch?.href) return platformMatch.href;
+
+  return getWalletBrand(variant.brandSlug)?.websiteUrl ?? null;
+}
+
+function resolveWalletFaqLink(variantId: WalletVariantId | null): { label: string; href: string } | null {
+  if (!variantId) return null;
+  const variant = getWalletVariant(variantId);
+  if (!variant || !hasWalletFaq(variant.brandSlug)) return null;
+
+  return {
+    label: `${variant.displayName} FAQ`,
+    href: `/beta/${variant.brandSlug}/faq`,
+  };
 }
 
 export default function FeedbackPanelBody({
   stage,
   mode,
   initialTesterName,
-  initialFocus,
   onClose,
   tooltipStep,
   onTooltipNext,
@@ -72,61 +103,32 @@ export default function FeedbackPanelBody({
   const [reportingItemId, setReportingItemId] = useState<string | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [readMeOpen, setReadMeOpen] = useState(false);
+  const [walletOpen, setWalletOpen] = useState(false);
 
   const [testerName, setTesterName] = useState<string | null>(initialTesterName ?? null);
   const [testerLoaded, setTesterLoaded] = useState(initialTesterName !== undefined);
-  const [focus, setFocus] = useState<("user" | "sdk")[]>(initialFocus ?? []);
+  const [selectedWalletVariantId, setSelectedWalletVariantId] = useState<WalletVariantId | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(
+    initialChecklistExpansion().sections,
+  );
+
   const popoutTipRef = useRef<HTMLDivElement>(null);
   const collapseTipRef = useRef<HTMLDivElement>(null);
   const contactMenuRef = useRef<HTMLDivElement>(null);
   const readMeMenuRef = useRef<HTMLDivElement>(null);
-
-  // Lifted out of FeedbackChecklist so it survives tab switches (the checklist
-  // tab body unmounts when the user switches to Report).
-  const initialExpansion = initialChecklistExpansion(initialFocus);
-  const [expandedSubLists, setExpandedSubLists] = useState<Record<SubListId, boolean>>(
-    initialExpansion.subLists,
-  );
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(
-    initialExpansion.sections,
-  );
-  // Tracks whether the async tester data has been applied; we only sync from
-  // late-loading data once, then leave the user's manual choice alone.
-  const focusInitialized = useRef(initialFocus !== undefined);
-  const expansionTouched = useRef(false);
-
-  function handleToggleSubList(id: SubListId) {
-    expansionTouched.current = true;
-    setExpandedSubLists((prev) => ({ ...prev, [id]: !prev[id] }));
-  }
-
-  function handleToggleSection(section: string) {
-    expansionTouched.current = true;
-    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
-  }
+  const walletMenuRef = useRef<HTMLDivElement>(null);
 
   const { hydrated: progressHydrated, completed, total } = useChecklistProgress(testerName, stage);
 
-  // Lazy hydration for panel mode (popout passes both as props server-side).
   useEffect(() => {
-    if (testerLoaded) return;
+    if (testerLoaded && selectedWalletVariantId !== null) return;
     let cancelled = false;
-    Promise.all([getCurrentTesterName(), getCurrentTesterFocus()])
-      .then(([name, f]) => {
+    Promise.all([getCurrentTesterName(), getCurrentTesterPreferredWalletVariantId()])
+      .then(([name, preferredWallet]) => {
         if (cancelled) return;
         setTesterName(name);
-        setFocus(f);
+        setSelectedWalletVariantId(preferredWallet);
         setTesterLoaded(true);
-        // Seed the expansion default exactly once, but only if the
-        // user hasn't manually toggled anything yet.
-        if (!focusInitialized.current) {
-          focusInitialized.current = true;
-          if (!expansionTouched.current) {
-            const defaults = initialChecklistExpansion(f);
-            setExpandedSubLists(defaults.subLists);
-            setExpandedSections(defaults.sections);
-          }
-        }
       })
       .catch(() => {
         if (!cancelled) setTesterLoaded(true);
@@ -134,7 +136,7 @@ export default function FeedbackPanelBody({
     return () => {
       cancelled = true;
     };
-  }, [testerLoaded]);
+  }, [selectedWalletVariantId, testerLoaded]);
 
   useEffect(() => {
     if (!contactOpen) return;
@@ -158,6 +160,21 @@ export default function FeedbackPanelBody({
     return () => document.removeEventListener("pointerdown", handlePointerDown, true);
   }, [readMeOpen]);
 
+  useEffect(() => {
+    if (!walletOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && walletMenuRef.current?.contains(target)) return;
+      setWalletOpen(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () => document.removeEventListener("pointerdown", handlePointerDown, true);
+  }, [walletOpen]);
+
+  function handleToggleSection(section: string) {
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  }
+
   function handleReportItem(itemId: string) {
     setReportingItemId(itemId);
     setTab("report");
@@ -180,7 +197,7 @@ export default function FeedbackPanelBody({
     try {
       await signOutBetaTester();
     } catch {
-      /* swallow — we're about to reload anyway */
+      // We reload regardless.
     }
     if (typeof window !== "undefined") {
       window.location.reload();
@@ -188,11 +205,11 @@ export default function FeedbackPanelBody({
   }
 
   const reportingItem = reportingItemId
-    ? BETA_CHECKLIST.find((i) => i.id === reportingItemId) ?? null
+    ? BETA_CHECKLIST.find((item) => item.id === reportingItemId) ?? null
     : null;
 
   const subline = !testerLoaded
-    ? "Loading…"
+    ? "Loading..."
     : testerName
       ? (
           <>
@@ -234,6 +251,13 @@ export default function FeedbackPanelBody({
     border: "1px solid var(--border-muted)",
   };
 
+  const selectedWalletStyle: React.CSSProperties = selectedWalletVariantId
+    ? iconBtnStyle
+    : {
+        ...iconBtnStyle,
+        border: "1px solid var(--accent-red, #e05252)",
+      };
+
   const contactLinks = COMMUNITIES.filter((item) =>
     item.label === "Telegram" ||
     item.label === "Signal" ||
@@ -246,6 +270,18 @@ export default function FeedbackPanelBody({
     { label: "Beta Overview", href: "/beta" },
     { label: "Developer Guide", href: "/docs/zns-developer-guide" },
   ];
+
+  const sortedWalletVariants = useMemo(
+    () =>
+      [...WALLET_VARIANTS].sort((a, b) => {
+        const byName = a.displayName.localeCompare(b.displayName);
+        if (byName !== 0) return byName;
+        return a.sortOrder - b.sortOrder;
+      }),
+    [],
+  );
+  const walletDownloadHref = resolveWalletDownloadHref(selectedWalletVariantId);
+  const walletFaqLink = resolveWalletFaqLink(selectedWalletVariantId);
 
   const tooltipBoxStyle: React.CSSProperties = {
     background: "var(--home-result-primary-bg)",
@@ -290,25 +326,174 @@ export default function FeedbackPanelBody({
           style={tooltipArrowStyle}
         />
         <p className="pr-1">{message}</p>
-        <div className="mt-2 flex justify-end gap-2">
-          {children}
-        </div>
+        <div className="mt-2 flex justify-end gap-2">{children}</div>
       </div>
     );
   }
 
+  function toggleTooltips() {
+    if (tooltipStep) {
+      onTooltipClose?.();
+      return;
+    }
+    onTooltipRestart?.();
+  }
+
+  const walletMenu = (
+    <div className="flex items-center gap-2">
+      <div ref={walletMenuRef} className="relative shrink-0" data-feedback-tour={tooltipStep === "wallet" ? true : undefined}>
+        <button
+          type="button"
+          onClick={() => setWalletOpen((open) => !open)}
+          aria-expanded={walletOpen}
+          aria-haspopup="menu"
+          className="rounded-lg px-2.5 py-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-90 inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
+          style={selectedWalletStyle}
+        >
+          {walletSummary(selectedWalletVariantId)}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-3 w-3 transition-transform"
+            style={{ transform: walletOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        {tooltipStep === "wallet" &&
+          renderTooltip({
+            message: "Select the wallet you are using. Change anytime.",
+            positionClassName: "right-0 top-full mt-2",
+            arrowClassName: "right-5 top-0 -translate-y-1/2 border-l border-t",
+            children: (
+              <>
+                <button
+                  type="button"
+                  onClick={onTooltipClose}
+                  className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                  style={tooltipActionStyle}
+                >
+                  Skip
+                </button>
+                <button
+                  type="button"
+                  onClick={onTooltipNext}
+                  className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                  style={tooltipActionStyle}
+                >
+                  Next
+                </button>
+              </>
+            ),
+          })}
+        {walletOpen && (
+          <div
+            role="menu"
+            className="absolute right-0 top-full z-30 mt-2 w-56 max-h-80 overflow-y-auto rounded-lg shadow-lg"
+            style={{
+              background: "var(--color-raised)",
+              border: "1px solid var(--border-muted)",
+            }}
+          >
+            {sortedWalletVariants.map((variant) => {
+              const active = selectedWalletVariantId === variant.variantId;
+              return (
+                <button
+                  key={variant.variantId}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={active}
+                  onClick={() => {
+                    setSelectedWalletVariantId(variant.variantId);
+                    setWalletOpen(false);
+                  }}
+                  className="block w-full px-3 py-2 text-left text-xs font-semibold transition-colors hover:opacity-80 cursor-pointer"
+                  style={{
+                    color: active ? "var(--fg-heading)" : "var(--fg-body)",
+                    background: active ? "var(--feature-card-bg)" : "transparent",
+                    borderBottom: "1px solid var(--border-muted)",
+                  }}
+                >
+                  {variant.displayName}
+                  <span className="block text-[0.68rem] font-normal" style={{ color: "var(--fg-muted)" }}>
+                    {subcategoryLabel(variant.subcategory)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {walletDownloadHref ? (
+        <a
+          href={walletDownloadHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-lg px-2.5 py-1.5 transition-opacity hover:opacity-100 opacity-90 inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
+          style={iconBtnStyle}
+          aria-label="Download wallet"
+          title="Download wallet"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.9"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path d="M12 3v11" />
+            <path d="m7 10 5 4.5 5-4.5" />
+            <path d="M4 18v3h16v-3" />
+          </svg>
+        </a>
+      ) : (
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          className="rounded-lg px-2.5 py-1.5 inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap cursor-not-allowed"
+          style={{
+            ...iconBtnStyle,
+            opacity: 0.45,
+          }}
+          aria-label="Download unavailable"
+          title="Download unavailable"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.9"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path d="M12 3v11" />
+            <path d="m7 10 5 4.5 5-4.5" />
+            <path d="M4 18v3h16v-3" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="flex flex-col h-full w-full" style={{ background: "var(--feature-card-bg)" }}>
-
-
-
-
-      {/* Checklist progress */}
+    <div className="flex flex-col h-full w-full" style={{ background: "var(--color-background, #0f1115)" }}>
       <div
         className="px-5 py-3 shrink-0"
         style={{
           borderBottom: "1px solid var(--faq-border)",
-          background: "var(--feature-card-bg)",
+          background: "var(--color-background, #0f1115)",
         }}
       >
         <div className="flex items-center gap-3">
@@ -371,7 +556,6 @@ export default function FeedbackPanelBody({
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex px-5" style={{ borderBottom: "1px solid var(--faq-border)" }}>
         <button
           type="button"
@@ -389,7 +573,6 @@ export default function FeedbackPanelBody({
         </button>
       </div>
 
-      {/* Body */}
       <div className="overflow-y-auto px-5 py-5 flex-1">
         {tab === "report" && (
           <FeedbackForm
@@ -397,21 +580,19 @@ export default function FeedbackPanelBody({
             checklistItem={reportingItem}
             onClearChecklistItem={() => setReportingItemId(null)}
             onOpenChecklist={() => setTab("checklist")}
+            initialWallet={walletFieldValue(selectedWalletVariantId)}
           />
         )}
         {tab === "checklist" && (
           <FeedbackChecklist
             testerName={testerName}
             stage={stage}
-            focus={focus}
-            expandedSubLists={expandedSubLists}
-            onToggleSubList={handleToggleSubList}
             expandedSections={expandedSections}
             onToggleSection={handleToggleSection}
+            headerAccessory={walletMenu}
             hideProgressBar
             onReport={handleReportItem}
             reportingItemId={reportingItemId}
-            onOpenPopout={mode === "panel" ? openInNewWindow : undefined}
             tooltipStep={tooltipStep}
             onTooltipNext={onTooltipNext}
             onTooltipClose={onTooltipClose}
@@ -420,12 +601,11 @@ export default function FeedbackPanelBody({
         )}
       </div>
 
-      {/* Bottom controls */}
       <div
         className="px-5 py-3 shrink-0"
         style={{
           borderTop: "1px solid var(--faq-border)",
-          background: "var(--feature-card-bg)",
+          background: "var(--color-background, #0f1115)",
         }}
       >
         <div className="flex items-start gap-3">
@@ -450,26 +630,79 @@ export default function FeedbackPanelBody({
                   positionClassName: "bottom-full left-0 mb-2",
                   arrowClassName: "bottom-0 left-2 translate-y-1/2 border-b border-r",
                   children: (
-                    <button
-                      type="button"
-                      onClick={onTooltipClose}
-                      className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                      style={tooltipActionStyle}
-                    >
-                      Close
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={onTooltipClose}
+                        className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                        style={tooltipActionStyle}
+                      >
+                        Skip
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onTooltipNext}
+                        className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                        style={tooltipActionStyle}
+                      >
+                        Next
+                      </button>
+                    </>
                   ),
                 })}
             </div>
           )}
 
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-bold leading-tight capitalize" style={{ color: "var(--fg-heading)" }}>
-              {stage} Feedback
+            <h2 className="text-lg font-bold leading-tight" style={{ color: "var(--fg-heading)" }}>
+              Feedback
             </h2>
             <p className="text-xs mt-0.5" style={{ color: "var(--fg-muted)" }}>
               {subline}
             </p>
+          </div>
+
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={toggleTooltips}
+              aria-pressed={tooltipStep ? true : undefined}
+              aria-label={tooltipStep ? "Hide tooltips" : "Show tooltips"}
+              title={tooltipStep ? "Hide tooltips" : "Show tooltips"}
+              className="rounded-lg p-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70"
+              style={iconBtnStyle}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-4 h-4"
+                aria-hidden="true"
+              >
+                <path d="M9 18h6" />
+                <path d="M10 22h4" />
+                <path d="M12 2a7 7 0 0 0-4 12.7c.6.4 1 1 1.2 1.8h5.6c.2-.8.6-1.4 1.2-1.8A7 7 0 0 0 12 2Z" />
+              </svg>
+            </button>
+            {tooltipStep === "tooltips" &&
+              renderTooltip({
+                message: "Use this lightbulb to show the tooltips again anytime.",
+                positionClassName: "bottom-full right-0 mb-2",
+                arrowClassName: "bottom-0 right-2 translate-y-1/2 border-b border-r",
+                children: (
+                  <button
+                    type="button"
+                    onClick={onTooltipClose}
+                    className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                    style={tooltipActionStyle}
+                  >
+                    Okay
+                  </button>
+                ),
+              })}
           </div>
 
           <div ref={readMeMenuRef} className="relative shrink-0" data-feedback-tour={tooltipStep === "readme" ? true : undefined}>
@@ -481,7 +714,7 @@ export default function FeedbackPanelBody({
               className="rounded-lg px-2.5 py-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70 inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
               style={iconBtnStyle}
             >
-              Read Me
+              Read
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -498,7 +731,7 @@ export default function FeedbackPanelBody({
             </button>
             {tooltipStep === "readme" &&
               renderTooltip({
-                message: "Use Read Me for instructions, guides, and these tips.",
+                message: "Use Read for instructions, beta details, wallet FAQs, and the developer guide.",
                 positionClassName: "bottom-full right-0 mb-2",
                 arrowClassName: "bottom-0 right-5 translate-y-1/2 border-b border-r",
                 children: (
@@ -531,6 +764,23 @@ export default function FeedbackPanelBody({
                   border: "1px solid var(--border-muted)",
                 }}
               >
+                {walletFaqLink && (
+                  <a
+                    href={walletFaqLink.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    role="menuitem"
+                    onClick={() => setReadMeOpen(false)}
+                    className="block px-3 py-2 text-xs font-semibold transition-colors hover:opacity-80"
+                    style={{
+                      color: "var(--fg-body)",
+                      textDecoration: "none",
+                      borderBottom: "1px solid var(--border-muted)",
+                    }}
+                  >
+                    {walletFaqLink.label}
+                  </a>
+                )}
                 {readMeLinks.map((item) => (
                   <a
                     key={item.label}
@@ -549,21 +799,6 @@ export default function FeedbackPanelBody({
                     {item.label}
                   </a>
                 ))}
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setReadMeOpen(false);
-                    onTooltipRestart?.();
-                  }}
-                  className="block w-full px-3 py-2 text-left text-xs font-semibold transition-colors hover:opacity-80 cursor-pointer"
-                  style={{
-                    color: "var(--fg-body)",
-                    background: "transparent",
-                  }}
-                >
-                  Show Tooltips
-                </button>
               </div>
             )}
           </div>
@@ -648,7 +883,6 @@ export default function FeedbackPanelBody({
               </div>
             )}
           </div>
-
         </div>
       </div>
     </div>

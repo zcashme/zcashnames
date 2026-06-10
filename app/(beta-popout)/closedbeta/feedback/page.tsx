@@ -1,51 +1,26 @@
 import type { Metadata } from "next";
 import FeedbackPanelBody from "@/components/closedbeta/FeedbackPanelBody";
 import { readCurrentStage, readCurrentTester } from "@/lib/beta/gate";
-import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
-  title: "Submit Feedback — ZcashNames Beta",
+  title: "Submit Feedback - ZcashNames Beta",
   robots: { index: false, follow: false, nocache: true },
 };
 
 export const dynamic = "force-dynamic";
 
-/**
- * Standalone full-page feedback form rendered in a popout window.
- * Reads the tester's identity from the gate cookie and their focus areas
- * from the beta_testers DB table, then hydrates FeedbackPanelBody in "popout"
- * mode — no surrounding site chrome, identical to the in-page panel visually.
- */
 export default async function FeedbackPopoutPage() {
   const [tester, stage] = await Promise.all([
     readCurrentTester(),
     readCurrentStage(),
   ]);
 
-  let focus: ("user" | "sdk")[] = [];
-  if (tester) {
-    const { data } = await db
-      .from("beta_testers")
-      .select("focus_areas")
-      .eq("id", tester.id)
-      .maybeSingle();
-    if (data?.focus_areas) {
-      focus = (data.focus_areas as unknown[]).filter(
-        (v): v is "user" | "sdk" => v === "user" || v === "sdk",
-      );
-    }
-  }
-
-  const testerName = tester?.displayName ?? null;
-  const activeStage = stage ?? "testnet";
-
   return (
     <main className="fixed inset-0">
       <FeedbackPanelBody
         mode="popout"
-        stage={activeStage}
-        initialTesterName={testerName}
-        initialFocus={focus}
+        stage={stage ?? "testnet"}
+        initialTesterName={tester?.displayName ?? null}
       />
     </main>
   );
