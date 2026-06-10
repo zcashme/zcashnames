@@ -121,8 +121,64 @@ export function InlineCollapseChevron() {
   );
 }
 
+export function InlineChecklistHeader() {
+  return (
+    <div
+      {...decorativeProps}
+      className="flex items-center justify-between gap-3 w-full max-w-sm"
+      style={noPointer}
+    >
+      <span
+        className="text-xs font-semibold uppercase tracking-wider"
+        style={{ color: "var(--fg-heading)" }}
+      >
+        User experience
+      </span>
+      <div className="flex items-center gap-2">
+        <span
+          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap"
+          style={{ ...iconBtnStyle, opacity: 0.9 }}
+        >
+          YWallet / Android
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-3 w-3"
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </span>
+        <span
+          className="inline-flex items-center justify-center rounded-lg px-2.5 py-1.5"
+          style={{ ...iconBtnStyle, opacity: 0.9 }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.9"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path d="M12 3v11" />
+            <path d="m7 10 5 4.5 5-4.5" />
+            <path d="M4 18v3h16v-3" />
+          </svg>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function InlineReportingBanner({
-  itemLabel = "Resolve a name on Testnet",
+  itemLabel = "1. Buy a listed name",
 }: { itemLabel?: string }) {
   return (
     <div
@@ -204,7 +260,7 @@ export function InlineReadMeBtn() {
       className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap align-text-bottom mx-0.5"
       style={{ ...iconBtnStyle, ...noPointer }}
     >
-      Read Me
+      Read
     </span>
   );
 }

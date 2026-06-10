@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BRAND } from "@/lib/zns/brand";
 import {
   InlineCollapseChevron,
+  InlineChecklistHeader,
   InlineNetworkToggle,
   InlinePopoutIcon,
   InlinePreview,
@@ -215,11 +216,14 @@ export default function BetaInstructionsBrief() {
       <section id="what-to-test">
         <h2 style={h2}>What to Test</h2>
         <p style={p}>
-          The full beta test plan lives in the <strong>Checklist</strong> tab of the feedback panel.
-          It contains every individual test and helps you track progress.
+          The <strong>Checklist</strong> tab currently shows one visible{" "}
+          <strong>User experience</strong> checklist. <strong>General Feedback</strong> sits at the
+          top, followed by the wallet-flow test items.
         </p>
         <p style={p}>
-          Record which wallet, version, and operating system you are using as part of any report.
+          In the underlying data those test items still belong to <strong>Wallet Flows</strong>, but
+          the panel does not show a separate <strong>Wallet Flows</strong> section header because
+          there is only one visible checklist group in the UI.
         </p>
         <p style={p}>
           For wallet coverage and supported feature differences, see{" "}
@@ -246,11 +250,15 @@ export default function BetaInstructionsBrief() {
         <ul className="list-disc pl-5">
           <li style={li}>
             <strong>Checklist</strong> tracks your test plan with checkboxes and lets you choose the
-            active reporting target.
+            active reporting target. The <strong>User experience</strong> row also includes the wallet
+            dropdown and a download button for the currently selected wallet.
+            <InlinePreview>
+              <InlineChecklistHeader />
+            </InlinePreview>
           </li>
           <li style={li}>
-            <strong>Report</strong> is the bug report and feedback form. Every report should be tied
-            to a checklist item.
+            <strong>Report</strong> is the bug report and feedback form. Use it for checklist-linked
+            bug reports or for standalone general feedback.
           </li>
         </ul>
 
@@ -258,7 +266,7 @@ export default function BetaInstructionsBrief() {
         <ul className="list-disc pl-5">
           <li style={li}>
             The active item shows a green outline in Checklist and a green reporting banner above the
-            Report tab.
+            Report tab. The banner shows only the selected checklist item label.
             <InlinePreview>
               <InlineReportingBanner />
             </InlinePreview>
@@ -268,7 +276,9 @@ export default function BetaInstructionsBrief() {
             test complete.
           </li>
           <li style={li}>
-            Wallet, version, and OS are remembered across reports until you change them.
+            Wallet selection comes from the dropdown in the checklist panel. The bug form then
+            prefills <strong>Wallet + Version + OS</strong>, but you still need to type the software
+            version and OS version manually.
           </li>
           <li style={li}>
             You need at least one of wallet, steps, expected, actual, txid, notes, or a screenshot
@@ -279,13 +289,14 @@ export default function BetaInstructionsBrief() {
         <h3 style={h3}>Test in one window, write in another</h3>
         <p style={p}>
           The popout icon <InlinePopoutIcon /> opens the same form in a standalone window. It shares
-          the same attribution, wallet details, and checklist progress across tabs and windows.
+          the same reporting flow in a standalone window, and the bug form is still prefilled from
+          the current panel wallet selection rather than requiring you to start from scratch.
         </p>
 
         <h3 style={h3}>Re-reading the instructions</h3>
         <p style={p}>
-          The Read Me button <InlineReadMeBtn /> opens these instructions in a new tab whenever you
-          need them.
+          The Read button <InlineReadMeBtn /> opens the docs and instructions menu whenever you need
+          the beta brief or related references.
         </p>
       </section>
 
