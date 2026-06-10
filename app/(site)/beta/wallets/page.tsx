@@ -28,7 +28,7 @@ export default function BetaWalletsPage() {
       <SiteRouteTitle title="Beta Wallets" />
       <main className="max-w-5xl">
         <p style={p}>
-          Each planned wallet value is platform-specific. Use this matrix to compare the mobile,
+          Use this matrix to compare the mobile,
           desktop, and browser integrations available during mainnet testing.
         </p>
         <p style={p}>
