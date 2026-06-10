@@ -67,11 +67,15 @@ const benefitGroups: BenefitGroup[] = [
     items: [
       {
         title: "Send using simple names",
-        description: "No copying/pasting long addresses or scanning unreadable QRs.",
+        description: "No copying or pasting long addresses.",
       },
       {
         title: "Update once, everywhere",
-        description: "Change your address without chasing down every contact.",
+        description: "Change your address without informing all of your contacts.",
+      },
+      {
+        title: "Know where it goes",
+        description: "QRs are hard to verify. Names show who you're paying.",
       },
     ],
   },
