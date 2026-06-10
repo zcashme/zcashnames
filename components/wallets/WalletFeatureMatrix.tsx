@@ -124,13 +124,32 @@ const stickyFirstColumnStyle: CSSProperties = {
 const stickyFirstHeaderStyle: CSSProperties = {
   ...stickyFirstColumnStyle,
   backgroundColor: "var(--color-surface)",
+  backgroundImage: "none",
   zIndex: 10,
 };
 
 const stickyFirstRowStyle: CSSProperties = {
   ...stickyFirstColumnStyle,
   backgroundColor: "var(--color-surface)",
+  backgroundImage: "none",
   zIndex: 8,
+};
+
+const selectableRowStyle: CSSProperties = {
+  cursor: "pointer",
+};
+
+const footnoteStyle: CSSProperties = {
+  color: "var(--fg-muted)",
+  fontSize: "0.8rem",
+  lineHeight: 1.5,
+};
+
+const selectedCellStyle: CSSProperties = {
+  boxShadow: "1px 0 0 var(--faq-border), inset 0 0 0 1px var(--color-accent-green)",
+  backgroundColor: "var(--color-accent-green-light)",
+  backgroundImage: "none",
+  color: "var(--color-accent-green)",
 };
 
 function SupportMark({ value }: { value: boolean }) {
@@ -158,6 +177,10 @@ function rowSupported(variant: WalletVariant, row: MatrixRow): boolean {
 
 function supportedCount(variant: WalletVariant, group: FeatureGroup): number {
   return group.rows.reduce((count, row) => count + Number(rowSupported(variant, row)), 0);
+}
+
+function rowSelectionKey(row: MatrixRow): string {
+  return `${row.kind}:${String(row.key)}`;
 }
 
 function sameFeatureSet(a: WalletVariant, b: WalletVariant): boolean {
@@ -207,17 +230,42 @@ function matrixColumns(variants: readonly WalletVariant[]): MatrixVariantColumn[
   return columns;
 }
 
-export default function WalletFeatureMatrix({ variants }: { variants: readonly WalletVariant[] }) {
+export default function WalletFeatureMatrix({
+  variants,
+  showEditFootnote = true,
+}: {
+  variants: readonly WalletVariant[];
+  showEditFootnote?: boolean;
+}) {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(FEATURE_GROUPS.map((group) => [
       group.id,
       group.id === "interact-with-names" || group.id === "manage-names",
     ])),
   );
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   if (variants.length === 0) return null;
 
   const columns = matrixColumns(variants);
+  const selectedMatrixRows = FEATURE_GROUPS
+    .flatMap((group) => group.rows)
+    .filter((row) => selectedRows.includes(rowSelectionKey(row)));
+  const filteredColumns = selectedRows.length === 0
+    ? columns
+    : columns.filter(({ variant }) =>
+      selectedMatrixRows.every((row) => rowSupported(variant, row)),
+    );
+  const noMatches = selectedRows.length > 0 && filteredColumns.length === 0;
+
+  function toggleRow(row: MatrixRow) {
+    const key = rowSelectionKey(row);
+    setSelectedRows((current) =>
+      current.includes(key)
+        ? current.filter((item) => item !== key)
+        : [...current, key],
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -236,7 +284,7 @@ export default function WalletFeatureMatrix({ variants }: { variants: readonly W
               >
                 Feature
               </th>
-              {columns.map(({ key, platformLabel, variant }) => (
+              {filteredColumns.map(({ key, platformLabel, variant }) => (
                 <th
                   key={key}
                   style={{ ...cellStyle, borderTop: "none", color: "var(--fg-heading)", minWidth: 130 }}
@@ -250,6 +298,20 @@ export default function WalletFeatureMatrix({ variants }: { variants: readonly W
             </tr>
           </thead>
           <tbody>
+            {noMatches ? (
+              <tr>
+                <td
+                  colSpan={1}
+                  style={{
+                    ...cellStyle,
+                    color: "var(--fg-muted)",
+                    fontStyle: "italic",
+                  }}
+                >
+                  No wallets match the selected features. Uncheck a feature to broaden the comparison.
+                </td>
+              </tr>
+            ) : null}
             {FEATURE_GROUPS.map((group) => {
               const expanded = expandedGroups[group.id] ?? true;
 
@@ -303,7 +365,7 @@ export default function WalletFeatureMatrix({ variants }: { variants: readonly W
                         <span />
                       </button>
                     </th>
-                    {columns.map(({ key, variant }) => (
+                    {filteredColumns.map(({ key, variant }) => (
                       <td
                         key={`${key}-${group.id}`}
                         style={{ ...cellStyle, ...groupSummaryCellStyle }}
@@ -313,33 +375,76 @@ export default function WalletFeatureMatrix({ variants }: { variants: readonly W
                     ))}
                   </tr>
                   {expanded &&
-                    group.rows.map((row) => (
-                      <tr key={`${group.id}-${row.key}`}>
-                        <th
-                          scope="row"
-                          style={{
-                            ...cellStyle,
-                            ...stickyFirstRowStyle,
-                            color: "var(--fg-heading)",
-                            fontWeight: 400,
-                            paddingLeft: "2.2rem",
-                          }}
+                    group.rows.map((row) => {
+                      const selected = selectedRows.includes(rowSelectionKey(row));
+
+                      return (
+                        <tr
+                          key={`${group.id}-${row.key}`}
+                          onClick={() => toggleRow(row)}
                         >
-                          {row.label}
-                        </th>
-                        {columns.map(({ key, variant }) => (
-                          <td key={`${key}-${group.id}-${row.key}`} style={cellStyle}>
-                            <SupportMark value={rowSupported(variant, row)} />
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
+                          <th
+                            scope="row"
+                            style={{
+                              ...cellStyle,
+                              ...stickyFirstRowStyle,
+                              ...selectableRowStyle,
+                              color: "var(--fg-heading)",
+                              fontWeight: 400,
+                              paddingLeft: "2.2rem",
+                              ...(selected ? selectedCellStyle : null),
+                            }}
+                          >
+                            <button
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggleRow(row);
+                              }}
+                              className="w-full text-left"
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "inherit",
+                                cursor: "pointer",
+                                font: "inherit",
+                                padding: 0,
+                              }}
+                            >
+                              <span className="flex items-center justify-between gap-2">
+                                <span>{row.label}</span>
+                                {selected ? <span aria-hidden="true">✓</span> : null}
+                              </span>
+                            </button>
+                          </th>
+                          {filteredColumns.map(({ key, variant }) => (
+                            <td
+                              key={`${key}-${group.id}-${row.key}`}
+                              style={{ ...cellStyle, ...selectableRowStyle }}
+                            >
+                              <SupportMark value={rowSupported(variant, row)} />
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
                 </Fragment>
               );
             })}
           </tbody>
         </table>
       </div>
+      {showEditFootnote ? (
+        <p style={footnoteStyle}>
+          <a
+            href="mailto:support@zcashme?subject=Wallet%20feature%20matrix%20feedback"
+            style={{ color: "var(--fg-heading)", textDecoration: "underline" }}
+          >
+            Suggest an edit
+          </a>
+        </p>
+      ) : null}
     </div>
   );
 }
