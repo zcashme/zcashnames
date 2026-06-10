@@ -12,7 +12,15 @@ interface Props {
 
 const PANEL_WIDTH_PX = 440;
 const PANEL_BREAKPOINT_PX = 900; // below this, panel goes full-width
-type TooltipStep = "popout" | "report" | "checkbox" | "readme" | "contact" | "collapse";
+type TooltipStep =
+  | "popout"
+  | "report"
+  | "checkbox"
+  | "wallet"
+  | "readme"
+  | "contact"
+  | "collapse"
+  | "tooltips";
 
 function nextTooltipStep(step: TooltipStep | null): TooltipStep | null {
   switch (step) {
@@ -21,14 +29,23 @@ function nextTooltipStep(step: TooltipStep | null): TooltipStep | null {
     case "report":
       return "checkbox";
     case "checkbox":
+      return "wallet";
+    case "wallet":
       return "readme";
     case "readme":
       return "contact";
     case "contact":
       return "collapse";
+    case "collapse":
+      return "tooltips";
     default:
       return null;
   }
+}
+
+function closeTooltipStep(step: TooltipStep | null): TooltipStep | null {
+  if (!step || step === "tooltips") return null;
+  return "tooltips";
 }
 
 export default function FeedbackModal({ network, initialTesterName }: Props) {
@@ -99,11 +116,9 @@ export default function FeedbackModal({ network, initialTesterName }: Props) {
               boxShadow: "0 16px 34px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
             }}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 scale-x-[-1]" aria-hidden="true">
-              <rect x="3" y="4" width="18" height="16" rx="2" />
-              <path d="M15 4v16" />
-              <path d="M8 12h5" />
-              <path d="M11 9l3 3-3 3" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+              <polyline points="11 17 6 12 11 7" />
+              <polyline points="18 17 13 12 18 7" />
             </svg>
             Submit Feedback
           </button>
@@ -119,6 +134,7 @@ export default function FeedbackModal({ network, initialTesterName }: Props) {
             style={{
               height: "100dvh",
               width: isWide ? `${PANEL_WIDTH_PX}px` : "100vw",
+              background: "var(--color-background, #0f1115)",
               borderLeft: "1px solid var(--faq-border)",
               boxShadow: "-12px 0 32px rgba(0,0,0,0.35)",
               transform: open ? "translateX(0)" : "translateX(100%)",
@@ -133,7 +149,7 @@ export default function FeedbackModal({ network, initialTesterName }: Props) {
               onClose={() => setOpen(false)}
               tooltipStep={tooltipStep}
               onTooltipNext={() => setTooltipStep((step) => nextTooltipStep(step))}
-              onTooltipClose={() => setTooltipStep(null)}
+              onTooltipClose={() => setTooltipStep((step) => closeTooltipStep(step))}
               onTooltipRestart={() => setTooltipStep("popout")}
             />
           </aside>,

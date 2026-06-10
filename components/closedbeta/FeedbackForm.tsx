@@ -12,7 +12,6 @@
 import { useEffect, useRef, useState } from "react";
 import { submitBetaFeedback } from "@/lib/beta/actions";
 import type { ChecklistItem } from "@/lib/beta/checklist";
-import { readLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
 
 interface Props {
   /** Initial network — usually the current network from StatusToggle. */
@@ -25,12 +24,12 @@ interface Props {
   onOpenChecklist?: () => void;
   /** Called once on successful submission. */
   onSuccess?: () => void;
+  /** Prefill for the wallet field inside the bug report accordion. */
+  initialWallet?: string;
 }
 
 const MAX_SCREENSHOTS = 5;
 const MAX_BYTES = 5 * 1024 * 1024;
-const WALLET_STORAGE_KEY = "beta:wallet";
-
 type Severity = "high" | "low" | "none";
 
 const MINIMUM_CONTENT_ERROR =
@@ -76,9 +75,10 @@ export default function FeedbackForm({
   onClearChecklistItem,
   onOpenChecklist,
   onSuccess,
+  initialWallet = "",
 }: Props) {
   const [severity, setSeverity] = useState<Severity>("none");
-  const [wallet, setWallet] = useState("");
+  const [wallet, setWallet] = useState(initialWallet);
   const [steps, setSteps] = useState("");
   const [expected, setExpected] = useState("");
   const [actual, setActual] = useState("");
@@ -139,18 +139,9 @@ export default function FeedbackForm({
     setError("");
   }
 
-  // Hydrate wallet from localStorage so it sticks across reports + sessions.
   useEffect(() => {
-    const stored = readLocalStorage(WALLET_STORAGE_KEY, "");
-    if (stored) setWallet(stored);
-  }, []);
-
-  // Persist wallet on every change.
-  useEffect(() => {
-    if (wallet) {
-      writeLocalStorage(WALLET_STORAGE_KEY, wallet);
-    }
-  }, [wallet]);
+    setWallet(initialWallet);
+  }, [initialWallet]);
 
   function handleFiles(list: FileList | null) {
     if (!list) return;
@@ -291,7 +282,7 @@ export default function FeedbackForm({
               Reporting on
             </p>
             <p className="text-sm font-semibold leading-snug" style={{ color: "var(--fg-heading)" }}>
-              {checklistItem.section ? `${checklistItem.section}, ${checklistItem.label}` : checklistItem.label}
+              {checklistItem.label}
             </p>
           </div>
           {onClearChecklistItem && (
@@ -440,7 +431,12 @@ export default function FeedbackForm({
 
             {/* Wallet */}
             <div>
-              <label style={labelStyle}>Wallet + Version + OS</label>
+              <div className="flex items-center justify-between gap-3">
+                <label style={labelStyle}>Wallet + Version + OS</label>
+                <p className="text-[0.68rem] font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
+                  Add the software version and OS version, e.g., Zingo 1.4.0 on macOS 14.5
+                </p>
+              </div>
               <input
                 type="text"
                 value={wallet}

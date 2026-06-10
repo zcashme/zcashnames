@@ -9,6 +9,7 @@ import { cookies, headers } from "next/headers";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { Network } from "@/lib/types";
+import { isWalletVariantId, type WalletVariantId } from "@/lib/wallets/catalog";
 import {
   BETA_COOKIE_NAME,
   BETA_STAGE_COOKIE_NAME,
@@ -82,6 +83,54 @@ export async function getCurrentTesterFocus(): Promise<("user" | "sdk")[]> {
   if (error || !data?.focus_areas) return [];
   const raw = data.focus_areas as unknown[];
   return raw.filter((v): v is "user" | "sdk" => v === "user" || v === "sdk");
+}
+
+function readPreferredWalletVariantId(
+  plannedWallet: unknown,
+  plannedWalletsDetail: unknown,
+): WalletVariantId | null {
+  if (typeof plannedWallet === "string" && isWalletVariantId(plannedWallet)) {
+    return plannedWallet;
+  }
+
+  if (!Array.isArray(plannedWalletsDetail)) return null;
+  const primaryRows = plannedWalletsDetail.filter(
+    (row) =>
+      typeof row === "object" &&
+      row !== null &&
+      (row as Record<string, unknown>).is_primary === true,
+  );
+  const candidateRows = primaryRows.length > 0 ? primaryRows : plannedWalletsDetail;
+
+  for (const row of candidateRows) {
+    if (typeof row !== "object" || row === null) continue;
+    const record = row as Record<string, unknown>;
+    const candidate =
+      typeof record.variant_id === "string"
+        ? record.variant_id
+        : typeof record.variantId === "string"
+          ? record.variantId
+          : typeof record.value === "string"
+            ? record.value
+            : "";
+    if (isWalletVariantId(candidate)) return candidate;
+  }
+
+  return null;
+}
+
+export async function getCurrentTesterPreferredWalletVariantId(): Promise<WalletVariantId | null> {
+  const tester = await readCurrentTester();
+  if (!tester) return null;
+
+  const { data, error } = await db
+    .from("beta_testers_v2")
+    .select("planned_wallet, planned_wallets_detail")
+    .eq("id", tester.id)
+    .maybeSingle();
+  if (error || !data) return null;
+
+  return readPreferredWalletVariantId(data.planned_wallet, data.planned_wallets_detail);
 }
 
 // ---------------------------------------------------------------------------
