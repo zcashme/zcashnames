@@ -8,6 +8,7 @@ export interface BetaTester {
   id: string;
   displayName: string;
   codeHash: string;
+  cohort: "v1" | "v2";
 }
 
 /** Look up a tester by their stable id (used by the cookie payload). Checks v2 first, falls back to v1. */
@@ -29,6 +30,7 @@ export async function findTesterById(id: string): Promise<BetaTester | null> {
         id: v2.id as string,
         displayName: v2.display_name as string,
         codeHash: v2.code_hash as string,
+        cohort: "v2",
       };
     }
 
@@ -49,6 +51,7 @@ export async function findTesterById(id: string): Promise<BetaTester | null> {
         id: v1.id as string,
         displayName: v1.display_name as string,
         codeHash: v1.code_hash as string,
+        cohort: "v1",
       };
     }
 
