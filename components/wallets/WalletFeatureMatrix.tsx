@@ -4,10 +4,12 @@ import { Fragment, useState, type CSSProperties } from "react";
 
 import {
   compareWalletVariantsByFeatureSupport,
+  getWalletPlatformDownloadsForBrand,
   subcategoryLabel,
   type WalletFeatures,
   type WalletVariant,
 } from "@/lib/wallets/catalog";
+import { resolveWalletDownloadHref } from "@/lib/beta/wallet-selection";
 
 type FeatureRow = {
   kind: "feature";
@@ -31,8 +33,8 @@ type FeatureGroup = {
 
 type MatrixVariantColumn = {
   key: string;
-  platformLabel: string;
   variant: WalletVariant;
+  platformLinks: { label: string; href: string }[];
 };
 
 const FEATURE_GROUPS: readonly FeatureGroup[] = [
@@ -46,8 +48,10 @@ const FEATURE_GROUPS: readonly FeatureGroup[] = [
       { kind: "feature", key: "uploadQR", label: "Upload QR" },
       { kind: "feature", key: "receiveUaddr", label: "Receive to unified address" },
       { kind: "feature", key: "rotateUaddr", label: "Rotate u-address" },
+      { kind: "feature", key: "rotateUaddr", label: "Generate new u-address" },
       { kind: "feature", key: "receiveTaddr", label: "Receive to transparent address" },
       { kind: "feature", key: "rotateTaddr", label: "Rotate t-address" },
+      { kind: "feature", key: "rotateTaddr", label: "Generate new t-address" },
     ],
   },
   {
@@ -211,19 +215,40 @@ function matrixColumns(variants: readonly WalletVariant[]): MatrixVariantColumn[
     if (equivalentMobilePeer) {
       consumed.add(variant.variantId);
       consumed.add(equivalentMobilePeer.variantId);
+      const pair = [variant, equivalentMobilePeer].sort((a, b) =>
+        subcategoryLabel(a.subcategory).localeCompare(subcategoryLabel(b.subcategory)),
+      );
       columns.push({
         key: `${variant.displayName}-android-ios`,
-        platformLabel: "Android, iOS",
         variant,
+        platformLinks: pair
+          .map((candidate) => {
+            const href = resolveWalletDownloadHref(candidate.variantId);
+            if (!href) return null;
+            return {
+              label: subcategoryLabel(candidate.subcategory),
+              href,
+            };
+          })
+          .filter((link): link is { label: string; href: string } => !!link),
       });
       continue;
     }
 
     consumed.add(variant.variantId);
+    const directHref = resolveWalletDownloadHref(variant.variantId);
+    const fallbackPlatformHref = getWalletPlatformDownloadsForBrand(variant.brandSlug).find(
+      (download) => download.device === variant.device && download.subcategory === variant.subcategory,
+    )?.href;
     columns.push({
       key: variant.variantId,
-      platformLabel: subcategoryLabel(variant.subcategory),
       variant,
+      platformLinks: (directHref || fallbackPlatformHref)
+        ? [{
+            label: subcategoryLabel(variant.subcategory),
+            href: directHref ?? fallbackPlatformHref!,
+          }]
+        : [],
     });
   }
 
@@ -284,14 +309,30 @@ export default function WalletFeatureMatrix({
               >
                 Feature
               </th>
-              {filteredColumns.map(({ key, platformLabel, variant }) => (
+              {filteredColumns.map(({ key, platformLinks, variant }) => (
                 <th
                   key={key}
                   style={{ ...cellStyle, borderTop: "none", color: "var(--fg-heading)", minWidth: 130 }}
                 >
                   <span className="block">{variant.displayName}</span>
                   <span className="block text-xs font-normal" style={{ color: "var(--fg-muted)" }}>
-                    {platformLabel}
+                    {platformLinks.length > 0 ? (
+                      platformLinks.map((link, index) => (
+                        <Fragment key={`${link.label}-${link.href}`}>
+                          {index > 0 ? ", " : null}
+                          <a
+                            href={link.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: "inherit", textDecoration: "underline" }}
+                          >
+                            {link.label}
+                          </a>
+                        </Fragment>
+                      ))
+                    ) : (
+                      subcategoryLabel(variant.subcategory)
+                    )}
                   </span>
                 </th>
               ))}

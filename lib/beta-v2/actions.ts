@@ -11,6 +11,7 @@ import { CONTACT_KINDS, type ContactKind } from "@/lib/types";
 import { sendBetaV2ApplicationNotice } from "@/lib/email/beta-application-v2";
 import { sendBetaInviteEmail } from "@/lib/email/beta-invite";
 import { setTesterCookie, setStageCookie } from "@/lib/beta/gate";
+import { readPreferredWalletVariantId } from "@/lib/beta/wallet-selection";
 import { resolveSiteUrl } from "@/lib/site-url";
 import {
   deviceLabel,
@@ -433,6 +434,57 @@ export async function submitBetaV2Application(
     submittedAt: submittedAtIso,
   });
 
+  if (contacts.email) {
+    const baseUrl = resolveSiteUrl();
+    const nowIso = new Date().toISOString();
+
+    try {
+      await sendBetaInviteEmail({
+        email: contacts.email,
+        displayName,
+        inviteCode,
+        baseUrl,
+        walletVariantId: readPreferredWalletVariantId(plannedWallet, plannedWalletsDetail),
+      });
+    } catch (sendError) {
+      const message = sendError instanceof Error ? sendError.message : String(sendError);
+      await db
+        .from("beta_testers_v2")
+        .update({
+          notice_status: "failed",
+          notice_error: message.slice(0, 500),
+          notice_attempted_at: nowIso,
+        })
+        .eq("id", testerId)
+        .is("code_sent_at", null);
+
+      return {
+        ok: false,
+        error: "Application received, but we couldn't send your beta invite email yet. Please try again shortly.",
+      };
+    }
+
+    const { error: inviteUpdateError } = await db
+      .from("beta_testers_v2")
+      .update({
+        status: "invited",
+        code_sent_at: nowIso,
+        notice_status: "sent",
+        notice_attempted_at: nowIso,
+        notice_error: null,
+      })
+      .eq("id", testerId)
+      .is("code_sent_at", null);
+
+    if (inviteUpdateError) {
+      console.error("[beta-v2-apply] invite status update failed:", inviteUpdateError);
+      return {
+        ok: false,
+        error: "Application received and invite email sent, but we couldn't finish updating your beta status.",
+      };
+    }
+  }
+
   return { ok: true };
 }
 
@@ -447,7 +499,7 @@ export type SendBetaInviteResult =
 export async function sendBetaInvite(testerId: string): Promise<SendBetaInviteResult> {
   const { data, error } = await db
     .from("beta_testers_v2")
-    .select("id, display_name, contact_email, status, invite_code")
+    .select("id, display_name, contact_email, status, invite_code, planned_wallet, planned_wallets_detail")
     .eq("id", testerId)
     .maybeSingle();
 
@@ -466,6 +518,7 @@ export async function sendBetaInvite(testerId: string): Promise<SendBetaInviteRe
     displayName: data.display_name as string,
     inviteCode: data.invite_code as string,
     baseUrl,
+    walletVariantId: readPreferredWalletVariantId(data.planned_wallet, data.planned_wallets_detail),
   });
 
   await db

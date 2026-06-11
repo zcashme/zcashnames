@@ -363,8 +363,9 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
           Application received
         </h2>
         <p className="text-sm" style={{ color: "var(--fg-body)", lineHeight: 1.7 }}>
-          Thanks for applying. We&apos;ll reach out through your preferred contact method if
-          there&apos;s a fit for this beta round.
+          Thanks for applying. If you entered an email address, your beta invite and access code
+          should arrive there shortly. If not, we&apos;ll reach out through your preferred contact
+          method.
         </p>
       </div>
     );

@@ -10,9 +10,11 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { Network } from "@/lib/types";
 import { isWalletVariantId, type WalletVariantId } from "@/lib/wallets/catalog";
+import { readPreferredWalletVariantId } from "@/lib/beta/wallet-selection";
 import {
   BETA_COOKIE_NAME,
   BETA_STAGE_COOKIE_NAME,
+  readCurrentBetaAccessSession,
   readCurrentStage,
   readCurrentTester,
   setStageCookie,
@@ -21,6 +23,7 @@ import {
 import { cookieOptions } from "@/lib/cookie";
 
 const FEEDBACK_BUCKET = "beta-feedback";
+const FEEDBACK_PROGRAM = "v2";
 
 // ---------------------------------------------------------------------------
 // Beta gate session helpers.
@@ -68,6 +71,11 @@ export async function getCurrentTesterName(): Promise<string | null> {
   return tester?.displayName ?? null;
 }
 
+export async function getCurrentTesterCohort(): Promise<"v1" | "v2" | null> {
+  const tester = await readCurrentTester();
+  return tester?.cohort ?? null;
+}
+
 export async function getCurrentBetaStage(): Promise<"testnet" | "mainnet" | null> {
   return readCurrentStage();
 }
@@ -75,8 +83,9 @@ export async function getCurrentBetaStage(): Promise<"testnet" | "mainnet" | nul
 export async function getCurrentTesterFocus(): Promise<("user" | "sdk")[]> {
   const tester = await readCurrentTester();
   if (!tester) return [];
+  const sourceTable = tester.cohort === "v2" ? "beta_testers_v2" : "beta_testers";
   const { data, error } = await db
-    .from("beta_testers")
+    .from(sourceTable)
     .select("focus_areas")
     .eq("id", tester.id)
     .maybeSingle();
@@ -85,43 +94,9 @@ export async function getCurrentTesterFocus(): Promise<("user" | "sdk")[]> {
   return raw.filter((v): v is "user" | "sdk" => v === "user" || v === "sdk");
 }
 
-function readPreferredWalletVariantId(
-  plannedWallet: unknown,
-  plannedWalletsDetail: unknown,
-): WalletVariantId | null {
-  if (typeof plannedWallet === "string" && isWalletVariantId(plannedWallet)) {
-    return plannedWallet;
-  }
-
-  if (!Array.isArray(plannedWalletsDetail)) return null;
-  const primaryRows = plannedWalletsDetail.filter(
-    (row) =>
-      typeof row === "object" &&
-      row !== null &&
-      (row as Record<string, unknown>).is_primary === true,
-  );
-  const candidateRows = primaryRows.length > 0 ? primaryRows : plannedWalletsDetail;
-
-  for (const row of candidateRows) {
-    if (typeof row !== "object" || row === null) continue;
-    const record = row as Record<string, unknown>;
-    const candidate =
-      typeof record.variant_id === "string"
-        ? record.variant_id
-        : typeof record.variantId === "string"
-          ? record.variantId
-          : typeof record.value === "string"
-            ? record.value
-            : "";
-    if (isWalletVariantId(candidate)) return candidate;
-  }
-
-  return null;
-}
-
 export async function getCurrentTesterPreferredWalletVariantId(): Promise<WalletVariantId | null> {
   const tester = await readCurrentTester();
-  if (!tester) return null;
+  if (!tester || tester.cohort !== "v2") return null;
 
   const { data, error } = await db
     .from("beta_testers_v2")
@@ -145,6 +120,7 @@ export interface FeedbackPayload {
   actual: string;
   txid?: string;
   notes?: string;
+  walletVariantId?: WalletVariantId | null;
 }
 
 export type FeedbackResult =
@@ -161,9 +137,15 @@ function sanitizeFilename(name: string): string {
 }
 
 export async function submitBetaFeedback(formData: FormData): Promise<FeedbackResult> {
-  const tester = await readCurrentTester();
+  const session = await readCurrentBetaAccessSession();
+  const tester = session?.kind === "tester" ? session.tester : null;
+  const isSharedMainnet = session?.kind === "shared" && session.testerId === "shared_mainnet";
+
+  if (!isSharedMainnet && tester?.cohort !== "v2") {
+    return { ok: false, error: "Feedback is only available for the current beta cohort." };
+  }
   const testerId = tester?.id ?? null;
-  const testerName = tester?.displayName ?? "anonymous";
+  const testerName = tester?.displayName ?? (isSharedMainnet ? "shared_mainnet" : "anonymous");
 
   const reqHeaders = await headers();
   const userAgent = reqHeaders.get("user-agent")?.slice(0, 500) ?? null;
@@ -179,7 +161,9 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
   const experienceRatingRaw = String(formData.get("experience_rating") ?? "").trim();
   const checklistItemId = String(formData.get("checklistItemId") ?? "").trim().slice(0, 64);
   const clientEnv = String(formData.get("client_env") ?? "").trim().slice(0, 200);
+  const walletVariantIdRaw = String(formData.get("wallet_variant_id") ?? "").trim();
   const experienceRating = experienceRatingRaw ? Number(experienceRatingRaw) : null;
+  const walletVariantId = isWalletVariantId(walletVariantIdRaw) ? walletVariantIdRaw : null;
 
   if (severity !== "high" && severity !== "low" && severity !== "none") {
     return { ok: false, error: "Pick a severity." };
@@ -249,11 +233,13 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
     id: reportId,
     tester_id: testerId,
     tester_name_snapshot: testerName,
+    beta_version: FEEDBACK_PROGRAM,
     stage: network,
     item_id: checklistItemId || null,
     severity,
     experience_rating: experienceRating,
     wallet: wallet || null,
+    wallet_variant_id: walletVariantId,
     steps: steps || null,
     expected: expected || null,
     actual: actual || null,
@@ -291,7 +277,7 @@ export async function saveChecklistProgress(
   input: ChecklistProgressInput,
 ): Promise<{ ok: true }> {
   const tester = await readCurrentTester();
-  if (!tester) return { ok: true };
+  if (!tester || tester.cohort !== "v2") return { ok: true };
 
   const itemId = String(input.itemId ?? "").slice(0, 64);
   if (!itemId) return { ok: true };
@@ -303,10 +289,11 @@ export async function saveChecklistProgress(
       {
         tester_id: tester.id,
         stage: input.stage,
+        beta_version: FEEDBACK_PROGRAM,
         item_id: itemId,
         completed: !!input.completed,
       },
-      { onConflict: "tester_id,stage,item_id" },
+      { onConflict: "tester_id,stage,beta_version,item_id" },
     );
 
   if (error) {
@@ -321,14 +308,15 @@ export async function loadChecklistProgress(
   stage: "testnet" | "mainnet",
 ): Promise<Record<string, boolean>> {
   const tester = await readCurrentTester();
-  if (!tester) return {};
+  if (!tester || tester.cohort !== "v2") return {};
   if (stage !== "testnet" && stage !== "mainnet") return {};
 
   const { data, error } = await db
     .from("beta_checklist_progress")
     .select("item_id, completed")
     .eq("tester_id", tester.id)
-    .eq("stage", stage);
+    .eq("stage", stage)
+    .eq("beta_version", FEEDBACK_PROGRAM);
 
   if (error) {
     console.error("[beta-checklist] load failed:", error);

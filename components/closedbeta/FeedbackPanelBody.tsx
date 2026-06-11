@@ -18,9 +18,9 @@ import { BETA_CHECKLIST } from "@/lib/beta/checklist";
 import {
   hasWalletFaq,
 } from "@/lib/beta/walletFaq";
+import { resolveWalletDownloadHref } from "@/lib/beta/wallet-selection";
 import {
   getWalletBrand,
-  getWalletPlatformDownloadsForBrand,
   getWalletVariant,
   subcategoryLabel,
   WALLET_VARIANTS,
@@ -62,20 +62,6 @@ function walletFieldValue(variantId: WalletVariantId | null): string {
   const variant = getWalletVariant(variantId);
   if (!variant) return "";
   return `${variant.displayName} on ${subcategoryLabel(variant.subcategory)}`;
-}
-
-function resolveWalletDownloadHref(variantId: WalletVariantId | null): string | null {
-  if (!variantId) return null;
-  const variant = getWalletVariant(variantId);
-  if (!variant) return null;
-
-  const platformMatch = getWalletPlatformDownloadsForBrand(variant.brandSlug).find(
-    (download) =>
-      download.device === variant.device && download.subcategory === variant.subcategory,
-  );
-  if (platformMatch?.href) return platformMatch.href;
-
-  return getWalletBrand(variant.brandSlug)?.websiteUrl ?? null;
 }
 
 function resolveWalletFaqLink(variantId: WalletVariantId | null): { label: string; href: string } | null {
@@ -208,7 +194,7 @@ export default function FeedbackPanelBody({
     ? BETA_CHECKLIST.find((item) => item.id === reportingItemId) ?? null
     : null;
 
-  const subline = !testerLoaded
+  const headerLabel = !testerLoaded
     ? "Loading..."
     : testerName
       ? (
@@ -226,6 +212,7 @@ export default function FeedbackPanelBody({
           </>
         )
       : <>Submitting <strong style={{ color: "var(--fg-body)" }}>anonymously</strong>.</>;
+  const headerTitle = !testerLoaded ? "Loading..." : testerName ?? "Anonymous";
 
   const tabBaseStyle: React.CSSProperties = {
     flex: 1,
@@ -266,9 +253,9 @@ export default function FeedbackPanelBody({
   );
 
   const readMeLinks = [
-    { label: "Instructions", href: "/beta/instructions" },
-    { label: "Beta Overview", href: "/beta" },
+    { label: "Beta Instructions", href: "/beta/instructions" },
     { label: "Developer Guide", href: "/docs/zns-developer-guide" },
+    { label: "Beta Overview", href: "/beta" },
   ];
 
   const sortedWalletVariants = useMemo(
@@ -507,7 +494,17 @@ export default function FeedbackPanelBody({
                 className="rounded-lg p-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70"
                 style={iconBtnStyle}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-4 h-4"
+                  style={{ transform: "scaleX(-1)" }}
+                  aria-hidden="true"
+                >
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                   <polyline points="15 3 21 3 21 9" />
                   <line x1="10" y1="14" x2="21" y2="3" />
@@ -581,6 +578,7 @@ export default function FeedbackPanelBody({
             onClearChecklistItem={() => setReportingItemId(null)}
             onOpenChecklist={() => setTab("checklist")}
             initialWallet={walletFieldValue(selectedWalletVariantId)}
+            walletVariantId={selectedWalletVariantId}
           />
         )}
         {tab === "checklist" && (
@@ -655,11 +653,18 @@ export default function FeedbackPanelBody({
 
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-bold leading-tight" style={{ color: "var(--fg-heading)" }}>
-              Feedback
+              {headerTitle}
             </h2>
-            <p className="text-xs mt-0.5" style={{ color: "var(--fg-muted)" }}>
-              {subline}
-            </p>
+            {testerLoaded && testerName && (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="text-xs mt-0.5 underline cursor-pointer"
+                style={{ color: "var(--fg-muted)", background: "transparent" }}
+              >
+                Sign out
+              </button>
+            )}
           </div>
 
           <div className="relative shrink-0">
@@ -764,6 +769,21 @@ export default function FeedbackPanelBody({
                   border: "1px solid var(--border-muted)",
                 }}
               >
+                <a
+                  href="/beta/wallets"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  role="menuitem"
+                  onClick={() => setReadMeOpen(false)}
+                  className="block px-3 py-2 text-xs font-semibold transition-colors hover:opacity-80"
+                  style={{
+                    color: "var(--fg-body)",
+                    textDecoration: "none",
+                    borderBottom: "1px solid var(--border-muted)",
+                  }}
+                >
+                  Wallet Guide
+                </a>
                 {walletFaqLink && (
                   <a
                     href={walletFaqLink.href}
@@ -781,7 +801,7 @@ export default function FeedbackPanelBody({
                     {walletFaqLink.label}
                   </a>
                 )}
-                {readMeLinks.map((item) => (
+                {readMeLinks.map((item, index, items) => (
                   <a
                     key={item.label}
                     href={item.href}
@@ -793,7 +813,7 @@ export default function FeedbackPanelBody({
                     style={{
                       color: "var(--fg-body)",
                       textDecoration: "none",
-                      borderBottom: "1px solid var(--border-muted)",
+                      borderBottom: index === items.length - 1 ? "none" : "1px solid var(--border-muted)",
                     }}
                   >
                     {item.label}

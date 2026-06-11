@@ -30,13 +30,14 @@ import { readLocalStorage, writeLocalStorage } from "@/components/hooks/useLocal
 const SYNC_EVENT = "zns:beta-checklist-change";
 const SAVE_DEBOUNCE_MS = 300;
 const SAVED_INDICATOR_MS = 1500;
+const CHECKLIST_VERSION = "v2";
 const CHECKLIST_ITEM_IDS = new Set(BETA_CHECKLIST.map((item) => item.id));
 
 export type ChecklistStage = "testnet" | "mainnet";
 export type ItemSaveStatus = "saving" | "saved";
 
 function storageKey(testerName: string | null, stage: ChecklistStage): string {
-  return `beta:checklist:${testerName ?? "anonymous"}:${stage}`;
+  return `beta:checklist:${CHECKLIST_VERSION}:${testerName ?? "anonymous"}:${stage}`;
 }
 
 // Hydrate from localStorage and strip unknown item ids.
@@ -88,6 +89,7 @@ export function useChecklistProgress(
   const [state, setState] = useState<Record<string, boolean>>({});
   const [hydrated, setHydrated] = useState(false);
   const [saveStatus, setSaveStatus] = useState<Record<string, ItemSaveStatus>>({});
+  const stateRef = useRef<Record<string, boolean>>({});
 
   // Tracks whether the user has clicked something since mount. Used to gate
   // server hydration so an in-flight server response can't stomp a fresh click.
@@ -99,12 +101,17 @@ export function useChecklistProgress(
   // Auto-clear timers for the "saved" indicator.
   const savedTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
+  const applyState = useCallback((next: Record<string, boolean>) => {
+    stateRef.current = next;
+    setState(next);
+  }, []);
+
   // Initial mount: hydrate from localStorage immediately, then optionally from
   // the server (real testers only).
   useEffect(() => {
     userTouchedRef.current = false;
     const local = loadState(testerName, stage);
-    setState(local);
+    applyState(local);
     setHydrated(true);
 
     if (!testerName) return;
@@ -119,7 +126,7 @@ export function useChecklistProgress(
           Object.keys(sanitizedServer).length === Object.keys(local).length &&
           Object.keys(sanitizedServer).every((k) => sanitizedServer[k] === local[k]);
         if (same) return;
-        setState(sanitizedServer);
+        applyState(sanitizedServer);
         persistState(testerName, stage, sanitizedServer);
         window.dispatchEvent(
           new CustomEvent<SyncEventDetail>(SYNC_EVENT, {
@@ -131,7 +138,7 @@ export function useChecklistProgress(
     return () => {
       cancelled = true;
     };
-  }, [testerName, stage]);
+  }, [testerName, stage, applyState]);
 
   // Listen for changes from sibling instances of the hook (same window) and
   // from other tabs (storage event).
@@ -141,12 +148,12 @@ export function useChecklistProgress(
       if (!detail) return;
       if (detail.testerName !== testerName || detail.stage !== stage) return;
       // Trust the payload directly — no localStorage round-trip.
-      setState(detail.state);
+      applyState(detail.state);
     }
     function handleStorage(e: StorageEvent) {
       if (e.key !== storageKey(testerName, stage)) return;
       // Cross-realm change: re-read localStorage (it's the only signal we have).
-      setState(loadState(testerName, stage));
+      applyState(loadState(testerName, stage));
     }
     window.addEventListener(SYNC_EVENT, handleSync as EventListener);
     window.addEventListener("storage", handleStorage);
@@ -154,7 +161,7 @@ export function useChecklistProgress(
       window.removeEventListener(SYNC_EVENT, handleSync as EventListener);
       window.removeEventListener("storage", handleStorage);
     };
-  }, [testerName, stage]);
+  }, [testerName, stage, applyState]);
 
   // Coalesced server upsert: resets a per-item debounce so rapid double-clicks
   // only produce one network call. Uses a ref-held timer map to survive renders.
@@ -222,30 +229,28 @@ export function useChecklistProgress(
   const toggle = useCallback(
     (itemId: string) => {
       userTouchedRef.current = true;
-      setState((prev) => {
-        const next = { ...prev, [itemId]: !prev[itemId] };
-        persistState(testerName, stage, next);
-        // Notify in-window siblings with the new state directly — no
-        // localStorage re-read, no race.
-        window.dispatchEvent(
-          new CustomEvent<SyncEventDetail>(SYNC_EVENT, {
-            detail: { testerName, stage, state: next },
-          }),
-        );
-        // Mark the item as saving and schedule the debounced flush.
-        // Cancel any pending "saved" indicator clear, since we're starting a
-        // new save cycle.
-        const savedTimer = savedTimersRef.current.get(itemId);
-        if (savedTimer) {
-          clearTimeout(savedTimer);
-          savedTimersRef.current.delete(itemId);
-        }
-        scheduleFlush(itemId, next[itemId]);
-        return next;
-      });
+      const next = { ...stateRef.current, [itemId]: !stateRef.current[itemId] };
+      applyState(next);
+      persistState(testerName, stage, next);
+      // Notify in-window siblings after local state is queued — avoids
+      // cross-component updates during another component's render.
+      window.dispatchEvent(
+        new CustomEvent<SyncEventDetail>(SYNC_EVENT, {
+          detail: { testerName, stage, state: next },
+        }),
+      );
+      // Mark the item as saving and schedule the debounced flush.
+      // Cancel any pending "saved" indicator clear, since we're starting a
+      // new save cycle.
+      const savedTimer = savedTimersRef.current.get(itemId);
+      if (savedTimer) {
+        clearTimeout(savedTimer);
+        savedTimersRef.current.delete(itemId);
+      }
+      scheduleFlush(itemId, next[itemId]);
       setSaveStatus((prev) => ({ ...prev, [itemId]: "saving" }));
     },
-    [testerName, stage, scheduleFlush],
+    [testerName, stage, scheduleFlush, applyState],
   );
 
   // Cleanup any pending timers on unmount.
