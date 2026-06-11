@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import { submitBetaFeedback } from "@/lib/beta/actions";
 import type { ChecklistItem } from "@/lib/beta/checklist";
+import type { WalletVariantId } from "@/lib/wallets/catalog";
 
 interface Props {
   /** Initial network — usually the current network from StatusToggle. */
@@ -26,6 +27,8 @@ interface Props {
   onSuccess?: () => void;
   /** Prefill for the wallet field inside the bug report accordion. */
   initialWallet?: string;
+  /** Structured wallet selection from the panel-level selector. */
+  walletVariantId?: WalletVariantId | null;
 }
 
 const MAX_SCREENSHOTS = 5;
@@ -76,6 +79,7 @@ export default function FeedbackForm({
   onOpenChecklist,
   onSuccess,
   initialWallet = "",
+  walletVariantId = null,
 }: Props) {
   const [severity, setSeverity] = useState<Severity>("none");
   const [wallet, setWallet] = useState(initialWallet);
@@ -231,6 +235,9 @@ export default function FeedbackForm({
     formData.set("notes", notes);
     if (experienceRating !== null) {
       formData.set("experience_rating", String(experienceRating));
+    }
+    if (walletVariantId) {
+      formData.set("wallet_variant_id", walletVariantId);
     }
     if (checklistItem) formData.set("checklistItemId", checklistItem.id);
     formData.set("client_env", captureClientEnv());

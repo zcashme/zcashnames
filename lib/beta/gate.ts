@@ -69,14 +69,28 @@ export function parseStageCookieValue(value: string): { stage: "testnet" | "main
   return parseSignedCookie(value, secret, parseStagePayload);
 }
 
-export async function readCurrentTester(): Promise<BetaTester | null> {
+export type BetaAccessSession =
+  | { kind: "tester"; tester: BetaTester }
+  | { kind: "shared"; testerId: "shared_mainnet" | "shared_testnet" };
+
+export async function readCurrentBetaAccessSession(): Promise<BetaAccessSession | null> {
   const value = await getCookie(BETA_COOKIE_NAME);
   if (!value) return null;
 
   const parsed = parseSignedCookie(value, getSecret(), parseTesterPayload);
   if (!parsed) return null;
 
-  return findTesterById(parsed.testerId);
+  if (parsed.testerId === "shared_mainnet" || parsed.testerId === "shared_testnet") {
+    return { kind: "shared", testerId: parsed.testerId };
+  }
+
+  const tester = await findTesterById(parsed.testerId);
+  return tester ? { kind: "tester", tester } : null;
+}
+
+export async function readCurrentTester(): Promise<BetaTester | null> {
+  const session = await readCurrentBetaAccessSession();
+  return session?.kind === "tester" ? session.tester : null;
 }
 
 export async function readCurrentStage(): Promise<"testnet" | "mainnet" | null> {
