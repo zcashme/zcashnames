@@ -18,6 +18,7 @@ export type WalletVariantId =
   | "mobile_ios_zodl"
   | "mobile_android_zodl"
   | "desktop_mac_vizor"
+  | "desktop_mac_zingo"
   | "desktop_pc_zingo"
   | "browser_chrome_noir"
   | "browser_chrome_brave";
@@ -251,6 +252,55 @@ const receiveOnlyMobileFeatures: WalletFeatures = {
   receiveUaddr: true,
 };
 
+const resolverMobileFeatures: WalletFeatures = {
+  ...baseWalletFeatures,
+  resolveName: true,
+  scanURI: true,
+  tapURI: true,
+  pasteURI: true,
+  uploadQR: true,
+  receiveTaddr: true,
+  receiveUaddr: true,
+};
+
+const limitedControlMobileFeatures: WalletFeatures = {
+  ...baseWalletFeatures,
+  viewProfile: true,
+  viewExplorer: true,
+  scanURI: true,
+  tapURI: true,
+  pasteURI: true,
+};
+
+const zodlMobileFeatures: WalletFeatures = {
+  ...baseWalletFeatures,
+  viewProfile: true,
+  viewExplorer: true,
+  scanURI: true,
+  pasteURI: true,
+  uploadQR: true,
+  rotateUaddr: true,
+};
+
+const zingoDesktopFeatures: WalletFeatures = {
+  ...baseWalletFeatures,
+  resolveName: true,
+  reverseLookup: true,
+  importContact: true,
+  exportContact: true,
+  viewExplorer: true,
+  tapURI: true,
+  pasteURI: true,
+  receiveTaddr: true,
+  receiveUaddr: true,
+};
+
+const viewOnlyDesktopFeatures: WalletFeatures = {
+  ...baseWalletFeatures,
+  viewProfile: true,
+  viewExplorer: true,
+};
+
 const browserResolverFeatures: WalletFeatures = {
   ...baseWalletFeatures,
   resolveName: true,
@@ -413,6 +463,11 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
       },
       {
         device: "desktop",
+        subcategory: "mac",
+        href: "https://apps.apple.com/us/app/zingo-pc/id6763584326?mt=12",
+      },
+      {
+        device: "desktop",
         subcategory: "pc",
         href: "https://github.com/zingolabs/zingo-pc/releases",
       },
@@ -498,8 +553,6 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     features: {
       ...baseWalletFeatures,
       resolveName: true,
-      viewProfile: true,
-      viewExplorer: true,
       scanURI: true,
       pasteURI: true,
       uploadQR: true,
@@ -520,8 +573,6 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     features: {
       ...baseWalletFeatures,
       resolveName: true,
-      viewProfile: true,
-      viewExplorer: true,
       scanURI: true,
       pasteURI: true,
       uploadQR: true,
@@ -539,7 +590,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "ios",
     recommended: false,
     sortOrder: 20,
-    features: receiveOnlyMobileFeatures,
+    features: resolverMobileFeatures,
   },
   {
     variantId: "mobile_android_cake",
@@ -551,7 +602,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "android",
     recommended: false,
     sortOrder: 21,
-    features: receiveOnlyMobileFeatures,
+    features: resolverMobileFeatures,
   },
   {
     variantId: "mobile_ios_unstoppable",
@@ -563,17 +614,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "ios",
     recommended: false,
     sortOrder: 30,
-    features: {
-      ...baseWalletFeatures,
-      resolveName: true,
-      importContact: true,
-      exportContact: true,
-      scanURI: true,
-      pasteURI: true,
-      uploadQR: true,
-      receiveTaddr: true,
-      receiveUaddr: true,
-    },
+    features: resolverMobileFeatures,
   },
   {
     variantId: "mobile_android_unstoppable",
@@ -585,17 +626,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "android",
     recommended: false,
     sortOrder: 31,
-    features: {
-      ...baseWalletFeatures,
-      resolveName: true,
-      importContact: true,
-      exportContact: true,
-      scanURI: true,
-      pasteURI: true,
-      uploadQR: true,
-      receiveTaddr: true,
-      receiveUaddr: true,
-    },
+    features: resolverMobileFeatures,
   },
   {
     variantId: "mobile_ios_zipher",
@@ -607,7 +638,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "ios",
     recommended: false,
     sortOrder: 40,
-    features: receiveOnlyMobileFeatures,
+    features: resolverMobileFeatures,
   },
   {
     variantId: "mobile_ios_zingo",
@@ -619,7 +650,12 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "ios",
     recommended: false,
     sortOrder: 50,
-    features: baseWalletFeatures,
+    features: {
+      ...baseWalletFeatures,
+      scanURI: true,
+      tapURI: true,
+      pasteURI: true,
+    },
     warning: "Mobile wallet Zingo cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc) via ZcashNames.com.",
   },
   {
@@ -632,7 +668,12 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "android",
     recommended: false,
     sortOrder: 51,
-    features: baseWalletFeatures,
+    features: {
+      ...baseWalletFeatures,
+      scanURI: true,
+      tapURI: true,
+      pasteURI: true,
+    },
     warning: "Mobile wallet Zingo cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc) via ZcashNames.com.",
   },
   {
@@ -645,7 +686,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "ios",
     recommended: false,
     sortOrder: 60,
-    features: controlOnlyFeatures,
+    features: limitedControlMobileFeatures,
     warning: "Mobile wallet Zkool cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc).",
   },
   {
@@ -658,7 +699,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "android",
     recommended: false,
     sortOrder: 61,
-    features: controlOnlyFeatures,
+    features: limitedControlMobileFeatures,
     warning: "Mobile wallet Zkool cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc).",
   },
   {
@@ -671,7 +712,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "ios",
     recommended: false,
     sortOrder: 70,
-    features: controlOnlyFeatures,
+    features: zodlMobileFeatures,
     warning: "Mobile wallet Zodl cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc).",
   },
   {
@@ -684,7 +725,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "android",
     recommended: false,
     sortOrder: 71,
-    features: controlOnlyFeatures,
+    features: zodlMobileFeatures,
     warning: "Mobile wallet Zodl cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc).",
   },
   {
@@ -697,8 +738,20 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "mac",
     recommended: false,
     sortOrder: 80,
-    features: controlOnlyFeatures,
+    features: viewOnlyDesktopFeatures,
     warning: "Desktop wallet Vizor cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc).",
+  },
+  {
+    variantId: "desktop_mac_zingo",
+    walletId: "desktop_zingo",
+    brandSlug: "zingo",
+    brandName: "Zingo",
+    displayName: "Zingo!",
+    device: "desktop",
+    subcategory: "mac",
+    recommended: false,
+    sortOrder: 90,
+    features: zingoDesktopFeatures,
   },
   {
     variantId: "desktop_pc_zingo",
@@ -709,21 +762,8 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     device: "desktop",
     subcategory: "pc",
     recommended: true,
-    sortOrder: 90,
-    features: {
-      ...baseWalletFeatures,
-      resolveName: true,
-      reverseLookup: true,
-      viewCollection: true,
-      importContact: true,
-      exportContact: true,
-      viewProfile: true,
-      viewExplorer: true,
-      tapURI: true,
-      pasteURI: true,
-      receiveTaddr: true,
-      receiveUaddr: true,
-    },
+    sortOrder: 91,
+    features: zingoDesktopFeatures,
   },
   {
     variantId: "browser_chrome_noir",
@@ -755,7 +795,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "chrome",
     recommended: false,
     sortOrder: 110,
-    features: controlOnlyFeatures,
+    features: viewOnlyDesktopFeatures,
     warning: "Browser wallet Brave cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc).",
   },
 ] as const;
