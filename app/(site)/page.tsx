@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { parseStageCookieValue, BETA_STAGE_COOKIE_NAME } from "@/lib/beta/gate";
+import {
+  parseStageCookieValue,
+  BETA_STAGE_COOKIE_NAME,
+  readCurrentBetaAccessSession,
+} from "@/lib/beta/gate";
 import { getChainStats } from "@/lib/network-stats";
 import NetworkPageClient from "./NetworkPageClient";
 
@@ -27,7 +31,20 @@ export default async function HomePage() {
   const stageCookie = store.get(BETA_STAGE_COOKIE_NAME)?.value;
   const parsed = stageCookie ? parseStageCookieValue(stageCookie) : null;
   const network = parsed?.stage ?? "mainnet";
-  const stats = await getChainStats(network);
+  const [stats, session] = await Promise.all([
+    getChainStats(network),
+    readCurrentBetaAccessSession(),
+  ]);
 
-  return <NetworkPageClient network={network} stats={stats} />;
+  const feedbackEnabled =
+    (session?.kind === "tester" && session.tester.cohort === "v2") ||
+    (session?.kind === "shared" && session.testerId === "shared_mainnet");
+
+  return (
+    <NetworkPageClient
+      network={network}
+      stats={stats}
+      feedbackEnabled={feedbackEnabled}
+    />
+  );
 }

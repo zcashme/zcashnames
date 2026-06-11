@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import FeedbackPanelBody from "@/components/closedbeta/FeedbackPanelBody";
-import { readCurrentStage, readCurrentTester } from "@/lib/beta/gate";
+import { readCurrentBetaAccessSession, readCurrentStage } from "@/lib/beta/gate";
 
 export const metadata: Metadata = {
   title: "Submit Feedback - ZcashNames Beta",
@@ -10,17 +11,25 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function FeedbackPopoutPage() {
-  const [tester, stage] = await Promise.all([
-    readCurrentTester(),
+  const [session, stage] = await Promise.all([
+    readCurrentBetaAccessSession(),
     readCurrentStage(),
   ]);
+
+  const feedbackEnabled =
+    (session?.kind === "tester" && session.tester.cohort === "v2") ||
+    (session?.kind === "shared" && session.testerId === "shared_mainnet");
+
+  if (!feedbackEnabled) {
+    redirect("/");
+  }
 
   return (
     <main className="fixed inset-0">
       <FeedbackPanelBody
         mode="popout"
         stage={stage ?? "testnet"}
-        initialTesterName={tester?.displayName ?? null}
+        initialTesterName={session?.kind === "tester" ? session.tester.displayName : null}
       />
     </main>
   );

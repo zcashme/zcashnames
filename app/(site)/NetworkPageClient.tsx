@@ -40,9 +40,10 @@ function ExplorerLink({ network }: { network: "mainnet" | "testnet" }) {
 type Props = {
   network: "mainnet" | "testnet";
   stats: ChainStats;
+  feedbackEnabled: boolean;
 };
 
-export default function NetworkPageClient({ network, stats }: Props) {
+export default function NetworkPageClient({ network, stats, feedbackEnabled }: Props) {
   return (
     <>
       <HomePage
@@ -51,7 +52,7 @@ export default function NetworkPageClient({ network, stats }: Props) {
         stats={stats}
         subtitle="Powered by Zcash. Claim your name"
       />
-      <FeedbackModal network={network} />
+      {feedbackEnabled ? <FeedbackModal network={network} /> : null}
     </>
   );
 }

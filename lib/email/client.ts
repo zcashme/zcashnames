@@ -22,7 +22,7 @@ export function getResend(): Resend {
 
 export async function sendEmail(
   params: Parameters<Resend["emails"]["send"]>[0],
-): Promise<void> {
+): Promise<Awaited<ReturnType<Resend["emails"]["send"]>>> {
   const resend = getResend();
-  await resend.emails.send(params);
+  return resend.emails.send(params);
 }

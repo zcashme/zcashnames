@@ -25,12 +25,12 @@ type TooltipStep =
 function nextTooltipStep(step: TooltipStep | null): TooltipStep | null {
   switch (step) {
     case "popout":
+      return "wallet";
+    case "wallet":
       return "report";
     case "report":
       return "checkbox";
     case "checkbox":
-      return "wallet";
-    case "wallet":
       return "readme";
     case "readme":
       return "contact";
