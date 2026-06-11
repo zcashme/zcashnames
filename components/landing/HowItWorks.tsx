@@ -66,12 +66,17 @@ const benefitGroups: BenefitGroup[] = [
     span: "lg:col-span-6",
     items: [
       {
-        title: "Send using simple names",
-        description: "No copying/pasting long addresses or scanning unreadable QRs.",
+        title: "Send to simple names",
+        description: "No copying or pasting long addresses.",
+      },
+      {
+        title: "Know where it goes",
+        description: "QRs are hard to verify. Names show who you're paying.",
       },
       {
         title: "Update once, everywhere",
-        description: "Change your address without chasing down every contact.",
+        description: "Change your address without informing all of your contacts.",
+        span: "sm:col-span-2",
       },
     ],
   },
@@ -81,17 +86,17 @@ const benefitGroups: BenefitGroup[] = [
     span: "lg:col-span-6",
     items: [
       {
+        title: "On-chain and tamper-resistant",
+        description: "Records cannot be altered or removed behind your back.",
+        span: "sm:col-span-2",
+      },
+      {
         title: "Control your name",
         description: "Hold, trade, or transfer it. Only you can make updates.",
       },
       {
         title: "No renewal fees",
         description: "Just sign in once every 6 months.",
-      },
-      {
-        title: "On-chain and tamper-resistant",
-        description: "Records cannot be altered or removed behind your back.",
-        span: "sm:col-span-2",
       },
     ],
   },
