@@ -48,10 +48,10 @@ const FEATURE_GROUPS: readonly FeatureGroup[] = [
       { kind: "feature", key: "uploadQR", label: "Upload QR" },
       { kind: "feature", key: "receiveUaddr", label: "Receive to unified address" },
       { kind: "feature", key: "rotateUaddr", label: "Rotate u-address" },
-      { kind: "feature", key: "rotateUaddr", label: "Generate new u-address" },
+      { kind: "feature", key: "generateUaddr", label: "Generate new u-address" },
       { kind: "feature", key: "receiveTaddr", label: "Receive to transparent address" },
       { kind: "feature", key: "rotateTaddr", label: "Rotate t-address" },
-      { kind: "feature", key: "rotateTaddr", label: "Generate new t-address" },
+      { kind: "feature", key: "generateTaddr", label: "Generate new t-address" },
     ],
   },
   {

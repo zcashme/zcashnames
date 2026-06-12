@@ -1,0 +1,23 @@
+group_id,group_label,row_kind,row_key,row_label,Edge Wallet iOS [mobile_ios_edge],Edge Wallet Android [mobile_android_edge],Cake Wallet iOS [mobile_ios_cake],Cake Wallet Android [mobile_android_cake],Unstoppable iOS [mobile_ios_unstoppable],Unstoppable Android [mobile_android_unstoppable],Zipher iOS [mobile_ios_zipher],Zingo iOS [mobile_ios_zingo],Zingo Android [mobile_android_zingo],Zkool iOS [mobile_ios_zkool],Zkool Android [mobile_android_zkool],Zodl iOS [mobile_ios_zodl],Zodl Android [mobile_android_zodl],Vizor Mac [desktop_mac_vizor],Zingo! Mac [desktop_mac_zingo],Zingo! PC [desktop_pc_zingo],Noir Chrome [browser_chrome_noir],Brave Chrome [browser_chrome_brave]
+use-zcashnames,Use ZcashNames.com,feature,scanURI,Scan URI,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,No,No
+use-zcashnames,Use ZcashNames.com,feature,tapURI,Tap URI,No,No,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes,Yes,Yes,No
+use-zcashnames,Use ZcashNames.com,feature,pasteURI,Paste URI,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,Yes,Yes,Yes,No
+use-zcashnames,Use ZcashNames.com,feature,uploadQR,Upload QR,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,No,Yes,Yes,No,No,No,Yes,No
+use-zcashnames,Use ZcashNames.com,feature,receiveUaddr,Receive to unified address,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,Yes,Yes,No
+use-zcashnames,Use ZcashNames.com,feature,rotateUaddr,Rotate u-address,No,No,No,No,No,No,No,No,No,No,No,Yes,Yes,No,No,No,No,No
+use-zcashnames,Use ZcashNames.com,feature,generateUaddr,Generate new u-address,No,No,No,No,No,No,No,Yes,Yes,No,No,Yes,Yes,No,Yes,Yes,No,No
+use-zcashnames,Use ZcashNames.com,feature,receiveTaddr,Receive to transparent address,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,Yes,Yes,No
+use-zcashnames,Use ZcashNames.com,feature,rotateTaddr,Rotate t-address,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No
+use-zcashnames,Use ZcashNames.com,feature,generateTaddr,Generate new t-address,No,No,No,No,No,No,No,No,No,No,No,No,No,No,Yes,Yes,No,No
+interact-with-names,Interact with Names,feature,resolveName,Send to a name,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,No,No,No,No,No,No,Yes,Yes,Yes,No
+interact-with-names,Interact with Names,feature,reverseLookup,See the name for an address,No,No,No,No,No,No,No,No,No,No,No,No,No,No,Yes,Yes,No,No
+interact-with-names,Interact with Names,feature,viewExplorer,View explorer,No,No,No,No,No,No,No,No,No,Yes,Yes,Yes,Yes,Yes,Yes,Yes,No,Yes
+interact-with-names,Interact with Names,feature,viewProfile,View profile,No,No,No,No,No,No,No,No,No,Yes,Yes,Yes,Yes,Yes,No,No,No,Yes
+manage-names,Manage Names,feature,importContact,Import contact,No,No,No,No,No,No,No,No,No,No,No,No,No,No,Yes,Yes,Yes,No
+manage-names,Manage Names,feature,exportContact,Export contact,No,No,No,No,No,No,No,No,No,No,No,No,No,No,Yes,Yes,Yes,No
+manage-names,Manage Names,feature,viewCollection,View collection,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No
+control-names,In-App Controls,action,claim,Claim name,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No
+control-names,In-App Controls,action,release,Release name,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No
+control-names,In-App Controls,action,buy,Buy name,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No
+control-names,In-App Controls,action,list,List name,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No
+control-names,In-App Controls,action,delist,Delist name,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No,No

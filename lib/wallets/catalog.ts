@@ -108,6 +108,8 @@ export type WalletFeatures = {
   uploadQR: boolean;
   rotateTaddr: boolean;
   rotateUaddr: boolean;
+  generateTaddr: boolean;
+  generateUaddr: boolean;
   receiveTaddr: boolean;
   receiveUaddr: boolean;
 };
@@ -126,6 +128,8 @@ const WALLET_FEATURE_KEYS = [
   "uploadQR",
   "rotateTaddr",
   "rotateUaddr",
+  "generateTaddr",
+  "generateUaddr",
   "receiveTaddr",
   "receiveUaddr",
 ] as const satisfies readonly (keyof Omit<WalletFeatures, "nameActions">)[];
@@ -209,6 +213,8 @@ const baseWalletFeatures: WalletFeatures = {
   uploadQR: false,
   rotateTaddr: false,
   rotateUaddr: false,
+  generateTaddr: false,
+  generateUaddr: false,
   receiveTaddr: false,
   receiveUaddr: false,
 };
@@ -228,6 +234,8 @@ const fullWalletFeatures: WalletFeatures = {
   uploadQR: true,
   rotateTaddr: true,
   rotateUaddr: true,
+  generateTaddr: true,
+  generateUaddr: true,
   receiveTaddr: true,
   receiveUaddr: true,
 };
@@ -280,6 +288,7 @@ const zodlMobileFeatures: WalletFeatures = {
   pasteURI: true,
   uploadQR: true,
   rotateUaddr: true,
+  generateUaddr: true,
 };
 
 const zingoDesktopFeatures: WalletFeatures = {
@@ -291,6 +300,8 @@ const zingoDesktopFeatures: WalletFeatures = {
   viewExplorer: true,
   tapURI: true,
   pasteURI: true,
+  generateTaddr: true,
+  generateUaddr: true,
   receiveTaddr: true,
   receiveUaddr: true,
 };
@@ -655,6 +666,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
       scanURI: true,
       tapURI: true,
       pasteURI: true,
+      generateUaddr: true,
     },
     warning: "Mobile wallet Zingo cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc) via ZcashNames.com.",
   },
@@ -673,6 +685,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
       scanURI: true,
       tapURI: true,
       pasteURI: true,
+      generateUaddr: true,
     },
     warning: "Mobile wallet Zingo cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc) via ZcashNames.com.",
   },
@@ -778,6 +791,8 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     features: {
       ...baseWalletFeatures,
       resolveName: true,
+      importContact: true,
+      exportContact: true,
       tapURI: true,
       pasteURI: true,
       uploadQR: true,
