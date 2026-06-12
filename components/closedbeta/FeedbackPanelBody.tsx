@@ -651,15 +651,15 @@ export default function FeedbackPanelBody({
             </div>
           )}
 
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 flex flex-col">
             <h2 className="text-lg font-bold leading-tight" style={{ color: "var(--fg-heading)" }}>
               {headerTitle}
             </h2>
-            {testerLoaded && testerName && (
+            {testerLoaded && (
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="text-xs mt-0.5 underline cursor-pointer"
+                className="self-start text-xs leading-none mt-px underline cursor-pointer"
                 style={{ color: "var(--fg-muted)", background: "transparent" }}
               >
                 Sign out
