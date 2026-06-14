@@ -185,12 +185,19 @@ export default function FAQ() {
       <div className="flex flex-col gap-10">
         {groups.map((group, groupIndex) => (
           <div key={groupIndex}>
-            <h3
-              className="type-kicker mb-4 px-1"
-              style={{ color: "var(--fg-muted)" }}
-            >
-              {group.title}
-            </h3>
+            <div className="mb-4 flex items-center gap-4 px-1">
+              <h3
+                className="type-kicker shrink-0"
+                style={{ color: "var(--fg-muted)" }}
+              >
+                {group.title}
+              </h3>
+              <div
+                className="h-px flex-1"
+                style={{ background: "linear-gradient(90deg, color-mix(in srgb, var(--fg-muted) 32%, transparent) 0%, transparent 100%)" }}
+                aria-hidden="true"
+              />
+            </div>
             <div
               className="rounded-xl overflow-hidden"
               style={{ border: "1px solid var(--faq-border)", backgroundColor: "transparent" }}

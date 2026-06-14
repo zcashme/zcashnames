@@ -22,7 +22,6 @@ type Step = {
   id: string;
   number: string;
   eyebrow: string;
-  title: string;
   description: ReactNode;
   accent: string;
 };
@@ -32,7 +31,6 @@ const steps: Step[] = [
     id: "step-1",
     number: "01",
     eyebrow: "Get in line",
-    title: "Get Early Access",
     description:
       "Invites go out in order, so early signups get first pick of the best Zcash names before the crowd shows up. Free to join. No commitment.",
     accent:
@@ -42,7 +40,6 @@ const steps: Step[] = [
     id: "step-2",
     number: "02",
     eyebrow: "Climb the queue",
-    title: "Move Up + Earn ZEC",
     description:
       "Referrals push you toward the front of the line, improving your odds of landing high-demand names. If they claim one, you earn ZEC.",
     accent:
@@ -52,7 +49,6 @@ const steps: Step[] = [
     id: "step-3",
     number: "03",
     eyebrow: "Lock it in",
-    title: "Claim Your Name",
     description:
       "When your turn opens, you get an email. Log in, choose your Zcash name, and secure it before public launch. Keep it, use it, or sell it later.",
     accent:
@@ -162,6 +158,27 @@ const sectionHeading = (
   </div>
 );
 
+const rowHeading = (title: string) => (
+  <div className="mb-4 flex items-center justify-center gap-4 px-1">
+    <div
+      className="h-px flex-1"
+      style={{ background: "linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--fg-muted) 32%, transparent) 100%)" }}
+      aria-hidden="true"
+    />
+    <h3 className="type-kicker shrink-0 text-center" style={{ color: "var(--fg-muted)" }}>
+      {title}
+    </h3>
+    <div
+      className="h-px flex-1"
+      style={{ background: "linear-gradient(90deg, color-mix(in srgb, var(--fg-muted) 32%, transparent) 0%, transparent 100%)" }}
+      aria-hidden="true"
+    />
+  </div>
+);
+
+const groupIntroClassName = "px-1 pt-3 pb-6";
+const groupIntroTextClassName = "type-section-subtitle max-w-xl text-center";
+
 function BenefitsBento() {
   const proximity = usePointerProximity<HTMLElement>({
     radius: 180,
@@ -171,7 +188,7 @@ function BenefitsBento() {
 
   return (
     <div
-      className="grid grid-cols-1 gap-5 lg:grid-cols-12"
+      className="grid grid-cols-1 gap-x-5 gap-y-10 lg:grid-cols-12"
       onPointerMove={proximity.handlePointerMove}
       onPointerLeave={proximity.handlePointerLeave}
     >
@@ -180,11 +197,9 @@ function BenefitsBento() {
           key={group.title}
           className={`${group.span ?? "lg:col-span-6"}`}
         >
-          <div className="mb-4 px-1">
-            <h3 className="type-kicker" style={{ color: "var(--fg-muted)" }}>
-              {group.title}
-            </h3>
-            <p className="mt-2 type-section-subtitle max-w-xl" style={{ color: "var(--fg-body)" }}>
+          {rowHeading(group.title)}
+          <div className={groupIntroClassName}>
+            <p className={`${groupIntroTextClassName} mx-auto`} style={{ color: "var(--fg-body)" }}>
               {group.description}
             </p>
           </div>
@@ -249,7 +264,7 @@ export default function HowItWorks() {
   });
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-6 py-24">
+    <section className="mx-auto w-full max-w-6xl px-6 pb-24 pt-0">
       {sectionHeading(
         "Benefits",
         "Readable, ownable, privacy-preserving identity for payments and apps built around Zcash.",
@@ -263,20 +278,13 @@ export default function HowItWorks() {
         )}
 
         <div
-          className="grid grid-cols-1 gap-5 lg:grid-cols-12"
+          className="grid grid-cols-1 gap-x-5 gap-y-10 lg:grid-cols-12"
           onPointerMove={proximity.handlePointerMove}
           onPointerLeave={proximity.handlePointerLeave}
         >
           {steps.map((step) => (
             <div key={step.id} className="lg:col-span-4">
-              <div className="mb-4 px-1">
-                <h3 className="type-kicker" style={{ color: "var(--fg-muted)" }}>
-                  {step.eyebrow}
-                </h3>
-                <p className="mt-2 type-section-subtitle max-w-xl" style={{ color: "var(--fg-body)" }}>
-                  {step.title}
-                </p>
-              </div>
+              {rowHeading(step.eyebrow)}
 
               <div
                 ref={(node) => proximity.register(step.id, node)}

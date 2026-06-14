@@ -406,7 +406,7 @@ export default function PartnerReel() {
   if (partners.length === 0) return null;
 
   return (
-    <section className="relative z-[2] mb-12 mt-12 w-full px-5 sm:mb-14 sm:mt-14 md:mb-16 md:mt-16">
+    <section className="relative z-[2] my-24 w-full px-5">
       <div className="mb-10 flex items-center justify-center gap-3.5">
         <span
           className="block h-px w-[clamp(24px,9vw,96px)] shrink-0"

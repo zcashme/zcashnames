@@ -162,14 +162,14 @@ export default function MarketStats({ stats }: { stats: NetworkStats }) {
                   style={{ background: isHighlighted ? "var(--market-stats-segment-active-bg)" : "transparent" }}
                 >
                   {isWaitlistMode ? (
-                    <div className="flex min-h-[8.75rem] flex-col items-center justify-start text-center">
+                    <div className="flex min-h-[8.75rem] flex-col items-center justify-center gap-3 text-center">
                       <div className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-dim sm:text-[0.78rem]">
                         {item.label}
                       </div>
-                      <div className="mt-3 tabular-nums text-[clamp(1.4rem,2.8vw,2rem)] font-semibold leading-none tracking-[-0.015em] text-fg-heading">
+                      <div className="tabular-nums text-[clamp(1.4rem,2.8vw,2rem)] font-semibold leading-none tracking-[-0.015em] text-fg-heading">
                         {item.value}
                       </div>
-                      <div className="mt-3 flex flex-col items-center gap-1 tabular-nums text-[0.68rem] font-medium leading-none text-fg-muted sm:text-[0.72rem]">
+                      <div className="flex flex-col items-center gap-1 tabular-nums text-[0.68rem] font-medium leading-none text-fg-muted sm:text-[0.72rem]">
                         {[
                           { value: item.deltaDayValue ?? "--", label: "1d" },
                           { value: item.deltaWeekValue ?? "--", label: "7d" },
