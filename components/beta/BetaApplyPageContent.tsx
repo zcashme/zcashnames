@@ -40,7 +40,7 @@ export default function BetaApplyPageContent({ brandSlug }: { brandSlug?: Wallet
         </h1>
         <p className="text-base" style={{ color: "var(--fg-body)", lineHeight: 1.65 }}>
           {brand
-            ? `${brand.intro ? `${brand.intro} ` : ""}We are looking for people who can spot confusing UX, explain bugs clearly, or both.`
+            ? (brand.intro ?? "")
             : "In this round, you will be: buying and selling names, viewing your personal collection, and sending ZEC to names in wallets featuring ZNS. Anyone can apply. We're especially looking for people who can spot confusing UX, explain bugs clearly, or both."}
         </p>
         <p className="text-sm mt-3" style={{ color: "var(--fg-muted)" }}>
