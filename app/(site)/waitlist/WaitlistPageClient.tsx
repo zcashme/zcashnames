@@ -14,6 +14,7 @@ function LeaderboardLink() {
       proximityId="leaderboard-link"
       href="/leaders"
       label="Leaderboard"
+      showArrow={false}
       icon={
         <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
           <path d="M8 21L12 17L16 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -33,15 +34,13 @@ function DashboardLink() {
       proximityId="dashboard-link"
       href="/community"
       label="Dashboard"
-      arrowDirection="left"
-      arrowPosition="left"
-      iconPosition="right"
+      showArrow={false}
       icon={
         <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
-          <circle cx="6.5" cy="7" r="1.5" fill="currentColor" />
-          <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" />
-          <circle cx="12" cy="17.5" r="1.5" fill="currentColor" />
-          <path d="M7.9 7.5L10.7 15.8M16.1 7L13.3 15.8M8 7.2H16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <rect x="3" y="4" width="8" height="7" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="13" y="4" width="8" height="11" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="3" y="13" width="8" height="7" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="13" y="17" width="8" height="3" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
         </svg>
       }
     />
@@ -105,6 +104,7 @@ export default function WaitlistPageClient({ stats }: { stats: Stats }) {
             <LeaderboardLink />
           </div>
         }
+        actionLinkPosition="belowStats"
         stats={stats}
         subtitle="Be first to claim a name you can use, hold, or sell."
         collapsed={waitlistConfirmed}

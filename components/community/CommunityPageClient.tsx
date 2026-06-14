@@ -1,10 +1,34 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTheme } from "next-themes";
-import ShareDropdown, { DownloadDropdown, DownloadTriggerIcon, type ActionDropdownItem } from "@/components/ShareDropdown";
+import {
+  ActionDropdown,
+  DownloadTriggerIcon,
+  EmailIcon,
+  MoreIcon,
+  ShareCopyIcon,
+  ShareTriggerIcon,
+  TelegramIcon,
+  XIcon,
+  type ActionDropdownItem,
+} from "@/components/ShareDropdown";
+import { useCopy } from "@/components/hooks/useCopy";
 import { usePointerProximity } from "@/components/hooks/usePointerProximity";
-import { getWalletPlatformDownloadsForBrand, subcategoryLabel } from "@/lib/wallets/catalog";
+import WalletDownloadBadge from "@/components/wallets/WalletDownloadBadge";
+import { SOCIAL_ICON_PATHS } from "@/lib/social-icons";
+import {
+  getWalletBetaDownloadItemsForBrand,
+  getWalletBrand,
+} from "@/lib/wallets/catalog";
+import {
+  buildEmailShareHref,
+  buildShareMessageWithLink,
+  buildTelegramShareHref,
+  buildXShareHref,
+} from "@/lib/share";
 import { BRAND } from "@/lib/zns/brand";
 import {
   COMMUNITY_SECTIONS,
@@ -15,14 +39,10 @@ import {
 } from "@/lib/community/sections";
 
 const SOCIAL_PATHS: Record<string, string> = {
-  "X / Twitter":
-    "M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z",
-  Discord:
-    "M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.227-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z",
-  Telegram:
-    "M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z",
-  Signal:
-    "M12 1.5C6.202 1.5 1.5 6.202 1.5 12c0 1.93.52 3.735 1.43 5.29L1.5 22.5l5.21-1.43A10.457 10.457 0 0 0 12 22.5c5.798 0 10.5-4.702 10.5-10.5S17.798 1.5 12 1.5zm0 2.1a8.4 8.4 0 1 1 0 16.8 8.357 8.357 0 0 1-4.29-1.178l-.308-.186-3.188.875.875-3.188-.186-.308A8.357 8.357 0 0 1 3.6 12 8.4 8.4 0 0 1 12 3.6z",
+  "X / Twitter": SOCIAL_ICON_PATHS.x,
+  Discord: SOCIAL_ICON_PATHS.discord,
+  Telegram: SOCIAL_ICON_PATHS.telegram,
+  Signal: SOCIAL_ICON_PATHS.signal,
   GitHub:
     "M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.84 1.236 1.84 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.605-2.665-.3-5.467-1.332-5.467-5.93 0-1.31.467-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.3 1.23a11.48 11.48 0 0 1 3-.404c1.02.005 2.045.138 3 .404 2.29-1.552 3.295-1.23 3.295-1.23.653 1.653.242 2.873.12 3.176.77.84 1.232 1.91 1.232 3.22 0 4.61-2.807 5.625-5.48 5.92.43.372.823 1.103.823 2.222 0 1.606-.015 2.898-.015 3.293 0 .322.216.695.825.577C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12",
 };
@@ -71,6 +91,8 @@ const THEMED_ICON_CLASS_BY_ID: Record<string, string> = {
 };
 
 const DIRECT_MONO_ICON_IDS = new Set(["leaderboard", "explorer", "builder-stories", "sharekit"]);
+
+type ShareTarget = "x" | "telegram" | "email" | "system";
 
 function formatCommunityCardHref(href: string) {
   if (!href) return "/";
@@ -162,7 +184,7 @@ function CommunitySectionGroup({ section }: { section: CommunitySection }) {
         </h2>
         <div className="h-px flex-1 bg-border-muted" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {visibleCards.map((card) => (
           <CommunityCardTile key={card.id} card={card} />
         ))}
@@ -178,108 +200,129 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
     maxScaleBoost: 0.025,
     maxShadowOpacity: 0.16,
   });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const shareUrl = `${BRAND.url}/community#${card.id}`;
   const external = isExternalHref(card.href);
   const footerHref = formatCommunityCardHref(card.href);
   const cardSurfaceClassName = resolvedTheme === "monochrome" ? "bg-transparent" : "bg-[var(--color-raised)]";
-  const platformDownloads = card.walletBrandSlug
-    ? getWalletPlatformDownloadsForBrand(card.walletBrandSlug)
+  const walletBrand = card.walletBrandSlug ? getWalletBrand(card.walletBrandSlug) : null;
+  const downloadBadges = card.walletBrandSlug
+    ? getWalletBetaDownloadItemsForBrand(card.walletBrandSlug)
     : [];
-  const downloadItems: ActionDropdownItem[] = platformDownloads.map((download) => ({
-    key: `${download.device}:${download.subcategory}`,
-    label: subcategoryLabel(download.subcategory),
-    href: download.href,
-  }));
-  const actionButtonClassName = "inline-flex items-center gap-2 rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading";
+  const websiteUrl = walletBrand?.websiteUrl ?? (external ? card.href : "");
+  const menuItems: ActionDropdownItem[] = [
+    {
+      key: "go-to",
+      label: "Go to...",
+      href: card.href,
+      icon: <OpenInIcon />,
+      external,
+      onClick: () => setMenuOpen(false),
+    },
+    ...(downloadBadges.length > 0
+      ? [{
+          key: "download",
+          label: "Download",
+          icon: <DownloadTriggerIcon />,
+          onClick: () => {
+            setMenuOpen(false);
+            setDownloadModalOpen(true);
+          },
+        } satisfies ActionDropdownItem]
+      : []),
+    {
+      key: "share",
+      label: "Share",
+      icon: <ShareTriggerIcon />,
+      onClick: () => {
+        setMenuOpen(false);
+        setShareModalOpen(true);
+      },
+    },
+  ];
 
   return (
-    <article
-      id={card.id}
-      ref={(node) => proximity.register(card.id, node)}
-      onPointerMove={proximity.handlePointerMove}
-      onPointerLeave={proximity.handlePointerLeave}
-      className={`community-card group relative flex min-h-[17.5rem] flex-col gap-5 overflow-visible rounded-[20px] border border-border-muted px-5 py-5 transition-[transform,box-shadow,border-color] duration-200 ease-out sm:min-h-0 ${cardSurfaceClassName}`}
-      style={{
-        transform: "translateZ(0) scale(var(--prox-scale, 1))",
-        boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
-      }}
-    >
-      <CardOverlayLink card={card} external={external} />
+    <>
+      <article
+        id={card.id}
+        ref={(node) => proximity.register(card.id, node)}
+        onPointerMove={proximity.handlePointerMove}
+        onPointerLeave={proximity.handlePointerLeave}
+        className={`community-card group relative flex min-h-[17.5rem] w-full min-w-0 flex-col gap-5 overflow-visible rounded-[20px] border border-border-muted px-5 py-5 transition-[transform,box-shadow,border-color] duration-200 ease-out sm:min-h-0 ${cardSurfaceClassName}`}
+        style={{
+          transform: "translateZ(0) scale(var(--prox-scale, 1))",
+          boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
+        }}
+      >
+        <CardOverlayLink card={card} external={external} />
 
-      <div className="pointer-events-none relative z-[2] flex items-start justify-between gap-4">
-        <div className="flex min-w-0 items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border-muted bg-transparent">
-            {renderCardIcon(card, resolvedTheme === "monochrome")}
+        <div className="pointer-events-none relative z-[2] flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border-muted bg-transparent">
+              {renderCardIcon(card, resolvedTheme)}
+            </div>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-fg-muted">{card.label}</p>
+              <h3 className="text-[1.02rem] font-bold leading-tight text-fg-heading">
+                {card.name}
+              </h3>
+            </div>
           </div>
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-fg-muted">{card.label}</p>
-            <h3 className="text-[1.02rem] font-bold leading-tight text-fg-heading">
-              {card.name}
-            </h3>
-          </div>
-        </div>
-        <span className="shrink-0 pt-0.5 text-fg-muted transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7 17L17 7M17 7H8M17 7v9" />
-          </svg>
-        </span>
-      </div>
-
-      <div className="pointer-events-none relative z-[2] border-t border-border-muted" aria-hidden="true" />
-
-      <div className="pointer-events-none relative z-[2] flex min-h-[4.8rem] flex-1 items-start">
-        <p className="text-sm leading-relaxed text-fg-body">
-          {card.description}
-        </p>
-      </div>
-
-      <div className="pointer-events-none relative z-[2] border-t border-border-muted" aria-hidden="true" />
-
-      <div className="pointer-events-none relative z-[3] mt-auto flex items-center justify-between gap-3">
-        <span className="min-w-0 truncate text-xs text-fg-muted">{footerHref}</span>
-        <div
-          className="pointer-events-auto flex items-center gap-2"
-          onClick={(event) => event.stopPropagation()}
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          {downloadItems.length === 1 ? (
-            <a
-              href={downloadItems[0].href}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Download ${card.name} for ${downloadItems[0].label}`}
-              title={`Download for ${downloadItems[0].label}`}
-              className={actionButtonClassName}
-            >
-              <DownloadTriggerIcon />
-              <span>Download</span>
-            </a>
-          ) : null}
-          {downloadItems.length > 1 ? (
-            <DownloadDropdown
-              label="Download"
-              items={downloadItems}
+          <div
+            className="pointer-events-auto relative shrink-0"
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <ActionDropdown
+              buttonClassName="flex h-9 w-9 items-center justify-center rounded-full border border-border-muted bg-transparent text-fg-heading transition-colors duration-200 hover:border-fg-heading hover:text-fg-heading"
+              items={menuItems}
+              itemClassName="justify-end text-right"
+              label="Actions"
               menuAlign="right"
-              menuDirection="up"
-              showTriggerIcon={true}
-              buttonClassName={actionButtonClassName}
+              menuClassName="border-border-muted bg-[var(--color-card)] shadow-2xl"
+              menuDirection="down"
+              onOpenChange={setMenuOpen}
+              open={menuOpen}
+              renderTriggerContent={(open) => <CardMenuTrigger open={open} />}
+              showTriggerIcon={false}
+              triggerAriaLabel={`Open actions for ${card.name}`}
             />
-          ) : null}
-          <ShareDropdown
-            label="Share"
-            message={card.shareText}
-            shareUrl={shareUrl}
-            emailSubject={card.name}
-            copyLabel="Copy Text"
-            systemShareLabel="Other"
-            menuAlign="right"
-            menuDirection="up"
-            showTriggerIcon={true}
-            buttonClassName={actionButtonClassName}
-          />
+          </div>
         </div>
-      </div>
-    </article>
+
+        <div className="pointer-events-none relative z-[2] border-t border-border-muted" aria-hidden="true" />
+
+        <div className="pointer-events-none relative z-[2] flex min-h-[4.8rem] flex-1 items-start">
+          <p className="text-sm leading-relaxed text-fg-body">
+            {card.description}
+          </p>
+        </div>
+
+        <div className="pointer-events-none relative z-[2] border-t border-border-muted" aria-hidden="true" />
+
+        <div className="pointer-events-none relative z-[3] mt-auto flex items-center justify-between gap-3">
+          <span className="min-w-0 truncate text-xs text-fg-muted">{footerHref}</span>
+        </div>
+      </article>
+
+      {downloadModalOpen && downloadBadges.length > 0 ? (
+        <CommunityDownloadModal
+          card={card}
+          badges={downloadBadges}
+          websiteUrl={websiteUrl}
+          onClose={() => setDownloadModalOpen(false)}
+        />
+      ) : null}
+      {shareModalOpen ? (
+        <CommunityShareModal
+          card={card}
+          shareUrl={shareUrl}
+          onClose={() => setShareModalOpen(false)}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -302,24 +345,273 @@ function CardOverlayLink({ card, external }: { card: CommunityCard; external: bo
   return <Link href={card.href} aria-label={label} className={className} />;
 }
 
-function renderCardIcon(card: CommunityCard, monochrome: boolean) {
-  const brandedSocialIconSrc = BRANDED_SOCIAL_ICON_SRCS[card.name];
+function CardMenuTrigger({ open }: { open: boolean }) {
+  return (
+    <span className="relative flex h-4 w-4 items-center justify-center" aria-hidden="true">
+      <span
+        className={`absolute h-0.5 w-3.5 rounded-full bg-current transition-transform duration-200 ${
+          open ? "translate-y-0 rotate-45" : "-translate-y-1"
+        }`}
+      />
+      <span
+        className={`absolute h-0.5 w-3.5 rounded-full bg-current transition-transform duration-200 ${
+          open ? "translate-y-0 -rotate-45" : "translate-y-1"
+        }`}
+      />
+    </span>
+  );
+}
 
-  if (brandedSocialIconSrc) {
-    return monochrome
-      ? (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="h-[1.65rem] w-[1.65rem] text-fg-heading" aria-hidden="true">
-          <path d={SOCIAL_PATHS[card.name]} />
-        </svg>
-      )
-      : <img src={brandedSocialIconSrc} alt="" className="h-9 w-9 object-contain" aria-hidden="true" />;
+function OpenInIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+      <path d="M7 17L17 7" />
+      <path d="M17 7H8" />
+      <path d="M17 7v9" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+      <path d="m6 6 12 12" />
+      <path d="M18 6 6 18" />
+    </svg>
+  );
+}
+
+function CommunityActionModal({
+  ariaLabel,
+  title,
+  onClose,
+  children,
+}: {
+  ariaLabel: string;
+  title?: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0, 0, 0, 0.55)", backdropFilter: "blur(6px)" }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabel}
+        className="flex w-full max-w-xl flex-col gap-5 rounded-[24px] border border-border-muted px-6 py-6 shadow-[0_24px_64px_rgba(0,0,0,0.4)] sm:px-7"
+        style={{ background: "var(--color-card)" }}
+      >
+        <div className={`flex items-start gap-4 ${title ? "justify-between" : "justify-end"}`}>
+          {title ? <h2 className="text-[1.2rem] font-bold leading-tight text-fg-heading">{title}</h2> : null}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border-muted text-fg-muted transition-colors hover:border-fg-heading hover:text-fg-heading"
+            aria-label="Close popup"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function CommunityDownloadModal({
+  card,
+  badges,
+  websiteUrl,
+  onClose,
+}: {
+  card: CommunityCard;
+  badges: ReturnType<typeof getWalletBetaDownloadItemsForBrand>;
+  websiteUrl: string;
+  onClose: () => void;
+}) {
+  return (
+    <CommunityActionModal ariaLabel={`Download ${card.name}`} onClose={onClose}>
+      <p className="text-sm leading-relaxed text-fg-body">
+        Make sure you are downloading the application from a trustworthy source.
+      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        {badges.map((badge) => <WalletDownloadBadge key={badge.href} item={badge} />)}
+      </div>
+      {websiteUrl ? (
+        <p className="text-sm leading-relaxed text-fg-muted">
+          More versions of {card.name} may be available at{" "}
+          <a
+            href={websiteUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-fg-heading underline underline-offset-2"
+          >
+            {formatCommunityCardHref(websiteUrl)}
+          </a>
+          .
+        </p>
+      ) : null}
+    </CommunityActionModal>
+  );
+}
+
+function CommunityShareModal({
+  card,
+  shareUrl,
+  onClose,
+}: {
+  card: CommunityCard;
+  shareUrl: string;
+  onClose: () => void;
+}) {
+  const copyState = useCopy();
+  const supportsSystemShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  const [shareTarget, setShareTarget] = useState<ShareTarget>("x");
+  const [draft, setDraft] = useState(() => buildShareMessageWithLink(card.shareText, shareUrl));
+  const shareTargets: { icon: ReactNode; label: string; value: ShareTarget }[] = [
+    { value: "x", label: "X", icon: <XIcon /> },
+    { value: "telegram", label: "Telegram", icon: <TelegramIcon /> },
+    { value: "email", label: "Email", icon: <EmailIcon /> },
+    ...(supportsSystemShare
+      ? [{ value: "system" as const, label: "Other", icon: <MoreIcon /> }]
+      : []),
+  ];
+  const activeTarget = shareTargets.find((target) => target.value === shareTarget) ?? shareTargets[0];
+
+  async function handleCopy() {
+    await copyState.copy(draft);
   }
 
+  async function handleShare() {
+    if (shareTarget === "x") {
+      window.open(buildXShareHref(draft), "_blank", "noopener,noreferrer");
+      onClose();
+      return;
+    }
+
+    if (shareTarget === "telegram") {
+      window.open(buildTelegramShareHref(draft), "_blank", "noopener,noreferrer");
+      onClose();
+      return;
+    }
+
+    if (shareTarget === "email") {
+      window.location.href = buildEmailShareHref(card.name, draft);
+      onClose();
+      return;
+    }
+
+    if (!supportsSystemShare) return;
+
+    try {
+      await navigator.share({ text: draft });
+      onClose();
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+    }
+  }
+
+  return (
+    <CommunityActionModal ariaLabel={`Share ${card.name}`} onClose={onClose}>
+      <label className="flex flex-col gap-2 text-sm font-semibold text-fg-heading">
+        <span>Share on:</span>
+        <span className="relative">
+          <select
+            value={shareTarget}
+            onChange={(event) => setShareTarget(event.target.value as ShareTarget)}
+            className="min-h-11 w-full appearance-none rounded-xl border border-border-muted bg-[var(--color-raised)] px-3 py-2 pr-10 text-sm font-semibold text-fg-heading outline-none transition-colors focus:border-fg-heading"
+          >
+            {shareTargets.map((target) => (
+              <option key={target.value} value={target.value}>
+                {target.label}
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-fg-muted" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </span>
+        </span>
+      </label>
+      <label className="flex flex-col gap-2 text-sm font-semibold text-fg-heading">
+        <span>Message</span>
+        <textarea
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          className="min-h-40 rounded-[18px] border border-border-muted bg-transparent px-4 py-3 text-sm font-normal leading-relaxed text-fg-body outline-none transition-colors focus:border-fg-heading"
+        />
+      </label>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => void handleCopy()}
+          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border-muted px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+        >
+          <ShareCopyIcon />
+          <span>{copyState.copied ? "Copied!" : "Copy"}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleShare()}
+          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border-muted px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+        >
+          {activeTarget?.icon}
+          <span>Share</span>
+        </button>
+      </div>
+    </CommunityActionModal>
+  );
+}
+
+function renderCardIcon(card: CommunityCard, resolvedTheme: string | undefined) {
+  const light = resolvedTheme === "light";
+  const brandedSocialIconSrc = BRANDED_SOCIAL_ICON_SRCS[card.name];
   const socialPath = SOCIAL_PATHS[card.name];
 
   if (socialPath) {
+    if (light && brandedSocialIconSrc) {
+      return <img src={brandedSocialIconSrc} alt="" className="h-9 w-9 object-contain" aria-hidden="true" />;
+    }
+
     return (
-      <svg viewBox="0 0 24 24" fill="currentColor" className="h-[1.65rem] w-[1.65rem] text-fg-heading" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        className="h-[1.65rem] w-[1.65rem] text-fg-heading"
+        aria-hidden="true"
+      >
         <path d={socialPath} />
       </svg>
     );

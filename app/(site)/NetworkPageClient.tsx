@@ -13,6 +13,7 @@ function ExplorerLink({ network }: { network: "mainnet" | "testnet" }) {
       href={network === "testnet" ? "/explorer?env=testnet" : "/explorer"}
       filled
       label="Explorer"
+      showArrow={false}
       icon={
         <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
           <circle cx="12" cy="12" r="4.25" stroke="currentColor" strokeWidth="1.7" />
@@ -37,6 +38,7 @@ export default function NetworkPageClient({ network, stats, feedbackEnabled }: P
       <HomePage
         form={<HomeSearchResults network={network} />}
         actionLink={<ExplorerLink network={network} />}
+        actionLinkPosition="belowStats"
         stats={stats}
         subtitle="Powered by Zcash. Claim your name"
       />

@@ -10,6 +10,7 @@ type LandingActionLinkProps = {
   label: string;
   proximityId: string;
   filled?: boolean;
+  showArrow?: boolean;
   arrowDirection?: "left" | "right";
   arrowPosition?: "left" | "right";
   iconPosition?: "left" | "right";
@@ -21,6 +22,7 @@ export default function LandingActionLink({
   label,
   proximityId,
   filled = false,
+  showArrow = true,
   arrowDirection = "right",
   arrowPosition = "right",
   iconPosition = "left",
@@ -44,7 +46,7 @@ export default function LandingActionLink({
           boxShadow: "0 14px 28px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
         }}
       >
-        {arrowPosition === "left" ? <span aria-hidden="true">{arrow}</span> : null}
+        {showArrow && arrowPosition === "left" ? <span aria-hidden="true">{arrow}</span> : null}
         {iconPosition === "left" ? (
           <span aria-hidden="true" style={{ width: "1.08em", height: "1.08em", display: "inline-flex" }}>
             {icon}
@@ -56,7 +58,7 @@ export default function LandingActionLink({
             {icon}
           </span>
         ) : null}
-        {arrowPosition === "right" ? <span aria-hidden="true">{arrow}</span> : null}
+        {showArrow && arrowPosition === "right" ? <span aria-hidden="true">{arrow}</span> : null}
       </Link>
     </div>
   );

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import WalletBrandLogo from "@/components/wallets/WalletBrandLogo";
+import WalletDownloadBadge from "@/components/wallets/WalletDownloadBadge";
 import { hasWalletFaq } from "@/lib/beta/walletFaq";
 import WalletFeatureMatrix from "@/components/wallets/WalletFeatureMatrix";
 import { BRAND } from "@/lib/zns/brand";
@@ -165,46 +166,6 @@ function SubsectionTitle({ title }: { title: string }) {
   );
 }
 
-function DownloadBadge({ item }: { item: WalletBetaDownloadItem }) {
-  return (
-    <a
-      href={item.href}
-      target="_blank"
-      rel="noreferrer"
-      aria-label={item.alt}
-      title={item.label}
-      className="inline-flex overflow-hidden rounded-[8px]"
-      style={{
-        background: "transparent",
-        border: "none",
-        boxShadow: "none",
-        isolation: "isolate",
-      }}
-    >
-      <img
-        src={item.src}
-        alt={item.alt}
-        className={item.monoSrc
-          ? "block h-14 w-auto object-contain [[data-theme=monochrome]_&]:hidden"
-          : "block h-14 w-auto object-contain"}
-        loading="lazy"
-        decoding="async"
-        style={{ filter: "none", mixBlendMode: "normal" }}
-      />
-      {item.monoSrc ? (
-        <img
-          src={item.monoSrc}
-          alt=""
-          className="hidden h-14 w-auto object-contain [[data-theme=monochrome]_&]:block"
-          loading="lazy"
-          decoding="async"
-          style={{ filter: "none", mixBlendMode: "normal" }}
-        />
-      ) : null}
-    </a>
-  );
-}
-
 export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandSlug }) {
   const brand = getWalletBrand(brandSlug);
   const variants = getWalletVariantsForBrand(brandSlug);
@@ -328,7 +289,7 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
           <div>
             <SubsectionTitle title={`Download ${brand.displayName}`} />
             <div className="flex flex-wrap items-center gap-3">
-              {downloads.map((badge) => <DownloadBadge key={badge.href} item={badge} />)}
+              {downloads.map((badge) => <WalletDownloadBadge key={badge.href} item={badge} />)}
             </div>
           </div>
         )}

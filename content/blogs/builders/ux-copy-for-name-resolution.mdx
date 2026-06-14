@@ -1,0 +1,15 @@
+# UX Copy for Name Resolution
+
+Resolver infrastructure is only half the job. The visible copy around success and failure states shapes whether the feature feels trustworthy.
+
+## Success messages
+
+When a name resolves correctly, the UI should confirm the resolved target without overwhelming the user with protocol details.
+
+## Error messages
+
+Errors should distinguish between invalid names, unsupported wallets, and temporary lookup failures.
+
+## Slow-path messaging
+
+If indexers or network calls lag, the UI should explain that the lookup is still in progress rather than implying the name is broken.

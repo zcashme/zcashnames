@@ -398,16 +398,22 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
     partner: true,
     logos: walletLogos("cake", "Cake Wallet logo"),
     appIcon: { src: "/wallets/cake/app-icon.png", alt: "Cake Wallet app icon" },
+    websiteUrl: "https://cakewallet.com/",
     platformDownloads: [
       {
         device: "mobile",
         subcategory: "ios",
-        href: "https://cakewallet.com/ios",
+        href: "https://apps.apple.com/us/app/cake-wallet/id1334702542",
       },
       {
         device: "mobile",
         subcategory: "android",
-        href: "https://cakewallet.com/gp",
+        href: "https://play.google.com/store/apps/details?id=com.cakewallet.cake_wallet",
+      },
+      {
+        device: "desktop",
+        subcategory: "pc",
+        href: "https://github.com/cake-tech/cake_wallet/releases",
       },
     ],
   },

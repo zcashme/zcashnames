@@ -84,6 +84,7 @@ export default function MarketStats({ stats }: { stats: NetworkStats }) {
         ]),
       )
     : 0;
+  const deltaSideWidthCh = Math.max(deltaValueWidthCh, 3);
   const activeItem = items.find((item) => item.key === activeKey);
   const isHelpVisible = Boolean(activeItem);
 
@@ -125,8 +126,18 @@ export default function MarketStats({ stats }: { stats: NetworkStats }) {
       onPointerLeave={resetItems}
     >
       <div className="mx-auto w-full max-w-2xl rounded-[24px] p-3 sm:max-w-3xl sm:p-4 xl:max-w-4xl">
-        <div className="grid grid-cols-3">
-          {items.map((item, index) => {
+        <div className="relative grid grid-cols-3">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-0 left-1/3 top-0 w-px -translate-x-1/2"
+            style={{ background: "var(--partner-card-border)" }}
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-0 left-2/3 top-0 w-px -translate-x-1/2"
+            style={{ background: "var(--partner-card-border)" }}
+          />
+          {items.map((item) => {
             const isHighlighted = hoverKey === item.key || activeKey === item.key;
             return (
               <button
@@ -140,9 +151,8 @@ export default function MarketStats({ stats }: { stats: NetworkStats }) {
                 onMouseLeave={() => setHoverKey((curr) => curr === item.key ? null : curr)}
                 onFocus={() => setHoverKey(item.key)}
                 onBlur={() => setHoverKey((curr) => curr === item.key ? null : curr)}
-                className={`cursor-pointer px-3 py-2 text-center transition-[transform,box-shadow,border-color] duration-200 ease-out will-change-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)] sm:px-5 sm:py-3 ${index > 0 ? "border-l" : ""}`}
+                className="cursor-pointer px-3 py-2 text-center transition-[transform,box-shadow,border-color] duration-200 ease-out will-change-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)] sm:px-5 sm:py-3"
                 style={{
-                  borderColor: "var(--partner-card-border)",
                   transform: "translateZ(0) scale(var(--stats-scale, 1))",
                   boxShadow: "0 18px 36px rgba(0, 0, 0, var(--stats-shadow-opacity, 0))",
                 }}
@@ -165,11 +175,16 @@ export default function MarketStats({ stats }: { stats: NetworkStats }) {
                           { value: item.deltaWeekValue ?? "--", label: "7d" },
                           { value: item.deltaMonthValue ?? "--", label: "30d" },
                         ].map((delta) => (
-                          <div key={`${item.key}-${delta.label}`} className="flex items-baseline justify-end gap-2">
-                            <span className="inline-block text-right" style={{ width: `${deltaValueWidthCh}ch` }}>
+                          <div
+                            key={`${item.key}-${delta.label}`}
+                            className="grid items-baseline justify-center"
+                            style={{ gridTemplateColumns: `${deltaSideWidthCh}ch 0.9ch ${deltaSideWidthCh}ch` }}
+                          >
+                            <span className="inline-block text-right">
                               {delta.value}
                             </span>
-                            <span className="inline-block w-[2.6ch] text-left">{delta.label}</span>
+                            <span aria-hidden="true" />
+                            <span className="inline-block text-left">{delta.label}</span>
                           </div>
                         ))}
                       </div>

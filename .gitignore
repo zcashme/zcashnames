@@ -60,10 +60,6 @@ backup-latest-commit.patch
 beta-testers.json
 sql/
 
-
-# temporary internal preview QA page
-app/(site)/internal/link-previews/
-
 # codesearch local semantic index
 .codesearch.db
 

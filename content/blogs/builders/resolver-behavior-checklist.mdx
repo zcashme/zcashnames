@@ -1,0 +1,15 @@
+# Resolver Behavior Checklist
+
+Integration work moves faster when teams agree on the same resolver behavior before polishing the user interface.
+
+## Input handling
+
+Builders should normalize user input consistently so wallets and apps do not disagree about the same name.
+
+## Resolution output
+
+A resolved name should return enough structured information for both send flows and audit/debug tooling.
+
+## Failure states
+
+Timeouts, stale index data, and malformed responses need distinct handling so users are not told the wrong story.

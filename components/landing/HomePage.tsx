@@ -42,9 +42,17 @@ type Props = {
   stats: Stats;
   subtitle?: React.ReactNode;
   collapsed?: boolean;
+  actionLinkPosition?: "aboveStats" | "belowStats";
 };
 
-export default function HomePage({ form, actionLink, stats, subtitle, collapsed = false }: Props) {
+export default function HomePage({
+  form,
+  actionLink,
+  stats,
+  subtitle,
+  collapsed = false,
+  actionLinkPosition = "aboveStats",
+}: Props) {
   const phonePanelRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -93,10 +101,17 @@ export default function HomePage({ form, actionLink, stats, subtitle, collapsed 
         </div>
       </section>
 
-      <div className="relative z-[2] mt-2 -mb-4 flex justify-center">
-        {actionLink}
-      </div>
+      {actionLinkPosition === "aboveStats" ? (
+        <div className="relative z-[2] mt-2 -mb-4 flex justify-center">
+          {actionLink}
+        </div>
+      ) : null}
       <MarketStats stats={stats} />
+      {actionLinkPosition === "belowStats" ? (
+        <div className="relative z-[2] -mt-1 mb-8 flex justify-center sm:mb-10">
+          {actionLink}
+        </div>
+      ) : null}
       <PartnerReel />
       <HowItWorks />
       <FAQ />

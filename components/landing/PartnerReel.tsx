@@ -75,8 +75,8 @@ function WalletsLink() {
     <LandingActionLink
       proximityId="wallets-link"
       href="/beta/wallets"
-      filled
       label="Wallets"
+      showArrow={false}
       icon={
         <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
           <path d="M4.75 7.25A2.25 2.25 0 0 1 7 5h10.25A1.75 1.75 0 0 1 19 6.75v1.5H8.25A2.25 2.25 0 0 0 6 10.5v3A2.25 2.25 0 0 0 8.25 15.75H19v1.5A1.75 1.75 0 0 1 17.25 19H7A2.25 2.25 0 0 1 4.75 16.75v-9.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />

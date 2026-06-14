@@ -175,17 +175,6 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         themedIconSrc: themedCommunityIcon("sharekit"),
       },
       {
-        id: "referrals-dashboard",
-        name: "Referrals Dashboard",
-        label: "Campaign",
-        description:
-          "Enter a referral code to view referrals, projected rewards, and dashboard details.",
-        href: "/leaders/ref",
-        shareText: "Track ZcashNames referrals from the community dashboard.",
-        detail: "Referral code dashboard",
-        themedIconSrc: themedCommunityIcon("referrals-dashboard"),
-      },
-      {
         id: "namepost",
         name: "Address Me By My Name",
         label: "Campaign",
@@ -248,6 +237,17 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         shareText: "Follow the ZcashNames community leaderboard.",
         detail: "Community ranking",
         themedIconSrc: themedCommunityIcon("leaderboard"),
+      },
+      {
+        id: "referrals-dashboard",
+        name: "Referrals Dashboard",
+        label: "Rankings",
+        description:
+          "Enter a referral code to view referrals, projected rewards, and dashboard details.",
+        href: "/leaders/ref",
+        shareText: "Track ZcashNames referrals from the community dashboard.",
+        detail: "Referral code dashboard",
+        themedIconSrc: themedCommunityIcon("referrals-dashboard"),
       },
       {
         id: "explorer",
@@ -316,7 +316,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         label: "Company",
         description:
           "Follow the core docs and product resources as ZcashNames moves toward release.",
-        href: "/docs",
+        href: "/blogs/updates",
         shareText: "@ZcashNames blog updates are live. Follow along for product notes and resources.",
         detail: "Product resources",
         themedIconSrc: themedCommunityIcon("updates"),
@@ -327,7 +327,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         label: "Product",
         description:
           "Read pricing, rollout, and beta context for the current ZcashNames release phase.",
-        href: "/docs/learn/pricing",
+        href: "/blogs/launch",
         shareText: "@ZcashNames launch notes are live. Follow along for rollout updates.",
         detail: "Pricing and rollout context",
         themedIconSrc: themedCommunityIcon("launch-notes"),
@@ -338,7 +338,7 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         label: "Product",
         description:
           "Explore integration paths for wallets, explorers, apps, and ecosystem builders.",
-        href: "/docs/integrate",
+        href: "/blogs/builders",
         shareText: "@ZcashNames builder stories are live. Follow along for wallet, app, and integration updates.",
         detail: "Wallets, apps, and integrations",
         themedIconSrc: themedCommunityIcon("builder-stories"),

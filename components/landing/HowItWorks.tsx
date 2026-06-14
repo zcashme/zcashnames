@@ -176,37 +176,17 @@ function BenefitsBento() {
       onPointerLeave={proximity.handlePointerLeave}
     >
       {benefitGroups.map((group) => (
-        <article
+        <div
           key={group.title}
-          ref={(node) => proximity.register(`group-${group.title}`, node)}
-          className={`group relative overflow-hidden rounded-[30px] p-6 sm:p-7 ${group.span ?? "lg:col-span-6"}`}
-          style={{
-            border: "1px solid color-mix(in srgb, var(--fg-heading) 10%, var(--faq-border))",
-            background:
-              "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 72%, transparent), color-mix(in srgb, var(--faq-border) 14%, transparent))",
-            transform: "translateZ(0) scale(var(--prox-scale, 1))",
-            boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
-          }}
+          className={`${group.span ?? "lg:col-span-6"}`}
         >
-          <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-1"
-            style={{ background: group.accent }}
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none absolute -right-12 top-6 h-28 w-28 rounded-full opacity-25 blur-3xl transition-transform duration-300 group-hover:scale-110"
-            style={{ background: "var(--feature-heading-line-to)" }}
-            aria-hidden="true"
-          />
-          <div className="relative z-[1] mb-6 flex items-start justify-between gap-4">
-            <div>
-              <p className="mb-2 text-[0.78rem] font-semibold uppercase tracking-[0.22em]" style={{ color: "var(--fg-muted)" }}>
-                {group.title}
-              </p>
-              <p className="type-section-subtitle max-w-xl" style={{ color: "var(--fg-body)" }}>
-                {group.description}
-              </p>
-            </div>
+          <div className="mb-4 px-1">
+            <h3 className="type-kicker" style={{ color: "var(--fg-muted)" }}>
+              {group.title}
+            </h3>
+            <p className="mt-2 type-section-subtitle max-w-xl" style={{ color: "var(--fg-body)" }}>
+              {group.description}
+            </p>
           </div>
 
           <div className={`grid grid-cols-1 gap-4 ${group.title === "Sign with Zcash" ? "lg:grid-cols-3" : group.span === "lg:col-span-12" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
@@ -255,7 +235,7 @@ function BenefitsBento() {
               </div>
             ))}
           </div>
-        </article>
+        </div>
       ))}
     </div>
   );
@@ -283,98 +263,60 @@ export default function HowItWorks() {
         )}
 
         <div
-          className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-stretch"
+          className="grid grid-cols-1 gap-5 lg:grid-cols-12"
           onPointerMove={proximity.handlePointerMove}
           onPointerLeave={proximity.handlePointerLeave}
         >
-          {steps.map((step, index) => (
-            <div key={step.id} className="contents">
+          {steps.map((step) => (
+            <div key={step.id} className="lg:col-span-4">
+              <div className="mb-4 px-1">
+                <h3 className="type-kicker" style={{ color: "var(--fg-muted)" }}>
+                  {step.eyebrow}
+                </h3>
+                <p className="mt-2 type-section-subtitle max-w-xl" style={{ color: "var(--fg-body)" }}>
+                  {step.title}
+                </p>
+              </div>
+
               <div
                 ref={(node) => proximity.register(step.id, node)}
-                className="group relative overflow-hidden rounded-[30px] p-6 sm:p-7"
+                className="relative overflow-hidden rounded-2xl p-5"
                 style={{
-                  border: "1px solid color-mix(in srgb, var(--fg-heading) 10%, var(--faq-border))",
+                  border: "1px solid color-mix(in srgb, var(--fg-heading) 8%, var(--faq-border))",
                   background:
-                    "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 72%, transparent), color-mix(in srgb, var(--faq-border) 14%, transparent))",
+                    "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 38%, transparent), transparent)",
                   transform: "translateZ(0) scale(var(--prox-scale, 1))",
                   boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
                 }}
               >
                 <div
-                  className="pointer-events-none absolute inset-x-0 top-0 h-1"
-                  style={{ background: step.accent }}
+                  className="pointer-events-none absolute inset-0 opacity-25"
+                  style={{
+                    backgroundImage:
+                      "radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--feature-heading-line-to) 36%, transparent), transparent 48%)",
+                  }}
                   aria-hidden="true"
                 />
-                <div
-                  className="pointer-events-none absolute -right-12 top-6 h-28 w-28 rounded-full opacity-25 blur-3xl transition-transform duration-300 group-hover:scale-110"
-                  style={{ background: "var(--feature-heading-line-to)" }}
-                  aria-hidden="true"
-                />
-                <div className="relative z-[1] flex h-full flex-col">
-                  <div className="mb-6 flex items-start justify-between gap-4">
-                    <div>
-                      <p className="mb-2 text-[0.74rem] font-semibold uppercase tracking-[0.24em]" style={{ color: "var(--fg-muted)" }}>
-                        {step.eyebrow}
-                      </p>
-                      <h3 className="text-[clamp(1.45rem,2vw,1.9rem)] font-semibold tracking-[-0.04em]" style={{ color: "var(--fg-heading)" }}>
-                        {step.title}
-                      </h3>
-                    </div>
-                    <div
-                      className="shrink-0 rounded-full px-3 py-2 text-sm font-bold tracking-[0.18em]"
-                      style={{
-                        border: "1px solid color-mix(in srgb, var(--fg-heading) 10%, var(--faq-border))",
-                        background: "color-mix(in srgb, var(--feature-heading-line-from) 10%, transparent)",
-                        color: "var(--fg-heading)",
-                      }}
-                    >
+                <div className="relative z-[1]">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <h4 className="type-section-subtitle font-semibold" style={{ color: "var(--fg-heading)" }}>
                       {step.number}
-                    </div>
+                    </h4>
+                    <div
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{
+                        background: step.accent,
+                      }}
+                    />
                   </div>
-
                   <p
-                    className="type-section-subtitle max-w-[34ch] sm:max-w-[42ch] lg:max-w-[28ch]"
-                    style={{ color: "var(--fg-body)" }}
+                    className="type-section-subtitle"
+                    style={{ color: "var(--fg-muted)" }}
                   >
                     {step.description}
                   </p>
                 </div>
               </div>
-
-              {index < steps.length - 1 && (
-                <>
-                  <div className="hidden items-center justify-center lg:flex">
-                    <div
-                      className="flex h-12 w-12 items-center justify-center rounded-full"
-                      style={{
-                        border: "1px solid color-mix(in srgb, var(--fg-heading) 10%, var(--faq-border))",
-                        background:
-                          "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 65%, transparent), transparent)",
-                        color: "var(--fg-muted)",
-                      }}
-                    >
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M4 12h14m0 0-5-5m5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-center py-1 lg:hidden">
-                    <div
-                      className="flex h-12 w-12 items-center justify-center rounded-full"
-                      style={{
-                        border: "1px solid color-mix(in srgb, var(--fg-heading) 10%, var(--faq-border))",
-                        background:
-                          "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 65%, transparent), transparent)",
-                        color: "var(--fg-muted)",
-                      }}
-                    >
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M12 4v14m0 0-5-5m5 5 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
           ))}
         </div>

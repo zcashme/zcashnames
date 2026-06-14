@@ -77,7 +77,7 @@ export default function BetaInviteEmail({
           <Link href="https://zcashnames.com" style={{ color: "#d4d4d8", textDecoration: "underline" }}>
             https://zcashnames.com
           </Link>
-          , select Mainnet, and enter this access code:
+          , select Mainnet and enter this access code:
         </Text>
       </Section>
 
