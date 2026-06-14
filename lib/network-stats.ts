@@ -9,6 +9,11 @@ export type WaitlistStats = {
   waitlist: number;
   referred: number;
   rewardsPot: number;
+  deltas: {
+    waitlist: { day: number | null; week: number | null; month: number | null };
+    referred: { day: number | null; week: number | null; month: number | null };
+    rewardsPot: { day: number | null; week: number | null; month: number | null };
+  };
 };
 
 export type ChainStats = {
@@ -54,8 +59,8 @@ export async function getNamePricing(network: keyof typeof NETWORKS, nameLen: nu
 
 export async function getNetworkStats(mode: "waitlist" | "mainnet" | "testnet"): Promise<NetworkStats> {
   if (mode === "waitlist") {
-    const { waitlist, referred, rewardsPot } = await getWaitlistStats();
-    return { mode: "waitlist", waitlist, referred, rewardsPot };
+    const { waitlist, referred, rewardsPot, deltas } = await getWaitlistStats();
+    return { mode: "waitlist", waitlist, referred, rewardsPot, deltas };
   }
 
   return getChainStats(mode);

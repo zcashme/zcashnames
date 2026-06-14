@@ -93,11 +93,10 @@ export default function HomePage({ form, actionLink, stats, subtitle, collapsed 
         </div>
       </section>
 
-      <MarketStats stats={stats} />
-
-      <div className="relative z-[2] -mt-4 mb-2 flex justify-center">
+      <div className="relative z-[2] mt-2 -mb-4 flex justify-center">
         {actionLink}
       </div>
+      <MarketStats stats={stats} />
       <PartnerReel />
       <HowItWorks />
       <FAQ />

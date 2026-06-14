@@ -71,6 +71,23 @@ export interface LeadersData {
   stats: { waitlist: number; referred: number; rewardsPot: number };
 }
 
+export interface WaitlistStatDeltaWindow {
+  day: number | null;
+  week: number | null;
+  month: number | null;
+}
+
+export interface WaitlistStatsSnapshot {
+  waitlist: number;
+  referred: number;
+  rewardsPot: number;
+  deltas: {
+    waitlist: WaitlistStatDeltaWindow;
+    referred: WaitlistStatDeltaWindow;
+    rewardsPot: WaitlistStatDeltaWindow;
+  };
+}
+
 export interface DailyNewNameEntry {
   name: string;
   referral_code: string;
@@ -235,13 +252,82 @@ function buildWaitlistStatsFromData(
   };
 }
 
-export async function getWaitlistStats(): Promise<{ waitlist: number; referred: number; rewardsPot: number }> {
+function getPointAtOrBefore(points: TimeSeriesPoint[], targetDate: string): TimeSeriesPoint | null {
+  for (let i = points.length - 1; i >= 0; i -= 1) {
+    if (points[i].date <= targetDate) return points[i];
+  }
+
+  return null;
+}
+
+function shiftUtcDate(date: string, days: number): string {
+  const ts = new Date(`${date}T00:00:00.000Z`).getTime();
+  if (!Number.isFinite(ts)) return date;
+  return new Date(ts + days * DAY_MS).toISOString().slice(0, 10);
+}
+
+function computeWaitlistStatDeltas(points: TimeSeriesPoint[], current: {
+  waitlist: number;
+  referred: number;
+  rewardsPot: number;
+}): WaitlistStatsSnapshot["deltas"] {
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterdayPoint = getPointAtOrBefore(points, shiftUtcDate(today, -1));
+  const lastWeekPoint = getPointAtOrBefore(points, shiftUtcDate(today, -7));
+  const lastMonthPoint = getPointAtOrBefore(points, shiftUtcDate(today, -30));
+
+  return {
+    waitlist: {
+      day: yesterdayPoint ? current.waitlist - yesterdayPoint.total : null,
+      week: lastWeekPoint ? current.waitlist - lastWeekPoint.total : null,
+      month: lastMonthPoint ? current.waitlist - lastMonthPoint.total : null,
+    },
+    referred: {
+      day: yesterdayPoint ? current.referred - yesterdayPoint.referred : null,
+      week: lastWeekPoint ? current.referred - lastWeekPoint.referred : null,
+      month: lastMonthPoint ? current.referred - lastMonthPoint.referred : null,
+    },
+    rewardsPot: {
+      day: yesterdayPoint ? roundZec(current.rewardsPot - yesterdayPoint.rewardsPot) : null,
+      week: lastWeekPoint ? roundZec(current.rewardsPot - lastWeekPoint.rewardsPot) : null,
+      month: lastMonthPoint ? roundZec(current.rewardsPot - lastMonthPoint.rewardsPot) : null,
+    },
+  };
+}
+
+export async function getWaitlistStats(): Promise<WaitlistStatsSnapshot> {
   try {
     const data = await fetchAllWaitlistRows();
-    if (!data) return { waitlist: 0, referred: 0, rewardsPot: 0 };
-    return buildWaitlistStatsFromData(data, toWaitlistReferralRows(data));
+    if (!data) {
+      return {
+        waitlist: 0,
+        referred: 0,
+        rewardsPot: 0,
+        deltas: {
+          waitlist: { day: null, week: null, month: null },
+          referred: { day: null, week: null, month: null },
+          rewardsPot: { day: null, week: null, month: null },
+        },
+      };
+    }
+    const rows = toWaitlistReferralRows(data);
+    const current = buildWaitlistStatsFromData(data, rows);
+    const timeSeries = buildLeadersTimeSeriesFromData(data, rows);
+    return {
+      ...current,
+      deltas: computeWaitlistStatDeltas(timeSeries, current),
+    };
   } catch {
-    return { waitlist: 0, referred: 0, rewardsPot: 0 };
+    return {
+      waitlist: 0,
+      referred: 0,
+      rewardsPot: 0,
+      deltas: {
+        waitlist: { day: null, week: null, month: null },
+        referred: { day: null, week: null, month: null },
+        rewardsPot: { day: null, week: null, month: null },
+      },
+    };
   }
 }
 

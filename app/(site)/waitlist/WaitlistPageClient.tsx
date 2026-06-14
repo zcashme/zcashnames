@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import Link from "next/link";
-import { usePointerProximity } from "@/components/hooks/usePointerProximity";
+import LandingActionLink from "@/components/landing/LandingActionLink";
 import { VerifiedModal } from "@/components/landing/VerifiedModal";
 import { useWaitlistVerification } from "@/components/hooks/useWaitlistVerification";
 import HomePage from "@/components/landing/HomePage";
@@ -10,23 +9,12 @@ import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import type { NetworkStats as Stats } from "@/lib/network-stats";
 
 function LeaderboardLink() {
-  const proximity = usePointerProximity<HTMLAnchorElement>({
-    radius: 170,
-    maxScaleBoost: 0.06,
-    maxShadowOpacity: 0.14,
-  });
-
   return (
-    <div onPointerMove={proximity.handlePointerMove} onPointerLeave={proximity.handlePointerLeave}>
-      <Link
-        ref={(node) => proximity.register("leaderboard-link", node)}
-        href="/leaders"
-        className="inline-flex items-center gap-2 rounded-full border border-[var(--home-result-link-border)] bg-transparent px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform,background-color,filter,box-shadow] duration-[140ms] hover:bg-[var(--home-result-link-hover-bg)]"
-        style={{
-          transform: "translateZ(0) scale(var(--prox-scale, 1))",
-          boxShadow: "0 14px 28px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
-        }}
-      >
+    <LandingActionLink
+      proximityId="leaderboard-link"
+      href="/leaders"
+      label="Leaderboard"
+      icon={
         <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
           <path d="M8 21L12 17L16 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M8 21V14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -34,9 +22,29 @@ function LeaderboardLink() {
           <circle cx="12" cy="10" r="6" stroke="currentColor" strokeWidth="1.5" />
           <path d="M12 6.5L13.1 8.8L15.6 9.1L13.8 10.8L14.2 13.3L12 12.1L9.8 13.3L10.2 10.8L8.4 9.1L10.9 8.8L12 6.5Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
         </svg>
-        {"Leaderboard \u2192"}
-      </Link>
-    </div>
+      }
+    />
+  );
+}
+
+function DashboardLink() {
+  return (
+    <LandingActionLink
+      proximityId="dashboard-link"
+      href="/community"
+      label="Dashboard"
+      arrowDirection="left"
+      arrowPosition="left"
+      iconPosition="right"
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
+          <circle cx="6.5" cy="7" r="1.5" fill="currentColor" />
+          <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" />
+          <circle cx="12" cy="17.5" r="1.5" fill="currentColor" />
+          <path d="M7.9 7.5L10.7 15.8M16.1 7L13.3 15.8M8 7.2H16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      }
+    />
   );
 }
 
@@ -91,7 +99,12 @@ export default function WaitlistPageClient({ stats }: { stats: Stats }) {
 
       <HomePage
         form={<WaitlistEntryForm onConfirm={handleConfirm} onReset={handleReset} />}
-        actionLink={<LeaderboardLink />}
+        actionLink={
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <DashboardLink />
+            <LeaderboardLink />
+          </div>
+        }
         stats={stats}
         subtitle="Be first to claim a name you can use, hold, or sell."
         collapsed={waitlistConfirmed}

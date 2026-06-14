@@ -15,6 +15,7 @@ type BenefitGroup = {
   description: string;
   items: Benefit[];
   span?: string;
+  accent: string;
 };
 
 type Step = {
@@ -64,6 +65,8 @@ const benefitGroups: BenefitGroup[] = [
     title: "Easy-to-use",
     description: "Payments without addresses",
     span: "lg:col-span-6",
+    accent:
+      "linear-gradient(135deg, color-mix(in srgb, var(--feature-heading-line-from) 82%, transparent), color-mix(in srgb, var(--feature-heading-line-to) 72%, transparent))",
     items: [
       {
         title: "Send to simple names",
@@ -84,6 +87,8 @@ const benefitGroups: BenefitGroup[] = [
     title: "Cryptographic Ownership",
     description: "Your Zcash name is an asset.",
     span: "lg:col-span-6",
+    accent:
+      "linear-gradient(135deg, color-mix(in srgb, var(--feature-heading-line-to) 82%, transparent), color-mix(in srgb, var(--feature-heading-line-from) 58%, transparent))",
     items: [
       {
         title: "On-chain and tamper-resistant",
@@ -101,9 +106,11 @@ const benefitGroups: BenefitGroup[] = [
     ],
   },
   {
-    title: "Portable Identity ",
+    title: "Sign with Zcash",
     description: "Your Zcash name can be used across apps.",
     span: "lg:col-span-12",
+    accent:
+      "linear-gradient(135deg, color-mix(in srgb, var(--feature-heading-line-from) 58%, transparent), color-mix(in srgb, var(--feature-heading-line-to) 88%, transparent))",
     items: [
       {
         title: "Private by default",
@@ -113,6 +120,10 @@ const benefitGroups: BenefitGroup[] = [
         title: "Portable identity",
         description: "Use your name across apps like Zcash.me.",
         soon: true,
+      },
+      {
+        title: "No Connected Wallets",
+        description: "Enter the passcode sent to your address to confirm name actions.",
       },
     ],
   },
@@ -152,7 +163,7 @@ const sectionHeading = (
 );
 
 function BenefitsBento() {
-  const proximity = usePointerProximity<HTMLDivElement>({
+  const proximity = usePointerProximity<HTMLElement>({
     radius: 180,
     maxScaleBoost: 0.03,
     maxShadowOpacity: 0.18,
@@ -167,21 +178,23 @@ function BenefitsBento() {
       {benefitGroups.map((group) => (
         <article
           key={group.title}
-          className={`relative overflow-hidden rounded-[28px] p-6 sm:p-7 ${group.span ?? "lg:col-span-6"}`}
+          ref={(node) => proximity.register(`group-${group.title}`, node)}
+          className={`group relative overflow-hidden rounded-[30px] p-6 sm:p-7 ${group.span ?? "lg:col-span-6"}`}
           style={{
             border: "1px solid color-mix(in srgb, var(--fg-heading) 10%, var(--faq-border))",
             background:
-              "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 68%, transparent), color-mix(in srgb, var(--faq-border) 18%, transparent))",
-            boxShadow: "0 24px 60px rgba(0, 0, 0, 0.10)",
+              "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 72%, transparent), color-mix(in srgb, var(--faq-border) 14%, transparent))",
+            transform: "translateZ(0) scale(var(--prox-scale, 1))",
+            boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
           }}
         >
           <div
-            className="pointer-events-none absolute inset-x-6 top-0 h-px"
-            style={{ background: "linear-gradient(90deg, transparent, var(--feature-heading-line-to), transparent)" }}
+            className="pointer-events-none absolute inset-x-0 top-0 h-1"
+            style={{ background: group.accent }}
             aria-hidden="true"
           />
           <div
-            className="pointer-events-none absolute -right-14 top-[-40px] h-36 w-36 rounded-full opacity-30 blur-3xl"
+            className="pointer-events-none absolute -right-12 top-6 h-28 w-28 rounded-full opacity-25 blur-3xl transition-transform duration-300 group-hover:scale-110"
             style={{ background: "var(--feature-heading-line-to)" }}
             aria-hidden="true"
           />
@@ -196,7 +209,7 @@ function BenefitsBento() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className={`grid grid-cols-1 gap-4 ${group.title === "Sign with Zcash" ? "lg:grid-cols-3" : group.span === "lg:col-span-12" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
             {group.items.map((b) => (
               <div
                 key={b.title}
@@ -249,7 +262,7 @@ function BenefitsBento() {
 }
 
 export default function HowItWorks() {
-  const proximity = usePointerProximity<HTMLDivElement>({
+  const proximity = usePointerProximity<HTMLElement>({
     radius: 180,
     maxScaleBoost: 0.035,
     maxShadowOpacity: 0.2,

@@ -1,18 +1,37 @@
-//
-// Root layout — intentionally passes children through without any wrapper.
-//
-// Next.js requires a root layout, but because we have two separate route
-// groups with different HTML shells (the marketing site and the docs site),
-// the actual <html>/<body>/<head> tags live in each group's layout:
-//   - app/(site)/layout.tsx — marketing site (Manrope + Dancing Script fonts)
-//   - app/(docs)/layout.tsx   — docs site (Manrope only, Nextra theme)
-//
-// This pass-through lets both groups coexist under one Next.js app.
-//
+import { Manrope, Dancing_Script, Inter } from "next/font/google";
+import "./globals.css";
+
+const uiSans = Manrope({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-ui",
+  display: "swap",
+});
+
+const uiCursive = Dancing_Script({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-cursive",
+  display: "swap",
+});
+
+const brandSans = Inter({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-brand",
+  display: "swap",
+});
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${uiSans.variable} ${uiCursive.variable} ${brandSans.variable}`}>
+        {children}
+      </body>
+    </html>
+  );
 }
