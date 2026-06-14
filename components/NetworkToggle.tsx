@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useZns, type ZnsMode } from "@/components/hooks/useZns";
 import { verifyBetaPassword } from "@/lib/beta/actions";
 import BetaPasswordModal from "@/components/beta/BetaPasswordModal";
 
-const MODES: ZnsMode[] = ["mainnet", "testnet", "waitlist"];
+const MODES: ZnsMode[] = ["mainnet", "waitlist"];
 type BetaMode = Exclude<ZnsMode, "waitlist">;
 
 export default function NetworkToggle() {
@@ -18,9 +18,15 @@ export default function NetworkToggle() {
   const onWaitlist = pathname === "/waitlist";
   const onHome = pathname === "/";
 
+  useEffect(() => {
+    if (!onWaitlist && zns.mode === "testnet") {
+      setMode("mainnet");
+    }
+  }, [onWaitlist, setMode, zns.mode]);
+
   if (!onWaitlist && !onHome) return null;
 
-  const activeMode: ZnsMode = onWaitlist ? "waitlist" : zns.mode;
+  const activeMode: ZnsMode = onWaitlist ? "waitlist" : zns.mode === "testnet" ? "mainnet" : zns.mode;
 
   function switchTo(mode: BetaMode) {
     setMode(mode);

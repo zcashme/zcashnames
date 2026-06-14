@@ -235,7 +235,7 @@ export default function BetaInstructionsBrief() {
       <section id="submitting-feedback">
         <h2 style={h2}>The Feedback Panel</h2>
         <p style={p}>
-          Once you have unlocked Mainnet or Testnet on the home page, a floating{" "}
+          Once you have unlocked Mainnet on the home page, a floating{" "}
           <strong>Submit Feedback</strong> button stays pinned to the bottom-right corner. Clicking it
           opens the reporting panel while keeping the site usable beside it. The chevron{" "}
           <InlineCollapseChevron /> collapses the panel again.

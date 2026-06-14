@@ -26,8 +26,7 @@ export function InlinePreview({ children }: { children: ReactNode }) {
 export function InlineNetworkToggle() {
   const tabs = [
     { key: "mainnet", label: "Mainnet" },
-    { key: "testnet", label: "Testnet", active: true },
-    { key: "waitlist", label: "Waitlist" },
+    { key: "waitlist", label: "Waitlist", active: true },
   ];
 
   return (
