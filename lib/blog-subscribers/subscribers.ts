@@ -104,11 +104,12 @@ export async function submitBlogSubscription(input: {
     return { status: "error", error: GENERIC_ERROR };
   }
 
+  const subscriptionSeries = uniqueSeriesValues as BlogSubscriptionSlug[];
   const submittedSeries: BlogSubscriptionSlug[] = [];
   const resentSeries: BlogSubscriptionSlug[] = [];
   const alreadySeries: BlogSubscriptionSlug[] = [];
 
-  for (const seriesValue of uniqueSeriesValues) {
+  for (const seriesValue of subscriptionSeries) {
     let existing = await findSubscription(email, seriesValue);
     const hadExistingRow = Boolean(existing);
 
