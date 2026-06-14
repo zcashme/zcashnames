@@ -160,17 +160,6 @@ function walletDisplay(context: WalletFaqContext): string {
   return context.brand.displayName;
 }
 
-function supportedVersionPhrase(context: WalletFaqContext): string {
-  return context.capabilities.hasMixedResolveName ? "on supported versions" : "in the current beta";
-}
-
-function listWithAnd(items: string[]): string {
-  if (items.length === 0) return "";
-  if (items.length === 1) return items[0] ?? "";
-  if (items.length === 2) return `${items[0]} and ${items[1]}`;
-  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
-}
-
 function purchaseMethods(context: WalletFaqContext): string[] {
   const methods: string[] = [];
   if (context.capabilities.supportsScanUri) methods.push("scan the payment QR");
@@ -194,18 +183,17 @@ const BASE_FAQ_TEMPLATE: readonly WalletFaqSectionTemplate[] = [
             <>
               <p>
                 This beta retests the core ZcashNames marketplace and wallet flows on Zcash mainnet
-                and continues the rollout of non-custodial name transfer.
+                and adds non-custodial name transfer to the broader launch path.
               </p>
               <p>
                 Testers may see flows for claiming unassigned names, updating the address tied to a
-                name, listing a name for sale, buying a listed name, and viewing personal name data
-                where supported.
+                name, listing a name for sale, buying a listed name, and viewing their personal name
+                collection.
               </p>
               {capabilities.supportsResolveName ? (
                 <p>
-                  In {walletDisplay(context)}, the current focus includes in-wallet name resolution{" "}
-                  {supportedVersionPhrase(context)}
-                  {capabilities.supportsReverseLookup ? " and reverse lookup where available." : "."}
+                  For most mobile wallets, the current focus is helping users understand which address a
+                  name belongs to and sending ZEC to those names.
                 </p>
               ) : capabilities.supportsAnyNameActions ? (
                 <p>
@@ -238,13 +226,13 @@ const BASE_FAQ_TEMPLATE: readonly WalletFaqSectionTemplate[] = [
             return (
               <>
                 <p>
-                  Open your ZEC wallet in {walletDisplay(context)} and enter the name in the
-                  recipient field on supported versions.
+                  Open the ZEC wallet in {walletDisplay(context)}, use the Send flow, and enter a Zcash
+                  name in the recipient field.
                 </p>
                 <p>
                   Use the full name with the suffix, such as <code>alice.zcash</code> or{" "}
-                  <code>alice.zec</code>. {walletDisplay(context)} can resolve the name to a
-                  destination address before you confirm when that flow is supported.
+                  <code>alice.zec</code>. {walletDisplay(context)} should resolve the name to a
+                  destination address before you confirm the transaction.
                 </p>
                 {capabilities.supportsReverseLookup ? (
                   <p>
@@ -293,30 +281,51 @@ const BASE_FAQ_TEMPLATE: readonly WalletFaqSectionTemplate[] = [
     entries: [
       {
         id: "purchase-flow",
-        question: "How does the purchase or claim flow work with this wallet?",
+        question: "What is the wallet's intended user flow?",
         answer: (context) => {
           const methods = purchaseMethods(context);
           return (
             <>
               <p>
-                To claim or buy a name, the user sends a specific memo and amount to the registrar
-                wallet. ZcashNames provides this as a ZIP-321 payment request.
+                The user must send a specific memo and amount to the registrar wallet to perform a
+                name action. We prepare these requests as Universal Resource Identifier based on
+                ZIP321.
               </p>
               {methods.length > 0 ? (
                 <>
                   <p>
-                    With {walletDisplay(context)}, the best supported methods are {listWithAnd(methods)}.
+                    When using a wallet to complete Zcash transaction and perform name actions, the
+                    methods we recommend, in order of most-recommended to least-recommended, are:
                   </p>
+                  <ul className="list-disc pl-5">
+                    {context.capabilities.supportsScanUri ? <li>Scan the QR code directly.</li> : null}
+                    {context.capabilities.supportsTapUri ? (
+                      <li>On mobile, tap the QR or payment link to open the wallet if the device supports it.</li>
+                    ) : null}
+                    {context.capabilities.supportsUploadQr ? (
+                      <li>Save or screenshot the QR and upload it into your wallet if scanning is not convenient.</li>
+                    ) : null}
+                    {context.capabilities.supportsPasteUri ? (
+                      <li>Copy and paste the ZIP-321 URI into the ZEC address field so the wallet can parse it across recipient, amount, and memo fields.</li>
+                    ) : null}
+                    <li>As a fallback, copy the address, memo, and amount into the wallet manually.</li>
+                  </ul>
                   <p>
-                    If a direct wallet flow is not available on the user&rsquo;s version, they can
-                    still fall back to copying the address, memo, and amount manually.
+                    All wallets can perform name actions using at least one or more of the above
+                    methods.
                   </p>
                 </>
               ) : (
-                <p>
-                  If the wallet does not expose direct QR or URI handling for this flow, the user
-                  can still complete the request by copying the address, memo, and amount manually.
-                </p>
+                <>
+                  <p>
+                    If the wallet does not expose direct QR or URI handling for this flow, the user
+                    can still complete the request by copying the address, memo, and amount manually.
+                  </p>
+                  <p>
+                    All wallets can perform name actions using at least one or more of the above
+                    methods.
+                  </p>
+                </>
               )}
             </>
           );
@@ -460,61 +469,6 @@ const BASE_FAQ_TEMPLATE: readonly WalletFaqSectionTemplate[] = [
 ] as const;
 
 const EDGE_ENTRY_OVERRIDES: WalletFaqOverrideMap = {
-  "current-features": {
-    answer: () => (
-      <>
-        <p>
-          This beta retests the core ZcashNames marketplace and wallet flows on Zcash mainnet and
-          adds non-custodial name transfer to the broader launch path.
-        </p>
-        <p>
-          Testers may see flows for claiming unassigned names, updating the address tied to a name,
-          listing a name for sale, buying a listed name, and viewing their personal name
-          collection.
-        </p>
-        <p>
-          Within Edge Wallet on mobile, the focus is on in-wallet name resolution and reverse
-          lookup so users can send to names and understand which name an address belongs to.
-        </p>
-      </>
-    ),
-  },
-  "using-name": {
-    question: "How do I use a purchased name inside Edge Wallet?",
-    answer: () => (
-      <>
-        <p>Open your ZEC wallet in Edge, tap Send, and enter the name in the recipient field.</p>
-        <p>
-          Use the full name with the suffix, such as <code>alice.zcash</code> or{" "}
-          <code>alice.zec</code>. Edge will resolve the name to a destination address before you
-          confirm the transaction.
-        </p>
-      </>
-    ),
-  },
-  "purchase-flow": {
-    question: "If name purchases still begin outside Edge, what is the intended user flow?",
-    answer: () => (
-      <>
-        <p>
-          To claim or buy a name, the user sends a specific memo and amount to the registrar
-          wallet. ZcashNames provides this as a ZIP-321 payment request.
-        </p>
-        <p>For Edge users, the preferred order is:</p>
-        <ul className="list-disc pl-5">
-          <li>Scan the QR code directly from Edge.</li>
-          <li>On mobile, tap the QR or payment link to open the wallet if the device supports it.</li>
-          <li>Save or screenshot the QR and upload it into Edge if scanning is more convenient.</li>
-          <li>Copy and paste the ZIP-321 URI into the ZEC address field so Edge can parse it.</li>
-          <li>As a fallback, copy the address, memo, and amount into the wallet manually.</li>
-        </ul>
-        <p>
-          A future beta may expose more of this marketplace flow directly inside partner wallet
-          experiences.
-        </p>
-      </>
-    ),
-  },
   "beta-access": {
     question: "How do I get access to the Edge beta?",
     answer: () => (
