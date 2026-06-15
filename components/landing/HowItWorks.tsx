@@ -147,19 +147,14 @@ const sectionHeading = (
 );
 
 const rowHeading = (title: string, prefix?: ReactNode) => (
-  <div className="mb-4 flex items-center justify-center gap-4 px-1">
-    <div
-      className="h-px flex-1"
-      style={{ background: "linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--fg-muted) 32%, transparent) 100%)" }}
-      aria-hidden="true"
-    />
-    <div className="shrink-0 flex items-center gap-3">
+  <div className="mb-4 flex items-center gap-4 px-1">
+    <div className="shrink-0 flex items-center gap-3 text-left">
       {prefix ? (
         <span className="type-kicker" style={{ color: "var(--fg-heading)" }}>
           {prefix}
         </span>
       ) : null}
-      <h3 className="type-kicker text-center" style={{ color: "var(--section-title-accent)" }}>
+      <h3 className="type-kicker text-left" style={{ color: "var(--section-title-accent)" }}>
         {title}
       </h3>
     </div>
@@ -172,7 +167,7 @@ const rowHeading = (title: string, prefix?: ReactNode) => (
 );
 
 const groupIntroClassName = "px-1 pt-3 pb-6";
-const groupIntroTextClassName = "type-section-subtitle max-w-xl text-center";
+const groupIntroTextClassName = "type-section-subtitle max-w-xl text-left";
 
 function BenefitsBento() {
   const proximity = usePointerProximity<HTMLElement>({
@@ -194,7 +189,7 @@ function BenefitsBento() {
         >
           {rowHeading(group.title)}
           <div className={groupIntroClassName}>
-            <p className={`${groupIntroTextClassName} mx-auto`} style={{ color: "var(--fg-body)" }}>
+            <p className={groupIntroTextClassName} style={{ color: "var(--fg-body)" }}>
               {group.description}
             </p>
           </div>
