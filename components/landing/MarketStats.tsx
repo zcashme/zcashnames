@@ -22,10 +22,13 @@ function formatSignedCount(value: number | null): string {
   return `${value > 0 ? "+" : ""}${value.toLocaleString()}`;
 }
 
-function formatSignedZecInteger(value: number | null): string {
+function formatSignedZecDecimal(value: number | null): string {
   if (value === null) return "--";
-  const truncated = value < 0 ? Math.ceil(value) : Math.floor(value);
-  return `${truncated > 0 ? "+" : ""}${truncated.toLocaleString()}`;
+  const formatted = Math.abs(value).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${value > 0 ? "+" : value < 0 ? "-" : ""}${formatted}`;
 }
 
 function buildItems(stats: NetworkStats): StatItem[] {
@@ -54,9 +57,9 @@ function buildItems(stats: NetworkStats): StatItem[] {
         label: "Rewards",
         value: `${Math.floor(stats.rewardsPot).toLocaleString()} ZEC`,
         helpText: "Estimated total rewards to be issued when names are purchased during early access.",
-        deltaDayValue: formatSignedZecInteger(stats.deltas.rewardsPot.day),
-        deltaWeekValue: formatSignedZecInteger(stats.deltas.rewardsPot.week),
-        deltaMonthValue: formatSignedZecInteger(stats.deltas.rewardsPot.month),
+        deltaDayValue: formatSignedZecDecimal(stats.deltas.rewardsPot.day),
+        deltaWeekValue: formatSignedZecDecimal(stats.deltas.rewardsPot.week),
+        deltaMonthValue: formatSignedZecDecimal(stats.deltas.rewardsPot.month),
       },
     ];
   }

@@ -40,7 +40,7 @@ export default function Header() {
 
           <div />
 
-          <div className="flex min-w-0 items-center justify-end gap-2">
+          <div className="flex min-w-0 items-center justify-end gap-4">
             <NetworkToggle />
             <ThemeToggle />
           </div>
