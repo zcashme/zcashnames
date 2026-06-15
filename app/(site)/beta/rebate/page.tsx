@@ -31,7 +31,7 @@ export default async function BetaRebatePage() {
         </span>
         <h1
           className="text-3xl font-bold tracking-tight md:text-4xl"
-          style={{ color: "var(--fg-heading)", marginBottom: "0.75rem" }}
+          style={{ color: "var(--announce-bar-fg)", marginBottom: "0.75rem" }}
         >
           Names are temporary. Claim yours.
         </h1>
