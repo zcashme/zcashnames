@@ -307,12 +307,6 @@ export default function HowItWorks() {
                   aria-hidden="true"
                 />
                 <div className="relative z-[1]">
-                  <div
-                    className="mb-3 h-2.5 w-2.5 rounded-full"
-                    style={{
-                      background: step.accent,
-                    }}
-                  />
                   <p
                     className="type-section-subtitle"
                     style={{ color: "var(--fg-muted)" }}

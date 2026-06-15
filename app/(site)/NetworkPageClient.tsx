@@ -11,7 +11,6 @@ function ExplorerLink({ network }: { network: "mainnet" | "testnet" }) {
     <LandingActionLink
       proximityId="explorer-link"
       href={network === "testnet" ? "/explorer?env=testnet" : "/explorer"}
-      filled
       label="Explorer"
       showArrow={false}
       icon={
