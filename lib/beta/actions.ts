@@ -37,7 +37,7 @@ import {
 import { cookieOptions } from "@/lib/cookie";
 
 const FEEDBACK_BUCKET = "beta-feedback";
-const REBATE_BUCKET = "beta-rebate-attachments";
+const REFUND_BUCKET = "beta-refund-attachments";
 const FEEDBACK_PROGRAM = "v2";
 
 // ---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ export async function getCurrentTesterPreferredWalletVariantId(): Promise<Wallet
   return readPreferredWalletVariantId(data.planned_wallet, data.planned_wallets_detail);
 }
 
-export interface BetaRebateDefaults {
+export interface BetaRefundDefaults {
   identifier: string;
   displayName: string | null;
   accessCode: string | null;
@@ -137,7 +137,7 @@ export interface BetaRebateDefaults {
   contactEmail: string | null;
 }
 
-interface ResolvedRebateWallet {
+interface ResolvedRefundWallet {
   walletLabel: string;
   walletDevice: WalletDeviceChoice;
   walletSubcategory: WalletSubcategory | "";
@@ -146,7 +146,7 @@ interface ResolvedRebateWallet {
   walletVariantId: WalletVariantId | null;
 }
 
-function defaultRebateWallet(): ResolvedRebateWallet {
+function defaultRefundWallet(): ResolvedRefundWallet {
   return {
     walletLabel: "",
     walletDevice: "not_sure",
@@ -170,10 +170,10 @@ function preferredWalletDetailRow(plannedWalletsDetail: unknown): Record<string,
   return firstRow && typeof firstRow === "object" ? (firstRow as Record<string, unknown>) : null;
 }
 
-function resolvePreferredRebateWallet(
+function resolvePreferredRefundWallet(
   plannedWallet: unknown,
   plannedWalletsDetail: unknown,
-): ResolvedRebateWallet {
+): ResolvedRefundWallet {
   const walletVariantId = readPreferredWalletVariantId(plannedWallet, plannedWalletsDetail);
   if (walletVariantId) {
     const variant = getWalletVariant(walletVariantId);
@@ -190,7 +190,7 @@ function resolvePreferredRebateWallet(
   }
 
   const detailRow = preferredWalletDetailRow(plannedWalletsDetail);
-  if (!detailRow) return defaultRebateWallet();
+  if (!detailRow) return defaultRefundWallet();
 
   const deviceRaw = typeof detailRow.device === "string" ? detailRow.device.trim() : "";
   const device: WalletDeviceChoice = isWalletDeviceChoice(deviceRaw) ? deviceRaw : "not_sure";
@@ -236,10 +236,10 @@ function resolvePreferredRebateWallet(
     };
   }
 
-  return defaultRebateWallet();
+  return defaultRefundWallet();
 }
 
-function parseSubmittedRebateWallet(formData: FormData):
+function parseSubmittedRefundWallet(formData: FormData):
   | { error: string }
   | { walletLabel: string; walletVariantId: WalletVariantId | null } {
   const deviceRaw = String(formData.get("wallet_device") ?? "").trim();
@@ -295,13 +295,13 @@ function parseSubmittedRebateWallet(formData: FormData):
   };
 }
 
-export async function getCurrentBetaRebateDefaults(): Promise<BetaRebateDefaults | null> {
+export async function getCurrentBetaRefundDefaults(): Promise<BetaRefundDefaults | null> {
   const session = await readCurrentBetaAccessSession();
   const stage = (await readCurrentStage()) ?? "mainnet";
 
   if (!session) return null;
   if (session.kind === "shared") {
-    const walletDefaults = defaultRebateWallet();
+    const walletDefaults = defaultRefundWallet();
     return {
       identifier: session.testerId,
       displayName: session.testerId,
@@ -319,7 +319,7 @@ export async function getCurrentBetaRebateDefaults(): Promise<BetaRebateDefaults
 
   const tester = session.tester;
   if (tester.cohort !== "v2") {
-    const walletDefaults = defaultRebateWallet();
+    const walletDefaults = defaultRefundWallet();
     return {
       identifier: tester.id,
       displayName: tester.displayName,
@@ -342,11 +342,11 @@ export async function getCurrentBetaRebateDefaults(): Promise<BetaRebateDefaults
     .maybeSingle();
 
   if (error || !data) {
-    console.error("[beta-rebate] default lookup failed:", error);
+    console.error("[beta-refund] default lookup failed:", error);
     return null;
   }
 
-  const preferredWallet = resolvePreferredRebateWallet(data.planned_wallet, data.planned_wallets_detail);
+  const preferredWallet = resolvePreferredRefundWallet(data.planned_wallet, data.planned_wallets_detail);
 
   return {
     identifier: tester.id,
@@ -385,7 +385,7 @@ export type FeedbackResult =
 const MAX_FIELD_LEN = 4000;
 const MAX_SCREENSHOTS = 5;
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
-const MAX_REBATE_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_REFUND_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 
 function sanitizeFilename(name: string): string {
   // Strip path separators + anything weird, keep extension.
@@ -518,11 +518,11 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
   return { ok: true };
 }
 
-export type BetaRebateResult =
+export type BetaRefundResult =
   | { ok: true }
   | { ok: false; error: string };
 
-export async function submitBetaRebateClaim(formData: FormData): Promise<BetaRebateResult> {
+export async function submitBetaRefundClaim(formData: FormData): Promise<BetaRefundResult> {
   const session = await readCurrentBetaAccessSession();
   if (!session) {
     return { ok: false, error: "Sign in to the beta first." };
@@ -555,7 +555,7 @@ export async function submitBetaRebateClaim(formData: FormData): Promise<BetaReb
     return { ok: false, error: "Transaction ID is required." };
   }
 
-  const parsedWallet = parseSubmittedRebateWallet(formData);
+  const parsedWallet = parseSubmittedRefundWallet(formData);
   if ("error" in parsedWallet) return { ok: false, error: parsedWallet.error };
 
   for (const [fieldName, value] of [["address", address], ["txid", txid], ["wallet", parsedWallet.walletLabel], ["notes", notes]] as const) {
@@ -567,7 +567,7 @@ export async function submitBetaRebateClaim(formData: FormData): Promise<BetaReb
   if (!attachment.type.startsWith("image/")) {
     return { ok: false, error: "Attachment must be an image." };
   }
-  if (attachment.size > MAX_REBATE_ATTACHMENT_BYTES) {
+  if (attachment.size > MAX_REFUND_ATTACHMENT_BYTES) {
     return { ok: false, error: "Attachment must be under 5 MB." };
   }
 
@@ -583,7 +583,7 @@ export async function submitBetaRebateClaim(formData: FormData): Promise<BetaReb
       .eq("id", tester.id)
       .maybeSingle();
     if (error || !data) {
-      console.error("[beta-rebate] tester lookup failed:", error);
+      console.error("[beta-refund] tester lookup failed:", error);
       return { ok: false, error: "Couldn't load your beta profile." };
     }
     identifier = tester.id;
@@ -592,21 +592,21 @@ export async function submitBetaRebateClaim(formData: FormData): Promise<BetaReb
     contactEmail = typeof data.contact_email === "string" ? data.contact_email : null;
   }
 
-  const rebateId = randomUUID();
-  const attachmentPath = `${identifier}/${rebateId}/${sanitizeFilename(attachment.name)}`;
-  const { error: uploadError } = await db.storage.from(REBATE_BUCKET).upload(attachmentPath, attachment, {
+  const refundId = randomUUID();
+  const attachmentPath = `${identifier}/${refundId}/${sanitizeFilename(attachment.name)}`;
+  const { error: uploadError } = await db.storage.from(REFUND_BUCKET).upload(attachmentPath, attachment, {
     cacheControl: "3600",
     upsert: false,
     contentType: attachment.type,
   });
   if (uploadError) {
-    console.error("[beta-rebate] storage upload failed:", uploadError);
+    console.error("[beta-refund] storage upload failed:", uploadError);
     return { ok: false, error: "Couldn't upload the picture. Try again." };
   }
 
-  const { data: publicAttachment } = db.storage.from(REBATE_BUCKET).getPublicUrl(attachmentPath);
-  const { error: insertError } = await db.from("beta_rebate_claims").insert({
-    id: rebateId,
+  const { data: publicAttachment } = db.storage.from(REFUND_BUCKET).getPublicUrl(attachmentPath);
+  const { error: insertError } = await db.from("beta_refund_claims").insert({
+    id: refundId,
     tester_id: tester?.id ?? null,
     tester_name_snapshot: testerName,
     session_identifier: identifier,
@@ -626,9 +626,9 @@ export async function submitBetaRebateClaim(formData: FormData): Promise<BetaReb
   });
 
   if (insertError) {
-    console.error("[beta-rebate] insert failed:", insertError);
-    await db.storage.from(REBATE_BUCKET).remove([attachmentPath]).catch(() => {});
-    return { ok: false, error: "Couldn't save your rebate claim. Try again." };
+    console.error("[beta-refund] insert failed:", insertError);
+    await db.storage.from(REFUND_BUCKET).remove([attachmentPath]).catch(() => {});
+    return { ok: false, error: "Couldn't save your refund claim. Try again." };
   }
 
   return { ok: true };

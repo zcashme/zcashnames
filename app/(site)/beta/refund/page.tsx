@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import BetaRebateForm from "@/components/beta/BetaRebateForm";
-import { getCurrentBetaRebateDefaults } from "@/lib/beta/actions";
+import BetaRefundForm from "@/components/beta/BetaRefundForm";
+import { getCurrentBetaRefundDefaults } from "@/lib/beta/actions";
 
 export const metadata: Metadata = {
-  title: "Claim Yours Rebate - ZcashNames",
-  description: "Submit a rebate request for mainnet beta claim and buy actions.",
+  title: "Claim Your Refund - ZcashNames",
+  description: "Submit a refund request for mainnet beta claim and buy actions.",
   robots: { index: false, follow: false, nocache: true },
 };
 
 export const dynamic = "force-dynamic";
 
-export default async function BetaRebatePage() {
-  const defaults = await getCurrentBetaRebateDefaults();
+export default async function BetaRefundPage() {
+  const defaults = await getCurrentBetaRefundDefaults();
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-10">
-      <SiteRouteTitle title="Rebate" />
+      <SiteRouteTitle title="Refund" />
       <header className="mb-6 text-center">
         <span
           className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
@@ -27,7 +27,7 @@ export default async function BetaRebatePage() {
           }}
         >
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" />
-          Mainnet rebate
+          Mainnet refund
         </span>
         <h1
           className="text-3xl font-bold tracking-tight md:text-4xl"
@@ -37,13 +37,13 @@ export default async function BetaRebatePage() {
         </h1>
         <p className="text-base" style={{ color: "var(--fg-body)", lineHeight: 1.65 }}>
           During the beta, you may have paid to test Zcash name actions. The names you may have
-          claimed or purchased are temporary. Use this form to request a rebate.
+          claimed or purchased are temporary. Use this form to request a refund.
         </p>
 
       </header>
 
       {defaults ? (
-        <BetaRebateForm defaults={defaults} />
+        <BetaRefundForm defaults={defaults} />
       ) : (
         <div
           className="rounded-[24px] border px-5 py-6 text-center sm:px-6"

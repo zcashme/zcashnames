@@ -18,11 +18,11 @@ export default function BetaApplyBar() {
 
   if ((!onWaitlist && !onMainnetHome) || !visible) return null;
 
-  const href = onWaitlist ? "/beta/apply" : "/beta/rebate";
-  const badgeLabel = onWaitlist ? "Earn ZEC" : "Rebate";
+  const href = onWaitlist ? "/beta/apply" : "/beta/refund";
+  const badgeLabel = onWaitlist ? "Earn ZEC" : "Refund";
   const ctaLabel = onWaitlist
     ? "Apply for the ZcashNames beta \u2192"
-    : "Names are temporary. Claim yours. \u2192";
+    : " Names are temporary during beta testing. \u2192";
   const barStyle: CSSProperties = onWaitlist
     ? {
         background: "var(--announce-bar-bg)",
@@ -30,8 +30,8 @@ export default function BetaApplyBar() {
         textDecoration: "none",
       }
     : {
-        background: "var(--rebate-bar-bg)",
-        color: "var(--rebate-bar-fg)",
+        background: "var(--refund-bar-bg)",
+        color: "var(--refund-bar-fg)",
         textDecoration: "none",
       };
   const badgeStyle: CSSProperties = onWaitlist
@@ -40,8 +40,8 @@ export default function BetaApplyBar() {
         color: "var(--announce-bar-pill-fg)",
       }
     : {
-        background: "var(--rebate-bar-pill-bg)",
-        color: "var(--rebate-bar-pill-fg)",
+        background: "var(--refund-bar-pill-bg)",
+        color: "var(--refund-bar-pill-fg)",
       };
 
   return (
@@ -66,7 +66,7 @@ export default function BetaApplyBar() {
         type="button"
         onClick={handleDismiss}
         className="site-announcement-dismiss justify-self-end"
-        aria-label={`Dismiss ${onWaitlist ? "beta application" : "rebate"} banner`}
+        aria-label={`Dismiss ${onWaitlist ? "beta application" : "refund"} banner`}
       >
         <span aria-hidden="true">&times;</span>
       </button>

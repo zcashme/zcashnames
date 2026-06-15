@@ -46,7 +46,7 @@ const MAIN_MENU_LINKS: MenuLink[] = [
     href: "/beta",
     displayPath: "/beta",
     featured: true,
-    children: [{ label: "Rebate", href: "/beta/rebate" }],
+    children: [{ label: "Refund", href: "/beta/refund" }],
   },
   { label: "Blogs", href: communitySectionHref("blogs"), displayPath: "/blogs", comingSoon: true, children: blogLinks },
   { label: "Brand Kit", href: "/brandkit" },

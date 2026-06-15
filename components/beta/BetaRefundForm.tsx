@@ -2,10 +2,9 @@
 
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { submitBetaRebateClaim, type BetaRebateDefaults } from "@/lib/beta/actions";
+import { submitBetaRefundClaim, type BetaRefundDefaults } from "@/lib/beta/actions";
 import { validateAddress } from "@/lib/zns/address-validation";
 import {
-  defaultSubcategory,
   defaultWalletChoice,
   getWalletVariant,
   getWalletVariantsForPlatform,
@@ -16,7 +15,7 @@ import {
 } from "@/lib/wallets/catalog";
 
 type Props = {
-  defaults: BetaRebateDefaults;
+  defaults: BetaRefundDefaults;
 };
 
 type WalletRow = {
@@ -74,7 +73,6 @@ const DEVICE_OPTIONS: SelectOption[] = [
   { value: "mobile", label: "Mobile" },
   { value: "desktop", label: "Desktop" },
   { value: "browser", label: "Browser" },
-  { value: "not_sure", label: "Not sure yet" },
 ];
 
 function captureClientEnv(): string {
@@ -105,7 +103,7 @@ function walletWarning(choice: WalletChoice | "other"): string | null {
   return getWalletVariant(choice)?.warning ?? null;
 }
 
-function buildInitialWallet(defaults: BetaRebateDefaults): WalletRow {
+function buildInitialWallet(defaults: BetaRefundDefaults): WalletRow {
   const device = defaults.walletDevice;
   const subcategory = device === "not_sure" ? "" : defaults.walletSubcategory;
   const choice =
@@ -113,9 +111,9 @@ function buildInitialWallet(defaults: BetaRebateDefaults): WalletRow {
     defaults.walletChoice === "not_sure" ||
     (device !== "not_sure" && subcategory && walletChoiceIsValid(device, subcategory, defaults.walletChoice))
       ? defaults.walletChoice
-      : device === "not_sure"
+      : device === "not_sure" || !subcategory
         ? "not_sure"
-        : defaultWalletChoice(device, subcategory || defaultSubcategory(device));
+        : defaultWalletChoice(device, subcategory);
 
   return {
     device,
@@ -125,7 +123,7 @@ function buildInitialWallet(defaults: BetaRebateDefaults): WalletRow {
   };
 }
 
-export default function BetaRebateForm({ defaults }: Props) {
+export default function BetaRefundForm({ defaults }: Props) {
   const initialWallet = useMemo(() => buildInitialWallet(defaults), [defaults]);
   const [address, setAddress] = useState("");
   const [actionType, setActionType] = useState<"CLAIM" | "BUY" | "OTHER">("CLAIM");
@@ -151,11 +149,10 @@ export default function BetaRebateForm({ defaults }: Props) {
   const selectedWalletWarning = useMemo(() => walletWarning(wallet.choice), [wallet.choice]);
 
   function updateWalletDevice(device: WalletDeviceChoice) {
-    const subcategory = defaultSubcategory(device);
     setWallet({
       device,
-      subcategory,
-      choice: defaultWalletChoice(device, subcategory),
+      subcategory: "",
+      choice: "not_sure",
       otherName: "",
     });
   }
@@ -215,7 +212,7 @@ export default function BetaRebateForm({ defaults }: Props) {
     const file = fileRef.current?.files?.[0];
     if (file) formData.append("attachment", file);
 
-    const result = await submitBetaRebateClaim(formData);
+    const result = await submitBetaRefundClaim(formData);
     setSubmitting(false);
 
     if (!result.ok) {
@@ -223,7 +220,7 @@ export default function BetaRebateForm({ defaults }: Props) {
       return;
     }
 
-    setSuccess("Rebate request saved.");
+    setSuccess("Refund request saved.");
     setAddress("");
     setActionType("CLAIM");
     setOutcome("success");
@@ -236,7 +233,7 @@ export default function BetaRebateForm({ defaults }: Props) {
 
   const platformOptions: SelectOption[] =
     wallet.device === "not_sure"
-      ? [{ value: "", label: "No platform" }]
+      ? []
       : wallet.device === "mobile"
         ? [
             { value: "ios", label: "iOS" },
@@ -252,14 +249,13 @@ export default function BetaRebateForm({ defaults }: Props) {
 
   const walletChoiceOptions: SelectOption[] =
     wallet.device === "not_sure"
-      ? [{ value: "not_sure", label: "Choose wallet" }]
+      ? []
       : [
           ...selectedWalletOptions.map((option) => ({
             value: option.variantId,
             label: option.displayName,
           })),
           { value: "other", label: "Other" },
-          { value: "not_sure", label: "Choose wallet" },
         ];
 
   return (
@@ -302,11 +298,11 @@ export default function BetaRebateForm({ defaults }: Props) {
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="rebate-address" style={labelStyle}>
+          <label htmlFor="refund-address" style={labelStyle}>
             Zcash address <span style={{ color: "var(--accent-red, #e05252)" }}>*</span>
           </label>
           <input
-            id="rebate-address"
+            id="refund-address"
             value={address}
             onChange={(event) => setAddress(event.target.value)}
             className={fieldClassName}
@@ -326,11 +322,11 @@ export default function BetaRebateForm({ defaults }: Props) {
           </p>
         </div>
         <div>
-          <label htmlFor="rebate-txid" style={labelStyle}>
+          <label htmlFor="refund-txid" style={labelStyle}>
             Transaction ID <span style={{ color: "var(--accent-red, #e05252)" }}>*</span>
           </label>
           <input
-            id="rebate-txid"
+            id="refund-txid"
             value={txid}
             onChange={(event) => setTxid(event.target.value)}
             className={fieldClassName}
@@ -344,25 +340,28 @@ export default function BetaRebateForm({ defaults }: Props) {
       <div className="mt-4">
         <label style={labelStyle}>Wallet</label>
         <div className="grid gap-2 sm:grid-cols-[minmax(0,8rem)_minmax(0,8rem)_minmax(0,1fr)]">
-          <RebateSelectField
-            id="rebate-wallet-device"
+          <RefundSelectField
+            id="refund-wallet-device"
             value={wallet.device}
             onChange={(value) => updateWalletDevice(value as WalletDeviceChoice)}
             options={DEVICE_OPTIONS}
+            placeholder="Device"
           />
-          <RebateSelectField
-            id="rebate-wallet-platform"
+          <RefundSelectField
+            id="refund-wallet-platform"
             value={wallet.subcategory}
             onChange={(value) => updateWalletSubcategory(value as WalletSubcategory)}
             options={platformOptions}
             disabled={wallet.device === "not_sure"}
+            placeholder="System"
           />
-          <RebateSelectField
-            id="rebate-wallet-choice"
+          <RefundSelectField
+            id="refund-wallet-choice"
             value={wallet.choice}
             onChange={(value) => updateWalletChoice(value as WalletChoice | "other")}
             options={walletChoiceOptions}
-            disabled={wallet.device !== "not_sure" && !wallet.subcategory}
+            disabled={wallet.device === "not_sure" || !wallet.subcategory}
+            placeholder="Wallet"
           />
         </div>
 
@@ -381,11 +380,11 @@ export default function BetaRebateForm({ defaults }: Props) {
 
         {wallet.choice === "other" && wallet.device !== "not_sure" ? (
           <div className="mt-2">
-            <label htmlFor="rebate-wallet-other" style={labelStyle}>
+            <label htmlFor="refund-wallet-other" style={labelStyle}>
               {wallet.device.charAt(0).toUpperCase() + wallet.device.slice(1)} wallet name
             </label>
             <input
-              id="rebate-wallet-other"
+              id="refund-wallet-other"
               type="text"
               value={wallet.otherName}
               onChange={(event) => setWallet((current) => ({ ...current, otherName: event.target.value }))}
@@ -401,18 +400,18 @@ export default function BetaRebateForm({ defaults }: Props) {
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="rebate-action" style={labelStyle}>Action type</label>
-          <RebateSelectField
-            id="rebate-action"
+          <label htmlFor="refund-action" style={labelStyle}>Action type</label>
+          <RefundSelectField
+            id="refund-action"
             value={actionType}
             onChange={(value) => setActionType(value as "CLAIM" | "BUY" | "OTHER")}
             options={ACTION_OPTIONS}
           />
         </div>
         <div>
-          <label htmlFor="rebate-outcome" style={labelStyle}>Outcome</label>
-          <RebateSelectField
-            id="rebate-outcome"
+          <label htmlFor="refund-outcome" style={labelStyle}>Outcome</label>
+          <RefundSelectField
+            id="refund-outcome"
             value={outcome}
             onChange={(value) => setOutcome(value as "success" | "failure")}
             options={OUTCOME_OPTIONS}
@@ -421,9 +420,9 @@ export default function BetaRebateForm({ defaults }: Props) {
       </div>
 
       <div className="mt-4">
-        <label htmlFor="rebate-notes" style={labelStyle}>Notes</label>
+        <label htmlFor="refund-notes" style={labelStyle}>Notes</label>
         <textarea
-          id="rebate-notes"
+          id="refund-notes"
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
           className={`${fieldClassName} min-h-32`}
@@ -433,10 +432,10 @@ export default function BetaRebateForm({ defaults }: Props) {
       </div>
 
       <div className="mt-4">
-        <label htmlFor="rebate-attachment" style={labelStyle}>Picture</label>
+        <label htmlFor="refund-attachment" style={labelStyle}>Picture</label>
         <input
           ref={fileRef}
-          id="rebate-attachment"
+          id="refund-attachment"
           type="file"
           accept="image/*"
           className={fileFieldClassName}
@@ -474,29 +473,31 @@ export default function BetaRebateForm({ defaults }: Props) {
             cursor: submitting ? "progress" : "pointer",
           }}
         >
-          {submitting ? "Submitting..." : "Submit rebate"}
+          {submitting ? "Submitting..." : "Submit request"}
         </button>
       </div>
     </form>
   );
 }
 
-function RebateSelectField({
+function RefundSelectField({
   id,
   value,
   options,
   onChange,
   disabled = false,
+  placeholder = "",
 }: {
   id: string;
   value: string;
   options: readonly SelectOption[];
   onChange: (value: string) => void;
   disabled?: boolean;
+  placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const activeOption = options.find((option) => option.value === value) ?? options[0];
+  const activeOption = options.find((option) => option.value === value) ?? null;
 
   useEffect(() => {
     if (!open) return;
@@ -541,7 +542,7 @@ function RebateSelectField({
               : "border-border-muted text-fg-heading hover:border-fg-heading focus:border-fg-heading focus:[box-shadow:0_0_0_1px_var(--fg-heading)]"
         }`}
       >
-        <span>{activeOption?.label ?? ""}</span>
+        <span>{activeOption?.label ?? placeholder}</span>
         <span className="pointer-events-none flex shrink-0 items-center text-fg-muted" aria-hidden="true">
           <svg
             viewBox="0 0 24 24"

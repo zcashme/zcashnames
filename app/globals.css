@@ -47,10 +47,10 @@
   --announce-bar-fg: #1a1a1a;
   --announce-bar-pill-bg: #1a1a1a;
   --announce-bar-pill-fg: #f4b728;
-  --rebate-bar-bg: var(--announce-bar-bg);
-  --rebate-bar-fg: var(--announce-bar-fg);
-  --rebate-bar-pill-bg: var(--announce-bar-pill-bg);
-  --rebate-bar-pill-fg: var(--announce-bar-pill-fg);
+  --refund-bar-bg: var(--announce-bar-bg);
+  --refund-bar-fg: var(--announce-bar-fg);
+  --refund-bar-pill-bg: var(--announce-bar-pill-bg);
+  --refund-bar-pill-fg: var(--announce-bar-pill-fg);
 
   /* Logo */
   --logo-filter: invert(1);
@@ -266,10 +266,10 @@
   --announce-bar-fg: #ffffff;
   --announce-bar-pill-bg: #ffffff;
   --announce-bar-pill-fg: #1d4ed8;
-  --rebate-bar-bg: linear-gradient(90deg, color-mix(in srgb, var(--color-brand-blue) 88%, #081428), color-mix(in srgb, var(--color-brand-blue-dark) 82%, #0f172a));
-  --rebate-bar-fg: var(--home-result-primary-fg);
-  --rebate-bar-pill-bg: var(--home-result-primary-fg);
-  --rebate-bar-pill-fg: color-mix(in srgb, var(--color-brand-blue-dark) 82%, #0f172a);
+  --refund-bar-bg: linear-gradient(90deg, color-mix(in srgb, var(--color-brand-blue) 88%, #081428), color-mix(in srgb, var(--color-brand-blue-dark) 82%, #0f172a));
+  --refund-bar-fg: var(--home-result-primary-fg);
+  --refund-bar-pill-bg: var(--home-result-primary-fg);
+  --refund-bar-pill-fg: color-mix(in srgb, var(--color-brand-blue-dark) 82%, #0f172a);
 
   /* Logo */
   --logo-filter: none;
@@ -431,10 +431,10 @@
   --announce-bar-fg: var(--mono-0);
   --announce-bar-pill-bg: var(--mono-0);
   --announce-bar-pill-fg: var(--mono-3);
-  --rebate-bar-bg: var(--announce-bar-bg);
-  --rebate-bar-fg: var(--announce-bar-fg);
-  --rebate-bar-pill-bg: var(--announce-bar-pill-bg);
-  --rebate-bar-pill-fg: var(--announce-bar-pill-fg);
+  --refund-bar-bg: var(--announce-bar-bg);
+  --refund-bar-fg: var(--announce-bar-fg);
+  --refund-bar-pill-bg: var(--announce-bar-pill-bg);
+  --refund-bar-pill-fg: var(--announce-bar-pill-fg);
 
   /* Logo/media */
   --logo-filter: brightness(0) invert(1) sepia(1) hue-rotate(30deg) saturate(8) brightness(0.9);
