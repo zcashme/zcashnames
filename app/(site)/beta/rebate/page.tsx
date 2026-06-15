@@ -31,13 +31,15 @@ export default async function BetaRebatePage() {
         </span>
         <h1
           className="text-3xl font-bold tracking-tight md:text-4xl"
-          style={{ color: "var(--announce-bar-fg)", marginBottom: "0.75rem" }}
+          style={{ color: "var(--fg-heading)", marginBottom: "0.75rem" }}
         >
-          Names are temporary. Claim yours.
+          Thanks for participating.
         </h1>
         <p className="text-base" style={{ color: "var(--fg-body)", lineHeight: 1.65 }}>
-          Submit the name action details and proof image for beta-paid mainnet actions. We lock the beta identifier and access code from your current session, then store the rest with your uploaded screenshot in Supabase.
+          During the beta, you may have paid to test Zcash name actions. The names you may have
+          claimed or purchased are temporary. Use this form to request a rebate.
         </p>
+
       </header>
 
       {defaults ? (

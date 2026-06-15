@@ -1,6 +1,10 @@
 import { ZNS } from "zcashname-sdk";
-import { bech32, bech32m } from "bech32";
 import type { Network, Registration, ResolveName, NameAvailabilityState } from "@/lib/types";
+import {
+  validateAddress,
+  type AddressStatus,
+  type AddressValidationResult,
+} from "@/lib/zns/address-validation";
 
 const instances: Record<Network, ZNS> = {
   testnet: new ZNS({ network: "testnet", url: process.env.ZNS_TESTNET_RPC_URL }),
@@ -8,65 +12,8 @@ const instances: Record<Network, ZNS> = {
 };
 
 export const getZns = (network: Network): ZNS => instances[network];
-
-//
-// Zcash address classification. Only unified addresses (u1… / utest1…) are
-// accepted for name registrations — they support both transparent and shielded
-// receivers. Everything else gets a warning explaining why.
-//
-
-export type AddressStatus = "unified" | "sapling" | "transparent" | "viewkey" | "tex" | "invalid";
-
-export interface AddressValidationResult {
-  status: AddressStatus;
-  warning: string;
-}
-
-function isViewingKey(a: string): boolean {
-  return /^(uview1|utestview1|zsview1|ztestsaplingview1)/i.test(a);
-}
-
-function isTex(a: string): boolean {
-  const s = a.toLowerCase();
-  if (!(s.startsWith("tex1") || s.startsWith("textest1"))) return false;
-  try {
-    const dec = bech32m.decode(s, 100);
-    return dec.prefix === "tex" || dec.prefix === "textest";
-  } catch { return false; }
-}
-
-function isUnified(a: string): boolean {
-  const s = a.toLowerCase();
-  if (!(s.startsWith("u1") || s.startsWith("utest1"))) return false;
-  try {
-    const dec = bech32m.decode(s, 300);
-    return dec.prefix === "u" || dec.prefix === "utest";
-  } catch { return false; }
-}
-
-function isSapling(a: string): boolean {
-  const s = a.toLowerCase();
-  if (!(s.startsWith("zs1") || s.startsWith("ztestsapling1"))) return false;
-  try {
-    const dec = bech32.decode(s, 200);
-    return dec.prefix === "zs" || dec.prefix === "ztestsapling";
-  } catch { return false; }
-}
-
-function isTransparent(a: string): boolean {
-  return /^[tT](1|3|m|2)[A-Za-z0-9]{20,}$/.test(a);
-}
-
-export function validateAddress(address: string): AddressValidationResult {
-  const t = String(address ?? "").trim();
-  if (!t) return { status: "invalid", warning: "" };
-  if (isViewingKey(t)) return { status: "viewkey", warning: "Viewing keys are not accepted." };
-  if (isTex(t))         return { status: "tex", warning: "TEX addresses are not supported." };
-  if (isUnified(t))     return { status: "unified", warning: "" };
-  if (isSapling(t))     return { status: "sapling", warning: "Sapling address - Unified preferred." };
-  if (isTransparent(t)) return { status: "transparent", warning: "Transparent addresses leak metadata." };
-  return { status: "invalid", warning: "Invalid address format." };
-}
+export { validateAddress };
+export type { AddressStatus, AddressValidationResult };
 
 //
 // Pure name utilities — no side effects, no async. Used everywhere a name

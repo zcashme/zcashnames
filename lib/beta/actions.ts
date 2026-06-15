@@ -10,12 +10,21 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { Network } from "@/lib/types";
 import {
+  deviceLabel,
+  findVariantByWalletIdAndPlatform,
   getWalletVariant,
+  isWalletDeviceChoice,
+  isWalletSubcategory,
   isWalletVariantId,
+  subcategoryLabel,
   walletVariantLabel,
+  type WalletChoice,
+  type WalletDeviceChoice,
+  type WalletSubcategory,
   type WalletVariantId,
 } from "@/lib/wallets/catalog";
 import { readPreferredWalletVariantId } from "@/lib/beta/wallet-selection";
+import { validateAddress } from "@/lib/zns/address-validation";
 import {
   BETA_COOKIE_NAME,
   BETA_STAGE_COOKIE_NAME,
@@ -120,36 +129,169 @@ export interface BetaRebateDefaults {
   accessCode: string | null;
   stage: "testnet" | "mainnet";
   walletLabel: string;
+  walletDevice: WalletDeviceChoice;
+  walletSubcategory: WalletSubcategory | "";
+  walletChoice: WalletChoice | "other";
+  walletOtherName: string;
   walletVariantId: WalletVariantId | null;
   contactEmail: string | null;
 }
 
-function fallbackWalletLabel(plannedWalletsDetail: unknown): string {
-  if (!Array.isArray(plannedWalletsDetail)) return "";
-  for (const row of plannedWalletsDetail) {
-    if (typeof row !== "object" || row === null) continue;
-    const record = row as Record<string, unknown>;
-    if (typeof record.label === "string" && record.label.trim()) return record.label.trim();
-    if (typeof record.other_name === "string" && record.other_name.trim()) return record.other_name.trim();
-    if (typeof record.otherName === "string" && record.otherName.trim()) return record.otherName.trim();
-  }
-  return "";
+interface ResolvedRebateWallet {
+  walletLabel: string;
+  walletDevice: WalletDeviceChoice;
+  walletSubcategory: WalletSubcategory | "";
+  walletChoice: WalletChoice | "other";
+  walletOtherName: string;
+  walletVariantId: WalletVariantId | null;
 }
 
-function resolvePreferredWalletLabel(
+function defaultRebateWallet(): ResolvedRebateWallet {
+  return {
+    walletLabel: "",
+    walletDevice: "not_sure",
+    walletSubcategory: "",
+    walletChoice: "not_sure",
+    walletOtherName: "",
+    walletVariantId: null,
+  };
+}
+
+function preferredWalletDetailRow(plannedWalletsDetail: unknown): Record<string, unknown> | null {
+  if (!Array.isArray(plannedWalletsDetail)) return null;
+  const primaryRows = plannedWalletsDetail.filter(
+    (row) =>
+      typeof row === "object" &&
+      row !== null &&
+      (row as Record<string, unknown>).is_primary === true,
+  );
+  const candidateRows = primaryRows.length > 0 ? primaryRows : plannedWalletsDetail;
+  const firstRow = candidateRows.find((row) => typeof row === "object" && row !== null);
+  return firstRow && typeof firstRow === "object" ? (firstRow as Record<string, unknown>) : null;
+}
+
+function resolvePreferredRebateWallet(
   plannedWallet: unknown,
   plannedWalletsDetail: unknown,
-): { walletLabel: string; walletVariantId: WalletVariantId | null } {
+): ResolvedRebateWallet {
   const walletVariantId = readPreferredWalletVariantId(plannedWallet, plannedWalletsDetail);
   if (walletVariantId) {
     const variant = getWalletVariant(walletVariantId);
     if (variant) {
-      return { walletLabel: walletVariantLabel(variant), walletVariantId };
+      return {
+        walletLabel: walletVariantLabel(variant),
+        walletDevice: variant.device,
+        walletSubcategory: variant.subcategory,
+        walletChoice: variant.variantId,
+        walletOtherName: "",
+        walletVariantId,
+      };
     }
   }
+
+  const detailRow = preferredWalletDetailRow(plannedWalletsDetail);
+  if (!detailRow) return defaultRebateWallet();
+
+  const deviceRaw = typeof detailRow.device === "string" ? detailRow.device.trim() : "";
+  const device: WalletDeviceChoice = isWalletDeviceChoice(deviceRaw) ? deviceRaw : "not_sure";
+  const subcategoryRaw =
+    typeof detailRow.subcategory === "string" ? detailRow.subcategory.trim() : "";
+  const subcategory: WalletSubcategory | "" =
+    device !== "not_sure" && isWalletSubcategory(subcategoryRaw) ? subcategoryRaw : "";
+  const choiceRaw = typeof detailRow.choice === "string" ? detailRow.choice.trim() : "";
+  const otherName =
+    typeof detailRow.other_name === "string" && detailRow.other_name.trim()
+      ? detailRow.other_name.trim()
+      : typeof detailRow.otherName === "string" && detailRow.otherName.trim()
+        ? detailRow.otherName.trim()
+        : "";
+  const label =
+    typeof detailRow.label === "string" && detailRow.label.trim() ? detailRow.label.trim() : "";
+
+  if (choiceRaw === "other" && device !== "not_sure" && subcategory) {
+    return {
+      walletLabel: label || `Other: ${deviceLabel(device)} ${subcategoryLabel(subcategory)} - ${otherName}`,
+      walletDevice: device,
+      walletSubcategory: subcategory,
+      walletChoice: "other",
+      walletOtherName: otherName,
+      walletVariantId: null,
+    };
+  }
+
+  if (choiceRaw === "not_sure") {
+    return {
+      walletLabel:
+        label ||
+        (device === "not_sure"
+          ? "Not sure yet"
+          : subcategory
+            ? `${deviceLabel(device)} ${subcategoryLabel(subcategory)}: Not sure yet`
+            : `${deviceLabel(device)}: Not sure yet`),
+      walletDevice: device,
+      walletSubcategory: subcategory,
+      walletChoice: "not_sure",
+      walletOtherName: "",
+      walletVariantId: null,
+    };
+  }
+
+  return defaultRebateWallet();
+}
+
+function parseSubmittedRebateWallet(formData: FormData):
+  | { error: string }
+  | { walletLabel: string; walletVariantId: WalletVariantId | null } {
+  const deviceRaw = String(formData.get("wallet_device") ?? "").trim();
+  const subcategoryRaw = String(formData.get("wallet_subcategory") ?? "").trim();
+  const choiceRaw = String(formData.get("wallet_choice") ?? "").trim();
+  const variantIdRaw = String(formData.get("wallet_variant_id") ?? choiceRaw).trim();
+  const otherName = String(formData.get("wallet_other_name") ?? "").trim();
+
+  if (!isWalletDeviceChoice(deviceRaw)) {
+    return { error: "Pick a valid wallet category." };
+  }
+
+  if (choiceRaw === "not_sure") {
+    if (deviceRaw === "not_sure") {
+      return { walletLabel: "Not sure yet", walletVariantId: null };
+    }
+    if (!isWalletSubcategory(subcategoryRaw)) {
+      return { error: "Pick a valid wallet platform." };
+    }
+    return {
+      walletLabel: `${deviceLabel(deviceRaw)} ${subcategoryLabel(subcategoryRaw)}: Not sure yet`,
+      walletVariantId: null,
+    };
+  }
+
+  if (deviceRaw === "not_sure") {
+    return { error: "Pick a valid wallet option." };
+  }
+  if (!isWalletSubcategory(subcategoryRaw)) {
+    return { error: "Pick a valid wallet platform." };
+  }
+
+  if (choiceRaw === "other") {
+    if (!otherName) return { error: "Enter the wallet name." };
+    if (otherName.length > 200) return { error: "Wallet name is too long." };
+    return {
+      walletLabel: `Other: ${deviceLabel(deviceRaw)} ${subcategoryLabel(subcategoryRaw)} - ${otherName}`,
+      walletVariantId: null,
+    };
+  }
+
+  let variant = isWalletVariantId(variantIdRaw) ? getWalletVariant(variantIdRaw) : null;
+  if (!variant) {
+    variant = findVariantByWalletIdAndPlatform(choiceRaw, deviceRaw, subcategoryRaw);
+  }
+  if (!variant || variant.device !== deviceRaw || variant.subcategory !== subcategoryRaw) {
+    return { error: "Pick a valid wallet option." };
+  }
+
   return {
-    walletLabel: fallbackWalletLabel(plannedWalletsDetail),
-    walletVariantId,
+    walletLabel: walletVariantLabel(variant),
+    walletVariantId: variant.variantId,
   };
 }
 
@@ -159,26 +301,36 @@ export async function getCurrentBetaRebateDefaults(): Promise<BetaRebateDefaults
 
   if (!session) return null;
   if (session.kind === "shared") {
+    const walletDefaults = defaultRebateWallet();
     return {
       identifier: session.testerId,
       displayName: session.testerId,
       accessCode: null,
       stage,
-      walletLabel: "",
-      walletVariantId: null,
+      walletLabel: walletDefaults.walletLabel,
+      walletDevice: walletDefaults.walletDevice,
+      walletSubcategory: walletDefaults.walletSubcategory,
+      walletChoice: walletDefaults.walletChoice,
+      walletOtherName: walletDefaults.walletOtherName,
+      walletVariantId: walletDefaults.walletVariantId,
       contactEmail: null,
     };
   }
 
   const tester = session.tester;
   if (tester.cohort !== "v2") {
+    const walletDefaults = defaultRebateWallet();
     return {
       identifier: tester.id,
       displayName: tester.displayName,
       accessCode: null,
       stage,
-      walletLabel: "",
-      walletVariantId: null,
+      walletLabel: walletDefaults.walletLabel,
+      walletDevice: walletDefaults.walletDevice,
+      walletSubcategory: walletDefaults.walletSubcategory,
+      walletChoice: walletDefaults.walletChoice,
+      walletOtherName: walletDefaults.walletOtherName,
+      walletVariantId: walletDefaults.walletVariantId,
       contactEmail: null,
     };
   }
@@ -194,7 +346,7 @@ export async function getCurrentBetaRebateDefaults(): Promise<BetaRebateDefaults
     return null;
   }
 
-  const preferredWallet = resolvePreferredWalletLabel(data.planned_wallet, data.planned_wallets_detail);
+  const preferredWallet = resolvePreferredRebateWallet(data.planned_wallet, data.planned_wallets_detail);
 
   return {
     identifier: tester.id,
@@ -202,6 +354,10 @@ export async function getCurrentBetaRebateDefaults(): Promise<BetaRebateDefaults
     accessCode: typeof data.invite_code === "string" ? data.invite_code : null,
     stage,
     walletLabel: preferredWallet.walletLabel,
+    walletDevice: preferredWallet.walletDevice,
+    walletSubcategory: preferredWallet.walletSubcategory,
+    walletChoice: preferredWallet.walletChoice,
+    walletOtherName: preferredWallet.walletOtherName,
     walletVariantId: preferredWallet.walletVariantId,
     contactEmail: typeof data.contact_email === "string" ? data.contact_email : null,
   };
@@ -376,27 +532,33 @@ export async function submitBetaRebateClaim(formData: FormData): Promise<BetaReb
   const stage = (await readCurrentStage()) ?? "mainnet";
   const reqHeaders = await headers();
   const userAgent = reqHeaders.get("user-agent")?.slice(0, 500) ?? null;
-  const name = String(formData.get("name") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
   const actionType = String(formData.get("action_type") ?? "").trim();
   const outcome = String(formData.get("outcome") ?? "").trim();
   const txid = String(formData.get("txid") ?? "").trim();
-  const walletLabel = String(formData.get("wallet_label") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const clientEnv = String(formData.get("client_env") ?? "").trim().slice(0, 200);
   const attachment = formData.get("attachment");
 
-  if (!name) return { ok: false, error: "Enter the name." };
-  if (name.length > 200) return { ok: false, error: "Name is too long." };
-  if (actionType !== "CLAIM" && actionType !== "BUY") {
+  if (!address) return { ok: false, error: "Enter your Zcash address." };
+  const addressValidation = validateAddress(address);
+  if (addressValidation.status !== "unified") {
+    return { ok: false, error: addressValidation.warning || "Enter a valid unified Zcash address." };
+  }
+  if (actionType !== "CLAIM" && actionType !== "BUY" && actionType !== "OTHER") {
     return { ok: false, error: "Pick a valid action type." };
   }
   if (outcome !== "success" && outcome !== "failure") {
     return { ok: false, error: "Pick a valid outcome." };
   }
-  if (outcome === "success" && !txid) {
-    return { ok: false, error: "Transaction ID is required for successful submissions." };
+  if (!txid) {
+    return { ok: false, error: "Transaction ID is required." };
   }
-  for (const [fieldName, value] of [["txid", txid], ["wallet", walletLabel], ["notes", notes]] as const) {
+
+  const parsedWallet = parseSubmittedRebateWallet(formData);
+  if ("error" in parsedWallet) return { ok: false, error: parsedWallet.error };
+
+  for (const [fieldName, value] of [["address", address], ["txid", txid], ["wallet", parsedWallet.walletLabel], ["notes", notes]] as const) {
     if (value.length > MAX_FIELD_LEN) return { ok: false, error: `${fieldName} is too long.` };
   }
   if (!(attachment instanceof File) || attachment.size === 0) {
@@ -412,13 +574,12 @@ export async function submitBetaRebateClaim(formData: FormData): Promise<BetaReb
   let identifier = session.kind === "shared" ? session.testerId : tester?.id ?? "anonymous";
   let testerName = session.kind === "shared" ? session.testerId : tester?.displayName ?? "anonymous";
   let inviteCode: string | null = null;
-  let walletVariantId: WalletVariantId | null = null;
   let contactEmail: string | null = null;
 
   if (tester?.cohort === "v2") {
     const { data, error } = await db
       .from("beta_testers_v2")
-      .select("invite_code, planned_wallet, planned_wallets_detail, contact_email")
+      .select("invite_code, contact_email")
       .eq("id", tester.id)
       .maybeSingle();
     if (error || !data) {
@@ -428,7 +589,6 @@ export async function submitBetaRebateClaim(formData: FormData): Promise<BetaReb
     identifier = tester.id;
     testerName = tester.displayName;
     inviteCode = typeof data.invite_code === "string" ? data.invite_code : null;
-    walletVariantId = resolvePreferredWalletLabel(data.planned_wallet, data.planned_wallets_detail).walletVariantId;
     contactEmail = typeof data.contact_email === "string" ? data.contact_email : null;
   }
 
@@ -452,12 +612,12 @@ export async function submitBetaRebateClaim(formData: FormData): Promise<BetaReb
     session_identifier: identifier,
     invite_code_snapshot: inviteCode,
     stage,
-    name,
+    name: address,
     action_type: actionType,
     outcome,
     txid: txid || null,
-    wallet_label: walletLabel || null,
-    wallet_variant_id_snapshot: walletVariantId,
+    wallet_label: parsedWallet.walletLabel || null,
+    wallet_variant_id_snapshot: parsedWallet.walletVariantId,
     contact_email_snapshot: contactEmail,
     notes: notes || null,
     attachment_urls: [publicAttachment.publicUrl],
