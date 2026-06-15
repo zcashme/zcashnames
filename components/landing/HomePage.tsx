@@ -7,6 +7,7 @@ import MarketStats from "@/components/landing/MarketStats";
 import HowItWorks from "@/components/landing/HowItWorks";
 import FAQ from "@/components/landing/FAQ";
 import PartnerReel from "@/components/landing/PartnerReel";
+import LandingNewsletterSignup from "@/components/landing/LandingNewsletterSignup";
 import type { NetworkStats as Stats } from "@/lib/network-stats";
 
 const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
@@ -57,7 +58,7 @@ export default function HomePage({
 
   return (
     <div className="home-theme-scope">
-      <section className="landing-top w-full flex flex-col items-center px-4 relative -mt-[92px]">
+      <section id="hero" className="landing-top w-full flex flex-col items-center px-4 relative -mt-[92px]">
         <div className="landing-top-grid w-full max-w-[1320px] grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(560px,640px)] items-start xl:items-center overflow-visible">
           <AnimatedHeadline triggerRef={phonePanelRef} collapsed={collapsed}>
             <div className="w-full max-w-2xl sm:max-w-3xl xl:max-w-4xl self-center xl:self-start flex flex-col items-center gap-3">
@@ -106,7 +107,7 @@ export default function HomePage({
           {actionLink}
         </div>
       ) : null}
-      <MarketStats stats={stats} />
+      <MarketStats stats={stats} sectionId="stats" />
       {actionLinkPosition === "belowStats" ? (
         <div className="relative z-[2] -mt-1 mb-8 flex justify-center sm:mb-10">
           {actionLink}
@@ -115,6 +116,7 @@ export default function HomePage({
       <PartnerReel />
       <HowItWorks />
       <FAQ />
+      <LandingNewsletterSignup />
 
       <div className="flex justify-center pb-10">
         <button

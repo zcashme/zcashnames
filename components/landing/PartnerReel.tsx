@@ -10,6 +10,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import LandingActionLink from "@/components/landing/LandingActionLink";
+import SectionHeaderPill from "@/components/landing/SectionHeaderPill";
 import { WALLET_BRANDS, type WalletBrand, type WalletBrandAppIcon } from "@/lib/wallets/catalog";
 
 type PartnerReelItem = {
@@ -406,27 +407,12 @@ export default function PartnerReel() {
   if (partners.length === 0) return null;
 
   return (
-    <section className="relative z-[2] my-24 w-full px-5">
-      <div className="mb-10 flex items-center justify-center gap-3.5">
-        <span
-          className="block h-px w-[clamp(24px,9vw,96px)] shrink-0"
-          style={{ background: "linear-gradient(90deg, var(--feature-heading-line-from) 0%, var(--feature-heading-line-to) 100%)" }}
-          aria-hidden="true"
-        />
-        <p
-          className="relative z-[1] m-0 whitespace-nowrap bg-clip-text px-3.5 text-transparent type-kicker"
-          style={{ backgroundImage: "var(--feature-heading-gradient)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
-        >
-          Supported By
-        </p>
-        <span
-          className="block h-px w-[clamp(24px,9vw,96px)] shrink-0"
-          style={{ background: "linear-gradient(90deg, var(--feature-heading-line-to) 0%, var(--feature-heading-line-from) 100%)" }}
-          aria-hidden="true"
-        />
+    <section id="supported-by" className="relative z-[2] my-24 w-full px-5">
+      <div className="mb-14 flex justify-center">
+        <SectionHeaderPill id="supported-by-pill" title="Supported By" />
       </div>
       <p
-        className="type-section-subtitle mx-auto mb-10 max-w-2xl text-center"
+        className="type-section-subtitle mx-auto mb-16 max-w-2xl text-center"
         style={{ color: "var(--fg-muted)" }}
       >
         Wallets, apps, and ecosystem teams already helping bring Zcash names to life. To integrate, visit the{" "}

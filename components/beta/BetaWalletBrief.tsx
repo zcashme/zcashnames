@@ -346,7 +346,7 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
               <WalletBrandLogo brand={brand} />
             </span>
           )}
-          <span>Access Beta with {brand.displayName}</span>
+          <span>Apply with {brand.displayName}</span>
         </Link>
       </section>
 

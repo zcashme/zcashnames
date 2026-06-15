@@ -2260,8 +2260,13 @@ body {
 }
 
 .site-header-menu-scroll {
+  direction: rtl;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--fg-muted) 72%, transparent) color-mix(in srgb, var(--color-raised) 90%, transparent);
+}
+
+.site-header-menu-scroll > * {
+  direction: ltr;
 }
 
 .site-header-menu-scroll::-webkit-scrollbar {

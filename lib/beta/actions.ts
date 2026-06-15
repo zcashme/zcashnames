@@ -9,7 +9,12 @@ import { cookies, headers } from "next/headers";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { Network } from "@/lib/types";
-import { isWalletVariantId, type WalletVariantId } from "@/lib/wallets/catalog";
+import {
+  getWalletVariant,
+  isWalletVariantId,
+  walletVariantLabel,
+  type WalletVariantId,
+} from "@/lib/wallets/catalog";
 import { readPreferredWalletVariantId } from "@/lib/beta/wallet-selection";
 import {
   BETA_COOKIE_NAME,
@@ -23,6 +28,7 @@ import {
 import { cookieOptions } from "@/lib/cookie";
 
 const FEEDBACK_BUCKET = "beta-feedback";
+const REBATE_BUCKET = "beta-rebate-attachments";
 const FEEDBACK_PROGRAM = "v2";
 
 // ---------------------------------------------------------------------------
@@ -108,6 +114,99 @@ export async function getCurrentTesterPreferredWalletVariantId(): Promise<Wallet
   return readPreferredWalletVariantId(data.planned_wallet, data.planned_wallets_detail);
 }
 
+export interface BetaRebateDefaults {
+  identifier: string;
+  displayName: string | null;
+  accessCode: string | null;
+  stage: "testnet" | "mainnet";
+  walletLabel: string;
+  walletVariantId: WalletVariantId | null;
+  contactEmail: string | null;
+}
+
+function fallbackWalletLabel(plannedWalletsDetail: unknown): string {
+  if (!Array.isArray(plannedWalletsDetail)) return "";
+  for (const row of plannedWalletsDetail) {
+    if (typeof row !== "object" || row === null) continue;
+    const record = row as Record<string, unknown>;
+    if (typeof record.label === "string" && record.label.trim()) return record.label.trim();
+    if (typeof record.other_name === "string" && record.other_name.trim()) return record.other_name.trim();
+    if (typeof record.otherName === "string" && record.otherName.trim()) return record.otherName.trim();
+  }
+  return "";
+}
+
+function resolvePreferredWalletLabel(
+  plannedWallet: unknown,
+  plannedWalletsDetail: unknown,
+): { walletLabel: string; walletVariantId: WalletVariantId | null } {
+  const walletVariantId = readPreferredWalletVariantId(plannedWallet, plannedWalletsDetail);
+  if (walletVariantId) {
+    const variant = getWalletVariant(walletVariantId);
+    if (variant) {
+      return { walletLabel: walletVariantLabel(variant), walletVariantId };
+    }
+  }
+  return {
+    walletLabel: fallbackWalletLabel(plannedWalletsDetail),
+    walletVariantId,
+  };
+}
+
+export async function getCurrentBetaRebateDefaults(): Promise<BetaRebateDefaults | null> {
+  const session = await readCurrentBetaAccessSession();
+  const stage = (await readCurrentStage()) ?? "mainnet";
+
+  if (!session) return null;
+  if (session.kind === "shared") {
+    return {
+      identifier: session.testerId,
+      displayName: session.testerId,
+      accessCode: null,
+      stage,
+      walletLabel: "",
+      walletVariantId: null,
+      contactEmail: null,
+    };
+  }
+
+  const tester = session.tester;
+  if (tester.cohort !== "v2") {
+    return {
+      identifier: tester.id,
+      displayName: tester.displayName,
+      accessCode: null,
+      stage,
+      walletLabel: "",
+      walletVariantId: null,
+      contactEmail: null,
+    };
+  }
+
+  const { data, error } = await db
+    .from("beta_testers_v2")
+    .select("invite_code, planned_wallet, planned_wallets_detail, contact_email")
+    .eq("id", tester.id)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error("[beta-rebate] default lookup failed:", error);
+    return null;
+  }
+
+  const preferredWallet = resolvePreferredWalletLabel(data.planned_wallet, data.planned_wallets_detail);
+
+  return {
+    identifier: tester.id,
+    displayName: tester.displayName,
+    accessCode: typeof data.invite_code === "string" ? data.invite_code : null,
+    stage,
+    walletLabel: preferredWallet.walletLabel,
+    walletVariantId: preferredWallet.walletVariantId,
+    contactEmail: typeof data.contact_email === "string" ? data.contact_email : null,
+  };
+}
+
 // ---------------------------------------------------------------------------
 
 export interface FeedbackPayload {
@@ -130,6 +229,7 @@ export type FeedbackResult =
 const MAX_FIELD_LEN = 4000;
 const MAX_SCREENSHOTS = 5;
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
+const MAX_REBATE_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 
 function sanitizeFilename(name: string): string {
   // Strip path separators + anything weird, keep extension.
@@ -257,6 +357,118 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
       await db.storage.from(FEEDBACK_BUCKET).remove(screenshotPaths).catch(() => {});
     }
     return { ok: false, error: "Couldn't save your report. Try again." };
+  }
+
+  return { ok: true };
+}
+
+export type BetaRebateResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export async function submitBetaRebateClaim(formData: FormData): Promise<BetaRebateResult> {
+  const session = await readCurrentBetaAccessSession();
+  if (!session) {
+    return { ok: false, error: "Sign in to the beta first." };
+  }
+
+  const tester = session.kind === "tester" ? session.tester : null;
+  const stage = (await readCurrentStage()) ?? "mainnet";
+  const reqHeaders = await headers();
+  const userAgent = reqHeaders.get("user-agent")?.slice(0, 500) ?? null;
+  const name = String(formData.get("name") ?? "").trim();
+  const actionType = String(formData.get("action_type") ?? "").trim();
+  const outcome = String(formData.get("outcome") ?? "").trim();
+  const txid = String(formData.get("txid") ?? "").trim();
+  const walletLabel = String(formData.get("wallet_label") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+  const clientEnv = String(formData.get("client_env") ?? "").trim().slice(0, 200);
+  const attachment = formData.get("attachment");
+
+  if (!name) return { ok: false, error: "Enter the name." };
+  if (name.length > 200) return { ok: false, error: "Name is too long." };
+  if (actionType !== "CLAIM" && actionType !== "BUY") {
+    return { ok: false, error: "Pick a valid action type." };
+  }
+  if (outcome !== "success" && outcome !== "failure") {
+    return { ok: false, error: "Pick a valid outcome." };
+  }
+  if (outcome === "success" && !txid) {
+    return { ok: false, error: "Transaction ID is required for successful submissions." };
+  }
+  for (const [fieldName, value] of [["txid", txid], ["wallet", walletLabel], ["notes", notes]] as const) {
+    if (value.length > MAX_FIELD_LEN) return { ok: false, error: `${fieldName} is too long.` };
+  }
+  if (!(attachment instanceof File) || attachment.size === 0) {
+    return { ok: false, error: "Attach one picture." };
+  }
+  if (!attachment.type.startsWith("image/")) {
+    return { ok: false, error: "Attachment must be an image." };
+  }
+  if (attachment.size > MAX_REBATE_ATTACHMENT_BYTES) {
+    return { ok: false, error: "Attachment must be under 5 MB." };
+  }
+
+  let identifier = session.kind === "shared" ? session.testerId : tester?.id ?? "anonymous";
+  let testerName = session.kind === "shared" ? session.testerId : tester?.displayName ?? "anonymous";
+  let inviteCode: string | null = null;
+  let walletVariantId: WalletVariantId | null = null;
+  let contactEmail: string | null = null;
+
+  if (tester?.cohort === "v2") {
+    const { data, error } = await db
+      .from("beta_testers_v2")
+      .select("invite_code, planned_wallet, planned_wallets_detail, contact_email")
+      .eq("id", tester.id)
+      .maybeSingle();
+    if (error || !data) {
+      console.error("[beta-rebate] tester lookup failed:", error);
+      return { ok: false, error: "Couldn't load your beta profile." };
+    }
+    identifier = tester.id;
+    testerName = tester.displayName;
+    inviteCode = typeof data.invite_code === "string" ? data.invite_code : null;
+    walletVariantId = resolvePreferredWalletLabel(data.planned_wallet, data.planned_wallets_detail).walletVariantId;
+    contactEmail = typeof data.contact_email === "string" ? data.contact_email : null;
+  }
+
+  const rebateId = randomUUID();
+  const attachmentPath = `${identifier}/${rebateId}/${sanitizeFilename(attachment.name)}`;
+  const { error: uploadError } = await db.storage.from(REBATE_BUCKET).upload(attachmentPath, attachment, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: attachment.type,
+  });
+  if (uploadError) {
+    console.error("[beta-rebate] storage upload failed:", uploadError);
+    return { ok: false, error: "Couldn't upload the picture. Try again." };
+  }
+
+  const { data: publicAttachment } = db.storage.from(REBATE_BUCKET).getPublicUrl(attachmentPath);
+  const { error: insertError } = await db.from("beta_rebate_claims").insert({
+    id: rebateId,
+    tester_id: tester?.id ?? null,
+    tester_name_snapshot: testerName,
+    session_identifier: identifier,
+    invite_code_snapshot: inviteCode,
+    stage,
+    name,
+    action_type: actionType,
+    outcome,
+    txid: txid || null,
+    wallet_label: walletLabel || null,
+    wallet_variant_id_snapshot: walletVariantId,
+    contact_email_snapshot: contactEmail,
+    notes: notes || null,
+    attachment_urls: [publicAttachment.publicUrl],
+    user_agent: userAgent,
+    client_env: clientEnv || null,
+  });
+
+  if (insertError) {
+    console.error("[beta-rebate] insert failed:", insertError);
+    await db.storage.from(REBATE_BUCKET).remove([attachmentPath]).catch(() => {});
+    return { ok: false, error: "Couldn't save your rebate claim. Try again." };
   }
 
   return { ok: true };

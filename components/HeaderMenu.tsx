@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
+import { useZns } from "@/components/hooks/useZns";
 import {
   COMMUNITY_SECTIONS,
   communitySectionHref,
@@ -19,6 +21,7 @@ type MenuLink = {
   disabled?: boolean;
   comingSoon?: boolean;
   featured?: boolean;
+  toggleOnPrimaryClick?: boolean;
   children?: MenuLink[];
 };
 
@@ -37,10 +40,12 @@ const blogLinks = sectionCardMenuLinks("blogs").map((item) => ({
   disabled: true,
 }));
 
-const menuLinks: MenuLink[] = [
-  { label: "Home", href: "/", displayPath: "zcashnames.com" },
+const MAIN_MENU_LINKS: MenuLink[] = [
   { label: "Explorer", href: "/explorer" },
   { label: "Collections", href: "/collections" },
+  { label: "Roadmap", href: "/roadmap" },
+  { label: "Brand Kit", href: "/brandkit" },
+  { label: "Beta", href: "/beta", displayPath: "/beta", featured: true },
   {
     label: "Learn",
     href: "/docs",
@@ -94,10 +99,18 @@ const menuLinks: MenuLink[] = [
       { label: "Terms", href: "/leaders/terms", displayPath: ".../terms" },
     ],
   },
-  { label: "Roadmap", href: "/roadmap" },
-  { label: "Brand Kit", href: "/brandkit" },
-  { label: "Beta", href: "/beta", displayPath: "/beta", featured: true },
 ];
+
+function buildPageSectionLinks(basePath: "/" | "/waitlist"): MenuLink[] {
+  return [
+    { label: "Get Names", href: `${basePath}#hero`, displayPath: "#hero" },
+    { label: "Supported by", href: `${basePath}#supported-by`, displayPath: "#supported-by" },
+    { label: "Benefits", href: `${basePath}#benefits`, displayPath: "#benefits" },
+    { label: "How It Works", href: `${basePath}#how-it-works`, displayPath: "#how-it-works" },
+    { label: "FAQ", href: `${basePath}#faq`, displayPath: "#faq" },
+    { label: "Newsletter", href: `${basePath}#newsletter`, displayPath: "#newsletter" },
+  ];
+}
 
 function sectionCardMenuLinks(sectionSlug: string): MenuLink[] {
   return (
@@ -116,13 +129,34 @@ function cardMenuDisplayPath(card: CommunityCard): string {
 }
 
 export default function HeaderMenu() {
+  const pathname = usePathname();
   const { resolvedTheme } = useTheme();
+  const { zns } = useZns();
   const monochrome = resolvedTheme === "monochrome";
   const [open, setOpen] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const landingBasePath: "/" | "/waitlist" =
+    pathname === "/waitlist"
+      ? "/waitlist"
+      : pathname === "/"
+        ? "/"
+        : zns.mode === "waitlist"
+          ? "/waitlist"
+          : "/";
+  const pageSectionLinks = buildPageSectionLinks(landingBasePath);
+  const menuLinks: MenuLink[] = [
+    {
+      label: "On this page...",
+      href: `${landingBasePath}#hero`,
+      displayPath: landingBasePath,
+      toggleOnPrimaryClick: true,
+      children: pageSectionLinks,
+    },
+    ...MAIN_MENU_LINKS,
+  ];
 
   useEffect(() => {
     if (!open) return;
@@ -298,6 +332,11 @@ function MenuAnchor({
             : "text-fg-muted hover:bg-[color-mix(in_srgb,var(--fg-heading)_12%,transparent)] hover:text-fg-heading focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_12%,transparent)] focus-visible:text-fg-heading"
       }`;
   const pathLabel = displayPath(item, parentPath);
+  const toggleIcon = item.children ? (
+    <span className="text-lg font-bold leading-none" aria-hidden="true">
+      {expanded ? "-" : "+"}
+    </span>
+  ) : null;
   const toggle = item.children ? (
     <button
       type="button"
@@ -314,9 +353,7 @@ function MenuAnchor({
           : "text-fg-muted hover:bg-[color-mix(in_srgb,var(--fg-heading)_16%,transparent)] hover:text-fg-heading focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_16%,transparent)] focus-visible:text-fg-heading"
       }`}
     >
-      <span className="text-lg font-bold leading-none" aria-hidden="true">
-        {expanded ? "-" : "+"}
-      </span>
+      {toggleIcon}
     </button>
   ) : (
     <span className="mx-3 h-7 w-7 shrink-0" aria-hidden="true" />
@@ -329,6 +366,28 @@ function MenuAnchor({
     </span>
   );
   const pathContent = <span className="truncate text-xs font-semibold text-fg-muted/70">{pathLabel}</span>;
+
+  if (item.children && primary && item.toggleOnPrimaryClick) {
+    return (
+      <button
+        type="button"
+        className={className}
+        aria-expanded={expanded}
+        onClick={onToggle}
+      >
+        <span
+          className={`mx-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
+            monochrome ? "text-fg-heading" : "text-fg-muted"
+          }`}
+          aria-hidden="true"
+        >
+          {toggleIcon}
+        </span>
+        {labelContent}
+        <span className="ml-auto inline-flex min-w-0 shrink items-center gap-2">{pathContent}</span>
+      </button>
+    );
+  }
 
   if (item.children) {
     const linkClassName = "flex min-w-0 flex-1 items-center gap-3";

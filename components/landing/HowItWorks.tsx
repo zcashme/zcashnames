@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { usePointerProximity } from "@/components/hooks/usePointerProximity";
+import SectionHeaderPill from "@/components/landing/SectionHeaderPill";
 
 type Benefit = {
   title: string;
@@ -126,31 +127,18 @@ const benefitGroups: BenefitGroup[] = [
 ];
 
 const sectionHeading = (
+  id: string,
   title: string,
   subtitle: string,
   align: "center" | "left" = "center",
+  subtitleClassName = "mt-6",
 ) => (
-  <div className={`mb-10 ${align === "center" ? "text-center" : "text-left"}`}>
-    <div className={`flex items-center gap-3.5 ${align === "center" ? "justify-center" : "justify-start"}`}>
-      <span
-        className="block h-px shrink-0 w-[clamp(24px,9vw,96px)]"
-        style={{ background: "linear-gradient(90deg, var(--feature-heading-line-from) 0%, var(--feature-heading-line-to) 100%)" }}
-        aria-hidden="true"
-      />
-      <p
-        className="relative z-[1] m-0 whitespace-nowrap bg-clip-text px-3.5 text-transparent type-kicker"
-        style={{ backgroundImage: "var(--feature-heading-gradient)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
-      >
-        {title}
-      </p>
-      <span
-        className="block h-px shrink-0 w-[clamp(24px,9vw,96px)]"
-        style={{ background: "linear-gradient(90deg, var(--feature-heading-line-to) 0%, var(--feature-heading-line-from) 100%)" }}
-        aria-hidden="true"
-      />
+  <div className={`mb-14 ${align === "center" ? "text-center" : "text-left"}`}>
+    <div className={`flex items-center ${align === "center" ? "justify-center" : "justify-start"}`}>
+      <SectionHeaderPill id={id} title={title} />
     </div>
     <p
-      className={`type-section-subtitle mt-4 max-w-2xl ${align === "center" ? "mx-auto" : ""}`}
+      className={`type-section-subtitle ${subtitleClassName} max-w-2xl ${align === "center" ? "mx-auto" : ""}`}
       style={{ color: "var(--fg-muted)" }}
     >
       {subtitle}
@@ -158,16 +146,23 @@ const sectionHeading = (
   </div>
 );
 
-const rowHeading = (title: string) => (
+const rowHeading = (title: string, prefix?: ReactNode) => (
   <div className="mb-4 flex items-center justify-center gap-4 px-1">
     <div
       className="h-px flex-1"
       style={{ background: "linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--fg-muted) 32%, transparent) 100%)" }}
       aria-hidden="true"
     />
-    <h3 className="type-kicker shrink-0 text-center" style={{ color: "var(--fg-muted)" }}>
-      {title}
-    </h3>
+    <div className="shrink-0 flex items-center gap-3">
+      {prefix ? (
+        <span className="type-kicker" style={{ color: "var(--fg-heading)" }}>
+          {prefix}
+        </span>
+      ) : null}
+      <h3 className="type-kicker text-center" style={{ color: "var(--fg-muted)" }}>
+        {title}
+      </h3>
+    </div>
     <div
       className="h-px flex-1"
       style={{ background: "linear-gradient(90deg, color-mix(in srgb, var(--fg-muted) 32%, transparent) 0%, transparent 100%)" }}
@@ -266,13 +261,19 @@ export default function HowItWorks() {
   return (
     <section className="mx-auto w-full max-w-6xl px-6 pb-24 pt-0">
       {sectionHeading(
+        "benefits",
         "Benefits",
         "Readable, ownable, privacy-preserving identity for payments and apps built around Zcash.",
+        "center",
+        "mt-6",
       )}
-      <BenefitsBento />
+      <div className="mt-16">
+        <BenefitsBento />
+      </div>
 
       <div className="mt-24">
         {sectionHeading(
+          "how-it-works",
           "How It Works",
           "Three steps: get positioned early, improve your spot, then claim the name before public launch.",
         )}
@@ -284,7 +285,7 @@ export default function HowItWorks() {
         >
           {steps.map((step) => (
             <div key={step.id} className="lg:col-span-4">
-              {rowHeading(step.eyebrow)}
+              {rowHeading(step.eyebrow, step.number)}
 
               <div
                 ref={(node) => proximity.register(step.id, node)}
@@ -306,17 +307,12 @@ export default function HowItWorks() {
                   aria-hidden="true"
                 />
                 <div className="relative z-[1]">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <h4 className="type-section-subtitle font-semibold" style={{ color: "var(--fg-heading)" }}>
-                      {step.number}
-                    </h4>
-                    <div
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{
-                        background: step.accent,
-                      }}
-                    />
-                  </div>
+                  <div
+                    className="mb-3 h-2.5 w-2.5 rounded-full"
+                    style={{
+                      background: step.accent,
+                    }}
+                  />
                   <p
                     className="type-section-subtitle"
                     style={{ color: "var(--fg-muted)" }}

@@ -67,7 +67,13 @@ function buildItems(stats: NetworkStats): StatItem[] {
   ];
 }
 
-export default function MarketStats({ stats }: { stats: NetworkStats }) {
+export default function MarketStats({
+  stats,
+  sectionId,
+}: {
+  stats: NetworkStats;
+  sectionId?: string;
+}) {
   const [activeKey, setActiveKey] = useState<StatKey | null>(null);
   const [hoverKey, setHoverKey] = useState<StatKey | null>(null);
   const itemRefs = useRef(new Map<StatKey, HTMLButtonElement>());
@@ -121,6 +127,7 @@ export default function MarketStats({ stats }: { stats: NetworkStats }) {
 
   return (
     <section
+      id={sectionId}
       className="relative z-[2] w-full px-4 pb-10 sm:px-6 sm:pb-12 max-[700px]:pb-8"
       onPointerMove={handlePointerMove}
       onPointerLeave={resetItems}

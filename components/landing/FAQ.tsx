@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
+import SectionHeaderPill from "@/components/landing/SectionHeaderPill";
 
 type FAQItem = {
   question: string;
@@ -153,26 +154,11 @@ export default function FAQ() {
 
   return (
     <section className="w-full max-w-3xl mx-auto px-6 pt-0 pb-24">
-      <div className="flex items-center justify-center gap-3.5 mb-14">
-        <span
-          className="block shrink-0 w-[clamp(24px,9vw,96px)] h-px"
-          style={{ background: "linear-gradient(90deg, var(--feature-heading-line-from) 0%, var(--feature-heading-line-to) 100%)" }}
-          aria-hidden="true"
-        />
-        <p
-          className="relative z-[1] whitespace-nowrap px-3.5 m-0 bg-clip-text text-transparent type-kicker"
-          style={{ backgroundImage: "var(--feature-heading-gradient)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
-        >
-          Frequently Asked Questions
-        </p>
-        <span
-          className="block shrink-0 w-[clamp(24px,9vw,96px)] h-px"
-          style={{ background: "linear-gradient(90deg, var(--feature-heading-line-to) 0%, var(--feature-heading-line-from) 100%)" }}
-          aria-hidden="true"
-        />
+      <div className="mb-14 flex justify-center">
+        <SectionHeaderPill id="faq" title="Frequently Asked Questions" />
       </div>
       <p
-        className="type-section-subtitle mx-auto -mt-8 mb-14 max-w-2xl text-center"
+        className="type-section-subtitle mx-auto mb-16 max-w-2xl text-center"
         style={{ color: "var(--fg-muted)" }}
       >
         Answers to the most common questions. If yours is not covered, join the{" "}
