@@ -24,11 +24,13 @@ export default function SectionHeaderPill({
       id={id}
       type="button"
       onClick={handleClick}
-      className="m-0 inline-flex w-full max-w-[44rem] cursor-pointer items-center justify-center rounded-[14px] border px-4 py-2 text-center type-kicker transition-opacity hover:opacity-90"
+      className="m-0 inline-flex w-full max-w-[44rem] cursor-pointer items-center justify-center rounded-[18px] border px-4 py-2.5 text-center type-kicker transition-opacity hover:opacity-90"
       style={{
         borderColor: "color-mix(in srgb, var(--feature-heading-line-to) 28%, var(--faq-border))",
         background:
-          "linear-gradient(180deg, color-mix(in srgb, var(--home-result-link-bg) 92%, white 8%), color-mix(in srgb, var(--home-result-link-bg) 84%, var(--faq-border) 16%))",
+          "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 70%, transparent), color-mix(in srgb, var(--faq-border) 18%, transparent))",
+        boxShadow: "0 12px 34px color-mix(in srgb, #000 10%, transparent)",
+        backdropFilter: "blur(10px)",
         color: "var(--fg-heading)",
       }}
       aria-label={`Scroll ${title} to the top`}

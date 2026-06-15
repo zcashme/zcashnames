@@ -5,6 +5,7 @@
  */
 "use client";
 
+import Link from "next/link";
 import { Fragment, useMemo, type CSSProperties } from "react";
 import { BETA_CHECKLIST } from "@/lib/beta/checklist";
 import { useChecklistProgress, type ChecklistStage } from "@/components/hooks/useChecklistProgress";
@@ -295,17 +296,18 @@ export default function FeedbackChecklist({
                             textDecoration: checked ? "line-through" : "underline",
                           }}
                         >
-                          {item.label}
+                          <span>{item.label}</span>
+                          {item.badge && <ChecklistBadgeLink itemLabel={item.label} href={item.badge.href} label={item.badge.label} />}
                         </a>
                       ) : (
                         <p
-                          className="text-sm leading-snug"
+                          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-snug"
                           style={{
                             color: checked ? "var(--fg-muted)" : "var(--fg-body)",
-                            textDecoration: checked ? "line-through" : "none",
                           }}
                         >
-                          {item.label}
+                          <span style={{ textDecoration: checked ? "line-through" : "none" }}>{item.label}</span>
+                          {item.badge && <ChecklistBadgeLink itemLabel={item.label} href={item.badge.href} label={item.badge.label} />}
                         </p>
                       )}
                       {item.hint && (
@@ -401,5 +403,32 @@ export default function FeedbackChecklist({
         Progress is saved {testerName ? "to your account and to this device" : "to this device only (sign in with your invite code to sync)"}.
       </p>
     </div>
+  );
+}
+
+function ChecklistBadgeLink({
+  href,
+  label,
+  itemLabel,
+}: {
+  href: string;
+  label: string;
+  itemLabel: string;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={`${label}: ${itemLabel}`}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+      className="inline-flex shrink-0 rounded-md border px-1.5 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.1em] transition-opacity hover:opacity-85"
+      style={{
+        borderColor: "color-mix(in srgb, var(--color-accent-green) 45%, transparent)",
+        color: "var(--color-accent-green)",
+        textDecoration: "none",
+      }}
+    >
+      {label}
+    </Link>
   );
 }

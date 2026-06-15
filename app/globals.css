@@ -47,6 +47,10 @@
   --announce-bar-fg: #1a1a1a;
   --announce-bar-pill-bg: #1a1a1a;
   --announce-bar-pill-fg: #f4b728;
+  --rebate-bar-bg: var(--announce-bar-bg);
+  --rebate-bar-fg: var(--announce-bar-fg);
+  --rebate-bar-pill-bg: var(--announce-bar-pill-bg);
+  --rebate-bar-pill-fg: var(--announce-bar-pill-fg);
 
   /* Logo */
   --logo-filter: invert(1);
@@ -139,6 +143,7 @@
   /* Hero */
   --hero-headline-primary: #f0f0f0;
   --hero-headline-accent: #f4b728;
+  --section-title-accent: color-mix(in srgb, #f4b728 86%, #ffe08b 14%);
   --hero-verified-icon: #16a34a;
   --hero-identity-badge-border: #72c996;
   --hero-identity-badge-bg: linear-gradient(90deg, #dcfce7 0%, #bbf7d0 100%);
@@ -261,6 +266,10 @@
   --announce-bar-fg: #ffffff;
   --announce-bar-pill-bg: #ffffff;
   --announce-bar-pill-fg: #1d4ed8;
+  --rebate-bar-bg: linear-gradient(90deg, color-mix(in srgb, var(--color-brand-blue) 88%, #081428), color-mix(in srgb, var(--color-brand-blue-dark) 82%, #0f172a));
+  --rebate-bar-fg: var(--home-result-primary-fg);
+  --rebate-bar-pill-bg: var(--home-result-primary-fg);
+  --rebate-bar-pill-fg: color-mix(in srgb, var(--color-brand-blue-dark) 82%, #0f172a);
 
   /* Logo */
   --logo-filter: none;
@@ -340,6 +349,7 @@
   /* Hero */
   --hero-headline-primary: #101c4a;
   --hero-headline-accent: #f4b728;
+  --section-title-accent: color-mix(in srgb, #1d4ed8 82%, #46b7ff 18%);
   --hero-verified-icon: #16a34a;
   --hero-chip-depth: 0 16px 30px rgba(30,35,65,0.16);
   --hero-chip-depth-hover: 0 28px 46px rgba(30,35,65,0.2);
@@ -421,6 +431,10 @@
   --announce-bar-fg: var(--mono-0);
   --announce-bar-pill-bg: var(--mono-0);
   --announce-bar-pill-fg: var(--mono-3);
+  --rebate-bar-bg: var(--announce-bar-bg);
+  --rebate-bar-fg: var(--announce-bar-fg);
+  --rebate-bar-pill-bg: var(--announce-bar-pill-bg);
+  --rebate-bar-pill-fg: var(--announce-bar-pill-fg);
 
   /* Logo/media */
   --logo-filter: brightness(0) invert(1) sepia(1) hue-rotate(30deg) saturate(8) brightness(0.9);
@@ -513,6 +527,7 @@
   /* Hero */
   --hero-headline-primary: var(--mono-3);
   --hero-headline-accent: var(--mono-3);
+  --section-title-accent: var(--mono-3);
   --hero-verified-icon: var(--mono-2);
   --hero-identity-badge-border: var(--mono-2);
   --hero-identity-badge-bg: linear-gradient(90deg, rgba(155,188,15,0.48) 0%, rgba(139,172,15,0.56) 100%);
@@ -2260,13 +2275,8 @@ body {
 }
 
 .site-header-menu-scroll {
-  direction: rtl;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--fg-muted) 72%, transparent) color-mix(in srgb, var(--color-raised) 90%, transparent);
-}
-
-.site-header-menu-scroll > * {
-  direction: ltr;
 }
 
 .site-header-menu-scroll::-webkit-scrollbar {
@@ -2826,22 +2836,39 @@ body.app-shell-standalone {
   text-decoration: underline;
 }
 
-.influencer-launch-banner button {
-  position: absolute;
-  right: 1rem;
-  flex: 0 0 auto;
+.site-announcement-dismiss {
+  display: inline-flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  align-items: center;
+  justify-content: center;
   border: 0;
+  border-radius: 999px;
   background: transparent;
   color: inherit;
   padding: 0;
   font: inherit;
+  font-size: 0.95rem;
   font-weight: 400;
   line-height: 1;
   cursor: pointer;
+  opacity: 0.88;
+  transition: opacity 160ms ease;
 }
 
-.influencer-launch-banner button:hover {
-  opacity: 0.8;
+.site-announcement-dismiss:hover {
+  opacity: 1;
+}
+
+.site-announcement-dismiss:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.influencer-launch-banner .site-announcement-dismiss {
+  position: absolute;
+  right: 1rem;
+  flex: 0 0 auto;
 }
 
 .influencer-layout {

@@ -146,7 +146,7 @@ export default function NetworkToggle() {
           {menuOpen ? (
             <div
               role="menu"
-              className="absolute left-0 top-[calc(100%+0.45rem)] min-w-full overflow-hidden rounded-[16px] border p-1.5"
+              className="absolute left-0 top-[calc(100%+0.45rem)] min-w-full overflow-hidden rounded-[18px] border p-1.5"
               style={{
                 borderColor: "color-mix(in srgb, var(--feature-heading-line-to) 28%, var(--faq-border))",
                 background:

@@ -3,60 +3,73 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { CSSProperties } from "react";
-import { useTheme } from "next-themes";
+import { useState } from "react";
 
 export default function BetaApplyBar() {
   const pathname = usePathname();
-  const { resolvedTheme } = useTheme();
+  const [visible, setVisible] = useState(true);
 
   const onWaitlist = pathname === "/waitlist";
   const onMainnetHome = pathname === "/";
-  const matchBetaBannerTheme = onWaitlist || resolvedTheme === "dark";
 
-  if (!onWaitlist && !onMainnetHome) return null;
+  function handleDismiss() {
+    setVisible(false);
+  }
+
+  if ((!onWaitlist && !onMainnetHome) || !visible) return null;
 
   const href = onWaitlist ? "/beta/apply" : "/beta/rebate";
   const badgeLabel = onWaitlist ? "Earn ZEC" : "Rebate";
   const ctaLabel = onWaitlist
     ? "Apply for the ZcashNames beta \u2192"
     : "Names are temporary. Claim yours. \u2192";
-  const barStyle: CSSProperties = matchBetaBannerTheme
+  const barStyle: CSSProperties = onWaitlist
     ? {
         background: "var(--announce-bar-bg)",
         color: "var(--announce-bar-fg)",
         textDecoration: "none",
       }
     : {
-        background:
-          "linear-gradient(90deg, color-mix(in srgb, var(--color-brand-blue) 88%, #081428), color-mix(in srgb, var(--color-brand-blue-dark) 82%, #0f172a))",
-        color: "var(--home-result-primary-fg)",
+        background: "var(--rebate-bar-bg)",
+        color: "var(--rebate-bar-fg)",
         textDecoration: "none",
       };
-  const badgeStyle: CSSProperties = matchBetaBannerTheme
+  const badgeStyle: CSSProperties = onWaitlist
     ? {
         background: "var(--announce-bar-pill-bg)",
         color: "var(--announce-bar-pill-fg)",
       }
     : {
-        background: "var(--home-result-primary-fg)",
-        color: "color-mix(in srgb, var(--color-brand-blue-dark) 82%, #0f172a)",
+        background: "var(--rebate-bar-pill-bg)",
+        color: "var(--rebate-bar-pill-fg)",
       };
 
   return (
-    <Link
-      href={href}
-      className="flex w-full items-center justify-center gap-2 px-3 py-2 text-[0.72rem] sm:text-sm font-semibold transition-opacity hover:opacity-90 whitespace-nowrap"
+    <div
+      className="grid w-full grid-cols-[1.5rem_minmax(0,1fr)_1.5rem] items-center gap-2 px-3 py-1.5 text-[0.72rem] font-semibold sm:text-sm"
       style={barStyle}
     >
-      <span
-        className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.55rem] sm:text-[0.65rem] font-bold uppercase tracking-wider shrink-0"
-        style={badgeStyle}
+      <span className="h-6 w-6" aria-hidden="true" />
+      <Link
+        href={href}
+        className="col-start-2 flex min-w-0 items-center justify-center gap-2 whitespace-nowrap text-center transition-opacity hover:opacity-90"
       >
-        {badgeLabel}
-      </span>
-      <span className="truncate">
-        {ctaLabel}
-      </span>
-    </Link>
+        <span
+          className="inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider sm:text-[0.65rem]"
+          style={badgeStyle}
+        >
+          {badgeLabel}
+        </span>
+        <span className="truncate">{ctaLabel}</span>
+      </Link>
+      <button
+        type="button"
+        onClick={handleDismiss}
+        className="site-announcement-dismiss justify-self-end"
+        aria-label={`Dismiss ${onWaitlist ? "beta application" : "rebate"} banner`}
+      >
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
   );
 }

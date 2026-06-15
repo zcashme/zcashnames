@@ -159,7 +159,7 @@ const rowHeading = (title: string, prefix?: ReactNode) => (
           {prefix}
         </span>
       ) : null}
-      <h3 className="type-kicker text-center" style={{ color: "var(--fg-muted)" }}>
+      <h3 className="type-kicker text-center" style={{ color: "var(--section-title-accent)" }}>
         {title}
       </h3>
     </div>

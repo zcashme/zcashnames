@@ -174,7 +174,7 @@ export default function FAQ() {
             <div className="mb-4 flex items-center gap-4 px-1">
               <h3
                 className="type-kicker shrink-0"
-                style={{ color: "var(--fg-muted)" }}
+                style={{ color: "var(--section-title-accent)" }}
               >
                 {group.title}
               </h3>

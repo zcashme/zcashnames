@@ -1,20 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { readLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
 
 // Dismissable launch-announcement banner rendered on cabal pages. Visibility
-// is gated on pathname prefix /cabal and a localStorage flag. Dismissing
-// persists the flag and hides the bar permanently for that browser.
+// is gated on pathname prefix /cabal. Dismissing hides the bar until reload.
 // Links to an external X/Twitter launch video post.
 export default function CabalLaunchBar() {
   const pathname = usePathname();
   const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    setVisible(readLocalStorage<string>("cabal-launch-banner-dismissed", "false") !== "true");
-  }, []);
 
   if (!pathname.startsWith("/cabal") || !visible) return null;
 
@@ -32,13 +26,11 @@ export default function CabalLaunchBar() {
       </a>
       <button
         type="button"
-        onClick={() => {
-          writeLocalStorage("cabal-launch-banner-dismissed", "true");
-          setVisible(false);
-        }}
+        className="site-announcement-dismiss"
+        onClick={() => setVisible(false)}
         aria-label="Dismiss launch video banner"
       >
-        x
+        <span aria-hidden="true">&times;</span>
       </button>
     </div>
   );

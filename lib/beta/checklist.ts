@@ -8,6 +8,7 @@ export interface ChecklistItem {
   hint?: string;
   section?: string;
   link?: { href: string };
+  badge?: { label: string; href: string };
   group: ChecklistGroup;
 }
 
@@ -22,6 +23,7 @@ export const BETA_CHECKLIST: ChecklistItem[] = [
     id: "ux-a1",
     label: "1. Buy a listed name",
     hint: "Find any name for sale in the Name Explorer. Buy it, then type the name in the wallet to confirm it resolves to your address.",
+    badge: { label: "Rebate", href: "/beta/rebate" },
     section: "Wallet Flows",
     group: "user",
   },
@@ -50,6 +52,7 @@ export const BETA_CHECKLIST: ChecklistItem[] = [
     id: "ux-a5",
     label: "5. Claim the name you want",
     hint: "Claim the name you want to keep. Type the name in the wallet to confirm it resolves to your address.",
+    badge: { label: "Rebate", href: "/beta/rebate" },
     section: "Wallet Flows",
     group: "user",
   },
