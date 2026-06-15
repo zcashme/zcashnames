@@ -38,11 +38,10 @@ export default function Header() {
             <span id="site-route-title" className="min-w-0 flex-1" />
           </div>
 
-          <div className="flex justify-center">
-            <NetworkToggle />
-          </div>
+          <div />
 
-          <div className="flex min-w-0 justify-end">
+          <div className="flex min-w-0 items-center justify-end gap-2">
+            <NetworkToggle />
             <ThemeToggle />
           </div>
         </div>
