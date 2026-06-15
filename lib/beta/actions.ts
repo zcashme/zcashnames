@@ -39,6 +39,7 @@ import { cookieOptions } from "@/lib/cookie";
 const FEEDBACK_BUCKET = "beta-feedback";
 const REFUND_BUCKET = "beta-refund-attachments";
 const FEEDBACK_PROGRAM = "v2";
+const DEFAULT_FEEDBACK_ITEM_ID = "ux-e1";
 
 // ---------------------------------------------------------------------------
 // Beta gate session helpers.
@@ -415,7 +416,8 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
   const txid = String(formData.get("txid") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const experienceRatingRaw = String(formData.get("experience_rating") ?? "").trim();
-  const checklistItemId = String(formData.get("checklistItemId") ?? "").trim().slice(0, 64);
+  const checklistItemIdRaw = String(formData.get("checklistItemId") ?? "").trim().slice(0, 64);
+  const checklistItemId = checklistItemIdRaw || DEFAULT_FEEDBACK_ITEM_ID;
   const clientEnv = String(formData.get("client_env") ?? "").trim().slice(0, 200);
   const walletVariantIdRaw = String(formData.get("wallet_variant_id") ?? "").trim();
   const experienceRating = experienceRatingRaw ? Number(experienceRatingRaw) : null;
@@ -491,7 +493,7 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
     tester_name_snapshot: testerName,
     beta_version: FEEDBACK_PROGRAM,
     stage: network,
-    item_id: checklistItemId || null,
+    item_id: checklistItemId,
     severity,
     experience_rating: experienceRating,
     wallet: wallet || null,

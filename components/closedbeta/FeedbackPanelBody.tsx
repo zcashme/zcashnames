@@ -6,6 +6,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "next-themes";
 import FeedbackForm from "./FeedbackForm";
 import FeedbackChecklist, { initialChecklistExpansion } from "./FeedbackChecklist";
 import { useChecklistProgress } from "@/components/hooks/useChecklistProgress";
@@ -85,6 +86,8 @@ export default function FeedbackPanelBody({
   onTooltipClose,
   onTooltipRestart,
 }: FeedbackPanelBodyProps) {
+  const { resolvedTheme } = useTheme();
+  const monochrome = resolvedTheme === "monochrome";
   const [tab, setTab] = useState<Tab>("checklist");
   const [reportingItemId, setReportingItemId] = useState<string | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
@@ -238,10 +241,17 @@ export default function FeedbackPanelBody({
     border: "1px solid var(--border-muted)",
   };
 
-  const selectedWalletStyle: React.CSSProperties = selectedWalletVariantId
-    ? iconBtnStyle
-    : {
+  const utilityBtnStyle: React.CSSProperties = monochrome
+    ? {
         ...iconBtnStyle,
+        background: "transparent",
+      }
+    : iconBtnStyle;
+
+  const selectedWalletStyle: React.CSSProperties = selectedWalletVariantId
+    ? utilityBtnStyle
+    : {
+        ...utilityBtnStyle,
         border: "1px solid var(--accent-red, #e05252)",
       };
 
@@ -256,6 +266,7 @@ export default function FeedbackPanelBody({
     { label: "Beta Instructions", href: "/beta/instructions" },
     { label: "Developer Guide", href: "/docs/zns-developer-guide" },
     { label: "Beta Overview", href: "/beta" },
+    { label: "Request Refund", href: "/beta/refund" },
   ];
 
   const sortedWalletVariants = useMemo(
@@ -383,7 +394,7 @@ export default function FeedbackPanelBody({
             role="menu"
             className="absolute right-0 top-full z-30 mt-2 w-56 max-h-80 overflow-y-auto rounded-lg shadow-lg"
             style={{
-              background: "var(--color-raised)",
+              background: monochrome ? "var(--color-background, #0f1115)" : "var(--color-raised)",
               border: "1px solid var(--border-muted)",
             }}
           >
@@ -402,7 +413,11 @@ export default function FeedbackPanelBody({
                   className="block w-full px-3 py-2 text-left text-xs font-semibold transition-colors hover:opacity-80 cursor-pointer"
                   style={{
                     color: active ? "var(--fg-heading)" : "var(--fg-body)",
-                    background: active ? "var(--feature-card-bg)" : "transparent",
+                    background: active
+                      ? (monochrome
+                        ? "color-mix(in srgb, var(--fg-heading) 10%, transparent)"
+                        : "var(--feature-card-bg)")
+                      : "transparent",
                     borderBottom: "1px solid var(--border-muted)",
                   }}
                 >
@@ -423,7 +438,7 @@ export default function FeedbackPanelBody({
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-lg px-2.5 py-1.5 transition-opacity hover:opacity-100 opacity-90 inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
-          style={iconBtnStyle}
+          style={utilityBtnStyle}
           aria-label="Download wallet"
           title="Download wallet"
         >
@@ -449,7 +464,7 @@ export default function FeedbackPanelBody({
           aria-disabled="true"
           className="rounded-lg px-2.5 py-1.5 inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap cursor-not-allowed"
           style={{
-            ...iconBtnStyle,
+            ...utilityBtnStyle,
             opacity: 0.45,
           }}
           aria-label="Download unavailable"
@@ -492,7 +507,7 @@ export default function FeedbackPanelBody({
                 title="Open in new window"
                 aria-label="Open in new window"
                 className="rounded-lg p-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70"
-                style={iconBtnStyle}
+                style={utilityBtnStyle}
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -615,7 +630,7 @@ export default function FeedbackPanelBody({
                 aria-label="Collapse feedback panel"
                 title="Collapse"
                 className="rounded-lg p-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70"
-                style={iconBtnStyle}
+                style={utilityBtnStyle}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
                   <polyline points="13 17 18 12 13 7" />
@@ -675,7 +690,7 @@ export default function FeedbackPanelBody({
               aria-label={tooltipStep ? "Hide tooltips" : "Show tooltips"}
               title={tooltipStep ? "Hide tooltips" : "Show tooltips"}
               className="rounded-lg p-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70"
-              style={iconBtnStyle}
+              style={utilityBtnStyle}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -717,7 +732,7 @@ export default function FeedbackPanelBody({
               aria-expanded={readMeOpen}
               aria-haspopup="menu"
               className="rounded-lg px-2.5 py-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70 inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
-              style={iconBtnStyle}
+              style={utilityBtnStyle}
             >
               Read
               <svg
@@ -765,7 +780,7 @@ export default function FeedbackPanelBody({
                 role="menu"
                 className="absolute bottom-full right-0 mb-2 w-44 overflow-hidden rounded-lg shadow-lg"
                 style={{
-                  background: "var(--color-raised)",
+                  background: monochrome ? "var(--color-background, #0f1115)" : "var(--color-raised)",
                   border: "1px solid var(--border-muted)",
                 }}
               >
@@ -830,7 +845,7 @@ export default function FeedbackPanelBody({
               aria-expanded={contactOpen}
               aria-haspopup="menu"
               className="rounded-lg px-2.5 py-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70 inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
-              style={iconBtnStyle}
+              style={utilityBtnStyle}
             >
               Contact
               <svg
@@ -878,7 +893,7 @@ export default function FeedbackPanelBody({
                 role="menu"
                 className="absolute bottom-full right-0 mb-2 w-40 overflow-hidden rounded-lg shadow-lg"
                 style={{
-                  background: "var(--color-raised)",
+                  background: monochrome ? "var(--color-background, #0f1115)" : "var(--color-raised)",
                   border: "1px solid var(--border-muted)",
                 }}
               >

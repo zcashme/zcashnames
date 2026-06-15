@@ -10,6 +10,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "next-themes";
 import { submitBetaFeedback } from "@/lib/beta/actions";
 import type { ChecklistItem } from "@/lib/beta/checklist";
 import type { WalletVariantId } from "@/lib/wallets/catalog";
@@ -46,12 +47,6 @@ const EXPERIENCE_OPTIONS = [
   { value: 5, label: "Excellent", mouth: "M7.5 13.5c1.2 1.8 2.7 2.7 4.5 2.7s3.3-.9 4.5-2.7" },
 ] as const;
 
-const inputStyle: React.CSSProperties = {
-  background: "var(--color-raised)",
-  border: "1.5px solid var(--faq-border)",
-  color: "var(--fg-heading)",
-};
-
 const primaryBtnStyle: React.CSSProperties = {
   background: "var(--home-result-primary-bg)",
   color: "var(--home-result-primary-fg)",
@@ -81,6 +76,8 @@ export default function FeedbackForm({
   initialWallet = "",
   walletVariantId = null,
 }: Props) {
+  const { resolvedTheme } = useTheme();
+  const monochrome = resolvedTheme === "monochrome";
   const [severity, setSeverity] = useState<Severity>("none");
   const [wallet, setWallet] = useState(initialWallet);
   const [steps, setSteps] = useState("");
@@ -96,6 +93,12 @@ export default function FeedbackForm({
   const [errorFading, setErrorFading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
+
+  const inputStyle: React.CSSProperties = {
+    background: monochrome ? "transparent" : "var(--color-raised)",
+    border: "1.5px solid var(--faq-border)",
+    color: "var(--fg-heading)",
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const errorDismissTimerRef = useRef<number | null>(null);
@@ -276,7 +279,7 @@ export default function FeedbackForm({
         <div
           className="flex items-start gap-3 rounded-lg px-3 py-2.5"
           style={{
-            background: "var(--color-accent-green-light)",
+            background: monochrome ? "var(--color-background, #0f1115)" : "var(--color-accent-green-light)",
             border: "1px solid var(--color-accent-green)",
           }}
         >
@@ -398,7 +401,10 @@ export default function FeedbackForm({
           onClick={() => setBugReportOpen((prev) => !prev)}
           aria-expanded={bugReportOpen}
           className="w-full flex items-center gap-2 px-3 py-3 text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
-          style={{ color: "var(--fg-heading)", background: "var(--color-raised)" }}
+          style={{
+            color: "var(--fg-heading)",
+            background: monochrome ? "var(--color-background, #0f1115)" : "var(--color-raised)",
+          }}
         >
           <svg
             viewBox="0 0 24 24"

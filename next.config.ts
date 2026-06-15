@@ -48,6 +48,11 @@ const distDir = process.env.NODE_ENV === "development" ? ".next-dev" : ".next";
 
 const nextConfig: NextConfig = {
   distDir,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "5mb",
+    },
+  },
   // svg-captcha ships a TTF font that webpack's server bundler doesn't copy.
   // Loading it externally at runtime lets the package read the file from node_modules.
   serverExternalPackages: ["svg-captcha"],
