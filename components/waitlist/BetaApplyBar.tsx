@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { CSSProperties } from "react";
+import { useTheme } from "next-themes";
 
 export default function BetaApplyBar() {
   const pathname = usePathname();
+  const { resolvedTheme } = useTheme();
 
   const onWaitlist = pathname === "/waitlist";
   const onMainnetHome = pathname === "/";
+  const matchBetaBannerTheme = onWaitlist || resolvedTheme === "dark";
 
   if (!onWaitlist && !onMainnetHome) return null;
 
@@ -17,7 +20,7 @@ export default function BetaApplyBar() {
   const ctaLabel = onWaitlist
     ? "Apply for the ZcashNames beta \u2192"
     : "Names are temporary. Claim yours. \u2192";
-  const barStyle: CSSProperties = onWaitlist
+  const barStyle: CSSProperties = matchBetaBannerTheme
     ? {
         background: "var(--announce-bar-bg)",
         color: "var(--announce-bar-fg)",
@@ -29,7 +32,7 @@ export default function BetaApplyBar() {
         color: "var(--home-result-primary-fg)",
         textDecoration: "none",
       };
-  const badgeStyle: CSSProperties = onWaitlist
+  const badgeStyle: CSSProperties = matchBetaBannerTheme
     ? {
         background: "var(--announce-bar-pill-bg)",
         color: "var(--announce-bar-pill-fg)",
