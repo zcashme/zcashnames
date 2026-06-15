@@ -198,8 +198,8 @@ export function buildReferralDashboard(
   const normalizedCode = referralCode.trim();
   const eligibleRows = rows.filter((row) => row.email_verified);
   const root = rows.find((row) => row.referral_code === normalizedCode) ?? null;
-  const waitlistPosition = root
-    ? [...rows]
+  const waitlistPosition = root?.email_verified
+    ? [...eligibleRows]
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
         .findIndex((row) => row.referral_code === normalizedCode) + 1
     : null;
@@ -260,7 +260,7 @@ export function buildReferralDashboard(
     referralCode: root?.preferred_referral_code ?? root?.human_referral_code ?? normalizedCode,
     canonicalReferralCode: normalizedCode,
     waitlistPosition: waitlistPosition && waitlistPosition > 0 ? waitlistPosition : null,
-    waitlistTotal: rows.length,
+    waitlistTotal: eligibleRows.length,
     rootBadge: resolveReferralBadge(normalizedCode, eligibleRows),
     directReferrals: descendants.filter((entry): entry is DirectReferralEntry => entry.depth === 1),
     descendants,

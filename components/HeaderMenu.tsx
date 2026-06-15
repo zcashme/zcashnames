@@ -30,7 +30,7 @@ const communitySectionLinks: MenuLink[] = COMMUNITY_SECTIONS
   .map((section) => ({
     label: section.title,
     href: communitySectionHref(section.slug),
-    displayPath: `.../${section.slug}`,
+    displayPath: `#${section.slug}`,
   }));
 
 const socialLinks = sectionCardMenuLinks("social");
@@ -41,7 +41,13 @@ const blogLinks = sectionCardMenuLinks("blogs").map((item) => ({
 }));
 
 const MAIN_MENU_LINKS: MenuLink[] = [
-  { label: "Beta", href: "/beta", displayPath: "/beta", featured: true },
+  {
+    label: "Beta",
+    href: "/beta",
+    displayPath: "/beta",
+    featured: true,
+    children: [{ label: "Rebate", href: "/beta/rebate" }],
+  },
   { label: "Blogs", href: communitySectionHref("blogs"), displayPath: "/blogs", comingSoon: true, children: blogLinks },
   { label: "Brand Kit", href: "/brandkit" },
   {
@@ -63,7 +69,7 @@ const MAIN_MENU_LINKS: MenuLink[] = [
     ],
   },
   { label: "Explorer", href: "/explorer" },
-  { label: "Collections", href: "/collections" },
+  { label: "Collections", href: "/collections", featured: true },
   { label: "Leaderboard", href: "/leaders", displayPath: "/leaders", children: [
       { label: "Dashboard", href: "/leaders/ref", displayPath: ".../ref" },
       { label: "Share Kit", href: "/sharekit", displayPath: ".../sharekit" },
@@ -98,7 +104,7 @@ function buildPageSectionLinks(basePath: "/" | "/waitlist"): MenuLink[] {
     { label: "Benefits", href: `${basePath}#benefits`, displayPath: "#benefits" },
     { label: "How It Works", href: `${basePath}#how-it-works`, displayPath: "#how-it-works" },
     { label: "FAQ", href: `${basePath}#faq`, displayPath: "#faq" },
-    { label: "Newsletter", href: `${basePath}#newsletter`, displayPath: "#newsletter" },
+    { label: "Newsletter", href: `${basePath}#newsletter`, displayPath: "#newsletter", featured: true },
   ];
 }
 
@@ -214,7 +220,7 @@ export default function HeaderMenu() {
           id="site-header-menu"
           aria-label="Site menu"
           aria-hidden={!open}
-          className={`absolute left-0 top-11 z-50 w-[min(calc(100vw-2rem),360px)] overflow-hidden rounded-lg border transition-all duration-200 ease-out ${
+          className={`absolute left-0 top-11 z-50 w-[min(calc(100vw-2rem),360px)] overflow-hidden rounded-[18px] border transition-all duration-200 ease-out ${
             monochrome
               ? "border-[rgba(155,188,15,0.62)] bg-[rgba(15,56,15,0.96)] shadow-[0_18px_40px_rgba(15,56,15,0.62)]"
               : "border-border-muted bg-[var(--color-raised)] shadow-2xl"

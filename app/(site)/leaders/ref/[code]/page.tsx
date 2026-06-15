@@ -1212,14 +1212,14 @@ function InstallHomeScreenCard({
             </p>
           ) : null}
 
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+          <div className="mt-5 flex items-center gap-3">
             <button
               type="button"
               onClick={() => {
                 void installState.promptInstall();
               }}
               disabled={!installState.canInstall || installState.installing}
-              className="inline-flex min-w-[214px] cursor-pointer items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold text-[var(--leaders-rank-text)] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold text-[var(--leaders-rank-text)] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
               style={{
                 background: "var(--leaders-rank-gold)",
                 borderColor: "transparent",
@@ -1232,7 +1232,7 @@ function InstallHomeScreenCard({
             <button
               type="button"
               onClick={onDismiss}
-              className="inline-flex min-w-[214px] cursor-pointer items-center justify-center rounded-full border px-5 py-3 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-muted"
+              className="inline-flex min-w-0 flex-1 cursor-pointer items-center justify-center rounded-full border px-5 py-3 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-muted"
               style={{ borderColor: "var(--leaders-card-border)" }}
             >
               Dismiss
