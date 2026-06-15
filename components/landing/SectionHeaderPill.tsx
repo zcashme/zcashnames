@@ -28,7 +28,7 @@ export default function SectionHeaderPill({
       style={{
         borderColor: "color-mix(in srgb, var(--feature-heading-line-to) 28%, var(--faq-border))",
         background:
-          "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 70%, transparent), color-mix(in srgb, var(--faq-border) 18%, transparent))",
+          "linear-gradient(180deg, color-mix(in srgb, var(--home-result-link-bg) 92%, white 8%), color-mix(in srgb, var(--home-result-link-bg) 84%, var(--faq-border) 16%))",
         color: "var(--fg-heading)",
       }}
       aria-label={`Scroll ${title} to the top`}

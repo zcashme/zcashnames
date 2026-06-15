@@ -11,7 +11,7 @@ type LandingNewsletterSignupProps = {
   buttonLabel?: string;
 };
 
-const DEFAULT_BUTTON_LABEL = "Notify me";
+const DEFAULT_BUTTON_LABEL = "Email me";
 
 export default function LandingNewsletterSignup({
   buttonLabel = DEFAULT_BUTTON_LABEL,
@@ -70,15 +70,9 @@ export default function LandingNewsletterSignup({
 
   return (
     <section id="newsletter" className="mx-auto w-full max-w-3xl px-4 pb-6 sm:px-6">
-      <div className="mb-14 flex justify-center">
+      <div className="mb-5 flex justify-center">
         <SectionHeaderPill title="Newsletter" />
       </div>
-      <p
-        className="type-section-subtitle mx-auto mb-16 max-w-2xl text-center"
-        style={{ color: "var(--fg-muted)" }}
-      >
-        Join the general Zcash Names newsletter for launch notes, product updates, and future access announcements.
-      </p>
       <div
         className="rounded-[24px] border px-5 py-5 sm:px-6 sm:py-6"
         style={{

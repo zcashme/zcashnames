@@ -30,7 +30,7 @@ const communitySectionLinks: MenuLink[] = COMMUNITY_SECTIONS
   .map((section) => ({
     label: section.title,
     href: communitySectionHref(section.slug),
-    displayPath: `/${section.slug}`,
+    displayPath: `.../${section.slug}`,
   }));
 
 const socialLinks = sectionCardMenuLinks("social");
@@ -41,22 +41,14 @@ const blogLinks = sectionCardMenuLinks("blogs").map((item) => ({
 }));
 
 const MAIN_MENU_LINKS: MenuLink[] = [
-  { label: "Explorer", href: "/explorer" },
-  { label: "Collections", href: "/collections" },
-  { label: "Roadmap", href: "/roadmap" },
-  { label: "Brand Kit", href: "/brandkit" },
   { label: "Beta", href: "/beta", displayPath: "/beta", featured: true },
+  { label: "Blogs", href: communitySectionHref("blogs"), displayPath: "/blogs", comingSoon: true, children: blogLinks },
+  { label: "Brand Kit", href: "/brandkit" },
   {
-    label: "Learn",
-    href: "/docs",
-    displayPath: "/docs/learn",
-    children: [
-      { label: "What is ZcashNames?", href: "/docs/learn/what-is-zns", displayPath: ".../what-is-zns" },
-      { label: "How it works", href: "/docs/learn/how-it-works", displayPath: ".../how-it-works" },
-      { label: "Pricing", href: "/docs/learn/pricing", displayPath: ".../pricing" },
-      { label: "Privacy", href: "/docs/learn/privacy", displayPath: ".../privacy" },
-      { label: "FAQ", href: "/docs/faq" },
-    ],
+    label: "Community",
+    href: "/community",
+    displayPath: "/community",
+    children: communitySectionLinks,
   },
   {
     label: "Developers",
@@ -70,41 +62,39 @@ const MAIN_MENU_LINKS: MenuLink[] = [
       { label: "OpenRPC JSON", href: "https://github.com/zcashme/ZNS/blob/master/openrpc.json" },
     ],
   },
-  {
-    label: "Community",
-    href: "/community",
-    displayPath: "/community",
-    children: communitySectionLinks,
+  { label: "Explorer", href: "/explorer" },
+  { label: "Collections", href: "/collections" },
+  { label: "Leaderboard", href: "/leaders", displayPath: "/leaders", children: [
+      { label: "Dashboard", href: "/leaders/ref", displayPath: ".../ref" },
+      { label: "Share Kit", href: "/sharekit", displayPath: ".../sharekit" },
+      { label: "Terms", href: "/leaders/terms", displayPath: ".../terms" },
+    ],
   },
+  {
+    label: "Learn",
+    href: "/docs",
+    displayPath: "/docs/learn",
+    children: [
+      { label: "What is ZcashNames?", href: "/docs/learn/what-is-zns", displayPath: ".../what-is-zns" },
+      { label: "How it works", href: "/docs/learn/how-it-works", displayPath: ".../how-it-works" },
+      { label: "Pricing", href: "/docs/learn/pricing", displayPath: ".../pricing" },
+      { label: "Privacy", href: "/docs/learn/privacy", displayPath: ".../privacy" },
+      { label: "FAQ", href: "/docs/faq" },
+    ],
+  },
+  { label: "Roadmap", href: "/roadmap" },
   {
     label: "Social",
     href: communitySectionHref("social"),
     displayPath: "/social",
     children: socialLinks,
   },
-  {
-    label: "Blogs",
-    href: communitySectionHref("blogs"),
-    displayPath: "/blogs",
-    comingSoon: true,
-    children: blogLinks,
-  },
-  {
-    label: "Leaderboard",
-    href: "/leaders",
-    displayPath: "/leaders",
-    children: [
-      { label: "Dashboard", href: "/leaders/ref", displayPath: ".../ref" },
-      { label: "Share Kit", href: "/sharekit", displayPath: ".../sharekit" },
-      { label: "Terms", href: "/leaders/terms", displayPath: ".../terms" },
-    ],
-  },
 ];
 
 function buildPageSectionLinks(basePath: "/" | "/waitlist"): MenuLink[] {
   return [
-    { label: "Get Names", href: `${basePath}#hero`, displayPath: "#hero" },
-    { label: "Supported by", href: `${basePath}#supported-by`, displayPath: "#supported-by" },
+    { label: "Get Names", href: `${basePath}#names`, displayPath: "#names" },
+    { label: "Supporters", href: `${basePath}#supporters`, displayPath: "#supporters" },
     { label: "Benefits", href: `${basePath}#benefits`, displayPath: "#benefits" },
     { label: "How It Works", href: `${basePath}#how-it-works`, displayPath: "#how-it-works" },
     { label: "FAQ", href: `${basePath}#faq`, displayPath: "#faq" },
@@ -149,10 +139,9 @@ export default function HeaderMenu() {
   const pageSectionLinks = buildPageSectionLinks(landingBasePath);
   const menuLinks: MenuLink[] = [
     {
-      label: "On this page...",
-      href: `${landingBasePath}#hero`,
-      displayPath: landingBasePath,
-      toggleOnPrimaryClick: true,
+      label: "Home",
+      href: landingBasePath,
+      displayPath: landingBasePath === "/" ? "zcashnames.com" : "/waitlist",
       children: pageSectionLinks,
     },
     ...MAIN_MENU_LINKS,
@@ -318,11 +307,9 @@ function MenuAnchor({
 }) {
   const className = primary
     ? `flex w-full items-center rounded-md px-3 py-2.5 text-left text-base font-bold transition-colors focus-visible:outline-none ${
-        item.featured
-          ? "bg-[color-mix(in_srgb,var(--color-accent-green)_18%,transparent)] text-fg-heading ring-1 ring-inset ring-[color-mix(in_srgb,var(--color-accent-green)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-accent-green)_26%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--color-accent-green)_26%,transparent)]"
-          : monochrome
-            ? "text-fg-heading hover:bg-[rgba(155,188,15,0.16)] hover:text-[var(--mono-3)] focus-visible:bg-[rgba(155,188,15,0.16)] focus-visible:text-[var(--mono-3)]"
-            : "text-fg-heading hover:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)]"
+        monochrome
+          ? "text-fg-heading hover:bg-[rgba(155,188,15,0.16)] hover:text-[var(--mono-3)] focus-visible:bg-[rgba(155,188,15,0.16)] focus-visible:text-[var(--mono-3)]"
+          : "text-fg-heading hover:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--fg-heading)_14%,transparent)]"
       }`
     : `flex w-full items-center gap-3 rounded-md py-2 pl-16 pr-3 text-left text-[0.95rem] font-semibold transition-colors focus-visible:outline-none ${
         item.disabled
@@ -462,7 +449,7 @@ function MenuAnchor({
 function ComingSoonBadge() {
   return (
     <span className="inline-flex shrink-0 rounded-md border border-border-muted px-1.5 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.1em] text-fg-muted">
-      Coming soon
+      Soon
     </span>
   );
 }

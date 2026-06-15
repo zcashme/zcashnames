@@ -58,7 +58,7 @@ export default function HomePage({
 
   return (
     <div className="home-theme-scope">
-      <section id="hero" className="landing-top w-full flex flex-col items-center px-4 relative -mt-[92px]">
+      <section id="names" className="landing-top w-full flex flex-col items-center px-4 relative -mt-[92px]">
         <div className="landing-top-grid w-full max-w-[1320px] grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(560px,640px)] items-start xl:items-center overflow-visible">
           <AnimatedHeadline triggerRef={phonePanelRef} collapsed={collapsed}>
             <div className="w-full max-w-2xl sm:max-w-3xl xl:max-w-4xl self-center xl:self-start flex flex-col items-center gap-3">

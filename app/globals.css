@@ -270,7 +270,7 @@
   --sf-bg: #f3f5fb;
   --sf-input-color: #5a6074;
   --sf-placeholder-color: #a6adbc;
-  --sf-search-btn-bg: linear-gradient(118deg, #2a6be6 0%, #2b8feb 54%, #2dc7ce 100%);
+  --sf-search-btn-bg: linear-gradient(116deg, #2a6be6 0%, #2b8feb 62%, #46b7ff 100%);
   --sf-search-btn-shadow: inset 0 0 0 2px rgba(255,255,255,0.9), 0 10px 18px rgba(33,78,158,0.22);
   --sf-shell-shadow: 0 8px 22px rgba(49, 65, 99, 0.1);
   --sf-focus-shadow: 0 10px 28px rgba(37, 72, 133, 0.18), 0 0 0 3px rgba(90, 151, 255, 0.18);
@@ -430,7 +430,7 @@
   --sf-bg: var(--mono-1);
   --sf-input-color: var(--mono-3);
   --sf-placeholder-color: var(--mono-2);
-  --sf-search-btn-bg: linear-gradient(180deg, rgba(155, 188, 15, 0.88) 0%, rgba(139, 172, 15, 0.88) 100%);
+  --sf-search-btn-bg: linear-gradient(116deg, rgba(139,172,15,0.9) 0%, rgba(155,188,15,0.9) 100%);
   --sf-search-btn-shadow: inset 0 0 0 2px rgba(155,188,15,0.5), 0 10px 18px rgba(15,56,15,0.44);
   --sf-shell-shadow: 0 8px 22px rgba(15, 56, 15, 0.44);
   --sf-focus-shadow: 0 10px 28px rgba(15,56,15,0.5), 0 0 0 3px rgba(155,188,15,0.34);
@@ -1505,7 +1505,7 @@ body {
   align-items: center;
   border-radius: 999px;
   border: 1px solid var(--home-result-link-border);
-  background: var(--home-result-link-bg);
+  background: transparent;
   min-height: 34px;
   padding: 7px 14px;
   color: var(--home-result-link-fg);

@@ -407,7 +407,7 @@ export default function PartnerReel() {
   if (partners.length === 0) return null;
 
   return (
-    <section id="supported-by" className="relative z-[2] my-24 w-full px-5">
+    <section id="supporters" className="relative z-[2] my-24 w-full px-5">
       <div className="mb-14 flex justify-center">
         <SectionHeaderPill id="supported-by-pill" title="Supported By" />
       </div>
