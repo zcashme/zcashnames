@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useTheme } from "next-themes";
 import { useCopy } from "@/components/hooks/useCopy";
 import {
@@ -22,12 +22,14 @@ export type ActionDropdownItem = {
 
 type ActionDropdownProps = {
   buttonClassName?: string;
+  iconPosition?: "left" | "right";
   items: readonly ActionDropdownItem[];
   itemClassName?: string;
   label: string;
   menuAlign?: "left" | "right";
   menuClassName?: string;
   menuDirection?: "down" | "up";
+  menuStyle?: CSSProperties;
   onOpenChange?: (open: boolean) => void;
   open?: boolean;
   renderTriggerContent?: (open: boolean) => ReactNode;
@@ -120,6 +122,7 @@ function MenuItem({
   href,
   onClick,
   icon,
+  iconPosition = "left",
   label,
   monochrome = false,
   className,
@@ -128,6 +131,7 @@ function MenuItem({
   href?: string;
   onClick?: () => void;
   icon?: ReactNode;
+  iconPosition?: "left" | "right";
   label: string;
   monochrome?: boolean;
   className?: string;
@@ -138,6 +142,19 @@ function MenuItem({
       : "hover:bg-[var(--color-raised)]"
   } ${className ?? ""}`.trim();
   const iconClassName = monochrome ? "shrink-0 text-fg-heading" : "shrink-0 text-fg-muted";
+  const content = iconPosition === "right"
+    ? (
+      <>
+        <span className="min-w-0 flex-1">{label}</span>
+        {icon ? <span className={iconClassName}>{icon}</span> : null}
+      </>
+    )
+    : (
+      <>
+        {icon ? <span className={iconClassName}>{icon}</span> : null}
+        <span className="min-w-0 flex-1">{label}</span>
+      </>
+    );
 
   if (href) {
     const internal = href.startsWith("/");
@@ -147,8 +164,7 @@ function MenuItem({
     if (!useExternalAnchor && internal) {
       return (
         <Link href={href} className={baseClassName} role="menuitem" onClick={onClick}>
-          {icon ? <span className={iconClassName}>{icon}</span> : null}
-          <span>{label}</span>
+          {content}
         </Link>
       );
     }
@@ -162,28 +178,28 @@ function MenuItem({
         role="menuitem"
         onClick={onClick}
       >
-        {icon ? <span className={iconClassName}>{icon}</span> : null}
-        <span>{label}</span>
+        {content}
       </a>
     );
   }
 
   return (
     <button type="button" onClick={onClick} className={`cursor-pointer ${baseClassName}`} role="menuitem">
-      {icon ? <span className={iconClassName}>{icon}</span> : null}
-      <span>{label}</span>
+      {content}
     </button>
   );
 }
 
 export function ActionDropdown({
   buttonClassName,
+  iconPosition = "left",
   items,
   itemClassName,
   label,
   menuAlign = "right",
   menuClassName: customMenuClassName,
   menuDirection = "down",
+  menuStyle,
   onOpenChange,
   open: controlledOpen,
   renderTriggerContent,
@@ -246,6 +262,7 @@ export function ActionDropdown({
       external={item.external}
       href={item.href}
       icon={item.icon}
+      iconPosition={iconPosition}
       label={item.label}
       monochrome={monochrome}
       onClick={item.onClick}
@@ -279,6 +296,7 @@ export function ActionDropdown({
         className={`absolute z-20 flex min-w-[220px] flex-col rounded-lg border p-2 transition-all duration-200 ease-out ${menuPositionClassName} ${menuDirectionClassName} ${defaultMenuClassName} ${customMenuClassName ?? ""} ${
           open ? "visible translate-y-0 opacity-100" : `pointer-events-none invisible ${hiddenOffsetClassName} opacity-0`
         }`}
+        style={menuStyle}
         role="menu"
         aria-hidden={!open}
       >

@@ -207,6 +207,12 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
   const external = isExternalHref(card.href);
   const footerHref = formatCommunityCardHref(card.href);
   const cardSurfaceClassName = resolvedTheme === "monochrome" ? "bg-transparent" : "bg-[var(--color-raised)]";
+  const cardMenuClassName = resolvedTheme === "monochrome"
+    ? "!overflow-hidden !rounded-[18px] !border-[rgba(155,188,15,0.62)] !bg-[rgba(15,56,15,0.96)] !shadow-[0_18px_40px_rgba(15,56,15,0.62)]"
+    : "!overflow-hidden !rounded-[18px] !border-border-muted !bg-[var(--color-raised)] !shadow-2xl";
+  const cardMenuStyle = resolvedTheme === "monochrome"
+    ? { backgroundColor: "rgb(15, 56, 15)" }
+    : { backgroundColor: "var(--color-raised)" };
   const walletBrand = card.walletBrandSlug ? getWalletBrand(card.walletBrandSlug) : null;
   const downloadBadges = card.walletBrandSlug
     ? getWalletBetaDownloadItemsForBrand(card.walletBrandSlug)
@@ -258,7 +264,7 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
       >
         <CardOverlayLink card={card} external={external} />
 
-        <div className="pointer-events-none relative z-[2] flex items-start justify-between gap-4">
+        <div className={`pointer-events-none relative flex items-start justify-between gap-4 ${menuOpen ? "z-[40]" : "z-[2]"}`}>
           <div className="flex min-w-0 items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border-muted bg-transparent">
               {renderCardIcon(card, resolvedTheme)}
@@ -271,18 +277,20 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
             </div>
           </div>
           <div
-            className="pointer-events-auto relative shrink-0"
+            className={`pointer-events-auto relative shrink-0 ${menuOpen ? "z-[50]" : ""}`}
             onClick={(event) => event.stopPropagation()}
             onPointerDown={(event) => event.stopPropagation()}
           >
             <ActionDropdown
               buttonClassName="flex h-9 w-9 items-center justify-center rounded-full border border-border-muted bg-transparent text-fg-heading transition-colors duration-200 hover:border-fg-heading hover:text-fg-heading"
+              iconPosition="right"
               items={menuItems}
-              itemClassName="justify-end text-right"
+              itemClassName="text-left"
               label="Actions"
               menuAlign="right"
-              menuClassName="border-border-muted bg-[var(--color-card)] shadow-2xl"
+              menuClassName={cardMenuClassName}
               menuDirection="down"
+              menuStyle={cardMenuStyle}
               onOpenChange={setMenuOpen}
               open={menuOpen}
               renderTriggerContent={(open) => <CardMenuTrigger open={open} />}
