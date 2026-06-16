@@ -55,11 +55,25 @@ export function EmailLayout({
   preview,
   headingText,
   children,
+  headerMark,
 }: {
   preview: string;
   headingText: string;
   children: ReactNode;
+  headerMark?: {
+    primaryHref?: string;
+    primarySrc: string;
+    primaryAlt: string;
+    secondarySrc?: string;
+    secondaryAlt?: string;
+  };
 }) {
+  const mark = headerMark ?? {
+    primaryHref: "https://zcashnames.com",
+    primarySrc: "https://zcashnames.com/brandkit/zcashnames-primary-logo-white-transparent-377x403.png",
+    primaryAlt: "ZcashNames",
+  };
+
   return (
     <Html>
       <Head />
@@ -67,15 +81,66 @@ export function EmailLayout({
       <Body style={bodyStyle}>
         <Container style={containerStyle}>
           <Section style={{ padding: "40px 40px 24px", textAlign: "center" as const }}>
-            <Link href="https://zcashnames.com" style={{ textDecoration: "none", display: "inline-block" }}>
-              <Img
-                src="https://zcashnames.com/brandkit/zcashnames-primary-logo-white-transparent-377x403.png"
-                alt="ZcashNames"
-                width="48"
-                height="48"
-                style={{ display: "block", margin: "0 auto", border: "0" }}
-              />
-            </Link>
+            <table role="presentation" style={{ margin: "0 auto", borderCollapse: "collapse" }}>
+              <tbody>
+                <tr>
+                  <td style={{ verticalAlign: "middle" }}>
+                    <Link
+                      href={mark.primaryHref ?? "https://zcashnames.com"}
+                      style={{ textDecoration: "none", display: "inline-block" }}
+                    >
+                      <Img
+                        src={mark.primarySrc}
+                        alt={mark.primaryAlt}
+                        width="48"
+                        height="48"
+                        style={{
+                          display: "block",
+                          margin: "0 auto",
+                          border: "0",
+                          width: 48,
+                          height: 48,
+                          objectFit: "contain",
+                        }}
+                      />
+                    </Link>
+                  </td>
+                  {mark.secondarySrc && (
+                    <>
+                      <td
+                        style={{
+                          verticalAlign: "middle",
+                          padding: "0 10px",
+                          fontSize: 14,
+                          lineHeight: "14px",
+                          color: "#52525b",
+                          fontWeight: 500,
+                        }}
+                      >
+                        x
+                      </td>
+                      <td style={{ verticalAlign: "middle" }}>
+                        <Img
+                          src={mark.secondarySrc}
+                          alt={mark.secondaryAlt ?? "Wallet"}
+                          width="48"
+                          height="48"
+                          style={{
+                            display: "block",
+                            margin: "0 auto",
+                            border: "0",
+                            width: 48,
+                            height: 48,
+                            objectFit: "contain",
+                            borderRadius: 10,
+                          }}
+                        />
+                      </td>
+                    </>
+                  )}
+                </tr>
+              </tbody>
+            </table>
           </Section>
 
           <Heading style={headingStyle}>{headingText}</Heading>

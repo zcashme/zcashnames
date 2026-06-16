@@ -239,6 +239,14 @@ function getSelectedPreview(email: string | string[] | undefined): EmailPreview 
   return previews.find((preview) => preview.key === key) ?? previews[0];
 }
 
+function resolvedPreviewSubject(
+  preview: EmailPreview,
+  walletVariantId: WalletVariantId | null,
+): string {
+  if (preview.key !== "beta-invite") return preview.subject;
+  return defaultInviteSubject({ walletVariantId });
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"]/g, (character) => {
     if (character === "&") return "&amp;";
@@ -344,6 +352,7 @@ export default async function InternalEmailPreviewPage({
     selected.key === "beta-invite"
       ? `/internal/email-preview?email=${selected.key}&name=${encodeURIComponent(params.name?.trim() || "Josh")}&code=${encodeURIComponent(params.code?.trim() || "7QFMb3jv")}${params.wallet?.trim() ? `&wallet=${encodeURIComponent(params.wallet.trim())}` : ""}`
       : `/internal/email-preview?email=${selected.key}`;
+  const selectedSubject = resolvedPreviewSubject(selected, selectedWallet);
 
   return (
     <main style={{ width: "100%", padding: "12px", boxSizing: "border-box" }}>
@@ -401,7 +410,7 @@ export default async function InternalEmailPreviewPage({
                           }}
                         >
                           <span className="block truncate text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-                            {preview.kind === "text" ? "Text" : "React"} - {preview.subject}
+                            {preview.kind === "text" ? "Text" : "React"} - {resolvedPreviewSubject(preview, selectedWallet)}
                           </span>
                           <span className="mt-1 block text-sm font-semibold text-fg-heading">{preview.title}</span>
                           <span className="mt-1 block text-xs leading-4 text-fg-muted">{preview.description}</span>
@@ -427,7 +436,7 @@ export default async function InternalEmailPreviewPage({
           >
             <div className="min-w-0">
               <h2 className="truncate text-lg font-semibold text-fg-heading">{selected.title}</h2>
-              <p className="mt-1 truncate text-xs text-fg-muted">Subject: {selected.subject}</p>
+              <p className="mt-1 truncate text-xs text-fg-muted">Subject: {selectedSubject}</p>
               {selected.key === "beta-invite" && (
                 <BetaInviteWalletPicker value={selectedWallet} />
               )}

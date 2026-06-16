@@ -12,12 +12,16 @@ import {
   resolveInviteTemplate,
 } from "@/lib/beta/invite-template";
 import {
+  WALLET_BRANDS,
+  type WalletBrandSlug,
   getWalletBrand,
   getWalletPlatformDownloadsForBrand,
   getWalletVariant,
   subcategoryLabel,
   type WalletVariantId,
 } from "@/lib/wallets/catalog";
+
+const PLACEHOLDER_WALLET_BRANDS = new Set<WalletBrandSlug>(["zkool", "zodl", "vizor", "brave", "zipher"]);
 
 interface RenderInvitePreviewArgs {
   displayName: string;
@@ -94,6 +98,30 @@ function resolveWalletCta(
   };
 }
 
+function resolveWalletLogoRow(baseUrl: string): { src: string; alt: string; size: number }[] {
+  return WALLET_BRANDS
+    .map((brand) => {
+      if (PLACEHOLDER_WALLET_BRANDS.has(brand.slug)) return null;
+      const logoPath = brand.appIcon?.src;
+      if (!logoPath) return null;
+      const size =
+        brand.slug === "edge" || brand.slug === "unstoppable"
+          ? 32
+          : brand.slug === "cake"
+            ? 41
+            : brand.slug === "zingo" || brand.slug === "noir"
+              ? 46
+            : 40;
+
+      return {
+        src: logoPath.startsWith("http") ? logoPath : `${baseUrl}${logoPath}`,
+        alt: brand.appIcon.alt,
+        size,
+      };
+    })
+    .filter((logo): logo is { src: string; alt: string; size: number } => logo !== null);
+}
+
 function resolveInviteParagraphs(
   bodyText: string,
   personalization: {
@@ -131,14 +159,29 @@ export async function renderBetaInvitePreview({
     joinUrl: resolvedJoinUrl,
   });
   const walletCta = resolveWalletCta(walletVariantId, resolvedBaseUrl);
+  const walletLogoRow = walletCta ? null : resolveWalletLogoRow(resolvedBaseUrl);
+  const brandLogoSrc =
+    `${resolvedBaseUrl}/brandkit/zcashnames-primary-logo-white-transparent-377x403.png`;
+  const resolvedBodyParagraphs = walletCta
+    ? [
+        `You're invited to the ZcashNames beta by ${walletCta.walletName}.`,
+        ...bodyParagraphs.filter(
+          (paragraph) => paragraph.trim().toLowerCase() !== "you're invited to the zcashnames beta.",
+        ),
+      ]
+    : bodyParagraphs;
+  const headingText = walletCta ? `You're invited by ${walletCta.walletName}` : "Your invitation";
 
   return render(
     BetaInviteEmail({
       displayName,
       joinUrl: resolvedJoinUrl,
       inviteCode,
-      bodyParagraphs,
+      bodyParagraphs: resolvedBodyParagraphs,
+      headingText,
+      brandLogoSrc,
       walletCta,
+      walletLogoRow,
     }),
   );
 }
@@ -149,7 +192,8 @@ export async function sendBetaInviteEmail(
   const recipient = "email" in args ? args.email : args.to;
   const baseUrl = "baseUrl" in args ? args.baseUrl : resolveSiteUrl();
   const joinUrl = `${baseUrl}/beta/join?code=${encodeURIComponent(args.inviteCode)}&stage=mainnet`;
-  const subject = "subject" in args ? args.subject : defaultInviteSubject();
+  const subject =
+    "subject" in args ? args.subject : defaultInviteSubject({ walletVariantId: args.walletVariantId });
   const bodyText = "bodyText" in args
     ? args.bodyText
     : defaultInviteBody({ displayName: args.displayName });
