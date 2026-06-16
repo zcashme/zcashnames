@@ -115,7 +115,7 @@ function resolveWalletLogoRow(baseUrl: string): { src: string; alt: string; size
 
       return {
         src: logoPath.startsWith("http") ? logoPath : `${baseUrl}${logoPath}`,
-        alt: brand.appIcon.alt,
+        alt: brand.appIcon?.alt ?? brand.logos?.alt ?? `${brand.displayName} logo`,
         size,
       };
     })
