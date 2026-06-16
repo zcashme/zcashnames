@@ -178,7 +178,7 @@ export default function BetaInviteEmail({
             ) : (
               <>
                 <Text style={{ margin: "0 0 6px", fontSize: 13, lineHeight: "20px", color: "#d4d4d8" }}>
-                  ZcashNames supported by
+                  Use ZcashNames with
                 </Text>
                 <table role="presentation" style={{ margin: "0 auto", borderCollapse: "separate", borderSpacing: "10px 0" }}>
                   <tbody>
