@@ -49,14 +49,6 @@ export function EmailLayout({
     primarySrc: "https://zcashnames.com/brandkit/zcashnames-primary-logo-white-transparent-377x403.png",
     primaryAlt: "ZcashNames",
   };
-  const assetBaseUrl = (() => {
-    try {
-      return new URL(mark.primaryHref ?? "https://zcashnames.com").origin;
-    } catch {
-      return "https://zcashnames.com";
-    }
-  })();
-
   return (
     <Html>
       <Head />
@@ -141,18 +133,18 @@ export function EmailLayout({
             <table role="presentation" style={{ margin: "0 auto", borderCollapse: "collapse" }}>
               <tbody>
                 <tr>
-                  {SOCIALS.map(({ href, iconKey, alt }) => (
-                    <td key={alt} style={{ padding: "0 8px" }}>
+                  {SOCIALS.map(({ href, iconSrc, alt }) => (
+                    <td key={alt} style={{ padding: "0 10px" }}>
                       <Link href={href} style={{ textDecoration: "none", display: "inline-block" }}>
                         <Img
-                          src={`${assetBaseUrl}/icons/email-footer/${iconKey}.png`}
+                          src={iconSrc}
                           alt={alt}
-                          width="20"
-                          height="20"
+                          width="24"
+                          height="24"
                           style={{
                             display: "block",
-                            width: 20,
-                            height: 20,
+                            width: 24,
+                            height: 24,
                             border: 0,
                           }}
                         />
