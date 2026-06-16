@@ -162,14 +162,9 @@ export async function renderBetaInvitePreview({
   const walletLogoRow = walletCta ? null : resolveWalletLogoRow(resolvedBaseUrl);
   const brandLogoSrc =
     `${resolvedBaseUrl}/brandkit/zcashnames-primary-logo-white-transparent-377x403.png`;
-  const resolvedBodyParagraphs = walletCta
-    ? [
-        `You're invited to the ZcashNames beta by ${walletCta.walletName}.`,
-        ...bodyParagraphs.filter(
-          (paragraph) => paragraph.trim().toLowerCase() !== "you're invited to the zcashnames beta.",
-        ),
-      ]
-    : bodyParagraphs;
+  const resolvedBodyParagraphs = bodyParagraphs.filter(
+    (paragraph) => paragraph.trim().toLowerCase() !== "you're invited to the zcashnames beta.",
+  );
   const headingText = walletCta ? `You're invited by ${walletCta.walletName}` : "Your invitation";
 
   return render(
