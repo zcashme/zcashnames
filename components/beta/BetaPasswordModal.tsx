@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import type { ZnsMode } from "@/components/hooks/useZns";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type Props = {
   target: "mainnet" | "testnet";
@@ -13,7 +13,17 @@ export default function BetaPasswordModal({ target, onCancel, onSubmit }: Props)
   const [input, setInput] = useState("");
   const [error, setError] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   async function handleSubmit() {
     if (checking) return;
@@ -30,9 +40,11 @@ export default function BetaPasswordModal({ target, onCancel, onSubmit }: Props)
     }
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal((
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
@@ -106,5 +118,5 @@ export default function BetaPasswordModal({ target, onCancel, onSubmit }: Props)
         </div>
       </div>
     </div>
-  );
+  ), document.body);
 }

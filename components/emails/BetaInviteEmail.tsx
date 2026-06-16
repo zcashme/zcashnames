@@ -178,12 +178,7 @@ export default function BetaInviteEmail({
             ) : (
               <>
                 <Text style={{ margin: "0 0 6px", fontSize: 13, lineHeight: "20px", color: "#d4d4d8" }}>
-                  Don&apos;t have a wallet yet?
-                </Text>
-                <Text style={{ margin: "0 0 14px", fontSize: 13, lineHeight: "20px", color: "#d4d4d8" }}>
-                  <Link href="https://zcashnames.com/beta/wallets" style={{ color: "#F4B728", textDecoration: "underline" }}>
-                    Compare wallets
-                  </Link>
+                  ZcashNames supported by
                 </Text>
                 <table role="presentation" style={{ margin: "0 auto", borderCollapse: "separate", borderSpacing: "10px 0" }}>
                   <tbody>
@@ -208,6 +203,11 @@ export default function BetaInviteEmail({
                     </tr>
                   </tbody>
                 </table>
+                <Text style={{ margin: "14px 0 0", fontSize: 13, lineHeight: "20px", color: "#d4d4d8" }}>
+                  <Link href="https://zcashnames.com/beta/wallets" style={{ color: "#F4B728", textDecoration: "underline" }}>
+                    Compare Wallets
+                  </Link>
+                </Text>
               </>
             )}
           </Section>

@@ -13,9 +13,9 @@ export function defaultInviteSubject(args?: { walletVariantId?: WalletVariantId 
 
 export function defaultInviteBody({ displayName: _displayName }: { displayName: string }): string {
   return [
-    "You're invited to the ZcashNames beta.",
+    "You are receiving this email because your application was accepted.",
     "",
-    "Use the invite link below to sign in and start testing. Keep your access code private and send all bug reports through the feedback panel.",
+    "Use the invite link below to sign in and start testing ZcashNames on mainnet. Keep your access code private and send all bug reports through the feedback panel.",
   ].join("\n");
 }
 
