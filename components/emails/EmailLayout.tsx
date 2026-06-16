@@ -19,7 +19,8 @@ import {
   Text,
 } from "@react-email/components";
 import type { ReactNode } from "react";
-import { SOCIALS } from "@/lib/email/constants";
+import { FROM_EMAIL, SOCIALS } from "@/lib/email/constants";
+import { SOCIAL_ICON_PATHS } from "@/lib/social-icons";
 import {
   body as bodyStyle,
   container as containerStyle,
@@ -27,23 +28,52 @@ import {
   divider as dividerStyle,
 } from "@/lib/email/styles";
 
-function socialBadgeLabel(alt: string): string {
-  if (alt === "X / Twitter") return "X";
-  if (alt === "Discord") return "D";
-  if (alt === "Signal") return "S";
-  if (alt === "Telegram") return "T";
-  return alt.slice(0, 1).toUpperCase();
+function EmailSocialIcon({
+  path,
+  alt,
+}: {
+  path: string;
+  alt: string;
+}) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      role="img"
+      aria-label={alt}
+      style={{ display: "block", color: "#d4d4d8" }}
+    >
+      <title>{alt}</title>
+      <path d={path} fill="currentColor" />
+    </svg>
+  );
 }
 
 export function EmailLayout({
   preview,
   headingText,
   children,
+  headerMark,
 }: {
   preview: string;
   headingText: string;
   children: ReactNode;
+  headerMark?: {
+    primaryHref?: string;
+    primarySrc: string;
+    primaryAlt: string;
+    secondarySrc?: string;
+    secondaryAlt?: string;
+  };
 }) {
+  const mark = headerMark ?? {
+    primaryHref: "https://zcashnames.com",
+    primarySrc: "https://zcashnames.com/brandkit/zcashnames-primary-logo-white-transparent-377x403.png",
+    primaryAlt: "ZcashNames",
+  };
+
   return (
     <Html>
       <Head />
@@ -51,15 +81,66 @@ export function EmailLayout({
       <Body style={bodyStyle}>
         <Container style={containerStyle}>
           <Section style={{ padding: "40px 40px 24px", textAlign: "center" as const }}>
-            <Link href="https://zcashnames.com" style={{ textDecoration: "none", display: "inline-block" }}>
-              <Img
-                src="https://zcashnames.com/brandkit/zcashnames-primary-logo-white-black-square-background-403x403.png"
-                alt="ZcashNames"
-                width="48"
-                height="48"
-                style={{ display: "block", margin: "0 auto", border: "0" }}
-              />
-            </Link>
+            <table role="presentation" style={{ margin: "0 auto", borderCollapse: "collapse" }}>
+              <tbody>
+                <tr>
+                  <td style={{ verticalAlign: "middle" }}>
+                    <Link
+                      href={mark.primaryHref ?? "https://zcashnames.com"}
+                      style={{ textDecoration: "none", display: "inline-block" }}
+                    >
+                      <Img
+                        src={mark.primarySrc}
+                        alt={mark.primaryAlt}
+                        width="48"
+                        height="48"
+                        style={{
+                          display: "block",
+                          margin: "0 auto",
+                          border: "0",
+                          width: 48,
+                          height: 48,
+                          objectFit: "contain",
+                        }}
+                      />
+                    </Link>
+                  </td>
+                  {mark.secondarySrc && (
+                    <>
+                      <td
+                        style={{
+                          verticalAlign: "middle",
+                          padding: "0 10px",
+                          fontSize: 14,
+                          lineHeight: "14px",
+                          color: "#52525b",
+                          fontWeight: 500,
+                        }}
+                      >
+                        x
+                      </td>
+                      <td style={{ verticalAlign: "middle" }}>
+                        <Img
+                          src={mark.secondarySrc}
+                          alt={mark.secondaryAlt ?? "Wallet"}
+                          width="48"
+                          height="48"
+                          style={{
+                            display: "block",
+                            margin: "0 auto",
+                            border: "0",
+                            width: 48,
+                            height: 48,
+                            objectFit: "contain",
+                            borderRadius: 10,
+                          }}
+                        />
+                      </td>
+                    </>
+                  )}
+                </tr>
+              </tbody>
+            </table>
           </Section>
 
           <Heading style={headingStyle}>{headingText}</Heading>
@@ -77,29 +158,10 @@ export function EmailLayout({
             <table role="presentation" style={{ margin: "0 auto", borderCollapse: "collapse" }}>
               <tbody>
                 <tr>
-                  {SOCIALS.map(({ href, alt }) => (
+                  {SOCIALS.map(({ href, iconKey, alt }) => (
                     <td key={alt} style={{ padding: "0 8px" }}>
-                      <Link
-                        href={href}
-                        aria-label={alt}
-                        title={alt}
-                        style={{
-                          display: "inline-block",
-                          width: "28px",
-                          height: "28px",
-                          lineHeight: "28px",
-                          borderRadius: "999px",
-                          border: "1px solid #3f3f46",
-                          color: "#d4d4d8",
-                          textAlign: "center",
-                          textDecoration: "none",
-                          fontSize: "12px",
-                          fontWeight: "700",
-                          fontFamily: "Arial, sans-serif",
-                          backgroundColor: "#111111",
-                        }}
-                      >
-                        {socialBadgeLabel(alt)}
+                      <Link href={href} style={{ textDecoration: "none", display: "inline-block" }}>
+                        <EmailSocialIcon path={SOCIAL_ICON_PATHS[iconKey]} alt={alt} />
                       </Link>
                     </td>
                   ))}

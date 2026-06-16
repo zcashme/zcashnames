@@ -1,7 +1,14 @@
 import { flattenToPlainText as flattenMarkdownLinks } from "@/lib/campaigns/content";
+import { getWalletVariant, type WalletVariantId } from "@/lib/wallets/catalog";
 
-export function defaultInviteSubject(): string {
-  return "You're invited to the ZcashNames beta";
+export function defaultInviteSubject(args?: { walletVariantId?: WalletVariantId | null }): string {
+  const walletVariantId = args?.walletVariantId ?? null;
+  if (!walletVariantId) return "Your invitation to ZNS beta test";
+
+  const variant = getWalletVariant(walletVariantId);
+  if (!variant) return "Your invitation to ZNS beta test";
+
+  return `ZNS Beta Invitation from ${variant.displayName}`;
 }
 
 export function defaultInviteBody({ displayName: _displayName }: { displayName: string }): string {
