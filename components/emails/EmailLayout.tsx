@@ -27,28 +27,49 @@ import {
   divider as dividerStyle,
 } from "@/lib/email/styles";
 
+export interface EmailHeaderMark {
+  primaryHref?: string;
+  primarySrc?: string;
+  primaryAlt?: string;
+  secondarySrc?: string;
+  secondaryAlt?: string;
+}
+
+export const ZCASHNAMES_HEADER_MARK: Required<
+  Pick<EmailHeaderMark, "primaryHref" | "primarySrc" | "primaryAlt">
+> = {
+  primaryHref: "https://www.zcashnames.com",
+  primarySrc: "https://www.zcashnames.com/brandkit/zcashnames-primary-logo-white-transparent-377x403.png",
+  primaryAlt: "ZcashNames",
+};
+
+export function createZcashNamesHeaderMark(
+  overrides: EmailHeaderMark = {},
+): Required<Pick<EmailHeaderMark, "primaryHref" | "primarySrc" | "primaryAlt">> &
+  Pick<EmailHeaderMark, "secondarySrc" | "secondaryAlt"> {
+  return {
+    ...ZCASHNAMES_HEADER_MARK,
+    ...overrides,
+  };
+}
+
 export function EmailLayout({
   preview,
   headingText,
   children,
   headerMark,
+  unsubscribeLinks,
 }: {
   preview: string;
   headingText: string;
   children: ReactNode;
-  headerMark?: {
-    primaryHref?: string;
-    primarySrc: string;
-    primaryAlt: string;
-    secondarySrc?: string;
-    secondaryAlt?: string;
-  };
+  headerMark?: EmailHeaderMark;
+  unsubscribeLinks?: {
+    seriesHref: string;
+    allHref: string;
+  } | null;
 }) {
-  const mark = headerMark ?? {
-    primaryHref: "https://zcashnames.com",
-    primarySrc: "https://zcashnames.com/brandkit/zcashnames-primary-logo-white-transparent-377x403.png",
-    primaryAlt: "ZcashNames",
-  };
+  const mark = createZcashNamesHeaderMark(headerMark);
   return (
     <Html>
       <Head />
@@ -163,6 +184,16 @@ export function EmailLayout({
               </Link>
             </Text>
           </Section>
+          {unsubscribeLinks && (
+            <Section style={{ textAlign: "center" as const, padding: "0 40px 32px" }}>
+              <Hr style={{ ...dividerStyle, margin: "0 0 24px" }} />
+              <Text style={{ margin: 0, fontSize: 11, color: "#a1a1aa", lineHeight: "18px" }}>
+                <Link href={unsubscribeLinks.seriesHref} style={{ color: "#a1a1aa", textDecoration: "underline" }}>
+                  Unsubscribe
+                </Link>
+              </Text>
+            </Section>
+          )}
         </Container>
       </Body>
     </Html>

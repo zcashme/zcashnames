@@ -160,8 +160,6 @@ export async function renderBetaInvitePreview({
   });
   const walletCta = resolveWalletCta(walletVariantId, resolvedBaseUrl);
   const walletLogoRow = walletCta ? null : resolveWalletLogoRow(resolvedBaseUrl);
-  const brandLogoSrc =
-    `${resolvedBaseUrl}/brandkit/zcashnames-primary-logo-white-transparent-377x403.png`;
   const resolvedBodyParagraphs = bodyParagraphs.filter(
     (paragraph) => paragraph.trim().toLowerCase() !== "you're invited to the zcashnames beta.",
   );
@@ -174,7 +172,6 @@ export async function renderBetaInvitePreview({
       inviteCode,
       bodyParagraphs: resolvedBodyParagraphs,
       headingText,
-      brandLogoSrc,
       walletCta,
       walletLogoRow,
     }),

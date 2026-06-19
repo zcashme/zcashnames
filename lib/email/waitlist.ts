@@ -7,6 +7,7 @@ import "server-only";
 // dashboard.
 import ConfirmEmail from "@/components/emails/ConfirmEmail";
 import ReferralRecoveryEmail from "@/components/emails/ReferralRecoveryEmail";
+import SubscriberConfirmEmail from "@/components/emails/SubscriberConfirmEmail";
 import WaitlistEmail from "@/components/emails/WaitlistEmail";
 import { FROM_EMAIL } from "@/lib/email/constants";
 import { sendEmail } from "@/lib/email/client";
@@ -50,6 +51,23 @@ export async function sendWaitlistWelcomeEmail({
     to: email,
     subject: "Early access to ZcashNames",
     react: WaitlistEmail({ name, referralUrl, referralCode: preferredReferralCode, accessPin }),
+  });
+}
+
+export async function sendSubscriberConfirmationEmail({
+  email,
+  series,
+  confirmUrl,
+}: {
+  email: string;
+  series: string;
+  confirmUrl: string;
+}): Promise<void> {
+  await sendEmail({
+    from: FROM_EMAIL,
+    to: email,
+    subject: `Confirm your ${series} subscription`,
+    react: SubscriberConfirmEmail({ email, series, confirmUrl }),
   });
 }
 

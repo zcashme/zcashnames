@@ -1,20 +1,27 @@
 import { Button, Section, Text } from "@react-email/components";
 import { createZcashNamesHeaderMark, EmailLayout } from "./EmailLayout";
-import { content, paragraph, ctaButton } from "@/lib/email/styles";
+import { content, ctaButton, paragraph } from "@/lib/email/styles";
 
-export default function BlogSubscriberConfirmEmail({
-  seriesTitle,
+export default function SubscriberConfirmEmail({
+  email,
+  series,
   confirmUrl,
 }: {
-  seriesTitle: string;
+  email: string;
+  series: string;
   confirmUrl: string;
 }) {
   return (
-    <EmailLayout preview={`Confirm your subscription to ${seriesTitle}.`} headingText="Confirm your subscription" headerMark={createZcashNamesHeaderMark()}>
+    <EmailLayout
+      preview={`Confirm your ${series} email subscription.`}
+      headingText="Confirm your subscription"
+      headerMark={createZcashNamesHeaderMark()}
+    >
       <Section style={content}>
-        <Text style={paragraph}>You asked to subscribe to {seriesTitle}.</Text>
+        <Text style={paragraph}>Hi,</Text>
         <Text style={paragraph}>
-          Click below to confirm your email and receive updates when new posts in this series are published.
+          Click below to confirm that <strong>{email}</strong> should receive ZcashNames{" "}
+          <strong>{series}</strong> emails.
         </Text>
       </Section>
 
@@ -36,7 +43,7 @@ export default function BlogSubscriberConfirmEmail({
 
       <Section style={{ textAlign: "left" as const, padding: "16px 40px 32px" }}>
         <Text style={{ ...paragraph, margin: 0, color: "#a1a1aa", fontSize: 13 }}>
-          If you didn&apos;t request this, you can ignore this email.
+          If you didn&apos;t request this change, you can ignore this email.
         </Text>
       </Section>
     </EmailLayout>

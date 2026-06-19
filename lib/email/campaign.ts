@@ -10,6 +10,10 @@ export async function renderCampaignPreview(args: {
   subject: string;
   bodyText: string;
   personalization: CampaignRecipientPersonalization;
+  unsubscribeLinks?: {
+    seriesHref: string;
+    allHref: string;
+  } | null;
 }): Promise<string> {
   return render(
     CampaignEmail({
@@ -17,6 +21,7 @@ export async function renderCampaignPreview(args: {
       headingText: args.subject,
       bodyText: args.bodyText,
       personalization: args.personalization,
+      unsubscribeLinks: args.unsubscribeLinks ?? null,
     }),
   );
 }
@@ -27,6 +32,10 @@ export async function sendCampaignEmail(args: {
   bodyText: string;
   personalization: CampaignRecipientPersonalization;
   scheduledAt?: string | null;
+  unsubscribeLinks?: {
+    seriesHref: string;
+    allHref: string;
+  } | null;
 }): Promise<{ id: string | null | undefined }> {
   const result = await sendEmail({
     from: FROM_EMAIL,
@@ -37,6 +46,7 @@ export async function sendCampaignEmail(args: {
       headingText: args.subject,
       bodyText: args.bodyText,
       personalization: args.personalization,
+      unsubscribeLinks: args.unsubscribeLinks ?? null,
     }),
     scheduledAt: args.scheduledAt ?? undefined,
   });

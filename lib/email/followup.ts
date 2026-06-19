@@ -10,11 +10,15 @@ export async function sendFollowUp(
   email: string,
   name: string,
   reasonCopy: string,
+  unsubscribeLinks?: {
+    seriesHref: string;
+    allHref: string;
+  } | null,
 ): Promise<void> {
   await sendEmail({
     from: FROM_EMAIL,
     to: email,
     subject: "Let\u2019s connect",
-    react: FollowUpEmail({ name, reasonCopy }),
+    react: FollowUpEmail({ name, reasonCopy, unsubscribeLinks: unsubscribeLinks ?? null }),
   });
 }
