@@ -24,7 +24,7 @@ export interface EmailSubscriberRecord {
 }
 
 export interface SubscriberSeriesPreference {
-  series: EmailSubscriptionSeries;
+  series: string;
   isSubscribed: boolean;
   isConfirmed: boolean;
   isPendingConfirmation: boolean;
@@ -53,7 +53,7 @@ function mapSubscriber(row: Record<string, unknown>): EmailSubscriberRecord {
   };
 }
 
-async function getSubscriber(
+export async function getSubscriberRecord(
   email: string,
   series: string,
 ): Promise<EmailSubscriberRecord | null> {
@@ -72,7 +72,7 @@ export async function getActiveSubscriber(
   email: string,
   series: string,
 ): Promise<EmailSubscriberRecord | null> {
-  const subscriber = await getSubscriber(email, series);
+  const subscriber = await getSubscriberRecord(email, series);
   if (!subscriber) return null;
   if (subscriber.unsubscribed_at) return null;
   if (!subscriber.confirmed_at) return null;
@@ -81,6 +81,7 @@ export async function getActiveSubscriber(
 
 export async function listSubscriberPreferences(
   email: string,
+  seriesList?: string[],
 ): Promise<SubscriberSeriesPreference[]> {
   const normalizedEmail = normalizeEmail(email);
   const { data, error } = await db
@@ -95,7 +96,11 @@ export async function listSubscriberPreferences(
     rows.set(mapped.series, mapped);
   }
 
-  return EMAIL_SUBSCRIPTION_SERIES.map((series) => {
+  const effectiveSeries = (seriesList && seriesList.length > 0 ? seriesList : EMAIL_SUBSCRIPTION_SERIES).map(
+    (series) => series.trim(),
+  );
+
+  return effectiveSeries.map((series) => {
     const row = rows.get(series);
     return {
       series,
@@ -120,7 +125,7 @@ export async function upsertSubscriber(args: {
 }): Promise<void> {
   const nowIso = new Date().toISOString();
   const normalizedEmail = normalizeEmail(args.email);
-  const existing = await getSubscriber(normalizedEmail, args.series);
+  const existing = await getSubscriberRecord(normalizedEmail, args.series);
 
   if (existing) {
     const { error: updateError } = await db
@@ -161,7 +166,7 @@ export async function upsertSubscriber(args: {
 
 export async function requestSubscriberConfirmation(args: {
   email: string;
-  series: EmailSubscriptionSeries;
+  series: string;
   source?: string | null;
   baseUrl?: string;
 }): Promise<void> {
@@ -189,7 +194,7 @@ export async function requestSubscriberConfirmation(args: {
 
 export async function confirmSubscriberSeries(args: {
   email: string;
-  series: EmailSubscriptionSeries;
+  series: string;
   source?: string | null;
 }): Promise<void> {
   await upsertSubscriber({
@@ -205,7 +210,7 @@ export async function confirmSubscriberSeries(args: {
 }
 
 export async function unsubscribeSeries(email: string, series: string): Promise<number> {
-  const subscriber = await getSubscriber(email, series);
+  const subscriber = await getSubscriberRecord(email, series);
   const nowIso = new Date().toISOString();
   if (!subscriber) {
     await upsertSubscriber({
@@ -231,9 +236,10 @@ export async function unsubscribeSeries(email: string, series: string): Promise<
   return (data ?? []).length;
 }
 
-export async function unsubscribeAll(email: string): Promise<number> {
+export async function unsubscribeAll(email: string, seriesList?: string[]): Promise<number> {
   let updated = 0;
-  for (const series of EMAIL_SUBSCRIPTION_SERIES) {
+  const effectiveSeries = seriesList && seriesList.length > 0 ? seriesList : EMAIL_SUBSCRIPTION_SERIES;
+  for (const series of effectiveSeries) {
     updated += await unsubscribeSeries(email, series);
   }
   return updated;
@@ -241,18 +247,16 @@ export async function unsubscribeAll(email: string): Promise<number> {
 
 export async function applySubscriberPreferences(args: {
   email: string;
-  desiredSeries: Record<EmailSubscriptionSeries, boolean>;
+  desiredSeries: Record<string, boolean>;
+  seriesList: string[];
   source?: string | null;
   baseUrl?: string;
-}): Promise<{
-  confirmationRequested: EmailSubscriptionSeries[];
-  unsubscribed: EmailSubscriptionSeries[];
-}> {
-  const confirmationRequested: EmailSubscriptionSeries[] = [];
-  const unsubscribed: EmailSubscriptionSeries[] = [];
+}): Promise<{ confirmationRequested: string[]; unsubscribed: string[] }> {
+  const confirmationRequested: string[] = [];
+  const unsubscribed: string[] = [];
   const normalizedEmail = normalizeEmail(args.email);
 
-  for (const series of EMAIL_SUBSCRIPTION_SERIES) {
+  for (const series of args.seriesList) {
     if (args.desiredSeries[series]) {
       const active = await getActiveSubscriber(normalizedEmail, series);
       if (!active) {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { EMAIL_SUBSCRIPTION_SERIES } from "@/lib/email/subscription-series";
+import { listDistinctSubscriberSeriesWithToken } from "@/lib/email/subscriber-series";
 import { listSubscriberPreferences } from "@/lib/email/subscribers";
 import { parseUnsubscribeToken } from "@/lib/email/unsubscribe-token";
 import UnsubscribePreferencesClient from "./UnsubscribePreferencesClient";
@@ -19,12 +19,9 @@ export default async function UnsubscribePage({
     return (
       <main className="mx-auto flex min-h-[70vh] max-w-xl items-center px-6 py-16">
         <section className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 p-8 text-center shadow-2xl">
-          <h1 className="mt-3 text-3xl font-semibold text-zinc-100">
-            Invalid unsubscribe link
-          </h1>
+          <h1 className="mt-3 text-3xl font-semibold text-zinc-100">Invalid unsubscribe link</h1>
           <p className="mt-4 text-sm leading-6 text-zinc-400">
-            This preferences link is missing or invalid. If you still need help, contact us
-            directly.
+            This preferences link is missing or invalid. If you still need help, contact us directly.
           </p>
           <div className="mt-8">
             <Link href="/" className="text-sm font-medium text-amber-400 hover:text-amber-300">
@@ -36,15 +33,16 @@ export default async function UnsubscribePage({
     );
   }
 
-  const preferences = await listSubscriberPreferences(parsed.email);
+  const seriesList = await listDistinctSubscriberSeriesWithToken(parsed.series);
+  const preferences = await listSubscriberPreferences(parsed.email, seriesList);
   const initialMap = Object.fromEntries(
     preferences.map((preference) => [preference.series, preference.isSubscribed]),
-  ) as Record<(typeof EMAIL_SUBSCRIPTION_SERIES)[number], boolean>;
+  ) as Record<string, boolean>;
 
   if (parsed.mode === "all") {
-    for (const series of EMAIL_SUBSCRIPTION_SERIES) initialMap[series] = false;
+    for (const series of seriesList) initialMap[series] = false;
   } else {
-    initialMap[parsed.series as (typeof EMAIL_SUBSCRIPTION_SERIES)[number]] = false;
+    initialMap[parsed.series] = false;
   }
 
   return (
@@ -57,6 +55,7 @@ export default async function UnsubscribePage({
         <UnsubscribePreferencesClient
           token={token}
           email={parsed.email}
+          seriesList={seriesList}
           initialPreferences={initialMap}
         />
         <div className="mt-8">

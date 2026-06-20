@@ -1,22 +1,17 @@
 "use server";
 
-import type { EmailSubscriptionSeries } from "@/lib/email/subscription-series";
-import { EMAIL_SUBSCRIPTION_SERIES } from "@/lib/email/subscription-series";
 import { applySubscriberPreferences } from "@/lib/email/subscribers";
+import { listDistinctSubscriberSeriesWithToken } from "@/lib/email/subscriber-series";
 import { parseUnsubscribeToken } from "@/lib/email/unsubscribe-token";
 import { resolveSiteUrl } from "@/lib/site-url";
 
 export async function saveUnsubscribePreferencesAction(
-  _previousState: {
-    ok: boolean;
-    message: string;
-    confirmationRequested?: EmailSubscriptionSeries[];
-  },
+  _previousState: { ok: boolean; message: string; confirmationRequested?: string[] },
   formData: FormData,
 ): Promise<{
   ok: boolean;
   message: string;
-  confirmationRequested?: EmailSubscriptionSeries[];
+  confirmationRequested?: string[];
 }> {
   const token = String(formData.get("token") ?? "").trim();
   const parsed = parseUnsubscribeToken(token);
@@ -24,16 +19,18 @@ export async function saveUnsubscribePreferencesAction(
     return { ok: false, message: "This preferences link is invalid or expired." };
   }
 
+  const seriesList = await listDistinctSubscriberSeriesWithToken(parsed.series);
   const desiredSeries = Object.fromEntries(
-    EMAIL_SUBSCRIPTION_SERIES.map((series) => [
+    seriesList.map((series) => [
       series,
       String(formData.get(`series_${series}`) ?? "unsubscribe") === "subscribe",
     ]),
-  ) as Record<EmailSubscriptionSeries, boolean>;
+  ) as Record<string, boolean>;
 
   const result = await applySubscriberPreferences({
     email: parsed.email,
     desiredSeries,
+    seriesList,
     source: "unsubscribe_preferences",
     baseUrl: resolveSiteUrl(),
   });

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { confirmSubscriberSeries } from "@/lib/email/subscribers";
-import { EMAIL_SUBSCRIPTION_SERIES } from "@/lib/email/subscription-series";
+import { listDistinctSubscriberSeriesWithToken } from "@/lib/email/subscriber-series";
 import {
   isSubscriberConfirmSignatureValid,
   isSubscriberConfirmTokenExpired,
@@ -19,16 +19,17 @@ export default async function ConfirmSubscriberPage({
 
   let title = "Invalid confirmation link";
   let message = "This confirmation link is missing, invalid, or expired.";
+  const seriesList = parsed ? await listDistinctSubscriberSeriesWithToken(parsed.series) : [];
 
   if (
     parsed &&
-    EMAIL_SUBSCRIPTION_SERIES.includes(parsed.series as (typeof EMAIL_SUBSCRIPTION_SERIES)[number]) &&
+    seriesList.includes(parsed.series) &&
     !isSubscriberConfirmTokenExpired(parsed) &&
     isSubscriberConfirmSignatureValid(parsed)
   ) {
     await confirmSubscriberSeries({
       email: parsed.email,
-      series: parsed.series as (typeof EMAIL_SUBSCRIPTION_SERIES)[number],
+      series: parsed.series,
       source: "subscriber_confirm_link",
     });
     title = "Subscription confirmed";
@@ -38,9 +39,7 @@ export default async function ConfirmSubscriberPage({
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-xl items-center px-6 py-16">
       <section className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 p-8 text-center shadow-2xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-          ZcashNames
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">ZcashNames</p>
         <h1 className="mt-3 text-3xl font-semibold text-zinc-100">{title}</h1>
         <p className="mt-4 text-sm leading-6 text-zinc-400">{message}</p>
         <div className="mt-8">
