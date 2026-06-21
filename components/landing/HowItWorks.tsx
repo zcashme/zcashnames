@@ -16,7 +16,6 @@ type BenefitGroup = {
   description: string;
   items: Benefit[];
   span?: string;
-  accent: string;
 };
 
 type Step = {
@@ -24,7 +23,6 @@ type Step = {
   number: string;
   eyebrow: string;
   description: ReactNode;
-  accent: string;
 };
 
 const steps: Step[] = [
@@ -34,8 +32,6 @@ const steps: Step[] = [
     eyebrow: "Get in line",
     description:
       "Invites go out in order, so early signups get first pick of the best Zcash names before the crowd shows up. Free to join. No commitment.",
-    accent:
-      "linear-gradient(135deg, color-mix(in srgb, var(--feature-heading-line-from) 82%, transparent), color-mix(in srgb, var(--feature-heading-line-to) 72%, transparent))",
   },
   {
     id: "step-2",
@@ -43,8 +39,6 @@ const steps: Step[] = [
     eyebrow: "Climb the queue",
     description:
       "Referrals push you toward the front of the line, improving your odds of landing high-demand names. If they claim one, you earn ZEC.",
-    accent:
-      "linear-gradient(135deg, color-mix(in srgb, var(--feature-heading-line-to) 82%, transparent), color-mix(in srgb, var(--feature-heading-line-from) 58%, transparent))",
   },
   {
     id: "step-3",
@@ -52,8 +46,6 @@ const steps: Step[] = [
     eyebrow: "Lock it in",
     description:
       "When your turn opens, you get an email. Log in, choose your Zcash name, and secure it before public launch. Keep it, use it, or sell it later.",
-    accent:
-      "linear-gradient(135deg, color-mix(in srgb, var(--feature-heading-line-from) 58%, transparent), color-mix(in srgb, var(--feature-heading-line-to) 88%, transparent))",
   },
 ];
 
@@ -62,8 +54,6 @@ const benefitGroups: BenefitGroup[] = [
     title: "Easy-to-use",
     description: "Payments without addresses",
     span: "lg:col-span-6",
-    accent:
-      "linear-gradient(135deg, color-mix(in srgb, var(--feature-heading-line-from) 82%, transparent), color-mix(in srgb, var(--feature-heading-line-to) 72%, transparent))",
     items: [
       {
         title: "Send to simple names",
@@ -84,8 +74,6 @@ const benefitGroups: BenefitGroup[] = [
     title: "Cryptographic Ownership",
     description: "Your Zcash name is an asset.",
     span: "lg:col-span-6",
-    accent:
-      "linear-gradient(135deg, color-mix(in srgb, var(--feature-heading-line-to) 82%, transparent), color-mix(in srgb, var(--feature-heading-line-from) 58%, transparent))",
     items: [
       {
         title: "On-chain and tamper-resistant",
@@ -106,8 +94,6 @@ const benefitGroups: BenefitGroup[] = [
     title: "Sign with Zcash",
     description: "Your Zcash name can be used across apps.",
     span: "lg:col-span-12",
-    accent:
-      "linear-gradient(135deg, color-mix(in srgb, var(--feature-heading-line-from) 58%, transparent), color-mix(in srgb, var(--feature-heading-line-to) 88%, transparent))",
     items: [
       {
         title: "Private by default",
@@ -147,8 +133,8 @@ const sectionHeading = (
 );
 
 const rowHeading = (title: string, prefix?: ReactNode) => (
-  <div className="mb-4 flex items-center gap-4 px-1">
-    <div className="shrink-0 flex items-center gap-3 text-left">
+  <div className="mb-4 px-1">
+    <div className="inline-flex items-center gap-3 text-left">
       {prefix ? (
         <span className="type-kicker" style={{ color: "var(--fg-heading)" }}>
           {prefix}
@@ -158,16 +144,21 @@ const rowHeading = (title: string, prefix?: ReactNode) => (
         {title}
       </h3>
     </div>
-    <div
-      className="h-px flex-1"
-      style={{ background: "linear-gradient(90deg, color-mix(in srgb, var(--fg-muted) 32%, transparent) 0%, transparent 100%)" }}
-      aria-hidden="true"
-    />
   </div>
 );
 
-const groupIntroClassName = "px-1 pt-3 pb-6";
-const groupIntroTextClassName = "type-section-subtitle max-w-xl text-left";
+const benefitGroupHeading = (title: string, description: string) => (
+  <div className="mb-4 px-1">
+    <div className="inline-flex max-w-xl flex-col text-left">
+      <h3 className="type-kicker text-left" style={{ color: "var(--section-title-accent)" }}>
+        {title}
+      </h3>
+      <p className="mt-1 type-section-subtitle text-left" style={{ color: "var(--fg-body)" }}>
+        {description}
+      </p>
+    </div>
+  </div>
+);
 
 function BenefitsBento() {
   const proximity = usePointerProximity<HTMLElement>({
@@ -187,12 +178,7 @@ function BenefitsBento() {
           key={group.title}
           className={`${group.span ?? "lg:col-span-6"}`}
         >
-          {rowHeading(group.title)}
-          <div className={groupIntroClassName}>
-            <p className={groupIntroTextClassName} style={{ color: "var(--fg-body)" }}>
-              {group.description}
-            </p>
-          </div>
+          {benefitGroupHeading(group.title, group.description)}
 
           <div className={`grid grid-cols-1 gap-4 ${group.title === "Sign with Zcash" ? "lg:grid-cols-3" : group.span === "lg:col-span-12" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
             {group.items.map((b) => (

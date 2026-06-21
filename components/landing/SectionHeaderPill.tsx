@@ -10,40 +10,68 @@ export default function SectionHeaderPill({
   id?: string;
   title: string;
 }) {
-  const { resolvedTheme } = useTheme();
-  const monochrome = resolvedTheme === "monochrome";
-  const pillRef = useRef<HTMLButtonElement | null>(null);
+  const sectionRef = useRef<HTMLDivElement | null>(null);
 
   function handleClick() {
-    pillRef.current?.scrollIntoView({
+    sectionRef.current?.scrollIntoView({
       behavior: "smooth",
       block: "start",
     });
   }
 
   return (
+    <div ref={sectionRef} id={id} className="w-full max-w-[44rem]">
+      <EditorialLineHeader title={title} onClick={handleClick} />
+    </div>
+  );
+}
+
+function EditorialLineHeader({
+  title,
+  onClick,
+}: {
+  title: string;
+  onClick: () => void;
+}) {
+  const { resolvedTheme } = useTheme();
+  const monochrome = resolvedTheme === "monochrome";
+
+  return (
     <button
-      ref={pillRef}
-      id={id}
       type="button"
-      onClick={handleClick}
-      className="m-0 inline-flex w-full max-w-[44rem] cursor-pointer items-center justify-center rounded-[18px] border px-4 py-2.5 text-center type-kicker transition-opacity hover:opacity-90"
+      onClick={onClick}
+      className="group grid w-full cursor-pointer items-center justify-center gap-3 px-1 text-center sm:gap-4"
       style={{
-        borderColor: monochrome
-          ? "color-mix(in srgb, var(--feature-heading-line-to) 28%, var(--faq-border))"
-          : "transparent",
-        background: monochrome
-          ? "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 70%, transparent), color-mix(in srgb, var(--faq-border) 18%, transparent))"
-          : "var(--home-result-primary-bg)",
-        boxShadow: monochrome
-          ? "0 12px 34px color-mix(in srgb, #000 10%, transparent)"
-          : "var(--home-result-primary-shadow)",
-        backdropFilter: monochrome ? "blur(10px)" : undefined,
-        color: monochrome ? "var(--fg-heading)" : "var(--home-result-primary-fg)",
+        gridTemplateColumns: "minmax(4.5rem, 11rem) auto minmax(4.5rem, 11rem)",
       }}
       aria-label={`Scroll ${title} to the top`}
     >
-      {title}
+      <span
+        className="block h-px w-full transition-opacity duration-150 group-hover:opacity-100"
+        style={{
+          opacity: 0.92,
+          background:
+            "linear-gradient(90deg, color-mix(in srgb, var(--fg-muted) 0%, transparent) 0%, color-mix(in srgb, var(--fg-muted) 68%, transparent) 14%, color-mix(in srgb, var(--fg-muted) 68%, transparent) 86%, color-mix(in srgb, var(--fg-muted) 0%, transparent) 100%)",
+        }}
+        aria-hidden="true"
+      />
+      <span
+        className="px-1 text-[0.88rem] font-semibold uppercase tracking-[0.16em] transition-colors duration-150 sm:text-[0.95rem] sm:tracking-[0.18em] md:text-[1.05rem]"
+        style={{
+          color: monochrome ? "var(--fg-heading)" : "var(--section-title-accent)",
+        }}
+      >
+        {title}
+      </span>
+      <span
+        className="block h-px w-full transition-opacity duration-150 group-hover:opacity-100"
+        style={{
+          opacity: 0.92,
+          background:
+            "linear-gradient(90deg, color-mix(in srgb, var(--fg-muted) 0%, transparent) 0%, color-mix(in srgb, var(--fg-muted) 68%, transparent) 14%, color-mix(in srgb, var(--fg-muted) 68%, transparent) 86%, color-mix(in srgb, var(--fg-muted) 0%, transparent) 100%)",
+        }}
+        aria-hidden="true"
+      />
     </button>
   );
 }

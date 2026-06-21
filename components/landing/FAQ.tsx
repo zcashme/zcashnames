@@ -171,18 +171,13 @@ export default function FAQ() {
       <div className="flex flex-col gap-10">
         {groups.map((group, groupIndex) => (
           <div key={groupIndex}>
-            <div className="mb-4 flex items-center gap-4 px-1">
+            <div className="mb-4 px-1">
               <h3
-                className="type-kicker shrink-0"
+                className="type-kicker"
                 style={{ color: "var(--section-title-accent)" }}
               >
                 {group.title}
               </h3>
-              <div
-                className="h-px flex-1"
-                style={{ background: "linear-gradient(90deg, color-mix(in srgb, var(--fg-muted) 32%, transparent) 0%, transparent 100%)" }}
-                aria-hidden="true"
-              />
             </div>
             <div
               className="rounded-xl overflow-hidden"
