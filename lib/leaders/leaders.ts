@@ -525,10 +525,13 @@ function buildLeaderboardFromRows(
       };
     })
     .sort((a, b) => {
+      if (b.potential_rewards !== a.potential_rewards) {
+        return b.potential_rewards - a.potential_rewards;
+      }
+      if (b.referrals !== a.referrals) return b.referrals - a.referrals;
       if (b.attributedReferrals !== a.attributedReferrals) {
         return b.attributedReferrals - a.attributedReferrals;
       }
-      if (b.referrals !== a.referrals) return b.referrals - a.referrals;
       return a.canonical_referral_code.localeCompare(b.canonical_referral_code);
     })
     .map((entry, i) => ({ ...entry, rank: i + 1 }));

@@ -32,7 +32,7 @@ function DashboardLink() {
   return (
     <LandingActionLink
       proximityId="dashboard-link"
-      href="/community"
+      href="/leaders/ref"
       label="Dashboard"
       showArrow={false}
       icon={

@@ -1288,9 +1288,8 @@ const HOW_IT_WORKS: { title: string; body: ReactNode }[] = [
     title: "Ranking",
     body: (
       <>
-        The leaderboard starts by ranking total referrals, but may adjust based on{" "}
-        <strong>successful referrals</strong> -- people who not only signed up, but also purchase
-        their name during early access.
+        The leaderboard ranks participants by estimated <strong>rewards</strong>, with referral
+        totals used only as tie-breakers.
         <span className="mt-2 block text-fg-muted">
           <img src="/icons/fire-red.apng" alt="streak" className="mr-1 inline-block h-4 w-4 align-text-bottom" />
           A red fire icon next to a name means that person has had the most referrals for more than
