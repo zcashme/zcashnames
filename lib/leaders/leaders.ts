@@ -1,7 +1,6 @@
 "use server";
 
 import { headers } from "next/headers";
-import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { sendCommissionPinEmail } from "@/lib/email/commission-pin";
 import { getPreferredReferralCode } from "@/lib/referral-code";
@@ -89,30 +88,6 @@ export interface WaitlistStatsSnapshot {
   };
 }
 
-export interface InternalReferralStatsPayload {
-  referralCode: string;
-  directReferrals: number | null;
-  indirectReferrals: number | null;
-  attributedReferrals: number | null;
-  referrals24hCount: number | null;
-  referrals24hGrowthPct: number | null;
-  referrals7dCount: number | null;
-  referrals7dGrowthPct: number | null;
-  referrals30dCount: number | null;
-  referrals30dGrowthPct: number | null;
-  depth1Referrals: number | null;
-  depth2Referrals: number | null;
-  depth3Referrals: number | null;
-  leaderboardRank: number | null;
-  waitlistPosition: number | null;
-  waitlistTotal: number | null;
-  maxReferralDepth: number | null;
-  potentialRewards: number | null;
-  rootBadge: "red" | "blue" | null;
-  commissionUnlocked: boolean | null;
-  referralsUnlocked: boolean | null;
-}
-
 export interface DailyNewNameEntry {
   name: string;
   referral_code: string;
@@ -142,7 +117,6 @@ const COMMISSION_PIN_RATE_LIMIT_MESSAGE = "We already sent you a code today";
 const COMMISSION_PIN_RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
 const WAITLIST_PAGE_SIZE = 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const INTERNAL_REFERRAL_STATS_REVALIDATE_SECONDS = 300;
 const REFERRAL_DASHBOARD_LOG_PREFIX = "[leaders/referral-dashboard]";
 
 function calculateGrowthPct(current: number, previous: number): number {
@@ -229,107 +203,6 @@ function buildPreferredCodeMap(rows: WaitlistReferralRow[]): Record<string, stri
 
   return preferredCodeMap;
 }
-
-function buildReferralWindowStats(rows: WaitlistReferralRow[], canonicalCode: string): Pick<
-  InternalReferralStatsPayload,
-  | "referrals24hCount"
-  | "referrals24hGrowthPct"
-  | "referrals7dCount"
-  | "referrals7dGrowthPct"
-  | "referrals30dCount"
-  | "referrals30dGrowthPct"
-> {
-  const nowMs = Date.now();
-  const cutoff24h = nowMs - DAY_MS;
-  const prevCutoff24h = nowMs - 2 * DAY_MS;
-  const cutoff7d = nowMs - 7 * DAY_MS;
-  const prevCutoff7d = nowMs - 14 * DAY_MS;
-  const cutoff30d = nowMs - 30 * DAY_MS;
-  const prevCutoff30d = nowMs - 60 * DAY_MS;
-
-  let count24h = 0;
-  let prev24h = 0;
-  let count7d = 0;
-  let prev7d = 0;
-  let count30d = 0;
-  let prev30d = 0;
-
-  for (const row of rows) {
-    if (!row.email_verified || row.referred_by !== canonicalCode) continue;
-
-    const createdAtMs = new Date(row.created_at).getTime();
-    if (!Number.isFinite(createdAtMs)) continue;
-
-    if (createdAtMs >= cutoff24h) count24h += 1;
-    else if (createdAtMs >= prevCutoff24h) prev24h += 1;
-
-    if (createdAtMs >= cutoff7d) count7d += 1;
-    else if (createdAtMs >= prevCutoff7d) prev7d += 1;
-
-    if (createdAtMs >= cutoff30d) count30d += 1;
-    else if (createdAtMs >= prevCutoff30d) prev30d += 1;
-  }
-
-  return {
-    referrals24hCount: count24h,
-    referrals24hGrowthPct: calculateGrowthPct(count24h, prev24h),
-    referrals7dCount: count7d,
-    referrals7dGrowthPct: calculateGrowthPct(count7d, prev7d),
-    referrals30dCount: count30d,
-    referrals30dGrowthPct: calculateGrowthPct(count30d, prev30d),
-  };
-}
-
-function buildInternalReferralStatsPayload(
-  rows: WaitlistReferralRow[],
-  canonicalCode: string,
-): InternalReferralStatsPayload | null {
-  const dashboard = buildReferralDashboard(canonicalCode, rows);
-  if (!dashboard.root) return null;
-
-  const summaries = buildFixedDepthReferralSummaries(rows);
-  const summary = summaries.get(canonicalCode);
-  const leaderboardRank =
-    buildLeaderboardFromRows(rows).find((entry) => entry.canonical_referral_code === canonicalCode)?.rank ?? null;
-  const depthCountMap = new Map(dashboard.depthCounts.map((entry) => [entry.depth, entry.count]));
-
-  return {
-    referralCode: canonicalCode,
-    directReferrals: summary?.directReferrals ?? dashboard.directReferrals.length,
-    indirectReferrals: summary?.indirectReferrals ?? 0,
-    attributedReferrals: summary?.attributedReferrals ?? dashboard.totalAttributedReferrals,
-    ...buildReferralWindowStats(rows, canonicalCode),
-    depth1Referrals: depthCountMap.get(1) ?? 0,
-    depth2Referrals: depthCountMap.get(2) ?? 0,
-    depth3Referrals: depthCountMap.get(3) ?? 0,
-    leaderboardRank,
-    waitlistPosition: dashboard.waitlistPosition,
-    waitlistTotal: dashboard.waitlistTotal,
-    maxReferralDepth: dashboard.maxDepth,
-    potentialRewards: summary?.potentialRewards ?? 0,
-    rootBadge: dashboard.rootBadge,
-    commissionUnlocked: null,
-    referralsUnlocked: null,
-  };
-}
-
-const getCachedInternalReferralStats = unstable_cache(
-  async (canonicalCode: string): Promise<InternalReferralStatsPayload | null> => {
-    const data = await fetchAllWaitlistRows();
-    if (!data) {
-      throw new Error("Could not load waitlist rows for internal referral stats.");
-    }
-
-    const payload = buildInternalReferralStatsPayload(toWaitlistReferralRows(data), canonicalCode);
-    if (!payload) {
-      throw new Error(`Could not build internal referral stats for ${canonicalCode}.`);
-    }
-
-    return payload;
-  },
-  ["internal-referral-stats"],
-  { revalidate: INTERNAL_REFERRAL_STATS_REVALIDATE_SECONDS },
-);
 
 async function fetchAllWaitlistRows(): Promise<Record<string, unknown>[] | null> {
   try {
@@ -817,29 +690,6 @@ export async function getReferralDashboard(
       error: formatUnknownError(error),
     });
     return null;
-  }
-}
-
-export async function getInternalReferralStats(
-  referralCode: string,
-): Promise<InternalReferralStatsPayload | null> {
-  const normalizedCode = referralCode.trim();
-  if (!normalizedCode) return null;
-
-  const resolved = await resolveReferralIdentity(normalizedCode, {
-    select: "id, referral_code, human_referral_code",
-  });
-  if (!resolved) return null;
-
-  try {
-    return await getCachedInternalReferralStats(resolved.canonicalCode);
-  } catch (error) {
-    console.error(`${REFERRAL_DASHBOARD_LOG_PREFIX} getInternalReferralStats failed`, {
-      referralCode: normalizedCode,
-      canonicalCode: resolved.canonicalCode,
-      error: formatUnknownError(error),
-    });
-    throw error;
   }
 }
 
