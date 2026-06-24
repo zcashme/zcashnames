@@ -388,6 +388,19 @@ const MAX_SCREENSHOTS = 5;
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 const MAX_REFUND_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 
+function isLegacyBetaTesterForeignKeyError(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false;
+  if (error.code !== "23503") return false;
+  return typeof error.message === "string" && error.message.includes("beta_feedback_tester_id_fkey");
+}
+
+function appendFeedbackServerTag(clientEnv: string | null, tag: string): string {
+  const base = clientEnv?.trim() ?? "";
+  const suffix = ` ${tag}`;
+  if (!base) return tag.slice(0, 200);
+  return `${base}${suffix}`.slice(0, 200);
+}
+
 function sanitizeFilename(name: string): string {
   // Strip path separators + anything weird, keep extension.
   return name.replace(/[^\w.\-]+/g, "_").slice(0, 80) || "file";
@@ -487,7 +500,7 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
     screenshotUrls.push(data.publicUrl);
   }
 
-  const { error: insertError } = await db.from("beta_feedback").insert({
+  const baseInsertPayload = {
     id: reportId,
     tester_id: testerId,
     tester_name_snapshot: testerName,
@@ -506,7 +519,21 @@ export async function submitBetaFeedback(formData: FormData): Promise<FeedbackRe
     screenshot_paths: screenshotUrls,
     user_agent: userAgent,
     client_env: clientEnv || null,
-  });
+  };
+
+  let { error: insertError } = await db.from("beta_feedback").insert(baseInsertPayload);
+
+  // Some deployed databases still have a legacy foreign key that points
+  // beta_feedback.tester_id at beta_testers (v1 only). Retry v2 inserts with a
+  // null tester_id so reports are not dropped while the schema catches up.
+  if (insertError && tester?.cohort === "v2" && isLegacyBetaTesterForeignKeyError(insertError)) {
+    console.warn("[beta-feedback] retrying v2 report insert without tester_id due to legacy foreign key");
+    ({ error: insertError } = await db.from("beta_feedback").insert({
+      ...baseInsertPayload,
+      tester_id: null,
+      client_env: appendFeedbackServerTag(clientEnv || null, `tester_id=${tester.id}`),
+    }));
+  }
 
   if (insertError) {
     console.error("[beta-feedback] insert failed:", insertError);
