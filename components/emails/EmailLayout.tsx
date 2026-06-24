@@ -155,17 +155,17 @@ export function EmailLayout({
               <tbody>
                 <tr>
                   {SOCIALS.map(({ href, iconSrc, alt }) => (
-                    <td key={alt} style={{ padding: "0 10px" }}>
+                    <td key={alt} style={{ padding: "0 6px" }}>
                       <Link href={href} style={{ textDecoration: "none", display: "inline-block" }}>
                         <Img
                           src={iconSrc}
                           alt={alt}
-                          width="24"
-                          height="24"
+                          width="60"
+                          height="60"
                           style={{
                             display: "block",
-                            width: 24,
-                            height: 24,
+                            width: 60,
+                            height: 60,
                             border: 0,
                           }}
                         />

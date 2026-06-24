@@ -15,13 +15,16 @@ export async function sendBlogSubscriberConfirmationEmail({
   confirmUrl: string;
 }): Promise<void> {
   const blogSeries = getBlogSubscriptionOption(series);
+  const subjectTitle =
+    series === "general" ? "ZcashNames newsletter" : blogSeries.title;
+  const bodyTitle = series === "general" ? "our newsletter" : blogSeries.title;
 
   await sendEmail({
     from: FROM_EMAIL,
     to: email,
-    subject: `Confirm your subscription to ${blogSeries.title}`,
+    subject: `Confirm your subscription to ${subjectTitle}`,
     react: BlogSubscriberConfirmEmail({
-      seriesTitle: blogSeries.title,
+      seriesTitle: bodyTitle,
       confirmUrl,
     }),
   });

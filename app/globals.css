@@ -697,9 +697,8 @@ body {
 .site-route-title {
   display: inline-flex;
   align-items: center;
-  max-width: min(38vw, 24rem);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100%;
   white-space: nowrap;
   color: var(--fg-muted);
   font-size: var(--type-section-subtitle);
@@ -709,8 +708,10 @@ body {
 
 #site-route-title {
   display: inline-flex;
+  flex: 1 1 auto;
   align-items: center;
   min-width: 0;
+  max-width: 100%;
 }
 
 .site-route-title::before {
@@ -4211,6 +4212,13 @@ body.app-shell-standalone {
   max-width: 860px;
   margin: 0 auto;
   padding: 3rem 1rem 4rem;
+  display: grid;
+  justify-items: center;
+}
+
+.blog-confirm-card {
+  text-align: center;
+  justify-items: center;
 }
 
 @media (max-width: 900px) {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { confirmBlogSubscription } from "@/lib/blog-subscribers/subscribers";
 import { getBlogSubscriptionOption } from "@/lib/blog-series";
+import { buildUnsubscribeToken } from "@/lib/email/unsubscribe-token";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 
 export default async function BlogConfirmPage({
@@ -11,10 +12,20 @@ export default async function BlogConfirmPage({
   const { token } = await searchParams;
   const result = token ? await confirmBlogSubscription(token) : { status: "invalid" as const };
   const series = result.status === "invalid" ? null : getBlogSubscriptionOption(result.series);
+  const preferencesHref =
+    result.status === "invalid"
+      ? "/unsubscribe"
+      : `/unsubscribe?token=${encodeURIComponent(
+          buildUnsubscribeToken({
+            email: result.email,
+            series: result.series,
+            mode: "series",
+          }),
+        )}`;
 
   return (
     <div className="blog-confirm-shell">
-      <SiteRouteTitle title="Blog Confirmation" />
+      <SiteRouteTitle title="Confirm" />
       <div className="blog-confirm-card">
         <p className="blog-unpublished-kicker">Email confirmation</p>
         <h1 className="blog-unpublished-title">
@@ -27,8 +38,8 @@ export default async function BlogConfirmPage({
           {result.status === "already" && `This email is already subscribed to ${series?.title}.`}
           {result.status === "invalid" && "This confirmation link is invalid or expired."}
         </p>
-        <Link href={series?.href ?? "/blogs"} className="blog-subscribe-button">
-          {series ? `Back to ${series.label}` : "Back to blogs"}
+        <Link href={preferencesHref} className="blog-subscribe-button">
+          Email Preferences
         </Link>
       </div>
     </div>

@@ -23,8 +23,8 @@ export type SubmitBlogSubscriptionResult =
   | { status: "error"; error: string };
 
 export type ConfirmBlogSubscriptionResult =
-  | { status: "success"; series: BlogSubscriptionSlug }
-  | { status: "already"; series: BlogSubscriptionSlug }
+  | { status: "success"; series: BlogSubscriptionSlug; email: string }
+  | { status: "already"; series: BlogSubscriptionSlug; email: string }
   | { status: "invalid" };
 
 function normalizeEmail(email: string): string {
@@ -190,7 +190,7 @@ export async function confirmBlogSubscription(token: string): Promise<ConfirmBlo
   }
 
   if (row.email_verified) {
-    return { status: "already", series: row.series };
+    return { status: "already", series: row.series, email: row.email };
   }
 
   const now = new Date().toISOString();
@@ -208,5 +208,5 @@ export async function confirmBlogSubscription(token: string): Promise<ConfirmBlo
     return { status: "invalid" };
   }
 
-  return { status: "success", series: row.series };
+  return { status: "success", series: row.series, email: row.email };
 }
