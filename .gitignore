@@ -59,6 +59,10 @@ public/_pagefind/
 backup-latest-commit.patch
 beta-testers.json
 sql/
+!sql/
+sql/*
+!sql/careers_jobs_and_applications.sql
+!sql/careers_legacy_jobs_cleanup.sql
 
 # codesearch local semantic index
 .codesearch.db
