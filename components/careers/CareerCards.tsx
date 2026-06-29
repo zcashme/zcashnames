@@ -5,11 +5,11 @@ function metaPill(label: string) {
   return (
     <span
       key={label}
-      className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+      className="[--career-badge-accent:color-mix(in_srgb,#f4b728_82%,#ffe08b)] [--career-badge-soft:color-mix(in_srgb,#f4b728_18%,transparent)] inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold [[data-theme=light]_&]:[--career-badge-accent:var(--color-brand-blue)] [[data-theme=light]_&]:[--career-badge-soft:color-mix(in_srgb,var(--color-brand-blue)_14%,transparent)] [[data-theme=monochrome]_&]:[--career-badge-accent:var(--color-accent-green)] [[data-theme=monochrome]_&]:[--career-badge-soft:color-mix(in_srgb,var(--color-accent-green)_14%,transparent)]"
       style={{
-        background: "transparent",
-        color: "var(--fg-heading)",
-        border: "1px solid color-mix(in srgb, var(--fg-heading) 12%, var(--faq-border))",
+        background: "var(--career-badge-soft)",
+        color: "var(--career-badge-accent)",
+        border: "1px solid color-mix(in srgb, var(--career-badge-accent) 32%, var(--faq-border))",
       }}
     >
       {label}
