@@ -50,6 +50,7 @@ const MAIN_MENU_LINKS: MenuLink[] = [
   },
   { label: "Blogs", href: communitySectionHref("blogs"), displayPath: "/blogs", comingSoon: true, children: blogLinks },
   { label: "Brand Kit", href: "/brandkit" },
+  { label: "Careers", href: "/careers", displayPath: "/careers", featured: true },
   {
     label: "Community",
     href: "/community",
