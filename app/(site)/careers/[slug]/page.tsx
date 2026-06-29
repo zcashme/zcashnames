@@ -52,7 +52,6 @@ export default async function CareerJobPage(
   const applyIsExternal = job.applicationMode === "external";
   const metaLabels = [job.employmentType];
   const shareMessage = `Seeking ${job.title} at Zcash Names. ${job.summary}`;
-  const xShareMessage = `Seeking ${job.title} at @ZcashNames.`;
 
   return (
     <main className="w-full">
@@ -83,7 +82,6 @@ export default async function CareerJobPage(
             <ShareDropdown
               label="Share"
               message={shareMessage}
-              xMessage={xShareMessage}
               shareUrl={job.jobUrl}
               emailSubject={`${job.title} | ZcashNames Careers`}
               menuAlign="right"

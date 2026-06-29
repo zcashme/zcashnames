@@ -26,7 +26,6 @@ export default async function CareersPage() {
   const jobs = await listOpenCareerJobs();
   const shareUrl = "https://www.zcashnames.com/careers";
   const shareMessage = "We're preparing to launch and hiring across a few focused roles at Zcash Names.";
-  const xShareMessage = "Nice! @ZcashNames is preparing to launch and hiring across a few focused roles.";
 
   return (
     <main className="w-full">
@@ -47,7 +46,6 @@ export default async function CareersPage() {
             <ShareDropdown
               label="Share"
               message={shareMessage}
-              xMessage={xShareMessage}
               shareUrl={shareUrl}
               emailSubject="ZcashNames Careers"
               menuAlign="right"
