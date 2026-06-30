@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import {
+  DEFAULT_BLOCKINFO_POST_SCHEDULE,
   type BlockinfoPostDestination,
   type BlockinfoPostRenderMode,
   type BlockinfoPostScheduleInput,
@@ -30,21 +31,7 @@ type ScheduleRow = {
   lock_expires_at: string | null;
 };
 
-const DEFAULT_SCHEDULE: BlockinfoPostScheduleState = {
-  enabled: false,
-  destination: "both",
-  renderMode: "deterministic",
-  scheduleMode: "daily_time",
-  intervalHours: 24,
-  dailyHour: 11,
-  dailyMinute: 15,
-  dailyTimezone: "America/New_York",
-  lastRunStartedAt: null,
-  lastRunCompletedAt: null,
-  lastRunStatus: null,
-  lastError: null,
-  lockExpiresAt: null,
-};
+const DEFAULT_SCHEDULE: BlockinfoPostScheduleState = DEFAULT_BLOCKINFO_POST_SCHEDULE;
 
 function isMissingBlockinfoLockFunctionError(message: string): boolean {
   return (

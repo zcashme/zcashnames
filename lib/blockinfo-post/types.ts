@@ -161,6 +161,22 @@ export type BlockinfoPostScheduleState = {
   lockExpiresAt: string | null;
 };
 
+export const DEFAULT_BLOCKINFO_POST_SCHEDULE: BlockinfoPostScheduleState = {
+  enabled: false,
+  destination: "both",
+  renderMode: "deterministic",
+  scheduleMode: "daily_time",
+  intervalHours: 24,
+  dailyHour: 11,
+  dailyMinute: 30,
+  dailyTimezone: "America/New_York",
+  lastRunStartedAt: null,
+  lastRunCompletedAt: null,
+  lastRunStatus: null,
+  lastError: null,
+  lockExpiresAt: null,
+};
+
 export type BlockinfoPostResult = {
   ok: boolean;
   mode: BlockinfoPostMode;

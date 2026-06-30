@@ -10,6 +10,7 @@ import {
 } from "@/lib/blockinfo-post/deterministic";
 import { isEphemeralBlockinfoFilesystemRuntime } from "@/lib/blockinfo-post/runtime";
 import { getBlockinfoPostScheduleState } from "@/lib/blockinfo-post/store";
+import { DEFAULT_BLOCKINFO_POST_SCHEDULE } from "@/lib/blockinfo-post/types";
 import type {
   BlockinfoPostCaptionPolicy,
   BlockinfoPostDeterministicLayout,
@@ -41,19 +42,7 @@ async function loadLatestDeterministicSnapshot(): Promise<BlockinfoPostDetermini
 
 export default async function BlockinfoPostPage() {
   const initialSchedule: BlockinfoPostScheduleState = await getBlockinfoPostScheduleState().catch(() => ({
-    enabled: false,
-    destination: "both" as const,
-    renderMode: "deterministic" as const,
-    scheduleMode: "daily_time" as const,
-    intervalHours: 24,
-    dailyHour: 11,
-    dailyMinute: 15,
-    dailyTimezone: "America/New_York",
-    lastRunStartedAt: null,
-    lastRunCompletedAt: null,
-    lastRunStatus: null,
-    lastError: null,
-    lockExpiresAt: null,
+    ...DEFAULT_BLOCKINFO_POST_SCHEDULE,
   }));
   const deterministicPaths = getDeterministicAssetConfig();
   const initialLayout: BlockinfoPostDeterministicLayout = await loadDeterministicLayout(deterministicPaths.layoutPath).catch(() =>

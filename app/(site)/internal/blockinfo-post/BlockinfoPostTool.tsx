@@ -9,6 +9,7 @@ import {
 import {
   BLOCKINFO_POST_DESTINATIONS,
   BLOCKINFO_POST_RENDER_MODES,
+  DEFAULT_BLOCKINFO_POST_SCHEDULE,
   type BlockinfoPostCaptionThresholdRule,
   type BlockinfoPostDeterministicLayout,
   type BlockinfoPostDeterministicSnapshot,
@@ -1044,7 +1045,7 @@ export default function BlockinfoPostTool(props: {
         {schedule.scheduleMode === "daily_time" ? (
           <p className="text-sm text-fg-body">
             Current daily target: <span className="font-semibold text-fg-heading">{dailyTimeInput} {schedule.dailyTimezone}</span>.
-            For your requested schedule, use <span className="font-semibold text-fg-heading">11:15 America/New_York</span>.
+            For your requested schedule, use <span className="font-semibold text-fg-heading">{toTimeInputValue(DEFAULT_BLOCKINFO_POST_SCHEDULE.dailyHour, DEFAULT_BLOCKINFO_POST_SCHEDULE.dailyMinute)} {DEFAULT_BLOCKINFO_POST_SCHEDULE.dailyTimezone}</span>.
           </p>
         ) : null}
 
