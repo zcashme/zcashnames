@@ -5,16 +5,36 @@ import "server-only";
 import { FROM_EMAIL } from "@/lib/email/constants";
 import { sendEmail } from "@/lib/email/client";
 import FollowUpEmail from "@/components/emails/FollowUpEmail";
+import {
+  DEFAULT_EMAIL_SERIES,
+} from "@/lib/email/subscribers";
+import { buildUnsubscribeLinks, ensureMarketingEmailAllowed } from "@/lib/email/policy";
+import { resolveSiteUrl } from "@/lib/site-url";
 
 export async function sendFollowUp(
   email: string,
   name: string,
   reasonCopy: string,
-): Promise<void> {
+): Promise<boolean> {
+  try {
+    await ensureMarketingEmailAllowed(email, DEFAULT_EMAIL_SERIES);
+  } catch {
+    return false;
+  }
+
   await sendEmail({
     from: FROM_EMAIL,
     to: email,
     subject: "Let\u2019s connect",
-    react: FollowUpEmail({ name, reasonCopy }),
+    react: FollowUpEmail({
+      name,
+      reasonCopy,
+      unsubscribeLinks: buildUnsubscribeLinks({
+        email,
+        series: DEFAULT_EMAIL_SERIES,
+        baseUrl: resolveSiteUrl(),
+      }),
+    }),
   });
+  return true;
 }

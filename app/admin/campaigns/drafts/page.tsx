@@ -16,6 +16,23 @@ function statusBadge(status: string) {
   return <span className={`rounded px-1.5 py-0.5 text-xs ${color}`}>{status}</span>;
 }
 
+function audienceSummary(campaign: {
+  source_kind: string;
+  audience_scope: string;
+  dedupe_mode: string;
+}) {
+  if (campaign.source_kind !== "zn_waitlist") return "-";
+  if (campaign.audience_scope === "selected_emails") {
+    return `selected_emails / ${campaign.dedupe_mode}`;
+  }
+  return `${campaign.audience_scope} / ${campaign.dedupe_mode}`;
+}
+
+function seriesSummary(sourceKind: string, series: string | null | undefined) {
+  if (sourceKind === "zn_waitlist") return "-";
+  return series?.trim() || "-";
+}
+
 export default async function CampaignDraftsPage() {
   const campaigns = await listDraftCampaigns();
 
@@ -38,6 +55,7 @@ export default async function CampaignDraftsPage() {
             <thead className="bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
               <tr>
                 <th className="px-3 py-2">Title</th>
+                <th className="px-3 py-2">Series</th>
                 <th className="px-3 py-2">Source</th>
                 <th className="px-3 py-2">Audience</th>
                 <th className="px-3 py-2">Recipients</th>
@@ -50,9 +68,10 @@ export default async function CampaignDraftsPage() {
               {campaigns.map((campaign) => (
                 <tr key={campaign.id} className="border-t border-zinc-800 hover:bg-zinc-900/60">
                   <td className="px-3 py-2 font-medium text-zinc-100">{campaign.title}</td>
+                  <td className="px-3 py-2 text-zinc-300">{seriesSummary(campaign.source_kind, campaign.series)}</td>
                   <td className="px-3 py-2 text-zinc-300">{campaign.source_kind}</td>
                   <td className="px-3 py-2 text-zinc-400">
-                    {campaign.audience_scope} / {campaign.dedupe_mode}
+                    {audienceSummary(campaign)}
                   </td>
                   <td className="px-3 py-2 text-zinc-300">{campaign.recipient_count}</td>
                   <td className="px-3 py-2">{statusBadge(campaign.status)}</td>

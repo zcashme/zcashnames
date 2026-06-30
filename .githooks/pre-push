@@ -1,5 +1,22 @@
 #!/bin/sh
-# Block pushes to main unless npm run build succeeds.
+# Block pushes when the worktree is dirty, and require a successful build
+# before pushes to main.
+
+if [ "$SKIP_DIRTY_PUSH_CHECK" != "1" ]; then
+  dirty_status=$(git status --porcelain)
+  if [ -n "$dirty_status" ]; then
+    echo "Push blocked: this repo has uncommitted or untracked changes."
+    echo
+    echo "Commit, stash, or clean your changes before pushing so deployed builds"
+    echo "cannot miss local-only files."
+    echo
+    echo "$dirty_status"
+    echo
+    echo "If you absolutely need to bypass this once, run:"
+    echo "  SKIP_DIRTY_PUSH_CHECK=1 git push ..."
+    exit 1
+  fi
+fi
 
 protected_branch="main"
 

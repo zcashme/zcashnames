@@ -22,8 +22,8 @@ export default function ResumeReplacementDialog({
       <div
         className="relative w-full max-w-sm rounded-2xl border p-5 shadow-2xl"
         style={{
-          background: "var(--leaders-card-bg-solid, var(--leaders-card-bg, var(--feature-card-bg)))",
-          borderColor: "var(--leaders-card-border, var(--faq-border))",
+          background: "var(--tool-panel-bg-solid, var(--tool-panel-bg, var(--feature-card-bg)))",
+          borderColor: "var(--tool-panel-border, var(--faq-border))",
         }}
         role="dialog"
         aria-modal="true"

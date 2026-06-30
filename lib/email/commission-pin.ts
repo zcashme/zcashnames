@@ -1,7 +1,7 @@
 import "server-only";
 
 // Commission PIN email with a deep link to the user's referral dashboard.
-// Called from leaders.ts after PIN rate-limit checks pass.
+// Called from the retained commission-access flow after PIN checks pass.
 import { FROM_EMAIL } from "@/lib/email/constants";
 import { sendEmail } from "@/lib/email/client";
 import CommissionPinEmail from "@/components/emails/CommissionPinEmail";

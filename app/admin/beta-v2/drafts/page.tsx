@@ -9,8 +9,9 @@ export default async function DraftsListPage() {
   if (drafts.length === 0) {
     return (
       <section className="rounded-md border border-zinc-800 bg-zinc-900/40 p-8 text-center text-sm text-zinc-400">
-        No pending beta invite drafts. Applicants whose best contact is email and
-        who have not been sent yet will appear here.
+        No pending beta invite drafts. Only applicants whose best contact is
+        email, whose contact email is present, and whose invite has not been
+        sent yet will appear here.
       </section>
     );
   }

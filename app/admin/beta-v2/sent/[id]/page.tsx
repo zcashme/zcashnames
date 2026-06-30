@@ -15,6 +15,7 @@ interface TesterRow {
   best_contact_kind: string | null;
   invite_code: string | null;
   code_sent_at: string | null;
+  activated_at: string | null;
   status: string;
   notice_status: string | null;
   notice_error: string | null;
@@ -32,7 +33,7 @@ export default async function SentDetailPage({
   const { data, error } = await db
     .from("beta_testers_v2")
     .select(
-      "id, display_name, contact_email, best_contact_kind, invite_code, code_sent_at, status, notice_status, notice_error, notice_attempted_at, planned_wallet, planned_wallets_detail",
+      "id, display_name, contact_email, best_contact_kind, invite_code, code_sent_at, activated_at, status, notice_status, notice_error, notice_attempted_at, planned_wallet, planned_wallets_detail",
     )
     .eq("id", id)
     .maybeSingle();
@@ -73,11 +74,12 @@ export default async function SentDetailPage({
         </span>
       </header>
 
-      <dl className="grid grid-cols-2 gap-2 text-xs text-zinc-400 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-2 text-xs text-zinc-400 sm:grid-cols-5">
         <div><dt className="text-zinc-500">Status</dt><dd className="text-zinc-200">{tester.status}</dd></div>
         <div><dt className="text-zinc-500">Notice</dt><dd className="text-zinc-200">{tester.notice_status ?? "-"}</dd></div>
         <div><dt className="text-zinc-500">Passcode</dt><dd className="font-mono text-zinc-200">{tester.invite_code ?? "-"}</dd></div>
         <div><dt className="text-zinc-500">Attempted</dt><dd className="text-zinc-200">{tester.notice_attempted_at ? new Date(tester.notice_attempted_at).toLocaleString() : "-"}</dd></div>
+        <div><dt className="text-zinc-500">Activated</dt><dd className="text-zinc-200">{tester.activated_at ? new Date(tester.activated_at).toLocaleString() : "-"}</dd></div>
       </dl>
 
       {tester.notice_error && (

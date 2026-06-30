@@ -6,15 +6,25 @@
 import { Button, Section, Text } from "@react-email/components";
 import { EmailLayout } from "./EmailLayout";
 import { content, paragraph, ctaButton } from "@/lib/email/styles";
+import type { EmailUnsubscribeLinks } from "@/lib/email/policy";
 
 interface FollowUpEmailProps {
   name: string;
   reasonCopy: string;
+  unsubscribeLinks?: EmailUnsubscribeLinks | null;
 }
 
-export default function FollowUpEmail({ name, reasonCopy }: FollowUpEmailProps) {
+export default function FollowUpEmail({
+  name,
+  reasonCopy,
+  unsubscribeLinks,
+}: FollowUpEmailProps) {
   return (
-    <EmailLayout preview="We'd love to chat about ZcashNames with you." headingText="Let&rsquo;s connect">
+    <EmailLayout
+      preview="We'd love to chat about ZcashNames with you."
+      headingText="Let&rsquo;s connect"
+      unsubscribeLinks={unsubscribeLinks}
+    >
       <Section style={content}>
         <Text style={paragraph}>Thanks for completing our survey, {name}.</Text>
         <Text style={paragraph}>{reasonCopy}</Text>

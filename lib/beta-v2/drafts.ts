@@ -20,6 +20,7 @@ export interface BetaV2DraftTesterRow {
   contact_forum: string | null;
   invite_code: string | null;
   code_sent_at: string | null;
+  activated_at: string | null;
   submitted_at: string;
   notice_status: string | null;
   preferred_wallet_variant_id: WalletVariantId | null;
@@ -30,6 +31,13 @@ export interface BetaV2InviteDraftRow {
   subject: string;
   body_text: string;
   updated_at?: string;
+}
+
+export interface BetaV2InviteStats {
+  totalApplicants: number;
+  sentInvites: number;
+  convertedApplicants: number;
+  unsentApplicants: number;
 }
 
 const CONTACT_FIELDS: Record<string, keyof BetaV2DraftTesterRow> = {
@@ -59,6 +67,7 @@ function normalizeTesterRow(row: Record<string, unknown>): BetaV2DraftTesterRow 
     contact_forum: typeof row.contact_forum === "string" ? row.contact_forum : null,
     invite_code: typeof row.invite_code === "string" ? row.invite_code : null,
     code_sent_at: typeof row.code_sent_at === "string" ? row.code_sent_at : null,
+    activated_at: typeof row.activated_at === "string" ? row.activated_at : null,
     submitted_at: String(row.submitted_at ?? ""),
     notice_status: typeof row.notice_status === "string" ? row.notice_status : null,
     preferred_wallet_variant_id: readPreferredWalletVariantId(
@@ -79,10 +88,12 @@ export async function listDraftTesters(): Promise<BetaV2DraftTesterRow[]> {
   const { data, error } = await db
     .from("beta_testers_v2")
     .select(
-      "id, display_name, focus_areas, why, experience, best_contact_kind, contact_email, contact_signal, contact_discord, contact_x, contact_telegram, contact_forum, invite_code, code_sent_at, submitted_at, notice_status, planned_wallet, planned_wallets_detail",
+      "id, display_name, focus_areas, why, experience, best_contact_kind, contact_email, contact_signal, contact_discord, contact_x, contact_telegram, contact_forum, invite_code, code_sent_at, activated_at, submitted_at, notice_status, planned_wallet, planned_wallets_detail",
     )
     .neq("status", "revoked")
     .is("code_sent_at", null)
+    .eq("best_contact_kind", "email")
+    .not("contact_email", "is", null)
     .order("submitted_at", { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -93,7 +104,7 @@ export async function listSentTesters(): Promise<BetaV2DraftTesterRow[]> {
   const { data, error } = await db
     .from("beta_testers_v2")
     .select(
-      "id, display_name, focus_areas, why, experience, best_contact_kind, contact_email, contact_signal, contact_discord, contact_x, contact_telegram, contact_forum, invite_code, code_sent_at, submitted_at, notice_status, planned_wallet, planned_wallets_detail",
+      "id, display_name, focus_areas, why, experience, best_contact_kind, contact_email, contact_signal, contact_discord, contact_x, contact_telegram, contact_forum, invite_code, code_sent_at, activated_at, submitted_at, notice_status, planned_wallet, planned_wallets_detail",
     )
     .neq("status", "revoked")
     .not("code_sent_at", "is", null)
@@ -101,6 +112,40 @@ export async function listSentTesters(): Promise<BetaV2DraftTesterRow[]> {
 
   if (error) throw new Error(error.message);
   return (data ?? []).map((row) => normalizeTesterRow(row as Record<string, unknown>));
+}
+
+export async function getInviteStats(): Promise<BetaV2InviteStats> {
+  const [allResult, sentResult, convertedResult] = await Promise.all([
+    db
+      .from("beta_testers_v2")
+      .select("id", { count: "exact", head: true })
+      .neq("status", "revoked"),
+    db
+      .from("beta_testers_v2")
+      .select("id", { count: "exact", head: true })
+      .neq("status", "revoked")
+      .not("code_sent_at", "is", null),
+    db
+      .from("beta_testers_v2")
+      .select("id", { count: "exact", head: true })
+      .neq("status", "revoked")
+      .not("activated_at", "is", null),
+  ]);
+
+  if (allResult.error) throw new Error(allResult.error.message);
+  if (sentResult.error) throw new Error(sentResult.error.message);
+  if (convertedResult.error) throw new Error(convertedResult.error.message);
+
+  const totalApplicants = allResult.count ?? 0;
+  const sentInvites = sentResult.count ?? 0;
+  const convertedApplicants = convertedResult.count ?? 0;
+
+  return {
+    totalApplicants,
+    sentInvites,
+    convertedApplicants,
+    unsentApplicants: Math.max(0, totalApplicants - sentInvites),
+  };
 }
 
 export async function getDraft(testerId: string): Promise<BetaV2InviteDraftRow | null> {

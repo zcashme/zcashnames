@@ -22,6 +22,7 @@ type BannerState = {
 };
 
 const FALLBACK_PHASES: Phase[] = ["input", "confirm", "scanning", "fund", "settling"];
+const DOTZCASH_MAIN_BASE_URL = "https://zcashnames.com";
 
 function stateOf(snap: ResumeSnapshot): BannerState {
   return (snap.state ?? {}) as BannerState;
@@ -37,9 +38,11 @@ function isCompleteSnapshot(snap: ResumeSnapshot): boolean {
 }
 
 function explorerHref(snap: ResumeSnapshot): string {
-  return snap.network === "testnet"
+  const path = snap.network === "testnet"
     ? `/explorer?env=testnet&name=${encodeURIComponent(snap.name)}`
     : `/explorer?name=${encodeURIComponent(snap.name)}`;
+
+  return `${DOTZCASH_MAIN_BASE_URL}${path}`;
 }
 
 function progressClipPath(i: number, n: number): string {
@@ -169,8 +172,8 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
     <div
       className="fixed bottom-5 left-5 z-[9998] w-[min(calc(100vw-2.5rem),28rem)] rounded-2xl border px-4 py-3 sm:px-5 sm:py-4"
       style={{
-        background: "var(--leaders-card-bg-solid, var(--leaders-card-bg, var(--feature-card-bg)))",
-        borderColor: "var(--leaders-card-border, var(--faq-border))",
+        background: "var(--tool-panel-bg-solid, var(--tool-panel-bg, var(--feature-card-bg)))",
+        borderColor: "var(--tool-panel-border, var(--faq-border))",
         boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
         opacity: hiddenByFullModal ? 0 : 1,
         pointerEvents: hiddenByFullModal ? "none" : "auto",
@@ -195,7 +198,7 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
               </span>
             )}
           </div>
-          <div className="h-px w-full" style={{ background: "var(--leaders-card-border, var(--faq-border))" }} />
+          <div className="h-px w-full" style={{ background: "var(--tool-panel-border, var(--faq-border))" }} />
           <div className="flex min-w-0 flex-col gap-1 text-left">
             <p className="m-0 text-sm" style={{ color: "var(--fg-muted)" }}>{description}</p>
             {statusDetail && (
@@ -257,7 +260,7 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
 
         {!isComplete && confirmingClear && (
           <>
-            <div className="h-px w-full" style={{ background: "var(--leaders-card-border, var(--faq-border))" }} />
+            <div className="h-px w-full" style={{ background: "var(--tool-panel-border, var(--faq-border))" }} />
             <p
               className="m-0 text-right text-sm font-medium leading-relaxed"
               style={{ color: "var(--home-result-status-negative-fg, #ff8a8a)" }}

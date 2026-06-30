@@ -1,6 +1,6 @@
 "use client";
 
-// Resume contract between Zip321Modal (writer) and the homepage/explorer
+// Resume contract between Zip321Modal (writer) and the retained resume
 // banner (reader). The modal persists its full reducer state on every
 // dispatch; the banner reads a slim view of that state to render a pill.
 //

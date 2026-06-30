@@ -39,6 +39,16 @@ import {
   settlingStatusMessage,
 } from "@/components/purchases/modalCopy";
 
+const DOTZCASH_MAIN_BASE_URL = "https://zcashnames.com";
+
+function explorerHref(network: "mainnet" | "testnet", name: string): string {
+  const path = network === "testnet"
+    ? `/explorer?env=testnet&name=${encodeURIComponent(name)}`
+    : `/explorer?name=${encodeURIComponent(name)}`;
+
+  return `${DOTZCASH_MAIN_BASE_URL}${path}`;
+}
+
 // ---- Helpers ---------------------------------------------------------------
 
 function parsePrice(raw: string): number | null {
@@ -968,7 +978,7 @@ export default function Zip321Modal({
             </p>
             <div className="flex gap-3">
               <a
-                href={network === "testnet" ? `/explorer?env=testnet&name=${encodeURIComponent(name)}` : `/explorer?name=${encodeURIComponent(name)}`}
+                href={explorerHref(network, name)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-5 py-2.5 rounded-full text-sm font-semibold transition-opacity hover:opacity-80"
@@ -1014,7 +1024,7 @@ export default function Zip321Modal({
             </p>
             <div className="flex gap-3">
               <a
-                href={network === "testnet" ? `/explorer?env=testnet&name=${encodeURIComponent(name)}` : `/explorer?name=${encodeURIComponent(name)}`}
+                href={explorerHref(network, name)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-5 py-2.5 rounded-full text-sm font-semibold transition-opacity hover:opacity-80"

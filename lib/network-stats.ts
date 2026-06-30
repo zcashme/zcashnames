@@ -2,14 +2,6 @@
 
 import { NETWORKS } from "zcashname-sdk";
 import { getZns } from "@/lib/zns/utils";
-import { getWaitlistStats } from "@/lib/leaders/leaders";
-
-export type WaitlistStats = {
-  mode: "waitlist";
-  waitlist: number;
-  referred: number;
-  rewardsPot: number;
-};
 
 export type ChainStats = {
   mode: "mainnet" | "testnet";
@@ -20,7 +12,7 @@ export type ChainStats = {
   uivkVerified: boolean;
 };
 
-export type NetworkStats = WaitlistStats | ChainStats;
+export type NetworkStats = ChainStats;
 
 export async function getChainStats(mode: "mainnet" | "testnet"): Promise<ChainStats> {
   try {
@@ -52,11 +44,6 @@ export async function getNamePricing(network: keyof typeof NETWORKS, nameLen: nu
   return cost;
 }
 
-export async function getNetworkStats(mode: "waitlist" | "mainnet" | "testnet"): Promise<NetworkStats> {
-  if (mode === "waitlist") {
-    const { waitlist, referred, rewardsPot } = await getWaitlistStats();
-    return { mode: "waitlist", waitlist, referred, rewardsPot };
-  }
-
+export async function getNetworkStats(mode: "mainnet" | "testnet"): Promise<NetworkStats> {
   return getChainStats(mode);
 }

@@ -1,6 +1,6 @@
 import "server-only";
 
-// Cookie-based access control for the leaders commission dashboard.
+// Cookie-based access control for the retained commission dashboard bridge.
 // Issues signed cookies (base64url payload + HMAC signature) for two tiers:
 // commission mode (cabal members) and referral table access (all users).
 // Uses the same HMAC secret derivation as commission-pin.

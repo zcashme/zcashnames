@@ -2,11 +2,14 @@
   "name": "zcashname",
   "version": "2.0.0",
   "private": true,
-  "description": ".zcash domain name splash page - Next.js, Tailwind CSS, SQLite3.",
+  "description": "Local-only ZcashNames admin and internal tooling worktree.",
   "scripts": {
     "dev": "next dev",
     "build": "next build && pagefind --site .next/server/app --output-path public/_pagefind",
-    "start": "next start"
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "blockinfo-post:dry-run": "powershell -ExecutionPolicy Bypass -File scripts/run-blockinfo-post.ps1 -DryRun -Destination telegram",
+    "blockinfo-post:run": "powershell -ExecutionPolicy Bypass -File scripts/run-blockinfo-post.ps1 -Destination telegram"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -19,8 +22,6 @@
     "bech32": "^2.0.0",
     "next": "^15.3.0",
     "next-themes": "^0.4.6",
-    "nextra": "^4.6.1",
-    "nextra-theme-docs": "^4.6.1",
     "node-email-verifier": "^4.0.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.1.0",
@@ -34,7 +35,6 @@
     "zcashname-sdk": "^0.10.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1",
     "@react-email/preview-server": "^5.2.10",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^22.13.10",

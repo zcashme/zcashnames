@@ -7,6 +7,7 @@
 import { createHash } from "crypto";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
+import { DEFAULT_EMAIL_SERIES, upsertSubscriber } from "@/lib/email/subscribers";
 import { CONTACT_KINDS, type ContactKind } from "@/lib/types";
 
 const MAX_NAME = 60;
@@ -106,6 +107,19 @@ export async function submitIndexerLaunchAlert(
     }
     console.error("[indexer-launch-alert] insert failed:", error);
     return { ok: false, error: "Couldn't save your signup. Try again." };
+  }
+
+  if (newsletter && contacts.email) {
+    try {
+      await upsertSubscriber({
+        email: contacts.email,
+        series: DEFAULT_EMAIL_SERIES,
+        emailVerified: false,
+        source: "indexer_launch_alert",
+      });
+    } catch (subscriberError) {
+      console.error("[indexer-launch-alert] subscriber upsert failed:", subscriberError);
+    }
   }
 
   return { ok: true };

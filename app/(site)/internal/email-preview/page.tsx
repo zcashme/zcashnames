@@ -1,365 +1,143 @@
 import Link from "next/link";
-import { render } from "@react-email/render";
-import ConfirmEmail from "@/components/emails/ConfirmEmail";
-import WaitlistEmail from "@/components/emails/WaitlistEmail";
-import FollowUpEmail from "@/components/emails/FollowUpEmail";
-import CommissionPinEmail from "@/components/emails/CommissionPinEmail";
-import CampaignEmail from "@/components/emails/CampaignEmail";
 import BetaInviteWalletPicker from "./BetaInviteWalletPicker";
-import { defaultInviteBody, defaultInviteSubject } from "@/lib/beta/invite-template";
-import { renderBetaInvitePreview } from "@/lib/email/beta-invite";
+import EmailPreviewUnsubscribeToggle from "./EmailPreviewUnsubscribeToggle";
+import { getPreviewDriftStatus } from "@/lib/email-preview/drift";
+import {
+  EMAIL_PREVIEW_GROUPS,
+  filterEmailPreviews,
+  getEmailPreviewRegistry,
+  renderEmailPreview,
+  type EmailPreviewFilter,
+  type EmailPreviewRegistryEntry,
+} from "@/lib/email-preview/registry";
 import { isWalletVariantId, type WalletVariantId } from "@/lib/wallets/catalog";
-import type { ReactElement } from "react";
 
-type EmailPreview = {
+function normalizeFilter(value: string | undefined): EmailPreviewFilter {
+  if (value === "main" || value === "other") return value;
+  return "all";
+}
+
+function driftDotStyle(status: "in_sync" | "drift" | "unknown") {
+  if (status === "in_sync") return { background: "#22c55e" };
+  if (status === "drift") return { background: "#ef4444" };
+  return { background: "#71717a" };
+}
+
+function filterLabel(filter: EmailPreviewFilter): string {
+  if (filter === "main") return "Main";
+  if (filter === "other") return "Other";
+  return "All";
+}
+
+function buildPreviewHref(args: {
   key: string;
-  group:
-    | "WAITLIST USER EMAILS"
-    | "BETA USER EMAILS"
-    | "CAMPAIGN EMAILS"
-    | "INTERNAL ADMIN NOTICES";
-  title: string;
-  description: string;
-  subject: string;
-  kind: "react" | "text";
-  element?: ReactElement;
-  text?: string;
-};
+  filter: EmailPreviewFilter;
+  name?: string;
+  code?: string;
+  wallet?: string;
+  includeUnsubscribe?: boolean;
+}): string {
+  const params = new URLSearchParams();
+  params.set("email", args.key);
+  params.set("filter", args.filter);
 
-const betaApplicationText = [
-  "New beta application: Josh",
-  "",
-  "Tester id:    tester_123",
-  "Invite code:  CABAL-123456",
-  "Submitted:    2026-04-18T12:00:00.000Z",
-  "Focus areas:  User flow, SDK / developer",
-  "",
-  "Contacts:",
-  "  - email (best): josh@example.com",
-  "  - x: @jswihart",
-  "",
-  "Why:",
-  "I want to test ZcashNames before launch and help with feedback.",
-  "",
-  "Experience: I use Zcash and run community demos.",
-  "Heard about it from: Zcash community",
-  "",
-  "-",
-  "Open the beta_testers table in Supabase to flip status when you've sent the code.",
-].join("\n");
-
-const cabalAccessText = [
-  "Josh is viewing your proposal.",
-  "",
-  "Name:      Josh",
-  "Viewed at: 2026-04-18T12:00:00.000Z",
-].join("\n");
-
-const cabalChatText = [
-  "New cabal deck comment from Josh",
-  "",
-  "Deck:       ZcashNames Cabal",
-  "Slide:      4 - Referral engine",
-  "Access:     investor-pass",
-  "Name field: Josh",
-  "Submitted:  2026-04-18T12:00:00.000Z",
-  "",
-  "Message:",
-  "Can you share the expected payout timing and fraud review process?",
-].join("\n");
-
-const cabalInterestText = [
-  "New cabal interest from Josh",
-  "",
-  "Deck:              ZcashNames Cabal",
-  "Slide:             9 - Join us",
-  "Access:            investor-pass",
-  "Name field:        Josh",
-  "Preferred contact: josh@example.com",
-  "Submitted:         2026-04-18T12:00:00.000Z",
-  "",
-  "Optional note:",
-  "Interested in helping with wallet partnerships.",
-].join("\n");
-
-const previews: EmailPreview[] = [
-  {
-    key: "confirm",
-    group: "WAITLIST USER EMAILS",
-    title: "Confirm Email",
-    description: "Waitlist signup confirmation email.",
-    subject: "Confirm your email",
-    kind: "react",
-    element: <ConfirmEmail name="Josh" confirmUrl="https://zcashnames.com/?token=sample-confirmation-token" />,
-  },
-  {
-    key: "waitlist",
-    group: "WAITLIST USER EMAILS",
-    title: "Waitlist Welcome",
-    description: "Sent after confirmation with referral link, dashboard link, passcode, and terms.",
-    subject: "Early access to ZcashNames",
-    kind: "react",
-    element: (
-      <WaitlistEmail
-        name="Josh"
-        referralUrl="https://zcashnames.com/?ref=jswihart"
-        referralCode="jswihart"
-        accessPin="924731"
-      />
-    ),
-  },
-  {
-    key: "waitlist-recovery",
-    group: "WAITLIST USER EMAILS",
-    title: "Referral Recovery Resend",
-    description: "Resent when a confirmed waitlist user recovers their referral link from Share Kit.",
-    subject: "Early access to ZcashNames",
-    kind: "react",
-    element: (
-      <WaitlistEmail
-        name="Josh"
-        referralUrl="https://zcashnames.com/?ref=Recover42"
-        referralCode="Recover42"
-        accessPin="924731"
-      />
-    ),
-  },
-  {
-    key: "follow-up",
-    group: "WAITLIST USER EMAILS",
-    title: "Survey Follow-Up",
-    description: "Sent after survey completion when we should reach out.",
-    subject: "Let's connect",
-    kind: "react",
-    element: (
-      <FollowUpEmail
-        name="Josh"
-        reasonCopy="Your answers suggest ZcashNames could be useful for your team, wallet, or community."
-      />
-    ),
-  },
-  {
-    key: "commission-pin",
-    group: "WAITLIST USER EMAILS",
-    title: "Dashboard Access Code",
-    description: "Referral dashboard passcode email.",
-    subject: "Your access code",
-    kind: "react",
-    element: (
-      <CommissionPinEmail
-        name="Josh"
-        pin="924731"
-        dashboardUrl="https://zcashnames.com/leaders/ref/jswihart"
-      />
-    ),
-  },
-  {
-    key: "beta-invite",
-    group: "BETA USER EMAILS",
-    title: "Beta Invite",
-    description: "Closed beta invite with mainnet join link and access code fallback.",
-    subject: defaultInviteSubject(),
-    kind: "react",
-  },
-  {
-    key: "campaign-waitlist",
-    group: "CAMPAIGN EMAILS",
-    title: "Waitlist Campaign",
-    description: "Generic admin-managed broadcast email for waitlist recipients.",
-    subject: "An update from ZcashNames",
-    kind: "react",
-    element: (
-      <CampaignEmail
-        preview="An update from ZcashNames"
-        headingText="An update from ZcashNames"
-        bodyText={[
-          "Thanks for joining the ZcashNames waitlist.",
-          "",
-          "You can share your referral link here: {{referral_url}}",
-          "",
-          "If you want to check your dashboard, use [your dashboard]({{dashboard_url}}).",
-        ].join("\n")}
-        personalization={{
-          name: "Josh",
-          referralCode: "jswihart",
-          referralUrl: "https://zcashnames.com/?ref=jswihart",
-          dashboardUrl: "https://zcashnames.com/leaders/ref/jswihart",
-          relatedNames: ["Josh", "Jswihart"],
-        }}
-      />
-    ),
-  },
-  {
-    key: "beta-application",
-    group: "INTERNAL ADMIN NOTICES",
-    title: "Beta Application Notice",
-    description: "Text-only internal notice for a closed beta application.",
-    subject: "New beta application: Josh",
-    kind: "text",
-    text: betaApplicationText,
-  },
-  {
-    key: "cabal-access",
-    group: "INTERNAL ADMIN NOTICES",
-    title: "Cabal Access Notice",
-    description: "Text-only internal notice when a cabal invite holder views the proposal.",
-    subject: "Cabal proposal view: Josh",
-    kind: "text",
-    text: cabalAccessText,
-  },
-  {
-    key: "cabal-chat",
-    group: "INTERNAL ADMIN NOTICES",
-    title: "Cabal Deck Comment",
-    description: "Text-only internal notice for a cabal deck comment.",
-    subject: "Cabal deck comment: 4 Referral engine",
-    kind: "text",
-    text: cabalChatText,
-  },
-  {
-    key: "cabal-interest",
-    group: "INTERNAL ADMIN NOTICES",
-    title: "Cabal Interest",
-    description: "Text-only internal notice for cabal interest submissions.",
-    subject: "Cabal interest: Josh",
-    kind: "text",
-    text: cabalInterestText,
-  },
-];
-
-const previewGroups = [
-  "WAITLIST USER EMAILS",
-  "BETA USER EMAILS",
-  "CAMPAIGN EMAILS",
-  "INTERNAL ADMIN NOTICES",
-] as const;
-
-function getSelectedPreview(email: string | string[] | undefined): EmailPreview {
-  const key = Array.isArray(email) ? email[0] : email;
-  return previews.find((preview) => preview.key === key) ?? previews[0];
-}
-
-function resolvedPreviewSubject(
-  preview: EmailPreview,
-  walletVariantId: WalletVariantId | null,
-): string {
-  if (preview.key !== "beta-invite") return preview.subject;
-  return defaultInviteSubject({ walletVariantId });
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"]/g, (character) => {
-    if (character === "&") return "&amp;";
-    if (character === "<") return "&lt;";
-    if (character === ">") return "&gt;";
-    return "&quot;";
-  });
-}
-
-function textPreviewDocument(preview: EmailPreview): string {
-  return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <style>
-      body {
-        margin: 0;
-        background: #f4f4f5;
-        color: #18181b;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      }
-      main {
-        max-width: 760px;
-        margin: 40px auto;
-        background: #ffffff;
-        border: 1px solid #d4d4d8;
-        border-radius: 8px;
-        overflow: hidden;
-      }
-      header {
-        border-bottom: 1px solid #d4d4d8;
-        padding: 16px 20px;
-      }
-      h1 {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        font-size: 18px;
-        margin: 0 0 6px;
-      }
-      p {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        font-size: 13px;
-        margin: 0;
-        color: #52525b;
-      }
-      pre {
-        margin: 0;
-        padding: 20px;
-        white-space: pre-wrap;
-        font-size: 14px;
-        line-height: 1.6;
-      }
-    </style>
-  </head>
-  <body>
-    <main>
-      <header>
-        <h1>${escapeHtml(preview.title)}</h1>
-        <p>Subject: ${escapeHtml(preview.subject)}</p>
-      </header>
-      <pre>${escapeHtml(preview.text ?? "")}</pre>
-    </main>
-  </body>
-</html>`;
-}
-
-async function renderPreview(
-  preview: EmailPreview,
-  personalization?: { name?: string; code?: string; wallet?: string },
-): Promise<string> {
-  if (preview.kind === "text") return textPreviewDocument(preview);
-  if (preview.key === "beta-invite") {
-    const displayName = personalization?.name?.trim() || "Josh";
-    const inviteCode = personalization?.code?.trim() || "7QFMb3jv";
-    const walletVariantId =
-      personalization?.wallet && isWalletVariantId(personalization.wallet)
-        ? personalization.wallet
-        : null;
-    return renderBetaInvitePreview({
-      displayName,
-      inviteCode,
-      bodyText: defaultInviteBody({ displayName }),
-      walletVariantId,
-    });
+  if (args.name?.trim()) params.set("name", args.name.trim());
+  if (args.code?.trim()) params.set("code", args.code.trim());
+  if (args.wallet?.trim()) params.set("wallet", args.wallet.trim());
+  if (typeof args.includeUnsubscribe === "boolean") {
+    params.set("includeUnsubscribe", args.includeUnsubscribe ? "1" : "0");
   }
-  return render(preview.element!);
+
+  return `/internal/email-preview?${params.toString()}`;
+}
+
+function PreviewBadgeRow({
+  entry,
+  driftDetail,
+  compact = false,
+}: {
+  entry: EmailPreviewRegistryEntry;
+  driftDetail?: { status: "in_sync" | "drift" | "unknown"; detail: string };
+  compact?: boolean;
+}) {
+  if (entry.sourceRepo !== "main_production") return null;
+
+  return (
+    <div className={`${compact ? "" : "mt-1 "}flex items-center gap-2`}>
+      <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-amber-300">
+        Main
+      </span>
+      <span
+        title={driftDetail?.detail ?? "No drift data."}
+        className="inline-flex items-center gap-1 text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
+      >
+        <span
+          className="h-2.5 w-2.5 rounded-full"
+          style={driftDotStyle(driftDetail?.status ?? "unknown")}
+        />
+        {driftDetail?.status === "in_sync"
+          ? "In sync"
+          : driftDetail?.status === "drift"
+            ? "Drift"
+            : "Unknown"}
+      </span>
+    </div>
+  );
 }
 
 export default async function InternalEmailPreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string | string[]; name?: string; code?: string; wallet?: string }>;
+  searchParams: Promise<{
+    email?: string | string[];
+    name?: string;
+    code?: string;
+    wallet?: string;
+    includeUnsubscribe?: string;
+    filter?: string;
+  }>;
 }) {
   const params = await searchParams;
-  const selected = getSelectedPreview(params.email);
+  const registry = getEmailPreviewRegistry();
+  const filter = normalizeFilter(params.filter);
+  const filteredRegistry = filterEmailPreviews(registry, filter);
+  const requestedKey = Array.isArray(params.email) ? params.email[0] : params.email;
+  const selected =
+    filteredRegistry.find((entry) => entry.key === requestedKey) ??
+    filteredRegistry[0] ??
+    registry[0];
+  const includeUnsubscribe = params.includeUnsubscribe !== "0";
   const selectedWallet =
     params.wallet && isWalletVariantId(params.wallet) ? (params.wallet as WalletVariantId) : null;
-  const html = await renderPreview(selected, {
+
+  const driftByKey = new Map(
+    registry
+      .filter((entry) => entry.sourceRepo === "main_production")
+      .map((entry) => [entry.key, getPreviewDriftStatus(entry.driftManifest)]),
+  );
+
+  const html = await renderEmailPreview(selected, {
     name: params.name,
     code: params.code,
     wallet: params.wallet,
+    includeUnsubscribe,
   });
-  const permalink =
-    selected.key === "beta-invite"
-      ? `/internal/email-preview?email=${selected.key}&name=${encodeURIComponent(params.name?.trim() || "Josh")}&code=${encodeURIComponent(params.code?.trim() || "7QFMb3jv")}${params.wallet?.trim() ? `&wallet=${encodeURIComponent(params.wallet.trim())}` : ""}`
-      : `/internal/email-preview?email=${selected.key}`;
-  const selectedSubject = resolvedPreviewSubject(selected, selectedWallet);
+  const selectedSubject = selected.resolveSubject(selectedWallet);
+  const permalink = buildPreviewHref({
+    key: selected.key,
+    filter,
+    name: params.name?.trim() || "Josh",
+    code: params.code?.trim() || "7QFMb3jv",
+    wallet: params.wallet?.trim(),
+    includeUnsubscribe,
+  });
 
   return (
     <main style={{ width: "100%", padding: "12px", boxSizing: "border-box" }}>
       <section
         style={{
           display: "grid",
-          gridTemplateColumns: "280px minmax(0, 1fr)",
+          gridTemplateColumns: "320px minmax(0, 1fr)",
           gap: 12,
           minHeight: "calc(100vh - 160px)",
           alignItems: "stretch",
@@ -368,77 +146,133 @@ export default async function InternalEmailPreviewPage({
         <aside
           className="rounded-lg border"
           style={{
-            background: "var(--leaders-card-bg)",
-            borderColor: "var(--leaders-card-border)",
+            background: "var(--tool-panel-bg)",
+            borderColor: "var(--tool-panel-border)",
             padding: 10,
             maxHeight: "calc(100vh - 170px)",
             overflowY: "auto",
           }}
         >
           <div className="mb-3 px-2">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-fg-muted">Internal</p>
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-fg-muted">
+              Internal
+            </p>
             <h1 className="mt-1 text-xl font-bold tracking-tight text-fg-heading">Email Preview</h1>
             <p className="mt-1 text-xs leading-5 text-fg-muted">
-              Ignored by git. Includes React templates and text-only notices.
+              Superset preview catalog for internal-only and dotzcash_main production emails.
             </p>
           </div>
 
+          <div className="mb-4 px-2">
+            <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-fg-muted">
+              Filter
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(["all", "main", "other"] as const).map((value) => {
+                const active = filter === value;
+                return (
+                  <Link
+                    key={value}
+                    href={buildPreviewHref({
+                      key: selected.key,
+                      filter: value,
+                      name: params.name?.trim() || "Josh",
+                      code: params.code?.trim() || "7QFMb3jv",
+                      wallet: params.wallet?.trim(),
+                      includeUnsubscribe,
+                    })}
+                    className="rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition-colors"
+                    style={{
+                      borderColor: active ? "var(--fg-heading)" : "var(--tool-panel-border)",
+                      background: active ? "var(--market-stats-segment-active-bg)" : "transparent",
+                      color: active ? "var(--fg-heading)" : "var(--fg-muted)",
+                    }}
+                  >
+                    {filterLabel(value)}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="grid gap-4">
-            {previewGroups.map((group) => (
-              <div key={group}>
-                <h2 className="mb-1.5 px-2 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-fg-muted">
-                  {group}
-                </h2>
-                <div className="grid gap-1.5">
-                  {previews
-                    .filter((preview) => preview.group === group)
-                    .map((preview) => {
-                      const active = preview.key === selected.key;
+            {EMAIL_PREVIEW_GROUPS.map((group) => {
+              const groupEntries = filteredRegistry.filter((entry) => entry.group === group);
+              if (groupEntries.length === 0) return null;
+
+              return (
+                <div key={group}>
+                  <h2 className="mb-1.5 px-2 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-fg-muted">
+                    {group}
+                  </h2>
+                  <div className="grid gap-1.5">
+                    {groupEntries.map((entry) => {
+                      const active = entry.key === selected.key;
+                      const drift = driftByKey.get(entry.key);
+
                       return (
                         <Link
-                          key={preview.key}
-                          href={
-                            preview.key === "beta-invite"
-                              ? `/internal/email-preview?email=${preview.key}&name=${encodeURIComponent(params.name?.trim() || "Josh")}&code=${encodeURIComponent(params.code?.trim() || "7QFMb3jv")}${params.wallet?.trim() ? `&wallet=${encodeURIComponent(params.wallet.trim())}` : ""}`
-                              : `/internal/email-preview?email=${preview.key}`
-                          }
+                          key={entry.key}
+                          href={buildPreviewHref({
+                            key: entry.key,
+                            filter,
+                            name: params.name?.trim() || "Josh",
+                            code: params.code?.trim() || "7QFMb3jv",
+                            wallet: params.wallet?.trim(),
+                            includeUnsubscribe,
+                          })}
                           className="block rounded-lg border transition-colors hover:border-fg-muted"
                           style={{
                             background: active ? "var(--market-stats-segment-active-bg)" : "transparent",
-                            borderColor: active ? "var(--fg-muted)" : "var(--leaders-card-border)",
+                            borderColor: active ? "var(--fg-muted)" : "var(--tool-panel-border)",
                             padding: "8px 10px",
                           }}
                         >
                           <span className="block truncate text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-                            {preview.kind === "text" ? "Text" : "React"} - {resolvedPreviewSubject(preview, selectedWallet)}
+                            {entry.kind === "text" ? "Text" : "React"} -{" "}
+                            {entry.resolveSubject(selectedWallet)}
                           </span>
-                          <span className="mt-1 block text-sm font-semibold text-fg-heading">{preview.title}</span>
-                          <span className="mt-1 block text-xs leading-4 text-fg-muted">{preview.description}</span>
+                          <span className="mt-1 block text-sm font-semibold text-fg-heading">
+                            {entry.title}
+                          </span>
+                          <PreviewBadgeRow entry={entry} driftDetail={drift} />
+                          <span className="mt-1 block text-xs leading-4 text-fg-muted">
+                            {entry.description}
+                          </span>
                         </Link>
                       );
                     })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </aside>
 
         <section
           className="min-w-0 overflow-hidden rounded-lg border"
           style={{
-            borderColor: "var(--leaders-card-border)",
+            borderColor: "var(--tool-panel-border)",
             minHeight: "calc(100vh - 170px)",
           }}
         >
           <div
             className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3"
-            style={{ borderColor: "var(--leaders-card-border)", background: "var(--leaders-card-bg)" }}
+            style={{ borderColor: "var(--tool-panel-border)", background: "var(--tool-panel-bg)" }}
           >
             <div className="min-w-0">
-              <h2 className="truncate text-lg font-semibold text-fg-heading">{selected.title}</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="truncate text-lg font-semibold text-fg-heading">{selected.title}</h2>
+                <PreviewBadgeRow
+                  entry={selected}
+                  driftDetail={driftByKey.get(selected.key)}
+                  compact
+                />
+              </div>
               <p className="mt-1 truncate text-xs text-fg-muted">Subject: {selectedSubject}</p>
-              {selected.key === "beta-invite" && (
-                <BetaInviteWalletPicker value={selectedWallet} />
+              {selected.controls?.wallet && <BetaInviteWalletPicker value={selectedWallet} />}
+              {selected.controls?.includeUnsubscribe && (
+                <EmailPreviewUnsubscribeToggle value={includeUnsubscribe} />
               )}
             </div>
             <Link

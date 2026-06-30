@@ -1,0 +1,67 @@
+   ▲ Next.js 15.5.14
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 49s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/20) ...
+   Generating static pages (5/20) 
+   Generating static pages (10/20) 
+   Generating static pages (15/20) 
+ ✓ Generating static pages (20/20)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /_not-found                            995 B         103 kB
+├ ƒ /admin                                 208 B         105 kB
+├ ƒ /admin/beta                            175 B         102 kB
+├ ƒ /admin/beta-v2                         175 B         102 kB
+├ ƒ /admin/beta-v2/drafts                  208 B         105 kB
+├ ƒ /admin/beta-v2/drafts/[id]             272 B         111 kB
+├ ƒ /admin/beta-v2/sent                    208 B         105 kB
+├ ƒ /admin/beta-v2/sent/[id]               208 B         105 kB
+├ ƒ /admin/beta/drafts                     208 B         105 kB
+├ ƒ /admin/beta/drafts/[id]                180 B         111 kB
+├ ƒ /admin/beta/report                   2.33 kB         106 kB
+├ ƒ /admin/beta/sent                       208 B         105 kB
+├ ƒ /admin/beta/sent/[id]                  208 B         105 kB
+├ ƒ /admin/campaigns                       175 B         102 kB
+├ ƒ /admin/campaigns/drafts                876 B         106 kB
+├ ƒ /admin/campaigns/drafts/[id]         7.25 kB         113 kB
+├ ƒ /admin/campaigns/sent                  208 B         105 kB
+├ ƒ /admin/campaigns/sent/[id]             208 B         105 kB
+├ ƒ /api/campaign-worker                   175 B         102 kB
+├ ƒ /internal                              208 B         105 kB
+├ ƒ /internal/banner-preview             16.5 kB         118 kB
+├ ƒ /internal/banner-preview/upload        175 B         102 kB
+├ ƒ /internal/beta-invite-preview          175 B         102 kB
+├ ƒ /internal/email-preview              1.85 kB         109 kB
+├ ƒ /internal/link-previews                175 B         102 kB
+├ ƒ /internal/quotepost                  6.41 kB         108 kB
+├ ƒ /internal/text-splitter              2.79 kB         105 kB
+├ ƒ /internal/unsubscribe-preview          208 B         105 kB
+├ ƒ /og/[slug].png                         175 B         102 kB
+├ ƒ /og/beta.png                           175 B         102 kB
+├ ƒ /og/explorer.png                       175 B         102 kB
+├ ƒ /og/home.png                           175 B         102 kB
+├ ƒ /og/leaders-ref.png                    175 B         102 kB
+├ ƒ /og/leaders-terms.png                  175 B         102 kB
+├ ƒ /og/leaders.png                        175 B         102 kB
+├ ƒ /og/roadmap.png                        175 B         102 kB
+├ ƒ /og/sharekit.png                       175 B         102 kB
+└ ○ /opengraph-image-12o0cb                175 B         102 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/2027-e52e43ab0786a9a5.js      45.7 kB
+  ├ chunks/f6ac3693-c8072d72ada881d9.js  54.2 kB
+  └ other shared chunks (total)          2.02 kB
+
+
+ƒ Middleware                               34 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

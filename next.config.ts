@@ -1,11 +1,4 @@
-// Next.js configuration for the ZcashNames documentation site.
-// Wraps the default config with the Nextra docs plugin and enriches it with:
-//   - Domain redirects (zcashna.me, zcashname.com → zcashnames.com)
-//   - Security headers (CSP, HSTS, framing, referrer policy)
-//   - A /api/confirm redirect that passes a ?token through to the landing page
-//   - Windows symlink workaround for OneDrive reparse points
 import type { NextConfig } from "next";
-import nextra from "nextra";
 import fs from "node:fs";
 
 // OneDrive-managed files on Windows can be reparse points that are not real symlinks.
@@ -40,16 +33,7 @@ if (isWindows) {
   }) as typeof fs.readlinkSync;
 }
 
-const withNextra = nextra({
-  contentDirBasePath: "/docs",
-});
-
-const distDir = process.env.NODE_ENV === "development" ? ".next-dev" : ".next";
-
 const nextConfig: NextConfig = {
-  distDir,
-  // svg-captcha ships a TTF font that webpack's server bundler doesn't copy.
-  // Loading it externally at runtime lets the package read the file from node_modules.
   serverExternalPackages: ["svg-captcha"],
   async redirects() {
     return [
@@ -77,12 +61,6 @@ const nextConfig: NextConfig = {
         destination: "https://www.zcashnames.com/:path*",
         permanent: true,
       },
-      {
-        source: "/api/confirm",
-        has: [{ type: "query", key: "token", value: "(?<token>.+)" }],
-        destination: "/waitlist?token=:token",
-        permanent: false,
-      },
     ];
   },
   async headers() {
@@ -94,6 +72,7 @@ const nextConfig: NextConfig = {
       "https://www.google.com/recaptcha/",
       ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*", "ws://localhost:*"] : []),
     ].join(" ");
+
     return [
       {
         source: "/(.*)",
@@ -120,4 +99,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextra(nextConfig);
+export default nextConfig;

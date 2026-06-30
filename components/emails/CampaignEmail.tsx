@@ -7,6 +7,7 @@ import {
   splitCampaignParagraphs,
 } from "@/lib/campaigns/content";
 import type { CampaignRecipientPersonalization } from "@/lib/campaigns/types";
+import type { EmailUnsubscribeLinks } from "@/lib/email/policy";
 
 function Paragraph({
   text,
@@ -37,15 +38,17 @@ export default function CampaignEmail({
   headingText,
   bodyText,
   personalization,
+  unsubscribeLinks,
 }: {
   preview: string;
   headingText: string;
   bodyText: string;
   personalization: CampaignRecipientPersonalization;
+  unsubscribeLinks?: EmailUnsubscribeLinks | null;
 }) {
   const paragraphs = splitCampaignParagraphs(bodyText);
   return (
-    <EmailLayout preview={preview} headingText={headingText}>
+    <EmailLayout preview={preview} headingText={headingText} unsubscribeLinks={unsubscribeLinks}>
       <Section style={content}>
         <Text style={paragraph}>Hi {personalization.name},</Text>
         {paragraphs.map((text, index) => (

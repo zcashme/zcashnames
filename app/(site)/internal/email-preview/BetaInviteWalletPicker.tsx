@@ -71,7 +71,7 @@ export default function BetaInviteWalletPicker({
           className="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm font-semibold outline-none transition-opacity hover:opacity-90"
           style={{
             background: opaqueRaisedSurface,
-            borderColor: "var(--leaders-card-border)",
+            borderColor: "var(--tool-panel-border)",
             color: "var(--fg-heading)",
           }}
         >
@@ -97,7 +97,7 @@ export default function BetaInviteWalletPicker({
           className="absolute left-0 right-0 top-full z-30 mt-2 max-h-80 overflow-y-auto rounded-lg shadow-lg"
           style={{
             background: opaqueSurface,
-            border: "1px solid var(--leaders-card-border)",
+            border: "1px solid var(--tool-panel-border)",
             boxShadow: "0 18px 40px rgba(0, 0, 0, 0.45)",
           }}
         >
@@ -110,7 +110,7 @@ export default function BetaInviteWalletPicker({
               style={{
                 color: !value ? "var(--fg-heading)" : "var(--fg-body)",
                 background: !value ? "var(--color-raised, #18181b)" : opaqueSurface,
-                borderBottom: "1px solid var(--leaders-card-border)",
+                borderBottom: "1px solid var(--tool-panel-border)",
               }}
             >
               No wallet download CTA
@@ -128,7 +128,7 @@ export default function BetaInviteWalletPicker({
                   style={{
                     color: active ? "var(--fg-heading)" : "var(--fg-body)",
                     background: active ? "var(--color-raised, #18181b)" : opaqueSurface,
-                    borderBottom: "1px solid var(--leaders-card-border)",
+                    borderBottom: "1px solid var(--tool-panel-border)",
                   }}
                 >
                   {variant.displayName}

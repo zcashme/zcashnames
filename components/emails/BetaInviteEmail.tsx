@@ -1,5 +1,5 @@
 import { Button, Hr, Img, Link, Section, Text } from "@react-email/components";
-import { EmailLayout } from "./EmailLayout";
+import { createZcashNamesHeaderMark, EmailLayout } from "./EmailLayout";
 import { content, paragraph, ctaButton, divider } from "@/lib/email/styles";
 import { parseInlineLinks } from "@/lib/campaigns/content";
 
@@ -10,7 +10,6 @@ interface BetaInviteEmailProps {
   bodyParagraphs: string[];
   headingText?: string;
   previewText?: string;
-  brandLogoSrc?: string;
   walletCta?: {
     walletName: string;
     platformName: string;
@@ -49,7 +48,6 @@ export default function BetaInviteEmail({
   bodyParagraphs,
   headingText = "You're invited",
   previewText = "You've been accepted to the ZcashNames beta.",
-  brandLogoSrc = "https://zcashnames.com/brandkit/zcashnames-primary-logo-white-transparent-377x403.png",
   walletCta,
   walletLogoRow,
 }: BetaInviteEmailProps) {
@@ -57,13 +55,10 @@ export default function BetaInviteEmail({
     <EmailLayout
       preview={previewText}
       headingText={headingText}
-      headerMark={{
-        primaryHref: "https://zcashnames.com",
-        primarySrc: brandLogoSrc,
-        primaryAlt: "ZcashNames",
+      headerMark={createZcashNamesHeaderMark({
         secondarySrc: walletCta?.logoSrc,
         secondaryAlt: walletCta?.logoAlt,
-      }}
+      })}
     >
       <Section style={content}>
         <Text style={paragraph}>Hi {displayName},</Text>
@@ -178,12 +173,7 @@ export default function BetaInviteEmail({
             ) : (
               <>
                 <Text style={{ margin: "0 0 6px", fontSize: 13, lineHeight: "20px", color: "#d4d4d8" }}>
-                  Don&apos;t have a wallet yet?
-                </Text>
-                <Text style={{ margin: "0 0 14px", fontSize: 13, lineHeight: "20px", color: "#d4d4d8" }}>
-                  <Link href="https://zcashnames.com/beta/wallets" style={{ color: "#F4B728", textDecoration: "underline" }}>
-                    Compare wallets
-                  </Link>
+                  Use ZcashNames with
                 </Text>
                 <table role="presentation" style={{ margin: "0 auto", borderCollapse: "separate", borderSpacing: "10px 0" }}>
                   <tbody>
@@ -208,6 +198,11 @@ export default function BetaInviteEmail({
                     </tr>
                   </tbody>
                 </table>
+                <Text style={{ margin: "14px 0 0", fontSize: 13, lineHeight: "20px", color: "#d4d4d8" }}>
+                  <Link href="https://zcashnames.com/beta/wallets" style={{ color: "#F4B728", textDecoration: "underline" }}>
+                    Compare Wallets
+                  </Link>
+                </Text>
               </>
             )}
           </Section>

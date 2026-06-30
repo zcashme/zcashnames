@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { createCampaignAction } from "@/app/admin/campaigns/actions";
+import { createCampaignAction } from "@/app/admin/campaigns/create-action";
 
 export default function CreateCampaignButton() {
   const router = useRouter();

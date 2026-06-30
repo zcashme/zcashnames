@@ -12,16 +12,15 @@ import { getReservedName } from "@/lib/zns/reserved";
 import { getNamePricing } from "@/lib/network-stats";
 
 //
-// Server-side name resolution. These functions are the read path for the
-// explorer and search — every name lookup in the app flows through here.
+// Server-side name resolution. These functions are the retained read path for
+// name/purchase support code — every name lookup in the app flows through here.
 //
 // resolveName() is the central dispatch: it normalises the input, queries
 // the ZNS indexer, checks the reserved-names table (Supabase), computes
 // the claim cost, and returns a typed ResolveName union the UI can switch on.
 //
-// The other exports (getCurrentRegistrations, getListings, getEvents,
-// getHomeStats) power the explorer page — they fetch paginated / filtered
-// data from the indexer and return it to the server component.
+// The other exports provide paginated / filtered indexer reads for the support
+// code that still needs them.
 //
 
 export async function getCurrentRegistrations(
