@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import ShareDropdown from "@/components/ShareDropdown";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import CareerMarkdown from "@/components/careers/CareerMarkdown";
+import CareersPageControls from "@/components/careers/CareersPageControls";
 import { getOpenCareerJobBySlug, listCareerJobs } from "@/lib/careers";
 
 export async function generateStaticParams() {
@@ -33,11 +34,20 @@ export async function generateMetadata(
       title: `${job.title} | ZcashNames Careers`,
       description: job.summary,
       url: job.jobUrl,
+      images: [
+        {
+          url: `/og/careers/${job.slug}`,
+          width: 1200,
+          height: 630,
+          alt: `${job.title} | ZcashNames Careers`,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: `${job.title} | ZcashNames Careers`,
       description: job.summary,
+      images: [`/og/careers/${job.slug}`],
     },
   };
 }
@@ -55,7 +65,7 @@ export default async function CareerJobPage(
 
   return (
     <main className="w-full">
-      <SiteRouteTitle title="Careers" />
+      <SiteRouteTitle title="Careers" href="/careers" />
       <section className="mx-auto grid w-full max-w-[1320px] gap-8 px-4 pb-20 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
         <article
           className="rounded-[30px] border bg-[var(--feature-card-bg)] p-6 md:p-8 [[data-theme=monochrome]_&]:bg-transparent"
@@ -68,11 +78,11 @@ export default async function CareerJobPage(
               {metaLabels.map((label) => (
                 <span
                   key={label}
-                  className="[--career-badge-accent:color-mix(in_srgb,#f4b728_82%,#ffe08b)] [--career-badge-soft:color-mix(in_srgb,#f4b728_18%,transparent)] inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold [[data-theme=light]_&]:[--career-badge-accent:var(--color-brand-blue)] [[data-theme=light]_&]:[--career-badge-soft:color-mix(in_srgb,var(--color-brand-blue)_14%,transparent)] [[data-theme=monochrome]_&]:[--career-badge-accent:var(--color-accent-green)] [[data-theme=monochrome]_&]:[--career-badge-soft:color-mix(in_srgb,var(--color-accent-green)_14%,transparent)]"
+                  className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
                   style={{
-                    background: "var(--career-badge-soft)",
-                    color: "var(--career-badge-accent)",
-                    border: "1px solid color-mix(in srgb, var(--career-badge-accent) 32%, var(--faq-border))",
+                    background: "transparent",
+                    color: "var(--fg-heading)",
+                    border: "1px solid color-mix(in srgb, var(--fg-heading) 12%, var(--faq-border))",
                   }}
                 >
                   {label}
@@ -102,7 +112,7 @@ export default async function CareerJobPage(
         </article>
 
         <aside
-          className="h-fit rounded-[30px] border p-6 text-center"
+          className="h-fit rounded-[30px] border p-6"
           style={{
             background:
               "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 78%, transparent), color-mix(in srgb, var(--faq-border) 18%, transparent))",
@@ -117,33 +127,35 @@ export default async function CareerJobPage(
             Otherwise, we may keep your information on file for similar future roles.
           </p>
 
-          {applyIsExternal ? (
-            <a
-              href={applyHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-6 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-80"
-              style={{
-                background: "var(--home-result-primary-bg)",
-                color: "var(--home-result-primary-fg)",
-                boxShadow: "var(--home-result-primary-shadow)",
-              }}
-            >
-              Apply for this role
-            </a>
-          ) : (
-            <Link
-              href={applyHref}
-              className="mt-6 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-80"
-              style={{
-                background: "var(--home-result-primary-bg)",
-                color: "var(--home-result-primary-fg)",
-                boxShadow: "var(--home-result-primary-shadow)",
-              }}
-            >
-              Apply for this role
-            </Link>
-          )}
+          <div className="mt-6 flex justify-center">
+            {applyIsExternal ? (
+              <a
+                href={applyHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-80"
+                style={{
+                  background: "var(--home-result-primary-bg)",
+                  color: "var(--home-result-primary-fg)",
+                  boxShadow: "var(--home-result-primary-shadow)",
+                }}
+              >
+                Apply for this role
+              </a>
+            ) : (
+              <Link
+                href={applyHref}
+                className="inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-80"
+                style={{
+                  background: "var(--home-result-primary-bg)",
+                  color: "var(--home-result-primary-fg)",
+                  boxShadow: "var(--home-result-primary-shadow)",
+                }}
+              >
+                Apply for this role
+              </Link>
+            )}
+          </div>
 
           <p
             className="mt-4 break-all text-center text-xs leading-6 font-semibold"
@@ -152,6 +164,9 @@ export default async function CareerJobPage(
             {job.applicationUrl}
           </p>
         </aside>
+        <div className="lg:col-span-2">
+          <CareersPageControls showBackToCareers />
+        </div>
       </section>
     </main>
   );

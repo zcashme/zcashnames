@@ -190,18 +190,18 @@ export default function CareerMarkdown({ markdown }: { markdown: string }) {
       }
     >
       {sections.map((section, index) => (
-        <div key={`${section.heading ?? "section"}-${index}`}>
+        <section key={`${section.heading ?? "section"}-${index}`} className={index === 0 ? "" : "mt-12"}>
           {section.heading ? (
             <h2
               id={slugify(section.heading)}
-              className="mt-10 text-2xl font-bold tracking-tight first:mt-0 sm:text-[1.9rem]"
-              style={{ color: "var(--fg-heading)", lineHeight: 1.2, marginBottom: "1rem" }}
+              className="text-2xl font-bold tracking-tight sm:text-[1.9rem]"
+              style={{ color: "var(--fg-heading)", lineHeight: 1.2, marginBottom: "1.25rem" }}
             >
               {section.heading}
             </h2>
           ) : null}
           {section.body ? <SectionBody markdown={section.body} sectionHeading={section.heading} /> : null}
-        </div>
+        </section>
       ))}
     </div>
   );

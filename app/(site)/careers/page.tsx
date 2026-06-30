@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
 import ShareDropdown from "@/components/ShareDropdown";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
+import CareersPageControls from "@/components/careers/CareersPageControls";
 import { CareerCard } from "@/components/careers/CareerCards";
 import { listOpenCareerJobs } from "@/lib/careers";
+
+const CAREERS_OG_IMAGE = {
+  url: "/og/careers.png",
+  width: 1200,
+  height: 630,
+  alt: "ZcashNames careers",
+};
 
 export const metadata: Metadata = {
   title: "Careers | ZcashNames",
@@ -14,11 +22,13 @@ export const metadata: Metadata = {
     title: "Careers | ZcashNames",
     description: "Open roles at ZcashNames, with a dedicated learn-more page and application URL for each job.",
     url: "https://www.zcashnames.com/careers",
+    images: [CAREERS_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: "Careers | ZcashNames",
     description: "Open roles at ZcashNames, with a dedicated learn-more page and application URL for each job.",
+    images: [CAREERS_OG_IMAGE.url],
   },
 };
 
@@ -29,16 +39,16 @@ export default async function CareersPage() {
 
   return (
     <main className="w-full">
-      <SiteRouteTitle title="Careers" />
+      <SiteRouteTitle title="Careers" href="/careers" />
       <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span
-              className="[--career-badge-accent:color-mix(in_srgb,#f4b728_82%,#ffe08b)] [--career-badge-soft:color-mix(in_srgb,#f4b728_18%,transparent)] inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold [[data-theme=light]_&]:[--career-badge-accent:var(--color-brand-blue)] [[data-theme=light]_&]:[--career-badge-soft:color-mix(in_srgb,var(--color-brand-blue)_14%,transparent)] [[data-theme=monochrome]_&]:[--career-badge-accent:var(--color-accent-green)] [[data-theme=monochrome]_&]:[--career-badge-soft:color-mix(in_srgb,var(--color-accent-green)_14%,transparent)]"
+              className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
               style={{
-                background: "var(--career-badge-soft)",
-                color: "var(--career-badge-accent)",
-                border: "1px solid color-mix(in srgb, var(--career-badge-accent) 32%, var(--faq-border))",
+                background: "transparent",
+                color: "var(--fg-heading)",
+                border: "1px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
               }}
             >
               Applications Open
@@ -79,6 +89,7 @@ export default async function CareersPage() {
             ))}
           </div>
         )}
+        <CareersPageControls />
       </section>
     </main>
   );
