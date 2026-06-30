@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/campaign-worker",
+      "schedule": "*/1 * * * *"
+    },
+    {
+      "path": "/api/blockinfo-post",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
