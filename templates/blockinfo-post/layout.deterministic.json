@@ -1,0 +1,195 @@
+{
+  "width": 1080,
+  "height": 1080,
+  "header": {
+    "eyebrow": {
+      "visible": true,
+      "x": 214,
+      "y": 56,
+      "maxWidth": 380,
+      "fontSize": 18,
+      "fontWeight": 700,
+      "lineHeight": 1.1,
+      "letterSpacing": 0.8,
+      "textAlign": "left",
+      "color": "#dfff72",
+      "opacity": 1
+    },
+    "title": {
+      "visible": true,
+      "x": 214,
+      "y": 88,
+      "maxWidth": 500,
+      "fontSize": 58,
+      "fontWeight": 800,
+      "lineHeight": 1,
+      "letterSpacing": 0,
+      "textAlign": "left",
+      "color": "#dfff72",
+      "opacity": 1
+    },
+    "subtitle": {
+      "visible": false,
+      "x": 78,
+      "y": 186,
+      "maxWidth": 700,
+      "fontSize": 22,
+      "fontWeight": 600,
+      "lineHeight": 1.18,
+      "letterSpacing": 0.2,
+      "textAlign": "left",
+      "color": "#dfff72",
+      "opacity": 1
+    }
+  },
+  "table": {
+    "headerY": 247,
+    "startY": 316,
+    "rowHeight": 67,
+    "note": {
+      "visible": false,
+      "x": 180,
+      "y": 870,
+      "maxWidth": 720,
+      "fontSize": 16,
+      "fontWeight": 600,
+      "lineHeight": 1.15,
+      "letterSpacing": 0.4,
+      "textAlign": "center",
+      "color": "#dfff72",
+      "opacity": 1
+    },
+    "columns": {
+      "label": {
+        "visible": true,
+        "x": 93,
+        "y": 10,
+        "maxWidth": 252,
+        "fontSize": 29,
+        "fontWeight": 583,
+        "lineHeight": 1.02,
+        "letterSpacing": 0.6,
+        "textAlign": "right",
+        "color": "#dfff72",
+        "opacity": 1
+      },
+      "current": {
+        "visible": true,
+        "x": 368,
+        "y": 0,
+        "maxWidth": 192,
+        "fontSize": 29,
+        "fontWeight": 700,
+        "lineHeight": 1.02,
+        "letterSpacing": 0,
+        "textAlign": "right",
+        "color": "#dfff72",
+        "opacity": 1
+      },
+      "delta1d": {
+        "visible": true,
+        "x": 622,
+        "y": 0,
+        "maxWidth": 154,
+        "fontSize": 22,
+        "fontWeight": 600,
+        "lineHeight": 1.12,
+        "letterSpacing": 0,
+        "textAlign": "right",
+        "color": "#dfff72",
+        "opacity": 1
+      },
+      "delta7d": {
+        "visible": true,
+        "x": 820,
+        "y": 0,
+        "maxWidth": 154,
+        "fontSize": 22,
+        "fontWeight": 600,
+        "lineHeight": 1.12,
+        "letterSpacing": 0,
+        "textAlign": "right",
+        "color": "#dfff72",
+        "opacity": 1
+      },
+      "delta30d": {
+        "visible": false,
+        "x": 832,
+        "y": 0,
+        "maxWidth": 100,
+        "fontSize": 22,
+        "fontWeight": 600,
+        "lineHeight": 1.02,
+        "letterSpacing": 0,
+        "textAlign": "right",
+        "color": "#dfff72",
+        "opacity": 1
+      }
+    },
+    "statRows": [
+      {
+        "key": "height",
+        "label": "Height",
+        "visible": true
+      },
+      {
+        "key": "verification_progress",
+        "label": "Verification",
+        "visible": false
+      },
+      {
+        "key": "chain_size_bytes",
+        "label": "Chain Size (GB)",
+        "visible": true
+      },
+      {
+        "key": "difficulty",
+        "label": "Difficulty",
+        "visible": true
+      },
+      {
+        "key": "transparent",
+        "label": "Transparent",
+        "visible": true
+      },
+      {
+        "key": "sprout",
+        "label": "Sprout",
+        "visible": true
+      },
+      {
+        "key": "sapling",
+        "label": "Sapling",
+        "visible": true
+      },
+      {
+        "key": "orchard",
+        "label": "Orchard",
+        "visible": true
+      },
+      {
+        "key": "lockbox",
+        "label": "Lockbox",
+        "visible": true
+      },
+      {
+        "key": "total_shielded",
+        "label": "Total Shielded",
+        "visible": true
+      }
+    ]
+  },
+  "footer": {
+    "visible": true,
+    "x": 700,
+    "y": 992,
+    "maxWidth": 278,
+    "fontSize": 24,
+    "fontWeight": 800,
+    "lineHeight": 1,
+    "letterSpacing": 0.2,
+    "textAlign": "right",
+    "color": "#a8dd2a",
+    "opacity": 1
+  }
+}

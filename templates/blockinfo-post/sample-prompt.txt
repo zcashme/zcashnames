@@ -1,0 +1,26 @@
+Create a polished social media image about the latest Zcash block info update.
+
+Use the provided base image as the visual starting point and preserve its overall composition unless the prompt below requires a stronger layout change.
+
+Content to communicate:
+- Zcash block height: {{height}}
+- Chain size bytes: {{chain_size_bytes}}
+- Total shielded: {{total_shielded}}
+- Sprout pool: {{sprout}}
+- Sapling pool: {{sapling}}
+- Orchard pool: {{orchard}}
+- Transparent pool: {{transparent}}
+- Measured at: {{measured_at}}
+
+Design direction:
+- do not change anything about template-image.png except:
+- write "Zcash Blockchain Info" in the title bar to the right of the logo. 
+- replace the date on the bottom-right with the current date using the same date format
+- add the "content to communicate" in the center square
+- Redesign the center content as a professional blockchain terminal layout. Use IBM Plex Mono SemiBold for the center data and a matching bold futuristic display font for the title. Replace centered text with a two-column data table: labels left-aligned, values right-aligned. Use grouped spacing: Block Height and Chain Size together, Total Shielded separated, Sprout/Sapling/Orchard grouped, Transparent Pool separated, and MEASURED AT centered near the bottom. Use commas, shorten decimals to 4 places, make primary metrics 100% size, pool metrics 90%, and timestamp 60-65% with lower opacity.
+
+Output:
+- one finished square image
+
+Raw row JSON for reference:
+{{row_json_pretty}}

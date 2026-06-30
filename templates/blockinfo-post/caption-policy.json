@@ -1,0 +1,50 @@
+{
+  "sproutAnyChange": {
+    "enabled": true,
+    "priority": 1000,
+    "minAbsoluteChange": 0
+  },
+  "orchardDaily": {
+    "enabled": true,
+    "priority": 900,
+    "absoluteThreshold": 10000,
+    "percentThreshold": 1
+  },
+  "totalShieldedDaily": {
+    "enabled": true,
+    "priority": 800,
+    "absoluteThreshold": 25000,
+    "percentThreshold": 1
+  },
+  "transparentDaily": {
+    "enabled": true,
+    "priority": 700,
+    "absoluteThreshold": 10000,
+    "percentThreshold": 1
+  },
+  "difficultyDaily": {
+    "enabled": true,
+    "priority": 600,
+    "percentThreshold": 10
+  },
+  "orchardWeekly": {
+    "enabled": true,
+    "priority": 500,
+    "absoluteThreshold": 25000,
+    "percentThreshold": 2
+  },
+  "totalShieldedWeekly": {
+    "enabled": true,
+    "priority": 450,
+    "absoluteThreshold": 50000,
+    "percentThreshold": 2
+  },
+  "blockDailyFallback": {
+    "enabled": true,
+    "priority": 200
+  },
+  "latestSnapshotFallback": {
+    "enabled": true,
+    "priority": 100
+  }
+}
