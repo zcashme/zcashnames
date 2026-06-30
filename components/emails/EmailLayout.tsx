@@ -19,8 +19,7 @@ import {
   Text,
 } from "@react-email/components";
 import type { ReactNode } from "react";
-import { FROM_EMAIL, SOCIALS } from "@/lib/email/constants";
-import { SOCIAL_ICON_PATHS } from "@/lib/social-icons";
+import { SOCIALS } from "@/lib/email/constants";
 import {
   body as bodyStyle,
   container as containerStyle,
@@ -28,27 +27,30 @@ import {
   divider as dividerStyle,
 } from "@/lib/email/styles";
 
-function EmailSocialIcon({
-  path,
-  alt,
-}: {
-  path: string;
-  alt: string;
-}) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      width="20"
-      height="20"
-      role="img"
-      aria-label={alt}
-      style={{ display: "block", color: "#d4d4d8" }}
-    >
-      <title>{alt}</title>
-      <path d={path} fill="currentColor" />
-    </svg>
-  );
+export interface EmailHeaderMark {
+  primaryHref?: string;
+  primarySrc?: string;
+  primaryAlt?: string;
+  secondarySrc?: string;
+  secondaryAlt?: string;
+}
+
+export const ZCASHNAMES_HEADER_MARK: Required<
+  Pick<EmailHeaderMark, "primaryHref" | "primarySrc" | "primaryAlt">
+> = {
+  primaryHref: "https://www.zcashnames.com",
+  primarySrc: "https://www.zcashnames.com/brandkit/zcashnames-primary-logo-white-transparent-377x403.png",
+  primaryAlt: "ZcashNames",
+};
+
+export function createZcashNamesHeaderMark(
+  overrides: EmailHeaderMark = {},
+): Required<Pick<EmailHeaderMark, "primaryHref" | "primarySrc" | "primaryAlt">> &
+  Pick<EmailHeaderMark, "secondarySrc" | "secondaryAlt"> {
+  return {
+    ...ZCASHNAMES_HEADER_MARK,
+    ...overrides,
+  };
 }
 
 export function EmailLayout({
@@ -56,24 +58,18 @@ export function EmailLayout({
   headingText,
   children,
   headerMark,
+  unsubscribeLinks,
 }: {
   preview: string;
   headingText: string;
   children: ReactNode;
-  headerMark?: {
-    primaryHref?: string;
-    primarySrc: string;
-    primaryAlt: string;
-    secondarySrc?: string;
-    secondaryAlt?: string;
-  };
+  headerMark?: EmailHeaderMark;
+  unsubscribeLinks?: {
+    seriesHref: string;
+    allHref: string;
+  } | null;
 }) {
-  const mark = headerMark ?? {
-    primaryHref: "https://zcashnames.com",
-    primarySrc: "https://zcashnames.com/brandkit/zcashnames-primary-logo-white-transparent-377x403.png",
-    primaryAlt: "ZcashNames",
-  };
-
+  const mark = createZcashNamesHeaderMark(headerMark);
   return (
     <Html>
       <Head />
@@ -158,10 +154,21 @@ export function EmailLayout({
             <table role="presentation" style={{ margin: "0 auto", borderCollapse: "collapse" }}>
               <tbody>
                 <tr>
-                  {SOCIALS.map(({ href, iconKey, alt }) => (
-                    <td key={alt} style={{ padding: "0 8px" }}>
+                  {SOCIALS.map(({ href, iconSrc, alt }) => (
+                    <td key={alt} style={{ padding: "0 6px" }}>
                       <Link href={href} style={{ textDecoration: "none", display: "inline-block" }}>
-                        <EmailSocialIcon path={SOCIAL_ICON_PATHS[iconKey]} alt={alt} />
+                        <Img
+                          src={iconSrc}
+                          alt={alt}
+                          width="60"
+                          height="60"
+                          style={{
+                            display: "block",
+                            width: 60,
+                            height: 60,
+                            border: 0,
+                          }}
+                        />
                       </Link>
                     </td>
                   ))}
@@ -177,6 +184,16 @@ export function EmailLayout({
               </Link>
             </Text>
           </Section>
+          {unsubscribeLinks && (
+            <Section style={{ textAlign: "center" as const, padding: "0 40px 32px" }}>
+              <Hr style={{ ...dividerStyle, margin: "0 0 24px" }} />
+              <Text style={{ margin: 0, fontSize: 11, color: "#a1a1aa", lineHeight: "18px" }}>
+                <Link href={unsubscribeLinks.seriesHref} style={{ color: "#a1a1aa", textDecoration: "underline" }}>
+                  Unsubscribe
+                </Link>
+              </Text>
+            </Section>
+          )}
         </Container>
       </Body>
     </Html>
