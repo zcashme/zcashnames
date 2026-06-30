@@ -115,7 +115,7 @@ function resolveWalletLogoRow(baseUrl: string): { src: string; alt: string; size
 
       return {
         src: logoPath.startsWith("http") ? logoPath : `${baseUrl}${logoPath}`,
-        alt: brand.appIcon.alt,
+        alt: brand.appIcon?.alt ?? brand.logos?.alt ?? `${brand.displayName} logo`,
         size,
       };
     })
@@ -160,16 +160,9 @@ export async function renderBetaInvitePreview({
   });
   const walletCta = resolveWalletCta(walletVariantId, resolvedBaseUrl);
   const walletLogoRow = walletCta ? null : resolveWalletLogoRow(resolvedBaseUrl);
-  const brandLogoSrc =
-    `${resolvedBaseUrl}/brandkit/zcashnames-primary-logo-white-transparent-377x403.png`;
-  const resolvedBodyParagraphs = walletCta
-    ? [
-        `You're invited to the ZcashNames beta by ${walletCta.walletName}.`,
-        ...bodyParagraphs.filter(
-          (paragraph) => paragraph.trim().toLowerCase() !== "you're invited to the zcashnames beta.",
-        ),
-      ]
-    : bodyParagraphs;
+  const resolvedBodyParagraphs = bodyParagraphs.filter(
+    (paragraph) => paragraph.trim().toLowerCase() !== "you're invited to the zcashnames beta.",
+  );
   const headingText = walletCta ? `You're invited by ${walletCta.walletName}` : "Your invitation";
 
   return render(
@@ -179,7 +172,6 @@ export async function renderBetaInvitePreview({
       inviteCode,
       bodyParagraphs: resolvedBodyParagraphs,
       headingText,
-      brandLogoSrc,
       walletCta,
       walletLogoRow,
     }),
