@@ -35,6 +35,11 @@ if (isWindows) {
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["svg-captcha"],
+  outputFileTracingIncludes: {
+    // These deterministic blockinfo assets are loaded from the filesystem at runtime.
+    // Include them in every server trace so Vercel functions can read the checked-in files.
+    "/*": ["./templates/blockinfo-post/**/*"],
+  },
   async redirects() {
     return [
       {
