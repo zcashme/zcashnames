@@ -39,6 +39,14 @@ function readRenderMode(request: Request, body: { renderMode?: unknown } | null)
 }
 
 export async function POST(request: Request) {
+  return handleBlockinfoPostRequest(request);
+}
+
+export async function GET(request: Request) {
+  return handleBlockinfoPostRequest(request);
+}
+
+async function handleBlockinfoPostRequest(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
