@@ -173,6 +173,14 @@ function zonedParts(date: Date, timeZone: string) {
   };
 }
 
+function zonedMinutes(date: Date, timeZone: string): { dateKey: string; minutes: number } {
+  const parts = zonedParts(date, timeZone);
+  return {
+    dateKey: parts.dateKey,
+    minutes: parts.hour * 60 + parts.minute,
+  };
+}
+
 export async function getBlockinfoPostScheduleState(): Promise<BlockinfoPostScheduleState> {
   const { data, error } = await db
     .from("blockinfo_post_schedule")
@@ -223,8 +231,8 @@ export function isBlockinfoPostDue(schedule: BlockinfoPostScheduleState, now = n
   if (!schedule.enabled) return false;
 
   if (schedule.scheduleMode === "daily_time") {
-    const current = zonedParts(now, schedule.dailyTimezone);
-    const currentMinutes = current.hour * 60 + current.minute;
+    const current = zonedMinutes(now, schedule.dailyTimezone);
+    const currentMinutes = current.minutes;
     const scheduledMinutes = schedule.dailyHour * 60 + schedule.dailyMinute;
     if (currentMinutes < scheduledMinutes) return false;
 
@@ -233,7 +241,9 @@ export function isBlockinfoPostDue(schedule: BlockinfoPostScheduleState, now = n
 
     const lastRun = new Date(anchor);
     if (Number.isNaN(lastRun.getTime())) return true;
-    return zonedParts(lastRun, schedule.dailyTimezone).dateKey !== current.dateKey;
+    const lastRunLocal = zonedMinutes(lastRun, schedule.dailyTimezone);
+    if (lastRunLocal.dateKey !== current.dateKey) return true;
+    return lastRunLocal.minutes < scheduledMinutes;
   }
 
   const anchor = schedule.lastRunCompletedAt ?? schedule.lastRunStartedAt;
