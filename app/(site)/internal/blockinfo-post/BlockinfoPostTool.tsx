@@ -27,7 +27,7 @@ import {
   saveDeterministicLayoutAction,
 } from "./actions";
 
-const DETERMINISTIC_FONT_FAMILY = '"IBM Plex Mono", "Geist Mono", "SFMono-Regular", "Menlo", "Consolas", monospace';
+const DETERMINISTIC_FONT_FAMILY = '"DeterministicMono", monospace';
 
 function destinationLabel(destination: BlockinfoPostDestination) {
   if (destination === "telegram") return "Telegram";

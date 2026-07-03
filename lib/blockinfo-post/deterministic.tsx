@@ -25,7 +25,9 @@ import {
 const DEFAULT_BACKGROUND_PATH = path.resolve("templates/blockinfo-post/template-image.png");
 const DEFAULT_LAYOUT_PATH = path.resolve("templates/blockinfo-post/layout.deterministic.json");
 const DEFAULT_CAPTION_POLICY_PATH = path.resolve("templates/blockinfo-post/caption-policy.json");
-const DETERMINISTIC_FONT_FAMILY = '"IBM Plex Mono", "Geist Mono", "SFMono-Regular", "Menlo", "Consolas", monospace';
+const DEFAULT_DETERMINISTIC_FONT_REGULAR_PATH = path.resolve("public/fonts/consola.ttf");
+const DEFAULT_DETERMINISTIC_FONT_BOLD_PATH = path.resolve("public/fonts/consolab.ttf");
+const DETERMINISTIC_FONT_FAMILY = '"DeterministicMono", monospace';
 const WINDOW_HOURS = {
   "1d": 24,
   "7d": 24 * 7,
@@ -33,6 +35,14 @@ const WINDOW_HOURS = {
 } as const;
 
 type JsonRecord = Record<string, unknown>;
+type DeterministicFontOption = {
+  name: string;
+  data: Buffer;
+  weight: 400 | 700;
+  style: "normal";
+};
+
+let deterministicFontDataPromise: Promise<DeterministicFontOption[]> | null = null;
 
 const STAT_META: Array<{ key: BlockinfoPostStatKey; label: string }> = [
   { key: "height", label: "Height" },
@@ -49,6 +59,25 @@ const STAT_META: Array<{ key: BlockinfoPostStatKey; label: string }> = [
 
 function fail(message: string): never {
   throw new Error(message);
+}
+
+async function loadDeterministicFonts(): Promise<DeterministicFontOption[]> {
+  if (!deterministicFontDataPromise) {
+    deterministicFontDataPromise = Promise.all([
+      readFile(DEFAULT_DETERMINISTIC_FONT_REGULAR_PATH),
+      readFile(DEFAULT_DETERMINISTIC_FONT_BOLD_PATH),
+    ]).then(([regular, bold]) => ([
+      { name: "DeterministicMono", data: regular, weight: 400 as const, style: "normal" as const },
+      { name: "DeterministicMono", data: bold, weight: 700 as const, style: "normal" as const },
+    ]));
+  }
+
+  try {
+    return await deterministicFontDataPromise;
+  } catch (error) {
+    deterministicFontDataPromise = null;
+    fail(`Missing deterministic font asset or unreadable font file: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 function toNullableString(value: unknown): string | null {
@@ -614,6 +643,7 @@ export async function renderDeterministicImage(args: {
   snapshot: BlockinfoPostDeterministicSnapshot;
 }): Promise<Buffer> {
   const backgroundDataUrl = await readBackgroundAsDataUrl(args.backgroundPath);
+  const fonts = await loadDeterministicFonts();
   const visibleRows = args.layout.table.statRows.filter((row) => row.visible);
   const footer = formatDisplayDateTime(args.snapshot.latestMeasuredAt);
   const visibleColumns = visibleColumnEntries(args.layout);
@@ -751,6 +781,7 @@ export async function renderDeterministicImage(args: {
     {
       width: args.layout.width,
       height: args.layout.height,
+      fonts,
     },
   );
 
