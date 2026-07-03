@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "DeterministicMono";
+  src: url("/fonts/consola.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DeterministicMono";
+  src: url("/fonts/consolab.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ═══════════════════════════════════════════════
    Theme variables - dark default, light override
    ═══════════════════════════════════════════════ */

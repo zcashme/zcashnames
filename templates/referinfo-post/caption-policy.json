@@ -1,0 +1,51 @@
+{
+  "postOrder": [
+    "summary_top10",
+    "top_movers",
+    "top_newcomers",
+    "top_indirect",
+    "leader_changes",
+    "closing_note"
+  ],
+  "rootKind": "summary_top10",
+  "xThreadMode": "linear",
+  "telegramDeliveryMode": "sequential",
+  "templates": {
+    "summary_top10": {
+      "eyebrow": "WEEKLY REFERINFO",
+      "title": "Referral Leaders",
+      "subtitle": "All-time rewards",
+      "captionTemplate": "{{summaryCaption}}"
+    },
+    "top_movers": {
+      "eyebrow": "WEEKLY REFERINFO",
+      "title": "Referral Leaders",
+      "subtitle": "7-day referrals",
+      "captionTemplate": "{{name}} had the biggest 7-day referral gain, up {{delta}} from the prior week and adding {{rewardDelta}} $ZEC in projected rewards."
+    },
+    "top_newcomers": {
+      "eyebrow": "WEEKLY REFERINFO",
+      "title": "Referral Leaders (Newcomers)",
+      "subtitle": "7-day referrals",
+      "captionTemplate": "{{name}} had the strongest start as a newcomer with {{attributedWeekly}} attributed referrals, earning {{rewardDelta}} $ZEC in projected rewards."
+    },
+    "top_indirect": {
+      "eyebrow": "WEEKLY REFERINFO",
+      "title": "Referral Leaders",
+      "subtitle": "7-day indirect refs",
+      "captionTemplate": "{{name}} led indirect referrals this week with {{indirectWeekly}} second-order-or-deeper referrals and {{rewardDelta}} $ZEC in projected rewards."
+    },
+    "leader_changes": {
+      "eyebrow": "WEEKLY REFERINFO",
+      "title": "Referral Leaders",
+      "subtitle": "Taking the lead",
+      "captionTemplate": "{{leaderChangesCaption}}"
+    },
+    "closing_note": {
+      "eyebrow": "WEEKLY REFERINFO",
+      "title": "",
+      "subtitle": "",
+      "captionTemplate": "Referrals are more than rewards.\n\nThey help you move up in line for the name you are waiting to claim, while making Zcash easier to use for everyone.\n\nThe more people use Zcash, the closer we get to making privacy normal.\n\nWe're making privacy as normal as names.\n\nZcashNames.com"
+    }
+  }
+}

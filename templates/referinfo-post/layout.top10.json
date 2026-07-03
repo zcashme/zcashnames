@@ -1,0 +1,149 @@
+{
+  "width": 1080,
+  "height": 1080,
+  "header": {
+    "eyebrow": {
+      "visible": true,
+      "x": 214,
+      "y": 62,
+      "maxWidth": 352,
+      "fontSize": 20,
+      "fontWeight": 700,
+      "lineHeight": 1.1,
+      "letterSpacing": 2,
+      "textAlign": "left",
+      "color": "#dfff72",
+      "opacity": 1
+    },
+    "title": {
+      "visible": true,
+      "x": 214,
+      "y": 94,
+      "maxWidth": 540,
+      "fontSize": 53,
+      "fontWeight": 800,
+      "lineHeight": 1,
+      "letterSpacing": 0,
+      "textAlign": "left",
+      "color": "#dfff72",
+      "opacity": 1
+    },
+    "subtitle": {
+      "visible": false,
+      "x": 78,
+      "y": 192,
+      "maxWidth": 700,
+      "fontSize": 22,
+      "fontWeight": 600,
+      "lineHeight": 1.1,
+      "letterSpacing": 0.2,
+      "textAlign": "left",
+      "color": "#dfff72",
+      "opacity": 0.95
+    }
+  },
+  "table": {
+    "headerFontSize": 22,
+    "headerY": 276,
+    "startY": 334,
+    "rowHeight": 56,
+    "columns": [
+      {
+        "key": "rank",
+        "visible": true,
+        "x": 92,
+        "y": 0,
+        "maxWidth": 64,
+        "fontSize": 28,
+        "fontWeight": 700,
+        "lineHeight": 1.02,
+        "letterSpacing": 0.3,
+        "textAlign": "left",
+        "color": "#dfff72",
+        "opacity": 1
+      },
+      {
+        "key": "name",
+        "visible": true,
+        "x": 170,
+        "y": 0,
+        "maxWidth": 320,
+        "fontSize": 28,
+        "fontWeight": 700,
+        "lineHeight": 1.02,
+        "letterSpacing": 0.2,
+        "textAlign": "left",
+        "color": "#dfff72",
+        "opacity": 1
+      },
+      {
+        "key": "direct",
+        "visible": true,
+        "x": 610,
+        "y": 0,
+        "maxWidth": 92,
+        "fontSize": 28,
+        "fontWeight": 700,
+        "lineHeight": 1.02,
+        "letterSpacing": 0,
+        "textAlign": "right",
+        "color": "#dfff72",
+        "opacity": 1
+      },
+      {
+        "key": "indirect",
+        "visible": true,
+        "x": 734,
+        "y": 0,
+        "maxWidth": 96,
+        "fontSize": 28,
+        "fontWeight": 700,
+        "lineHeight": 1.02,
+        "letterSpacing": 0,
+        "textAlign": "right",
+        "color": "#dfff72",
+        "opacity": 1
+      },
+      {
+        "key": "rewards",
+        "visible": true,
+        "x": 862,
+        "y": 0,
+        "maxWidth": 138,
+        "fontSize": 28,
+        "fontWeight": 700,
+        "lineHeight": 1.02,
+        "letterSpacing": 0,
+        "textAlign": "right",
+        "color": "#dfff72",
+        "opacity": 1
+      }
+    ],
+    "note": {
+      "visible": true,
+      "x": 250,
+      "y": 890,
+      "maxWidth": 580,
+      "fontSize": 18,
+      "fontWeight": 600,
+      "lineHeight": 1.15,
+      "letterSpacing": 0.3,
+      "textAlign": "center",
+      "color": "#dfff72",
+      "opacity": 0.95
+    }
+  },
+  "footer": {
+    "visible": true,
+    "x": 834,
+    "y": 991,
+    "maxWidth": 144,
+    "fontSize": 28,
+    "fontWeight": 800,
+    "lineHeight": 1,
+    "letterSpacing": 0.8,
+    "textAlign": "right",
+    "color": "#dfff72",
+    "opacity": 1
+  }
+}

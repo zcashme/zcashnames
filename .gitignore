@@ -58,7 +58,8 @@ public/_pagefind/
 .vscode/
 backup-latest-commit.patch
 beta-testers.json
-sql/
+sql/*
+!sql/2026-07-01-referinfo-post-schedule.sql
 
 
 # temporary internal preview QA page
@@ -69,3 +70,4 @@ app/(site)/internal/link-previews/
 
 # codesearch incremental reindex log (post-commit hook)
 .codesearch-index.log
+.env*

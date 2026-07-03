@@ -41,6 +41,11 @@ const tools = [
     label: "Blockinfo Post",
     description: "Generate a zebra_stats image post, save it, upload it, and post it to Telegram, X, or both.",
   },
+  {
+    href: "/internal/referinfo-post",
+    label: "Referinfo Post",
+    description: "Generate the weekly referral-intelligence thread, preview each card, and post the queue to Telegram, X, or both.",
+  },
 ] as const;
 
 export default function InternalToolsIndexPage() {

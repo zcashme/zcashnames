@@ -1,0 +1,121 @@
+{
+  "width": 1080,
+  "height": 1080,
+  "header": {
+    "eyebrow": {
+      "visible": true,
+      "x": 214,
+      "y": 62,
+      "maxWidth": 352,
+      "fontSize": 20,
+      "fontWeight": 700,
+      "lineHeight": 1.1,
+      "letterSpacing": 2,
+      "textAlign": "left",
+      "color": "#dfff72",
+      "opacity": 1
+    },
+    "title": {
+      "visible": true,
+      "x": 214,
+      "y": 94,
+      "maxWidth": 540,
+      "fontSize": 54,
+      "fontWeight": 800,
+      "lineHeight": 1,
+      "letterSpacing": 0,
+      "textAlign": "left",
+      "color": "#dfff72",
+      "opacity": 1
+    },
+    "subtitle": {
+      "visible": false,
+      "x": 78,
+      "y": 192,
+      "maxWidth": 700,
+      "fontSize": 22,
+      "fontWeight": 600,
+      "lineHeight": 1.1,
+      "letterSpacing": 0.2,
+      "textAlign": "left",
+      "color": "#dfff72",
+      "opacity": 0.95
+    }
+  },
+  "table": {
+    "headerFontSize": 26,
+    "headerY": 292,
+    "startY": 346,
+    "rowHeight": 128,
+    "columns": [
+      {
+        "key": "period",
+        "visible": true,
+        "x": 92,
+        "y": 0,
+        "maxWidth": 150,
+        "fontSize": 29,
+        "fontWeight": 700,
+        "lineHeight": 1.05,
+        "letterSpacing": 0.2,
+        "textAlign": "left",
+        "color": "#dfff72",
+        "opacity": 1
+      },
+      {
+        "key": "change",
+        "visible": true,
+        "x": 265,
+        "y": 0,
+        "maxWidth": 570,
+        "fontSize": 29,
+        "fontWeight": 700,
+        "lineHeight": 1.05,
+        "letterSpacing": 0.2,
+        "textAlign": "left",
+        "color": "#dfff72",
+        "opacity": 1
+      },
+      {
+        "key": "rewards",
+        "visible": true,
+        "x": 850,
+        "y": 0,
+        "maxWidth": 118,
+        "fontSize": 29,
+        "fontWeight": 700,
+        "lineHeight": 1.12,
+        "letterSpacing": 0,
+        "textAlign": "right",
+        "color": "#dfff72",
+        "opacity": 1
+      }
+    ],
+    "note": {
+      "visible": true,
+      "x": 250,
+      "y": 876,
+      "maxWidth": 580,
+      "fontSize": 19,
+      "fontWeight": 600,
+      "lineHeight": 1.15,
+      "letterSpacing": 0.3,
+      "textAlign": "center",
+      "color": "#dfff72",
+      "opacity": 0.95
+    }
+  },
+  "footer": {
+    "visible": true,
+    "x": 834,
+    "y": 991,
+    "maxWidth": 144,
+    "fontSize": 28,
+    "fontWeight": 800,
+    "lineHeight": 1,
+    "letterSpacing": 0.8,
+    "textAlign": "right",
+    "color": "#dfff72",
+    "opacity": 1
+  }
+}
