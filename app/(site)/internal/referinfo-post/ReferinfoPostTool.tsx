@@ -197,7 +197,6 @@ function PreviewCard(props: {
     const x = entry.block.x;
     if (referralGroup && x >= referralGroup.start.block.x && x <= referralGroup.end.block.x) return true;
     if (rewardGroup && x >= rewardGroup.start.block.x && x <= rewardGroup.end.block.x) return true;
-    if (props.post.kind === "summary_top10" && entry.key === "rewards") return true;
     return false;
   }
 

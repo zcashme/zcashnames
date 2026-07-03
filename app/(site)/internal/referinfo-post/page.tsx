@@ -32,7 +32,7 @@ export default async function ReferinfoPostPage() {
   const assets = getReferinfoDeterministicAssetConfig();
   const hostedFilesystemReadonly = isEphemeralReferinfoFilesystemRuntime();
   const [top10Layout, top5Layout, topIndirectLayout, leaderChangesLayout] = await Promise.all([
-    loadReferinfoDeterministicLayout(getReferinfoDeterministicLayoutPathForEditorKind("top10", assets), ["rank", "name", "rewards"]),
+    loadReferinfoDeterministicLayout(getReferinfoDeterministicLayoutPathForEditorKind("top10", assets), ["rank", "name", "direct", "indirect", "reward", "total"]),
     loadReferinfoDeterministicLayout(getReferinfoDeterministicLayoutPathForEditorKind("top5", assets), ["rank", "name", "metric", "reward"]),
     loadReferinfoDeterministicLayout(getReferinfoDeterministicLayoutPathForEditorKind("top_indirect", assets), ["rank", "name", "metric", "depth2", "depth3", "depth4plus", "reward", "total"]),
     loadReferinfoDeterministicLayout(getReferinfoDeterministicLayoutPathForEditorKind("leader_changes", assets), ["period", "leader", "context"]),

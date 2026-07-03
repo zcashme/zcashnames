@@ -637,7 +637,7 @@ function buildLeaderChanges(args: {
   }
 
   const caption = captionParts.length > 0
-    ? captionParts.join(" ")
+    ? captionParts.join("\n\n")
     : `${rows[0].currentLeader} held every tracked lead through ${args.reportWindow.weekLabel}.`;
 
   return {
@@ -785,7 +785,8 @@ export async function buildReferinfoDraftBundle(args: {
         { key: "name", label: "Zcash name" },
         { key: "direct", label: "I" },
         { key: "indirect", label: "II+" },
-        { key: "rewards", label: "∑ ZEC" },
+        { key: "reward", label: "Δ ZEC" },
+        { key: "total", label: "\u03A3 ZEC" },
       ],
       rows: top10Rows.length > 0
         ? top10Rows.map((entry) => ({
@@ -795,10 +796,11 @@ export async function buildReferinfoDraftBundle(args: {
               entry.displayCode,
               formatInteger(entry.directReferrals),
               formatInteger(entry.indirectReferrals),
+              formatZecDelta(rewardDeltaMap.get(entry.referralCode) ?? 0),
               formatZec(entry.potentialRewards),
             ],
           }))
-        : [{ key: "empty", cells: ["-", "No ranked rows", "-", "-", "-"] }],
+        : [{ key: "empty", cells: ["-", "No ranked rows", "-", "-", "-", "-"] }],
       note: projectedRewardsNote(),
     },
   });
@@ -832,7 +834,10 @@ export async function buildReferinfoDraftBundle(args: {
     ? interpolateTemplate(moversTemplate.captionTemplate, {
         name: topMover.name,
         delta: formatSignedInteger(topMover.delta),
+        directDelta: formatInteger(Math.max(0, topMover.directDelta)),
+        indirectDelta: formatInteger(Math.max(0, topMover.indirectDelta)),
         rewardDelta: formatZecDelta(topMover.rewardDelta),
+        totalRewards: formatZec(topMover.potentialRewards),
       }).trim()
     : "No mover data available for the completed week.";
   posts.push({
@@ -905,6 +910,9 @@ export async function buildReferinfoDraftBundle(args: {
       ? interpolateTemplate(newcomersTemplate.captionTemplate, {
           name: nameMap[topNewcomer.summary.referralCode] ?? topNewcomer.summary.referralCode,
           attributedWeekly: formatInteger(topNewcomer.metrics.attributedWeekly),
+          referralBreakdown: topNewcomer.metrics.indirectWeekly > 0
+            ? ` (${formatInteger(topNewcomer.metrics.directWeekly)} direct, ${formatInteger(topNewcomer.metrics.indirectWeekly)} indirect)`
+            : "",
           rewardDelta: formatZecDelta(topNewcomer.rewardDelta),
         }).trim()
       : "No new referrers broke onto the board this week.",
@@ -972,6 +980,7 @@ export async function buildReferinfoDraftBundle(args: {
           name: topIndirect.name,
           indirectWeekly: formatInteger(topIndirect.metrics.indirectWeekly),
           rewardDelta: formatZecDelta(topIndirect.rewardDelta),
+          totalRewards: formatZec(topIndirect.potentialRewards),
         }).trim()
       : "No second-order-or-deeper referrals landed during the completed week.",
     configSummary: buildConfigSummary({ policy: args.policy, kind: "top_indirect", order: 3 }),
