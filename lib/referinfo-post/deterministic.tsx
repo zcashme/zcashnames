@@ -32,6 +32,10 @@ const DEFAULT_CAPTION_POLICY_PATH = path.resolve("templates/referinfo-post/capti
 const DEFAULT_DETERMINISTIC_FONT_REGULAR_PATH = path.resolve("public/fonts/consola.ttf");
 const DEFAULT_DETERMINISTIC_FONT_BOLD_PATH = path.resolve("public/fonts/consolab.ttf");
 const DETERMINISTIC_FONT_FAMILY = '"DeterministicMono", monospace';
+const DETERMINISTIC_GRID_VERTICAL_COLOR = "rgba(223, 255, 114, 0.28)";
+const DETERMINISTIC_GRID_VERTICAL_THICKNESS = 1;
+const DETERMINISTIC_GRID_HORIZONTAL_COLOR = "rgba(223, 255, 114, 0.28)";
+const DETERMINISTIC_GRID_HORIZONTAL_THICKNESS = 2;
 
 type DeterministicFontOption = {
   name: string;
@@ -491,8 +495,8 @@ export async function renderReferinfoDeterministicImage(args: {
             left: tableLeft,
             top: headerDividerY,
             width: tableRight - tableLeft,
-            height: 1,
-            background: "rgba(223, 255, 114, 0.34)",
+            height: DETERMINISTIC_GRID_HORIZONTAL_THICKNESS,
+            background: DETERMINISTIC_GRID_HORIZONTAL_COLOR,
           }}
         />
 
@@ -503,9 +507,9 @@ export async function renderReferinfoDeterministicImage(args: {
               position: "absolute",
               left: x,
               top: args.layout.table.headerY - 8,
-              width: 1,
+              width: DETERMINISTIC_GRID_VERTICAL_THICKNESS,
               height: Math.max(0, tableBottomY - (args.layout.table.headerY - 8)),
-              background: "rgba(223, 255, 114, 0.28)",
+              background: DETERMINISTIC_GRID_VERTICAL_COLOR,
             }}
           />
         ))}
@@ -518,8 +522,8 @@ export async function renderReferinfoDeterministicImage(args: {
               left: tableLeft,
               top: y,
               width: tableRight - tableLeft,
-              height: 1,
-              background: "rgba(223, 255, 114, 0.22)",
+              height: DETERMINISTIC_GRID_HORIZONTAL_THICKNESS,
+              background: DETERMINISTIC_GRID_HORIZONTAL_COLOR,
             }}
           />
         ))}

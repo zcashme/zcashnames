@@ -28,6 +28,10 @@ import {
 } from "./actions";
 
 const DETERMINISTIC_FONT_FAMILY = '"DeterministicMono", monospace';
+const GRID_VERTICAL_COLOR = "rgba(223,255,114,0.28)";
+const GRID_VERTICAL_THICKNESS = 1;
+const GRID_HORIZONTAL_COLOR = "rgba(223,255,114,0.28)";
+const GRID_HORIZONTAL_THICKNESS = 2;
 
 function destinationLabel(destination: BlockinfoPostDestination) {
   if (destination === "telegram") return "Telegram";
@@ -476,8 +480,8 @@ function DeterministicPreview(props: {
             x2={tableRight}
             y1={headerDividerY}
             y2={headerDividerY}
-            stroke="rgba(223,255,114,0.34)"
-            strokeWidth="1"
+            stroke={GRID_HORIZONTAL_COLOR}
+            strokeWidth={GRID_HORIZONTAL_THICKNESS}
           />
 
           {dividers.map((x, index) => (
@@ -487,8 +491,8 @@ function DeterministicPreview(props: {
               x2={x}
               y1={layout.table.headerY - 8}
               y2={layout.table.startY + visibleRows.length * layout.table.rowHeight - 18}
-              stroke="rgba(223,255,114,0.28)"
-              strokeWidth="1"
+              stroke={GRID_VERTICAL_COLOR}
+              strokeWidth={GRID_VERTICAL_THICKNESS}
             />
           ))}
 
@@ -501,8 +505,8 @@ function DeterministicPreview(props: {
                 x2={tableRight}
                 y1={y}
                 y2={y}
-                stroke="rgba(223,255,114,0.22)"
-                strokeWidth="1"
+                stroke={GRID_HORIZONTAL_COLOR}
+                strokeWidth={GRID_HORIZONTAL_THICKNESS}
               />
             );
           })}

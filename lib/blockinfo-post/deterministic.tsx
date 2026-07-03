@@ -33,6 +33,10 @@ const WINDOW_HOURS = {
   "7d": 24 * 7,
   "30d": 24 * 30,
 } as const;
+const DETERMINISTIC_GRID_VERTICAL_COLOR = "rgba(223, 255, 114, 0.28)";
+const DETERMINISTIC_GRID_VERTICAL_THICKNESS = 1;
+const DETERMINISTIC_GRID_HORIZONTAL_COLOR = "rgba(223, 255, 114, 0.28)";
+const DETERMINISTIC_GRID_HORIZONTAL_THICKNESS = 2;
 
 type JsonRecord = Record<string, unknown>;
 type DeterministicFontOption = {
@@ -724,8 +728,8 @@ export async function renderDeterministicImage(args: {
             left: tableLeft,
             top: headerDividerY,
             width: tableRight - tableLeft,
-            height: 1,
-            background: "rgba(223, 255, 114, 0.34)",
+            height: DETERMINISTIC_GRID_HORIZONTAL_THICKNESS,
+            background: DETERMINISTIC_GRID_HORIZONTAL_COLOR,
           }}
         />
 
@@ -736,9 +740,9 @@ export async function renderDeterministicImage(args: {
               position: "absolute",
               left: x,
               top: args.layout.table.headerY - 8,
-              width: 1,
+              width: DETERMINISTIC_GRID_VERTICAL_THICKNESS,
               height: visibleRows.length * args.layout.table.rowHeight + 26,
-              background: "rgba(223, 255, 114, 0.28)",
+              background: DETERMINISTIC_GRID_VERTICAL_COLOR,
             }}
           />
         ))}
@@ -751,8 +755,8 @@ export async function renderDeterministicImage(args: {
               left: tableLeft,
               top: y,
               width: tableRight - tableLeft,
-              height: 1,
-              background: "rgba(223, 255, 114, 0.22)",
+              height: DETERMINISTIC_GRID_HORIZONTAL_THICKNESS,
+              background: DETERMINISTIC_GRID_HORIZONTAL_COLOR,
             }}
           />
         ))}
