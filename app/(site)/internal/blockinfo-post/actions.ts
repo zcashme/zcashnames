@@ -21,7 +21,7 @@ function normalizeDestination(destination: BlockinfoPostDestination): BlockinfoP
 }
 
 function normalizeRenderMode(renderMode: BlockinfoPostRenderMode): BlockinfoPostRenderMode {
-  return isBlockinfoPostRenderMode(renderMode) ? renderMode : "openai";
+  return isBlockinfoPostRenderMode(renderMode) ? renderMode : "deterministic";
 }
 
 export async function runBlockinfoPostAction(

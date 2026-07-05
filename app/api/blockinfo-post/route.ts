@@ -58,9 +58,9 @@ async function handleBlockinfoPostRequest(request: Request) {
   const renderMode = readRenderMode(request, body);
 
   const result = dryRun
-    ? await runBlockinfoPost({ mode: "dry-run", destination: destination ?? "telegram", renderMode: renderMode ?? "openai" })
+    ? await runBlockinfoPost({ mode: "dry-run", destination: destination ?? "telegram", renderMode: renderMode ?? "deterministic" })
     : destination
-      ? await runBlockinfoPost({ mode: "run", destination, renderMode: renderMode ?? "openai" })
+      ? await runBlockinfoPost({ mode: "run", destination, renderMode: renderMode ?? "deterministic" })
       : await runBlockinfoPostScheduleHeartbeat();
 
   return NextResponse.json(result, { status: result.ok ? 200 : 500 });
