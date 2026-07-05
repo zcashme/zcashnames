@@ -50,6 +50,11 @@ export type BlockinfoPostStatSnapshot = {
   label: string;
   current: number | null;
   formattedCurrent: string;
+  max30d: {
+    value: number | null;
+    measuredAt: string | null;
+    isCurrent: boolean;
+  };
   deltas: Record<BlockinfoPostDeltaWindowKey, BlockinfoPostDeltaValue>;
 };
 
@@ -81,10 +86,13 @@ export type BlockinfoPostSproutCaptionRule = {
 
 export type BlockinfoPostCaptionPolicy = {
   sproutAnyChange: BlockinfoPostSproutCaptionRule;
+  orchard30dMax: BlockinfoPostCaptionSimpleRule;
+  totalShielded30dMax: BlockinfoPostCaptionSimpleRule;
+  transparent30dMax: BlockinfoPostCaptionSimpleRule;
+  difficulty30dMax: BlockinfoPostCaptionSimpleRule;
   orchardDaily: BlockinfoPostCaptionThresholdRule;
   totalShieldedDaily: BlockinfoPostCaptionThresholdRule;
   transparentDaily: BlockinfoPostCaptionThresholdRule;
-  difficultyDaily: BlockinfoPostCaptionThresholdRule;
   orchardWeekly: BlockinfoPostCaptionThresholdRule;
   totalShieldedWeekly: BlockinfoPostCaptionThresholdRule;
   blockDailyFallback: BlockinfoPostCaptionSimpleRule;

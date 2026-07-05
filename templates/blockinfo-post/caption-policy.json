@@ -4,28 +4,39 @@
     "priority": 1000,
     "minAbsoluteChange": 0
   },
+  "orchard30dMax": {
+    "enabled": true,
+    "priority": 950
+  },
+  "totalShielded30dMax": {
+    "enabled": true,
+    "priority": 900
+  },
+  "transparent30dMax": {
+    "enabled": true,
+    "priority": 850
+  },
+  "difficulty30dMax": {
+    "enabled": true,
+    "priority": 800
+  },
   "orchardDaily": {
-    "enabled": true,
-    "priority": 900,
-    "absoluteThreshold": 10000,
-    "percentThreshold": 1
-  },
-  "totalShieldedDaily": {
-    "enabled": true,
-    "priority": 800,
-    "absoluteThreshold": 25000,
-    "percentThreshold": 1
-  },
-  "transparentDaily": {
     "enabled": true,
     "priority": 700,
     "absoluteThreshold": 10000,
     "percentThreshold": 1
   },
-  "difficultyDaily": {
+  "totalShieldedDaily": {
+    "enabled": true,
+    "priority": 650,
+    "absoluteThreshold": 25000,
+    "percentThreshold": 1
+  },
+  "transparentDaily": {
     "enabled": true,
     "priority": 600,
-    "percentThreshold": 10
+    "absoluteThreshold": 10000,
+    "percentThreshold": 1
   },
   "orchardWeekly": {
     "enabled": true,

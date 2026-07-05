@@ -24,10 +24,13 @@ export type BlockinfoPostSproutCaptionRule = {
 
 export type BlockinfoPostCaptionPolicy = {
   sproutAnyChange: BlockinfoPostSproutCaptionRule;
+  orchard30dMax: BlockinfoPostCaptionSimpleRule;
+  totalShielded30dMax: BlockinfoPostCaptionSimpleRule;
+  transparent30dMax: BlockinfoPostCaptionSimpleRule;
+  difficulty30dMax: BlockinfoPostCaptionSimpleRule;
   orchardDaily: BlockinfoPostCaptionThresholdRule;
   totalShieldedDaily: BlockinfoPostCaptionThresholdRule;
   transparentDaily: BlockinfoPostCaptionThresholdRule;
-  difficultyDaily: BlockinfoPostCaptionThresholdRule;
   orchardWeekly: BlockinfoPostCaptionThresholdRule;
   totalShieldedWeekly: BlockinfoPostCaptionThresholdRule;
   blockDailyFallback: BlockinfoPostCaptionSimpleRule;
@@ -54,10 +57,6 @@ function formatZecAmount(value: number): string {
   return absolute.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
-function formatPercentValue(value: number): string {
-  return Math.abs(value).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 1 });
-}
-
 function getDelta(
   snapshot: BlockinfoPostDeterministicSnapshot,
   key: BlockinfoPostStatKey,
@@ -73,28 +72,39 @@ export function getDefaultBlockinfoPostCaptionPolicy(): BlockinfoPostCaptionPoli
       priority: 1000,
       minAbsoluteChange: 0,
     },
-    orchardDaily: {
+    orchard30dMax: {
+      enabled: true,
+      priority: 950,
+    },
+    totalShielded30dMax: {
       enabled: true,
       priority: 900,
-      absoluteThreshold: 10000,
-      percentThreshold: 1,
     },
-    totalShieldedDaily: {
+    transparent30dMax: {
+      enabled: true,
+      priority: 850,
+    },
+    difficulty30dMax: {
       enabled: true,
       priority: 800,
-      absoluteThreshold: 25000,
-      percentThreshold: 1,
     },
-    transparentDaily: {
+    orchardDaily: {
       enabled: true,
       priority: 700,
       absoluteThreshold: 10000,
       percentThreshold: 1,
     },
-    difficultyDaily: {
+    totalShieldedDaily: {
+      enabled: true,
+      priority: 650,
+      absoluteThreshold: 25000,
+      percentThreshold: 1,
+    },
+    transparentDaily: {
       enabled: true,
       priority: 600,
-      percentThreshold: 10,
+      absoluteThreshold: 10000,
+      percentThreshold: 1,
     },
     orchardWeekly: {
       enabled: true,
@@ -144,6 +154,11 @@ function passesThresholdRule(
   return absHit || percentHit;
 }
 
+function isThirtyDayMax(snapshot: BlockinfoPostDeterministicSnapshot, key: BlockinfoPostStatKey): boolean {
+  const stat = snapshot.stats[key];
+  return stat.max30d.value != null && stat.current != null && stat.max30d.isCurrent && stat.current === stat.max30d.value;
+}
+
 export function buildDeterministicCaptionDecision(
   snapshot: BlockinfoPostDeterministicSnapshot,
   summary: BlockinfoPostRowSummary,
@@ -166,6 +181,42 @@ export function buildDeterministicCaptionDecision(
         sprout1d.absolute < 0
           ? `Wow, ${amount} $ZEC moved out of the Sprout pool over the last 24 hours.`
           : `${amount} $ZEC moved into the Sprout pool over the last 24 hours.`,
+    });
+  }
+
+  if (policy.orchard30dMax.enabled && isThirtyDayMax(snapshot, "orchard")) {
+    candidates.push({
+      ruleId: "orchard30dMax",
+      priority: policy.orchard30dMax.priority,
+      configSummary: configSummaryForRule(policy, "orchard30dMax"),
+      text: `The Orchard pool is at its highest level in the last 30 days, now holding ${snapshot.stats.orchard.formattedCurrent} $ZEC.`,
+    });
+  }
+
+  if (policy.totalShielded30dMax.enabled && isThirtyDayMax(snapshot, "total_shielded")) {
+    candidates.push({
+      ruleId: "totalShielded30dMax",
+      priority: policy.totalShielded30dMax.priority,
+      configSummary: configSummaryForRule(policy, "totalShielded30dMax"),
+      text: `Shielded ZEC just reached its highest level in the last 30 days at ${snapshot.stats.total_shielded.formattedCurrent} $ZEC.`,
+    });
+  }
+
+  if (policy.transparent30dMax.enabled && isThirtyDayMax(snapshot, "transparent")) {
+    candidates.push({
+      ruleId: "transparent30dMax",
+      priority: policy.transparent30dMax.priority,
+      configSummary: configSummaryForRule(policy, "transparent30dMax"),
+      text: `The transparent pool is at a 30-day high with ${snapshot.stats.transparent.formattedCurrent} $ZEC.`,
+    });
+  }
+
+  if (policy.difficulty30dMax.enabled && isThirtyDayMax(snapshot, "difficulty")) {
+    candidates.push({
+      ruleId: "difficulty30dMax",
+      priority: policy.difficulty30dMax.priority,
+      configSummary: configSummaryForRule(policy, "difficulty30dMax"),
+      text: `Network difficulty is at its highest point in the last 30 days.`,
     });
   }
 
@@ -208,21 +259,6 @@ export function buildDeterministicCaptionDecision(
         (transparent1d.absolute as number) >= 0
           ? `${amount} more $ZEC entered the transparent pool over the last 24 hours.`
           : `${amount} $ZEC moved out of the transparent pool over the last 24 hours.`,
-    });
-  }
-
-  const difficulty1d = getDelta(snapshot, "difficulty", "1d");
-  if (
-    policy.difficultyDaily.enabled &&
-    difficulty1d.percent != null &&
-    typeof policy.difficultyDaily.percentThreshold === "number" &&
-    Math.abs(difficulty1d.percent) >= policy.difficultyDaily.percentThreshold
-  ) {
-    candidates.push({
-      ruleId: "difficultyDaily",
-      priority: policy.difficultyDaily.priority,
-      configSummary: configSummaryForRule(policy, "difficultyDaily"),
-      text: `Network difficulty ${difficulty1d.percent >= 0 ? "jumped" : "fell"} ${formatPercentValue(difficulty1d.percent)}% over the last 24 hours.`,
     });
   }
 

@@ -263,10 +263,13 @@ function mergeCaptionPolicy(
   const next = input ?? {};
   return {
     sproutAnyChange: { ...base.sproutAnyChange, ...(next.sproutAnyChange ?? {}) },
+    orchard30dMax: { ...base.orchard30dMax, ...(next.orchard30dMax ?? {}) },
+    totalShielded30dMax: { ...base.totalShielded30dMax, ...(next.totalShielded30dMax ?? {}) },
+    transparent30dMax: { ...base.transparent30dMax, ...(next.transparent30dMax ?? {}) },
+    difficulty30dMax: { ...base.difficulty30dMax, ...(next.difficulty30dMax ?? {}) },
     orchardDaily: { ...base.orchardDaily, ...(next.orchardDaily ?? {}) },
     totalShieldedDaily: { ...base.totalShieldedDaily, ...(next.totalShieldedDaily ?? {}) },
     transparentDaily: { ...base.transparentDaily, ...(next.transparentDaily ?? {}) },
-    difficultyDaily: { ...base.difficultyDaily, ...(next.difficultyDaily ?? {}) },
     orchardWeekly: { ...base.orchardWeekly, ...(next.orchardWeekly ?? {}) },
     totalShieldedWeekly: { ...base.totalShieldedWeekly, ...(next.totalShieldedWeekly ?? {}) },
     blockDailyFallback: { ...base.blockDailyFallback, ...(next.blockDailyFallback ?? {}) },
@@ -512,18 +515,60 @@ async function fetchHistoricalRow(targetIso: string): Promise<JsonRecord | null>
   return (data ?? null) as JsonRecord | null;
 }
 
+async function fetchWindowRows(startIso: string): Promise<JsonRecord[]> {
+  const { data, error } = await db
+    .from("zebra_stats")
+    .select("*")
+    .gte("measured_at", startIso)
+    .order("measured_at", { ascending: true, nullsFirst: false });
+
+  if (error) {
+    fail(`Supabase query failure while loading zebra_stats 30-day window from ${startIso}: ${error.message}`);
+  }
+
+  return ((data ?? []) as JsonRecord[]).filter((row) => toNullableString(row.measured_at) != null);
+}
+
+function computeMax30d(
+  key: BlockinfoPostStatKey,
+  current: number | null,
+  windowRows: JsonRecord[],
+  latestMeasuredAt: string | null,
+): BlockinfoPostStatSnapshot["max30d"] {
+  let maxValue: number | null = current;
+  let maxMeasuredAt = latestMeasuredAt;
+
+  for (const row of windowRows) {
+    const value = toNullableNumber(row[key]);
+    if (value == null) continue;
+    if (maxValue == null || value > maxValue) {
+      maxValue = value;
+      maxMeasuredAt = toNullableString(row.measured_at);
+    }
+  }
+
+  return {
+    value: maxValue,
+    measuredAt: maxMeasuredAt,
+    isCurrent: current != null && maxValue != null && latestMeasuredAt != null && maxMeasuredAt === latestMeasuredAt && current === maxValue,
+  };
+}
+
 function snapshotForStat(
   key: BlockinfoPostStatKey,
   label: string,
   latest: JsonRecord,
   historical: Record<keyof typeof WINDOW_HOURS, JsonRecord | null>,
+  windowRows: JsonRecord[],
 ): BlockinfoPostStatSnapshot {
   const current = toNullableNumber(latest[key]);
+  const latestMeasuredAt = toNullableString(latest.measured_at);
   return {
     key,
     label,
     current,
     formattedCurrent: formatCurrentValue(key, current),
+    max30d: computeMax30d(key, current, windowRows, latestMeasuredAt),
     deltas: {
       "1d": buildDelta(key, "1d", current, toNullableNumber(historical["1d"]?.[key]), toNullableString(historical["1d"]?.measured_at)),
       "7d": buildDelta(key, "7d", current, toNullableNumber(historical["7d"]?.[key]), toNullableString(historical["7d"]?.measured_at)),
@@ -550,10 +595,11 @@ export async function fetchDeterministicSnapshot(latestRow: JsonRecord): Promise
     ]),
   ) as Record<keyof typeof WINDOW_HOURS, string>;
 
-  const [row1d, row7d, row30d] = await Promise.all([
+  const [row1d, row7d, row30d, windowRows] = await Promise.all([
     fetchHistoricalRow(targets["1d"]),
     fetchHistoricalRow(targets["7d"]),
     fetchHistoricalRow(targets["30d"]),
+    fetchWindowRows(targets["30d"]),
   ]);
 
   const historical = {
@@ -563,7 +609,7 @@ export async function fetchDeterministicSnapshot(latestRow: JsonRecord): Promise
   } satisfies Record<keyof typeof WINDOW_HOURS, JsonRecord | null>;
 
   const stats = Object.fromEntries(
-    STAT_META.map(({ key, label }) => [key, snapshotForStat(key, label, latestRow, historical)]),
+    STAT_META.map(({ key, label }) => [key, snapshotForStat(key, label, latestRow, historical, windowRows)]),
   ) as Record<BlockinfoPostStatKey, BlockinfoPostStatSnapshot>;
 
   return {

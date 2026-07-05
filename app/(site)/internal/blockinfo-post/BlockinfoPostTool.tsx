@@ -10,6 +10,7 @@ import {
   BLOCKINFO_POST_DESTINATIONS,
   BLOCKINFO_POST_RENDER_MODES,
   DEFAULT_BLOCKINFO_POST_SCHEDULE,
+  type BlockinfoPostCaptionSimpleRule,
   type BlockinfoPostCaptionThresholdRule,
   type BlockinfoPostDeterministicLayout,
   type BlockinfoPostDeterministicSnapshot,
@@ -313,6 +314,30 @@ function CaptionThresholdRuleEditor(props: {
           />
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function CaptionSimpleRuleEditor(props: {
+  title: string;
+  rule: BlockinfoPostCaptionSimpleRule;
+  onChange: (patch: Partial<BlockinfoPostCaptionSimpleRule>) => void;
+}) {
+  return (
+    <div className="grid gap-3 rounded-xl border border-border-muted bg-[var(--color-raised)] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm font-bold text-fg-heading">{props.title}</div>
+        <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-fg-muted">
+          <input
+            type="checkbox"
+            checked={props.rule.enabled}
+            onChange={(event) => props.onChange({ enabled: event.target.checked })}
+            className="h-4 w-4 rounded border-border-muted"
+          />
+          Enabled
+        </label>
+      </div>
+      <NumericField label="Priority" value={props.rule.priority} onChange={(value) => props.onChange({ priority: value })} />
     </div>
   );
 }
@@ -1269,6 +1294,32 @@ export default function BlockinfoPostTool(props: {
                 </div>
               </div>
 
+              <CaptionSimpleRuleEditor
+                title="Orchard 30-day Max"
+                rule={captionPolicy.orchard30dMax}
+                onChange={(patch) => setCaptionPolicy((current) => ({ ...current, orchard30dMax: { ...current.orchard30dMax, ...patch } }))}
+              />
+              <CaptionSimpleRuleEditor
+                title="Total Shielded 30-day Max"
+                rule={captionPolicy.totalShielded30dMax}
+                onChange={(patch) =>
+                  setCaptionPolicy((current) => ({ ...current, totalShielded30dMax: { ...current.totalShielded30dMax, ...patch } }))
+                }
+              />
+              <CaptionSimpleRuleEditor
+                title="Transparent 30-day Max"
+                rule={captionPolicy.transparent30dMax}
+                onChange={(patch) =>
+                  setCaptionPolicy((current) => ({ ...current, transparent30dMax: { ...current.transparent30dMax, ...patch } }))
+                }
+              />
+              <CaptionSimpleRuleEditor
+                title="Difficulty 30-day Max"
+                rule={captionPolicy.difficulty30dMax}
+                onChange={(patch) =>
+                  setCaptionPolicy((current) => ({ ...current, difficulty30dMax: { ...current.difficulty30dMax, ...patch } }))
+                }
+              />
               <CaptionThresholdRuleEditor
                 title="Orchard 1-day"
                 rule={captionPolicy.orchardDaily}
@@ -1289,12 +1340,6 @@ export default function BlockinfoPostTool(props: {
                 showAbsolute
                 showPercent
                 onChange={(patch) => setCaptionPolicy((current) => ({ ...current, transparentDaily: { ...current.transparentDaily, ...patch } }))}
-              />
-              <CaptionThresholdRuleEditor
-                title="Difficulty 1-day"
-                rule={captionPolicy.difficultyDaily}
-                showPercent
-                onChange={(patch) => setCaptionPolicy((current) => ({ ...current, difficultyDaily: { ...current.difficultyDaily, ...patch } }))}
               />
               <CaptionThresholdRuleEditor
                 title="Orchard 7-day"
