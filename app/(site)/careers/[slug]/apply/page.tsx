@@ -20,18 +20,18 @@ export async function generateMetadata(
 
   if (!job) {
     return {
-      title: "Application Closed | ZcashNames",
+      title: "Application Closed | Zcash Names",
     };
   }
 
   return {
-    title: `Apply: ${job.title} | ZcashNames Careers`,
+    title: `Apply: ${job.title} | Zcash Names Careers`,
     description: `Application form for ${job.title}.`,
     alternates: {
       canonical: job.applicationUrl,
     },
     openGraph: {
-      title: `Apply: ${job.title} | ZcashNames Careers`,
+      title: `Apply: ${job.title} | Zcash Names Careers`,
       description: `Application form for ${job.title}.`,
       url: job.applicationUrl,
       images: [
@@ -39,13 +39,13 @@ export async function generateMetadata(
           url: `/og/careers/${job.slug}`,
           width: 1200,
           height: 630,
-          alt: `${job.title} | ZcashNames Careers`,
+          alt: `${job.title} | Zcash Names Careers`,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `Apply: ${job.title} | ZcashNames Careers`,
+      title: `Apply: ${job.title} | Zcash Names Careers`,
       description: `Application form for ${job.title}.`,
       images: [`/og/careers/${job.slug}`],
     },
@@ -61,6 +61,7 @@ export default async function CareerApplyPage(
   const isExternal = job.applicationMode === "external";
   const applyLabel = "Now Hiring";
   const shareMessage = `Seeking ${job.title} at Zcash Names. Apply here:`;
+  const xShareMessage = `Seeking ${job.title} at @ZcashNames. Apply here:`;
 
   return (
     <main className="w-full">
@@ -82,8 +83,9 @@ export default async function CareerApplyPage(
               <ShareDropdown
                 label="Share"
                 message={shareMessage}
+                xMessage={xShareMessage}
                 shareUrl={job.applicationUrl}
-                emailSubject={`Apply: ${job.title} | ZcashNames Careers`}
+                emailSubject={`Apply: ${job.title} | Zcash Names Careers`}
                 menuAlign="right"
                 buttonClassName="inline-flex min-h-10 items-center gap-2 rounded-md border border-border-muted bg-transparent px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
               />

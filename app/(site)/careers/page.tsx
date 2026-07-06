@@ -9,25 +9,25 @@ const CAREERS_OG_IMAGE = {
   url: "/og/careers.png",
   width: 1200,
   height: 630,
-  alt: "ZcashNames careers",
+  alt: "Zcash Names careers",
 };
 
 export const metadata: Metadata = {
-  title: "Careers | ZcashNames",
-  description: "Open roles at ZcashNames, with a dedicated learn-more page and application URL for each job.",
+  title: "Careers | Zcash Names",
+  description: "Open roles at Zcash Names. Learn more and apply.",
   alternates: {
     canonical: "https://www.zcashnames.com/careers",
   },
   openGraph: {
-    title: "Careers | ZcashNames",
-    description: "Open roles at ZcashNames, with a dedicated learn-more page and application URL for each job.",
+    title: "Careers | Zcash Names",
+    description: "Open roles at Zcash Names. Learn more and apply.",
     url: "https://www.zcashnames.com/careers",
     images: [CAREERS_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Careers | ZcashNames",
-    description: "Open roles at ZcashNames, with a dedicated learn-more page and application URL for each job.",
+    title: "Careers | Zcash Names",
+    description: "Open roles at Zcash Names. Learn more and apply.",
     images: [CAREERS_OG_IMAGE.url],
   },
 };
@@ -36,6 +36,7 @@ export default async function CareersPage() {
   const jobs = await listOpenCareerJobs();
   const shareUrl = "https://www.zcashnames.com/careers";
   const shareMessage = "We're preparing to launch and hiring across a few focused roles at Zcash Names.";
+  const xShareMessage = "We're preparing to launch and hiring across a few focused roles at @ZcashNames.";
 
   return (
     <main className="w-full">
@@ -56,8 +57,9 @@ export default async function CareersPage() {
             <ShareDropdown
               label="Share"
               message={shareMessage}
+              xMessage={xShareMessage}
               shareUrl={shareUrl}
-              emailSubject="ZcashNames Careers"
+              emailSubject="Zcash Names Careers"
               menuAlign="right"
               buttonClassName="inline-flex min-h-10 items-center gap-2 rounded-md border border-border-muted bg-transparent px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
             />

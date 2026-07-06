@@ -20,18 +20,18 @@ export async function generateMetadata(
 
   if (!job) {
     return {
-      title: "Job Not Found | ZcashNames",
+      title: "Job Not Found | Zcash Names",
     };
   }
 
   return {
-    title: `${job.title} | ZcashNames Careers`,
+    title: `${job.title} | Zcash Names Careers`,
     description: job.summary,
     alternates: {
       canonical: job.jobUrl,
     },
     openGraph: {
-      title: `${job.title} | ZcashNames Careers`,
+      title: `${job.title} | Zcash Names Careers`,
       description: job.summary,
       url: job.jobUrl,
       images: [
@@ -39,13 +39,13 @@ export async function generateMetadata(
           url: `/og/careers/${job.slug}`,
           width: 1200,
           height: 630,
-          alt: `${job.title} | ZcashNames Careers`,
+          alt: `${job.title} | Zcash Names Careers`,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${job.title} | ZcashNames Careers`,
+      title: `${job.title} | Zcash Names Careers`,
       description: job.summary,
       images: [`/og/careers/${job.slug}`],
     },
@@ -62,6 +62,7 @@ export default async function CareerJobPage(
   const applyIsExternal = job.applicationMode === "external";
   const metaLabels = [job.employmentType];
   const shareMessage = `Seeking ${job.title} at Zcash Names. ${job.summary}`;
+  const xShareMessage = `Seeking ${job.title} at @ZcashNames. ${job.summary}`;
 
   return (
     <main className="w-full">
@@ -92,8 +93,9 @@ export default async function CareerJobPage(
             <ShareDropdown
               label="Share"
               message={shareMessage}
+              xMessage={xShareMessage}
               shareUrl={job.jobUrl}
-              emailSubject={`${job.title} | ZcashNames Careers`}
+              emailSubject={`${job.title} | Zcash Names Careers`}
               menuAlign="right"
               buttonClassName="inline-flex min-h-10 items-center gap-2 rounded-md border border-border-muted bg-transparent px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
             />
