@@ -601,7 +601,7 @@ export default function WaitlistEntryForm({
             aria-disabled={!name}
             onClick={confirmName}
           >
-            Get Early Access &nbsp;
+            Early Access &nbsp;
           </button>
           <button
             type="button"

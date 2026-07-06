@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 
 type Theme = "dark" | "light" | "monochrome";
-
-const THEMES: Theme[] = ["dark", "light", "monochrome"];
+const TRIPLE_TAP_WINDOW_MS = 650;
 
 const icons: Record<Theme, React.ReactNode> = {
   dark: (
@@ -34,100 +33,69 @@ const icons: Record<Theme, React.ReactNode> = {
   ),
 };
 
-// Three-theme switcher (dark / light / monochrome) powered by next-themes.
-// A sliding highlight pill follows the active theme. Before hydration (mounted=false), a hidden
-// placeholder renders to prevent layout shift; after mount, the resolved theme takes over.
+// Single-icon theme switcher powered by next-themes, with a hidden monochrome easter egg.
+// Before hydration (mounted=false), a hidden placeholder renders to prevent layout shift.
 export default function ThemeToggle() {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const tapTimesRef = useRef<number[]>([]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const resolvedActive = resolvedTheme ?? theme;
-  const activeTheme: Theme = resolvedActive && THEMES.includes(resolvedActive as Theme)
+  const activeTheme: Theme = resolvedActive && ["dark", "light", "monochrome"].includes(resolvedActive as Theme)
     ? (resolvedActive as Theme)
-    : "monochrome";
+    : "light";
 
-  const handleSelect = (t: Theme) => {
-    setTheme(t);
-  };
+  function handleToggle() {
+    const now = Date.now();
+    const recentTaps = tapTimesRef.current.filter((time) => now - time <= TRIPLE_TAP_WINDOW_MS);
+    recentTaps.push(now);
+    tapTimesRef.current = recentTaps;
 
-  const idx = THEMES.indexOf(activeTheme);
+    if (recentTaps.length >= 3) {
+      tapTimesRef.current = [];
+      setTheme("monochrome");
+      return;
+    }
+
+    if (activeTheme === "monochrome") {
+      setTheme("light");
+      return;
+    }
+
+    setTheme(activeTheme === "light" ? "dark" : "light");
+  }
 
   if (!mounted) {
     return (
-      <div
-        className="relative flex items-center rounded-full h-8 text-sm font-bold tracking-tight leading-none"
-        style={{ isolation: "isolate", background: "var(--color-raised)", visibility: "hidden" }}
+      <button
+        type="button"
+        className="relative flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold tracking-tight leading-none"
+        style={{ background: "var(--color-raised)", visibility: "hidden" }}
         aria-hidden="true"
+        tabIndex={-1}
       >
-        <span
-          className="absolute inset-y-0 rounded-full pointer-events-none"
-          style={{
-            left: 0,
-            width: `${100 / THEMES.length}%`,
-            transform: "translateX(0%)",
-            transition: "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
-            willChange: "transform",
-            background: "var(--color-raised)",
-            boxShadow: "0 0 0 2px var(--fg-heading)",
-            zIndex: 0,
-          }}
-        />
-
-        {THEMES.map((t) => (
-          <button
-            key={t}
-            type="button"
-            aria-pressed={false}
-            aria-label={`${t} theme`}
-            className="relative z-10 flex items-center justify-center h-full px-2.5 rounded-full cursor-pointer transition-opacity duration-200"
-            style={{ opacity: 0.4 }}
-            tabIndex={-1}
-          >
-            {icons[t]}
-          </button>
-        ))}
-      </div>
+        <span className="inline-flex items-center justify-center text-fg-heading">
+          {icons.light}
+        </span>
+      </button>
     );
   }
 
   return (
-    <div
-      className="relative flex items-center rounded-full h-8 text-sm font-bold tracking-tight leading-none"
-      style={{ isolation: "isolate", background: "var(--color-raised)" }}
+    <button
+      type="button"
+      aria-label={`${activeTheme} theme`}
+      onClick={handleToggle}
+      className="relative flex h-8 w-8 items-center justify-center rounded-full text-fg-heading transition-opacity duration-200 cursor-pointer"
+      style={{ background: "var(--color-raised)" }}
     >
-      {/* Sliding highlight */}
-      <span
-        className="absolute inset-y-0 rounded-full pointer-events-none"
-        style={{
-          left: 0,
-          width: `${100 / THEMES.length}%`,
-          transform: `translateX(${idx * 100}%)`,
-          transition: "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
-          willChange: "transform",
-          background: "var(--color-raised)",
-          boxShadow: "0 0 0 2px var(--fg-heading)",
-          zIndex: 0,
-        }}
-        aria-hidden="true"
-      />
-
-      {THEMES.map((t) => (
-        <button
-          key={t}
-          type="button"
-          aria-pressed={activeTheme === t}
-          aria-label={`${t} theme`}
-          onClick={() => handleSelect(t)}
-          className="relative z-10 flex items-center justify-center h-full px-2.5 rounded-full cursor-pointer transition-opacity duration-200"
-          style={{ opacity: activeTheme === t ? 1 : 0.4 }}
-        >
-          {icons[t]}
-        </button>
-      ))}
-    </div>
+      <span className="relative z-10 inline-flex items-center justify-center">
+        {icons[activeTheme]}
+      </span>
+    </button>
   );
 }

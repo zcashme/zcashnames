@@ -316,7 +316,7 @@ function buildSnippet(t: ThemeTokens): string {
               />
             </div>
           </div>
-          <button type="button" class="sf-badge">Get Early Access &nbsp;</button>
+          <button type="button" class="sf-badge">Early Access &nbsp;</button>
           <button type="button" class="sf-claim" aria-label="Next">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M5 12h14" />

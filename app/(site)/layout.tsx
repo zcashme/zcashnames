@@ -77,7 +77,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <PwaShellClient />
       <ThemeProvider
         attribute="data-theme"
-        defaultTheme="dark"
+        defaultTheme="light"
         themes={["dark", "light", "monochrome"]}
       >
         <NetworkProvider initialMode={initialMode} hasBeta={hasBeta}>
