@@ -41,6 +41,7 @@ type ActionDropdownProps = {
 type ShareDropdownProps = {
   label?: string;
   message: string;
+  xMessage?: string;
   shareUrl: string;
   emailSubject?: string;
   copyLabel?: string;
@@ -337,8 +338,9 @@ export function DownloadDropdown({
 export default function ShareDropdown({
   label = "Share",
   message,
+  xMessage,
   shareUrl,
-  emailSubject = "ZcashNames",
+  emailSubject = "Zcash Names",
   copyLabel = "Copy Link",
   copiedLabel = "Copied!",
   systemShareLabel = "More ways",
@@ -350,6 +352,7 @@ export default function ShareDropdown({
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyState = useCopy();
   const shareMessageWithLink = buildShareMessageWithLink(message, shareUrl);
+  const xShareMessageWithLink = buildShareMessageWithLink(xMessage ?? message, shareUrl);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -411,7 +414,7 @@ export default function ShareDropdown({
       key: "x",
       label: "X",
       icon: <XIcon />,
-      href: buildXShareHref(shareMessageWithLink),
+      href: buildXShareHref(xShareMessageWithLink),
     },
     {
       key: "system",
