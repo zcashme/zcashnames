@@ -1,66 +1,34 @@
-import { Hr, Link, Section, Text } from "@react-email/components";
+import { Hr, Section, Text } from "@react-email/components";
 import { EmailLayout } from "./EmailLayout";
 import { content, divider, paragraph } from "@/lib/email/styles";
-import {
-  parseInlineLinks,
-  resolveCampaignTokens,
-  splitCampaignParagraphs,
-} from "@/lib/campaigns/content";
+import { resolveCampaignTokens } from "@/lib/campaigns/content";
+import EmailRichBody from "./EmailRichBody";
 import type { CampaignRecipientPersonalization } from "@/lib/campaigns/types";
 import type { EmailUnsubscribeLinks } from "@/lib/email/policy";
-
-function Paragraph({
-  text,
-  personalization,
-}: {
-  text: string;
-  personalization: CampaignRecipientPersonalization;
-}) {
-  const resolved = resolveCampaignTokens(text, personalization);
-  const parts = parseInlineLinks(resolved);
-  return (
-    <Text style={paragraph}>
-      {parts.map((part, index) =>
-        part.type === "link" && part.href ? (
-          <Link key={`${part.href}-${index}`} href={part.href} style={{ color: "#F4B728" }}>
-            {part.text}
-          </Link>
-        ) : (
-          <span key={`${part.text}-${index}`}>{part.text}</span>
-        ),
-      )}
-    </Text>
-  );
-}
 
 export default function CampaignEmail({
   preview,
   headingText,
   bodyText,
+  showRelatedNamesFooter,
   personalization,
   unsubscribeLinks,
 }: {
   preview: string;
-  headingText: string;
+  headingText?: string | null;
   bodyText: string;
+  showRelatedNamesFooter?: boolean;
   personalization: CampaignRecipientPersonalization;
   unsubscribeLinks?: EmailUnsubscribeLinks | null;
 }) {
-  const paragraphs = splitCampaignParagraphs(bodyText);
+  const resolvedBodyText = resolveCampaignTokens(bodyText, personalization);
   return (
     <EmailLayout preview={preview} headingText={headingText} unsubscribeLinks={unsubscribeLinks}>
       <Section style={content}>
-        <Text style={paragraph}>Hi {personalization.name},</Text>
-        {paragraphs.map((text, index) => (
-          <Paragraph
-            key={`${index}-${text.slice(0, 24)}`}
-            text={text}
-            personalization={personalization}
-          />
-        ))}
+        <EmailRichBody bodyText={resolvedBodyText} />
       </Section>
 
-      {personalization.relatedNames.length > 1 && (
+      {showRelatedNamesFooter !== false && personalization.relatedNames.length > 1 && (
         <>
           <Hr style={{ ...divider, margin: "0 40px 24px" }} />
           <Section style={{ padding: "0 40px 24px" }}>

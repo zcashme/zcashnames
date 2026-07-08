@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import CampaignQuickActions from "@/components/admin/campaigns/CampaignQuickActions";
+import { getProviderManagedScheduleState } from "@/lib/campaigns/provider-schedule";
 import { formatEasternDateTime } from "@/lib/campaigns/schedule";
 import {
   getCampaign,
@@ -65,7 +67,13 @@ export default async function CampaignSentDetailPage({
   ]);
   const delivery = deliverySummary(deliveryBatches);
   const providerScheduledAttempts = attempts.filter((attempt) => attempt.status === "scheduled");
-  const providerManagedSchedule = delivery.total === 0 && providerScheduledAttempts.length > 0;
+  const providerSchedule = getProviderManagedScheduleState({
+    hasDeliveryBatches: delivery.total > 0,
+    acceptedCount: providerScheduledAttempts.length,
+    scheduledAt: providerScheduledAttempts[0]?.scheduled_for ?? campaign.scheduled_at ?? null,
+    canceledAt: campaign.delivery_canceled_at,
+  });
+  const providerManagedSchedule = providerSchedule.managed;
   const personalization = snapshots[0]?.personalization ?? {
     name: "Josh",
     referralCode: "jswihart",
@@ -80,6 +88,8 @@ export default async function CampaignSentDetailPage({
   const previewHtml = await renderCampaignPreview({
     subject: draft.subject,
     bodyText: draft.body_text,
+    headingText: draft.heading_text,
+    showRelatedNamesFooter: draft.show_related_names_footer,
     personalization,
     includeUnsubscribe: shouldIncludeUnsubscribe(
       campaign.source_kind,
@@ -102,6 +112,17 @@ export default async function CampaignSentDetailPage({
           {campaign.status} | {campaign.recipient_count} recipients
         </span>
       </header>
+
+      <CampaignQuickActions
+        campaignId={campaign.id}
+        editHref={`/admin/campaigns/drafts/${encodeURIComponent(campaign.id)}`}
+        allowPauseResume={delivery.total > 0 && !providerManagedSchedule}
+        isPaused={Boolean(campaign.delivery_paused_at)}
+        isCanceled={Boolean(campaign.delivery_canceled_at)}
+        allowCancel={delivery.total > 0 || providerSchedule.cancelable}
+        allowRetry={attempts.some((attempt) => attempt.status === "failed")}
+        allowRunWorker={delivery.total > 0 && !providerManagedSchedule}
+      />
 
       {fromSend === "1" ? (
         <section className="rounded-md border border-emerald-900/60 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-200">
@@ -167,6 +188,11 @@ export default async function CampaignSentDetailPage({
               </div>
             </div>
           </div>
+          {providerSchedule.pastDue ? (
+            <div className="mt-3 text-xs text-amber-300">
+              Scheduled time passed. Delivery outcome now depends on Resend webhook updates.
+            </div>
+          ) : null}
         </section>
       ) : null}
 

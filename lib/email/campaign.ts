@@ -2,7 +2,7 @@ import "server-only";
 
 import { render } from "@react-email/render";
 import CampaignEmail from "@/components/emails/CampaignEmail";
-import { resolveCampaignTokens } from "@/lib/campaigns/content";
+import { flattenToPlainText, resolveCampaignTokens } from "@/lib/campaigns/content";
 import { getCampaignReferralStats, withCampaignReferralStats } from "@/lib/campaigns/referral-stats";
 import { FROM_EMAIL } from "@/lib/email/constants";
 import {
@@ -18,6 +18,8 @@ export interface CampaignSendEmailArgs {
   to: string;
   subject: string;
   bodyText: string;
+  headingText?: string | null;
+  showRelatedNamesFooter?: boolean;
   personalization: CampaignRecipientPersonalization;
   series?: string | null;
   includeUnsubscribe?: boolean;
@@ -40,6 +42,8 @@ export async function enrichCampaignPreviewPersonalization(
 export async function renderCampaignPreview(args: {
   subject: string;
   bodyText: string;
+  headingText?: string | null;
+  showRelatedNamesFooter?: boolean;
   personalization: CampaignRecipientPersonalization;
   includeUnsubscribe?: boolean;
   unsubscribeLinks?: {
@@ -48,11 +52,15 @@ export async function renderCampaignPreview(args: {
   } | null;
 }): Promise<string> {
   const resolvedSubject = resolveCampaignTokens(args.subject, args.personalization);
+  const resolvedHeadingText = args.headingText?.trim()
+    ? resolveCampaignTokens(args.headingText, args.personalization)
+    : null;
   return render(
     CampaignEmail({
       preview: resolvedSubject,
-      headingText: resolvedSubject,
+      headingText: resolvedHeadingText,
       bodyText: args.bodyText,
+      showRelatedNamesFooter: args.showRelatedNamesFooter,
       personalization: args.personalization,
       unsubscribeLinks:
         args.includeUnsubscribe === false
@@ -69,6 +77,10 @@ async function buildCampaignEmailBasePayload(
   args: CampaignSendEmailArgs,
 ): Promise<Omit<SendEmailParams, "scheduledAt">> {
   const resolvedSubject = resolveCampaignTokens(args.subject, args.personalization);
+  const resolvedHeadingText = args.headingText?.trim()
+    ? resolveCampaignTokens(args.headingText, args.personalization)
+    : null;
+  const resolvedBodyText = resolveCampaignTokens(args.bodyText, args.personalization);
   const hasSeries = Boolean(args.series?.trim());
   if (!args.skipConsentCheck && hasSeries) {
     await ensureMarketingEmailAllowed(args.to, args.series!.trim());
@@ -81,17 +93,30 @@ async function buildCampaignEmailBasePayload(
           series: args.series!.trim(),
           baseUrl: args.baseUrl,
         });
+  const html = await render(
+    CampaignEmail({
+      preview: resolvedSubject,
+      headingText: resolvedHeadingText,
+      bodyText: args.bodyText,
+      showRelatedNamesFooter: args.showRelatedNamesFooter,
+      personalization: args.personalization,
+      unsubscribeLinks,
+    }),
+  );
+  const plainTextParts = [
+    resolvedHeadingText?.trim() ? resolvedHeadingText.trim() : null,
+    flattenToPlainText(resolvedBodyText),
+    args.showRelatedNamesFooter !== false && args.personalization.relatedNames.length > 1
+      ? `This inbox is associated with these waitlist names:\n\n${args.personalization.relatedNames.join(", ")}`
+      : null,
+  ].filter((value): value is string => Boolean(value && value.trim()));
+
   return {
     from: FROM_EMAIL,
     to: args.to,
     subject: resolvedSubject,
-    react: CampaignEmail({
-      preview: resolvedSubject,
-      headingText: resolvedSubject,
-      bodyText: args.bodyText,
-      personalization: args.personalization,
-      unsubscribeLinks,
-    }),
+    html,
+    text: plainTextParts.join("\n\n"),
   };
 }
 
@@ -109,7 +134,12 @@ export async function sendCampaignEmail(
     scheduledAt: args.scheduledAt ?? undefined,
   } as SendEmailParams;
   const result = await sendEmail(payload);
-  return { id: (result as { id?: string | null } | undefined)?.id };
+  return {
+    id:
+      (result as { data?: { id?: string | null } } | undefined)?.data?.id ??
+      (result as { id?: string | null } | undefined)?.id ??
+      null,
+  };
 }
 
 export async function sendCampaignEmailBatch(

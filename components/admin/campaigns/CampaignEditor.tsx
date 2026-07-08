@@ -14,6 +14,7 @@ import {
   sendCampaignAction,
 } from "@/app/admin/campaigns/actions";
 import { flattenToPlainText } from "@/lib/campaigns/content";
+import { getProviderManagedScheduleState } from "@/lib/campaigns/provider-schedule";
 import {
   easternDateTimeInputToIso,
   formatEasternDateTime,
@@ -77,6 +78,12 @@ interface CampaignWorkerResponse {
   error?: string;
 }
 
+declare global {
+  interface Window {
+    __campaignEditorFlushSave?: (() => Promise<boolean>) | undefined;
+  }
+}
+
 interface DeliveryAttemptView {
   id: string;
   email: string;
@@ -98,6 +105,8 @@ interface CampaignEditorProps {
   initialSeriesOptions: string[];
   initialCustomEmailsText: string;
   initialSubject: string;
+  initialHeadingText: string | null;
+  initialShowRelatedNamesFooter: boolean;
   initialBodyText: string;
   initialPreviewHtml: string;
   initialRecipientCount: number;
@@ -130,6 +139,12 @@ const PREVIEW_MS = 350;
 const LARGE_AUDIENCE_THRESHOLD = 500;
 const PACED_BATCH_SIZE = 100;
 const WORKER_LOOP_SLEEP_MS = 1500;
+const SECONDARY_BUTTON_CLASS =
+  "rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-800/80 disabled:cursor-not-allowed disabled:opacity-50";
+const DANGER_BUTTON_CLASS =
+  "rounded-md border border-red-900/60 px-3 py-1.5 text-sm text-red-300 transition-colors hover:border-red-700 hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-50";
+const PRIMARY_BUTTON_CLASS =
+  "rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-zinc-900 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -239,6 +254,11 @@ export default function CampaignEditor(props: CampaignEditorProps) {
     useState<CampaignPersonalizationMode>(props.initialPersonalizationMode);
   const [customEmailsText, setCustomEmailsText] = useState(props.initialCustomEmailsText);
   const [subject, setSubject] = useState(props.initialSubject);
+  const [headingEnabled, setHeadingEnabled] = useState(Boolean(props.initialHeadingText?.trim()));
+  const [headingText, setHeadingText] = useState(props.initialHeadingText ?? "");
+  const [showRelatedNamesFooter, setShowRelatedNamesFooter] = useState(
+    props.initialShowRelatedNamesFooter,
+  );
   const [bodyText, setBodyText] = useState(props.initialBodyText);
   const [previewHtml, setPreviewHtml] = useState(props.initialPreviewHtml);
   const [recipientCount, setRecipientCount] = useState(props.initialRecipientCount);
@@ -261,6 +281,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
   const [deliveryAttempts, setDeliveryAttempts] = useState<DeliveryAttemptView[]>([]);
   const [workerResult, setWorkerResult] = useState<string | null>(null);
   const [workerError, setWorkerError] = useState<string | null>(null);
+  const [tokensExpanded, setTokensExpanded] = useState(false);
   const [deliveryState, setDeliveryState] = useState<DeliveryStateView>({
     batches: props.initialDeliveryBatches,
     deliveryPausedAt: props.initialDeliveryPausedAt,
@@ -284,31 +305,14 @@ export default function CampaignEditor(props: CampaignEditorProps) {
     personalizationMode,
     customEmailsText,
     subject,
+    headingText,
+    showRelatedNamesFooter,
     bodyText,
   });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    latestRef.current = {
-      title,
-      sourceKind,
-      series,
-      includeUnsubscribe,
-      audienceScope,
-      dedupeMode,
-      personalizationMode,
-      customEmailsText,
-      subject,
-      bodyText,
-    };
-  }, [
+  latestRef.current = {
     title,
     sourceKind,
     series,
@@ -318,8 +322,16 @@ export default function CampaignEditor(props: CampaignEditorProps) {
     personalizationMode,
     customEmailsText,
     subject,
+    headingText,
+    showRelatedNamesFooter,
     bodyText,
-  ]);
+  };
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const flushSave = useCallback(async (): Promise<boolean> => {
     if (!dirtyRef.current) return true;
@@ -328,7 +340,10 @@ export default function CampaignEditor(props: CampaignEditorProps) {
       saveTimer.current = null;
     }
     setSaveStatus("saving");
-    const result = await saveCampaignAction(props.campaignId, latestRef.current);
+    const result = await saveCampaignAction(props.campaignId, {
+      ...latestRef.current,
+      headingText: headingEnabled ? latestRef.current.headingText : null,
+    });
     if (result.ok) {
       dirtyRef.current = false;
       setSaveStatus("saved");
@@ -338,15 +353,26 @@ export default function CampaignEditor(props: CampaignEditorProps) {
     setSaveStatus("error");
     setSaveError(result.error);
     return false;
-  }, [props.campaignId]);
+  }, [headingEnabled, props.campaignId]);
+
+  useEffect(() => {
+    window.__campaignEditorFlushSave = flushSave;
+    return () => {
+      if (window.__campaignEditorFlushSave === flushSave) {
+        delete window.__campaignEditorFlushSave;
+      }
+    };
+  }, [flushSave]);
 
   const refreshPreview = useCallback(async (options?: { hydrateLiveStats?: boolean }) => {
     const html = await renderCampaignPreviewAction(props.campaignId, {
       subject: latestRef.current.subject,
+      headingText: headingEnabled ? latestRef.current.headingText : null,
+      showRelatedNamesFooter: latestRef.current.showRelatedNamesFooter,
       bodyText: latestRef.current.bodyText,
     }, options);
     setPreviewHtml(html);
-  }, [props.campaignId]);
+  }, [headingEnabled, props.campaignId]);
 
   const queueAutosave = () => {
     dirtyRef.current = true;
@@ -446,6 +472,8 @@ export default function CampaignEditor(props: CampaignEditorProps) {
     unsubscribed: "unsubscribed",
     unconfirmed: "unconfirmed",
     not_on_waitlist: "not on waitlist",
+    suppressed: "suppressed",
+    missing_beta_invite: "missing beta invite code",
   };
   const effectiveRecipientCount = instantCustomRecipients
     ? localCustomEstimate.validEmails.length
@@ -479,7 +507,13 @@ export default function CampaignEditor(props: CampaignEditorProps) {
   const deliveryPaused = Boolean(deliveryState.deliveryPausedAt);
   const deliveryCanceled = Boolean(deliveryState.deliveryCanceledAt);
   const hasDeliveryBatches = deliveryState.batches.length > 0;
-  const hasProviderManagedSchedule = deliveryState.providerManaged;
+  const providerSchedule = getProviderManagedScheduleState({
+    hasDeliveryBatches,
+    acceptedCount: deliveryState.providerScheduledCount,
+    scheduledAt: deliveryState.providerScheduledAt,
+    canceledAt: deliveryState.deliveryCanceledAt,
+  });
+  const hasProviderManagedSchedule = providerSchedule.managed;
   const deliveryAvailable = !deliveryState.deliveryWarning;
   const easternZoneLabel = getEasternTimeZoneLabel();
   const deliveryActionPending = deliveryActionBusy !== null;
@@ -685,7 +719,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
       setDeliveryNotice(buildDeliveryNotice(result));
       applyDeliveryState(result.delivery);
       await refreshDeliveryDiagnostics();
-      if (!schedule && result.mode === "immediate") {
+      if (!schedule && result.mode === "immediate" && result.pendingCount > 0) {
         await runWorkerUntilIdle();
       } else {
         scheduleRefreshes();
@@ -779,7 +813,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
     if (!saved) return;
     try {
       await navigator.clipboard.writeText(
-        `Subject: ${latestRef.current.subject}\n\n${flattenToPlainText(latestRef.current.bodyText)}`,
+        `Subject: ${latestRef.current.subject}${headingEnabled && latestRef.current.headingText.trim() ? `\nHeading: ${latestRef.current.headingText.trim()}` : ""}\n\n${flattenToPlainText(latestRef.current.bodyText)}`,
       );
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
@@ -951,11 +985,26 @@ export default function CampaignEditor(props: CampaignEditorProps) {
             ) : null}
           </div>
           <div className="rounded-md border border-zinc-800 bg-zinc-950/40 px-3 py-2 text-xs text-zinc-400">
-            <div className="font-semibold uppercase tracking-wide text-zinc-500">Tokens</div>
-            <div>{`{{name}} {{referral_code}} {{referral_url}} {{dashboard_url}} {{human_referral_code}} {{human_referral_url}} {{human_dashboard_url}} {{direct_referrals}} {{indirect_referrals}} {{attributed_referrals}} {{referrals_24h_count}} {{referrals_24h_growth_pct}} {{referrals_7d_count}} {{referrals_7d_growth_pct}} {{referrals_30d_count}} {{referrals_30d_growth_pct}} {{depth_1_referrals}} {{depth_2_referrals}} {{depth_3_referrals}} {{leaderboard_rank}} {{waitlist_position}} {{waitlist_total}} {{max_referral_depth}} {{potential_rewards}} {{root_badge}} {{commission_unlocked}} {{referrals_unlocked}}`}</div>
-            <div className="mt-2 text-[11px] text-zinc-500">
-              Referral, dashboard, and stat tokens are meaningful only for <code>zn_waitlist</code>. Scheduled sends refresh stat values at actual send time.
-            </div>
+            <button
+              type="button"
+              onClick={() => setTokensExpanded((value) => !value)}
+              className="flex w-full items-center justify-between gap-3 text-left transition-colors hover:text-zinc-200"
+            >
+              <span className="font-semibold uppercase tracking-wide text-zinc-500">
+                Available tokens
+              </span>
+              <span className="text-[11px] text-zinc-500">
+                {tokensExpanded ? "Collapse" : "Expand"}
+              </span>
+            </button>
+            {tokensExpanded ? (
+              <>
+                <div className="mt-2 break-words">{`{{name}} {{referral_code}} {{referral_url}} {{dashboard_url}} {{human_referral_code}} {{human_referral_url}} {{human_dashboard_url}} {{beta_display_name}} {{beta_invite_code}} {{beta_invite_link}} {{direct_referrals}} {{indirect_referrals}} {{attributed_referrals}} {{referrals_24h_count}} {{referrals_24h_growth_pct}} {{referrals_7d_count}} {{referrals_7d_growth_pct}} {{referrals_30d_count}} {{referrals_30d_growth_pct}} {{depth_1_referrals}} {{depth_2_referrals}} {{depth_3_referrals}} {{leaderboard_rank}} {{waitlist_position}} {{waitlist_total}} {{max_referral_depth}} {{potential_rewards}} {{root_badge}} {{commission_unlocked}} {{referrals_unlocked}}`}</div>
+                <div className="mt-2 text-[11px] text-zinc-500">
+                  Beta invite tokens resolve only when the recipient email matches <code>beta_testers_v2.contact_email</code>. Referral, dashboard, and stat tokens are meaningful only for <code>zn_waitlist</code>. Scheduled sends refresh stat values at actual send time.
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
         {showCustomEmailControls ? (
@@ -1018,11 +1067,85 @@ export default function CampaignEditor(props: CampaignEditorProps) {
               }}
               className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-amber-500"
             />
+            <span className="text-xs text-zinc-500">
+              Subject is email metadata. It does not have to match the visible heading inside the email.
+            </span>
           </label>
+
+          <div className="flex flex-col gap-3 rounded-md border border-zinc-800 bg-zinc-950/30 px-3 py-3">
+            <label className="flex items-center gap-2 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                checked={headingEnabled}
+                onChange={(event) => {
+                  const nextEnabled = event.target.checked;
+                  setHeadingEnabled(nextEnabled);
+                  if (nextEnabled && !headingText.trim()) {
+                    setHeadingText(subject);
+                  }
+                  queueAutosave();
+                  queuePreview();
+                }}
+                className="accent-amber-500"
+              />
+              Enable visible email heading
+            </label>
+            {headingEnabled ? (
+              <label className="flex flex-col gap-1 text-sm text-zinc-300">
+                <span className="text-xs uppercase tracking-wide text-zinc-500">
+                  Visible heading
+                </span>
+                <input
+                  type="text"
+                  value={headingText}
+                  onChange={(event) => {
+                    setHeadingText(event.target.value);
+                    queueAutosave();
+                    queuePreview();
+                  }}
+                  className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-amber-500"
+                />
+                <span className="text-xs text-zinc-500">
+                  This appears inside the email above the body. Leave the checkbox off to remove it entirely.
+                </span>
+              </label>
+            ) : (
+              <span className="text-xs text-zinc-500">
+                Heading disabled. The email body controls all visible content.
+              </span>
+            )}
+            <label className="flex items-center gap-2 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                checked={showRelatedNamesFooter}
+                onChange={(event) => {
+                  setShowRelatedNamesFooter(event.target.checked);
+                  queueAutosave();
+                  queuePreview();
+                }}
+                className="accent-amber-500"
+              />
+              Show related waitlist names footer when multiple names share the inbox
+            </label>
+            <span className="text-xs text-zinc-500">
+              This controls the footer that lists related waitlist names for shared recipient inboxes.
+            </span>
+          </div>
 
           <label className="flex flex-col gap-1 text-sm text-zinc-300">
             <span className="text-xs uppercase tracking-wide text-zinc-500">
-              Body - blank lines split paragraphs - inline links use <code className="rounded bg-zinc-800 px-1 text-zinc-300">[text](url)</code>
+              Body - blank lines split paragraphs - use{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">**bold**</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">*italic*</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">__underline__</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300"># Heading</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">## center: Heading</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">![alt](https://...)</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">[![alt](https://...)](https://...)</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">[text](url)</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">---</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::box</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::codebox</code>
             </span>
             <textarea
               value={bodyText}
@@ -1034,6 +1157,21 @@ export default function CampaignEditor(props: CampaignEditorProps) {
               rows={22}
               className="min-h-[420px] resize-y rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 font-mono text-[13px] leading-relaxed text-zinc-100 outline-none focus:border-amber-500"
             />
+            <span className="text-xs text-zinc-500">
+              Use <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::box</code> for a filled callout and{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::codebox</code> for a highlighted access-code block. Optional alignment:
+              {" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::box justify</code>
+              {" "}
+              or
+              {" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::codebox left</code>. Headers support{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">left:</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">center:</code>, and{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">justify:</code>. Put{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">---</code>{" "}
+              on its own line for a divider.
+            </span>
           </label>
 
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-500">
@@ -1047,7 +1185,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                 type="button"
                 onClick={refreshEstimate}
                 disabled={deliveryActionPending}
-                className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                className={SECONDARY_BUTTON_CLASS}
               >
                 Refresh recipients
               </button>
@@ -1055,7 +1193,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                 type="button"
                 onClick={onRefreshPreview}
                 disabled={previewPending}
-                className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                className={SECONDARY_BUTTON_CLASS}
               >
                 {previewRefreshing ? "Refreshing preview..." : "Refresh preview"}
               </button>
@@ -1063,7 +1201,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                 type="button"
                 onClick={onCopy}
                 disabled={deliveryActionPending}
-                className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                className={SECONDARY_BUTTON_CLASS}
               >
                 {copied ? "Copied" : "Copy plain text"}
               </button>
@@ -1210,7 +1348,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                       type="button"
                       onClick={onResume}
                       disabled={deliveryMutationPending}
-                      className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 disabled:opacity-50"
+                      className={SECONDARY_BUTTON_CLASS}
                     >
                       Resume delivery
                     </button>
@@ -1219,7 +1357,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                       type="button"
                       onClick={onPause}
                       disabled={deliveryMutationPending}
-                      className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 disabled:opacity-50"
+                      className={SECONDARY_BUTTON_CLASS}
                     >
                       Pause delivery
                     </button>
@@ -1229,7 +1367,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                       type="button"
                       onClick={onCancel}
                       disabled={deliveryMutationPending}
-                      className="rounded-md border border-red-900/60 px-3 py-1.5 text-sm text-red-300 disabled:opacity-50"
+                      className={DANGER_BUTTON_CLASS}
                     >
                       Cancel remaining batches
                     </button>
@@ -1244,7 +1382,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                       deliveryCanceled ||
                       hasProviderManagedSchedule
                     }
-                    className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 disabled:opacity-50"
+                    className={SECONDARY_BUTTON_CLASS}
                   >
                     {deliveryActionBusy === "worker" ? "Running worker..." : "Run worker until idle"}
                   </button>
@@ -1301,12 +1439,16 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                     <span className="rounded border border-red-900/60 bg-red-950/40 px-3 py-1 text-xs text-red-300">
                       Delivery canceled
                     </span>
+                  ) : providerSchedule.pastDue ? (
+                    <span className="rounded border border-amber-900/60 bg-amber-950/40 px-3 py-1 text-xs text-amber-300">
+                      Scheduled time passed; awaiting webhook confirmation
+                    </span>
                   ) : (
                     <button
                       type="button"
                       onClick={onCancel}
-                      disabled={deliveryMutationPending}
-                      className="rounded-md border border-red-900/60 px-3 py-1.5 text-sm text-red-300 disabled:opacity-50"
+                      disabled={deliveryMutationPending || !providerSchedule.cancelable}
+                      className={DANGER_BUTTON_CLASS}
                     >
                       Cancel scheduled delivery
                     </button>
@@ -1352,7 +1494,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                 !canAttemptSend ||
                 hasLocalInvalidCustomEmails
               }
-              className="mt-4 w-full rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className={`mt-4 w-full ${PRIMARY_BUTTON_CLASS}`}
             >
               {deliveryActionBusy === "send"
                 ? schedule
@@ -1373,7 +1515,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                     !canAttemptSend ||
                     hasLocalInvalidCustomEmails
                   }
-                  className="mt-2 w-full rounded-md border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-2 w-full rounded-md border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:border-zinc-500 hover:bg-zinc-800/80 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {deliveryActionBusy === "queue" ? "Queueing paced send..." : "Queue paced send"}
                 </button>

@@ -2,18 +2,21 @@ import "server-only";
 
 import { db } from "@/lib/db";
 import {
+  campaignDraftUsesBetaInviteTokens,
+  getCampaignBetaTokenUsage,
   defaultCampaignBodyText,
   defaultCampaignSubject,
   defaultCampaignTitle,
 } from "@/lib/campaigns/content";
 import {
+  getBetaInviteDataByEmail,
+} from "@/lib/campaigns/beta-invite";
+import {
   getSubscriberRecord,
   upsertSubscriber,
 } from "@/lib/email/subscribers";
 import {
-  buildCampaignBatchEmailPayload,
   sendCampaignEmail,
-  sendCampaignEmailBatch,
   type CampaignSendEmailArgs,
 } from "@/lib/email/campaign";
 import { cancelScheduledEmail } from "@/lib/email/client";
@@ -23,8 +26,11 @@ import {
   listWaitlistPersonalizationsByEmail,
   listWaitlistRecipients,
 } from "@/lib/campaigns/waitlist";
+import { listActiveSuppressedEmailSet } from "@/lib/campaigns/suppression";
+import { getProviderManagedScheduleState } from "@/lib/campaigns/provider-schedule";
 import { buildCampaignReferralStatsContext, withCampaignReferralStats } from "@/lib/campaigns/referral-stats";
 import { getDefaultCampaignSeries, isSupportedCampaignSeries } from "@/lib/campaigns/series";
+import { resolveSiteUrl } from "@/lib/site-url";
 import type {
   CampaignAudienceScope,
   CampaignBlockedRecipient,
@@ -36,8 +42,10 @@ import type {
   CampaignPersonalizationMode,
   CampaignRecipient,
   CampaignRecipientEstimate,
+  CampaignRecipientPersonalization,
   CampaignRecipientSnapshotRecord,
   CampaignRecord,
+  CampaignSendAttemptRecord,
   CampaignTargetSeries,
   CampaignSourceKind,
   CampaignStatus,
@@ -105,13 +113,15 @@ function shouldIncludeUnsubscribe(
 }
 
 function baseUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL || "https://zcashnames.com";
+  return resolveSiteUrl();
 }
 
 function normalizeDraftInput(draft: CampaignDraftInput): CampaignDraftInput {
   return {
     subject: draft.subject.trim(),
     bodyText: draft.bodyText.replace(/\r\n?/g, "\n").trim(),
+    headingText: draft.headingText?.trim() ? draft.headingText.trim() : null,
+    showRelatedNamesFooter: draft.showRelatedNamesFooter !== false,
   };
 }
 
@@ -191,11 +201,160 @@ function buildMinimalRecipient(
       humanReferralCode: null,
       humanReferralUrl: null,
       humanDashboardUrl: null,
+      betaDisplayName: null,
+      betaInviteCode: null,
+      betaInviteLink: null,
       referralStats: null,
       relatedNames: [fallbackName],
       ...personalizationOverrides,
     },
   };
+}
+
+function withBetaInvitePersonalization(
+  personalization: CampaignRecipientPersonalization,
+  betaInvite:
+    | {
+        betaDisplayName: string | null;
+        betaInviteCode: string | null;
+        betaInviteLink: string | null;
+      }
+    | null
+    | undefined,
+): CampaignRecipientPersonalization {
+  return {
+    ...personalization,
+    betaDisplayName: betaInvite?.betaDisplayName ?? null,
+    betaInviteCode: betaInvite?.betaInviteCode ?? null,
+    betaInviteLink: betaInvite?.betaInviteLink ?? null,
+  };
+}
+
+function betaInviteFailureReason(
+  recipient: CampaignRecipient,
+): CampaignBlockedRecipient {
+  return {
+    email: recipient.email,
+    normalizedEmail: recipient.normalizedEmail,
+    reason: "missing_beta_invite",
+  };
+}
+
+async function applyBetaInviteTokenRules(args: {
+  estimate: CampaignRecipientEstimate;
+  betaTokenUsage: ReturnType<typeof getCampaignBetaTokenUsage>;
+  baseUrl?: string | null;
+}): Promise<CampaignRecipientEstimate> {
+  if (
+    !args.betaTokenUsage.usesBetaDisplayName &&
+    !args.betaTokenUsage.usesBetaInviteCode &&
+    !args.betaTokenUsage.usesBetaInviteLink
+  ) {
+    return args.estimate;
+  }
+
+  const betaInviteByEmail = await getBetaInviteDataByEmail({
+    emails: args.estimate.sample.map((recipient) => recipient.normalizedEmail),
+    baseUrl: args.baseUrl,
+  });
+
+  const sample: CampaignRecipient[] = [];
+  const blocked = [...args.estimate.blocked];
+  const blockedKeys = new Set(
+    blocked.map((recipient) => `${recipient.normalizedEmail}:${recipient.reason}`),
+  );
+
+  for (const recipient of args.estimate.sample) {
+    const betaInvite = betaInviteByEmail.get(recipient.normalizedEmail);
+    const missingMatch = !betaInvite;
+    const missingDisplayName =
+      args.betaTokenUsage.usesBetaDisplayName && !betaInvite?.betaDisplayName;
+    const missingInviteData =
+      (args.betaTokenUsage.usesBetaInviteCode || args.betaTokenUsage.usesBetaInviteLink) &&
+      (!betaInvite?.betaInviteCode || !betaInvite?.betaInviteLink);
+    if (missingMatch || missingDisplayName || missingInviteData) {
+      const blockedRecipient = betaInviteFailureReason(recipient);
+      const blockedKey = `${blockedRecipient.normalizedEmail}:${blockedRecipient.reason}`;
+      if (!blockedKeys.has(blockedKey)) {
+        blocked.push(blockedRecipient);
+        blockedKeys.add(blockedKey);
+      }
+      continue;
+    }
+
+    sample.push({
+      ...recipient,
+      personalization: withBetaInvitePersonalization(
+        recipient.personalization,
+        betaInvite,
+      ),
+    });
+  }
+
+  return {
+    count: sample.length,
+    sample,
+    blocked,
+  };
+}
+
+function validateRequiredCampaignTokens(args: {
+  betaTokenUsage: ReturnType<typeof getCampaignBetaTokenUsage>;
+  personalization: CampaignRecipientPersonalization;
+}): string | null {
+  if (
+    args.betaTokenUsage.usesBetaDisplayName &&
+    !args.personalization.betaDisplayName
+  ) {
+    return "Recipient is missing beta display name.";
+  }
+  if (
+    (args.betaTokenUsage.usesBetaInviteCode || args.betaTokenUsage.usesBetaInviteLink) &&
+    (!args.personalization.betaInviteCode || !args.personalization.betaInviteLink)
+  ) {
+    return "Recipient is missing beta invite code.";
+  }
+  return null;
+}
+
+async function enrichPendingSnapshotPersonalization(
+  campaignId: string,
+  draft: CampaignDraftRecord | null,
+): Promise<void> {
+  if (
+    !draft ||
+    !campaignDraftUsesBetaInviteTokens({
+      subject: draft.subject,
+      bodyText: draft.body_text,
+      headingText: draft.heading_text,
+    })
+  ) {
+    return;
+  }
+
+  const snapshots = (await listCampaignRecipientSnapshots(campaignId)).filter(
+    (snapshot) => snapshot.send_status === "pending",
+  );
+  if (snapshots.length === 0) return;
+
+  const betaInviteByEmail = await getBetaInviteDataByEmail({
+    emails: snapshots.map((snapshot) => snapshot.normalized_email),
+    baseUrl: baseUrl(),
+  });
+
+  for (const snapshot of snapshots) {
+    const nextPersonalization = withBetaInvitePersonalization(
+      snapshot.personalization,
+      betaInviteByEmail.get(snapshot.normalized_email) ?? null,
+    );
+    const { error } = await db
+      .from("campaign_recipient_snapshots")
+      .update({
+        personalization: nextPersonalization,
+      })
+      .eq("id", snapshot.id);
+    if (error) throw new Error(error.message);
+  }
 }
 
 function parseCustomEmailsText(text: string | null | undefined): {
@@ -220,6 +379,39 @@ function parseCustomEmailsText(text: string | null | undefined): {
   }
 
   return { normalizedEmails, invalidEmails };
+}
+
+async function applySuppressionFilterToEstimate(
+  estimate: CampaignRecipientEstimate,
+): Promise<CampaignRecipientEstimate> {
+  const suppressedEmails = await listActiveSuppressedEmailSet(
+    estimate.sample.map((recipient) => recipient.normalizedEmail),
+  );
+  if (suppressedEmails.size === 0) return estimate;
+
+  const blocked = [...estimate.blocked];
+  const blockedKeys = new Set(
+    blocked.map((recipient) => `${recipient.normalizedEmail}:${recipient.reason}`),
+  );
+  const sample = estimate.sample.filter((recipient) => {
+    if (!suppressedEmails.has(recipient.normalizedEmail)) return true;
+    const blockedKey = `${recipient.normalizedEmail}:suppressed`;
+    if (!blockedKeys.has(blockedKey)) {
+      blocked.push({
+        email: recipient.email,
+        normalizedEmail: recipient.normalizedEmail,
+        reason: "suppressed",
+      });
+      blockedKeys.add(blockedKey);
+    }
+    return false;
+  });
+
+  return {
+    count: sample.length,
+    sample,
+    blocked,
+  };
 }
 
 async function resolveSubscriberRecipients(series: string): Promise<CampaignRecipient[]> {
@@ -260,11 +452,15 @@ async function resolveSubscriberPreviewRecipient(
     .is("unsubscribed_at", null)
     .not("confirmed_at", "is", null)
     .order("email", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(20);
   if (error) throw new Error(error.message);
-  if (!data?.email) return null;
-  return buildMinimalRecipient(data.email, "email_subscribers");
+  const emails = ((data ?? []) as Array<{ email?: string | null }>)
+    .map((row) => (row.email ? normalizeEmail(row.email) : null))
+    .filter((row): row is string => Boolean(row));
+  const suppressedEmails = await listActiveSuppressedEmailSet(emails);
+  const previewEmail = emails.find((email) => !suppressedEmails.has(email)) ?? null;
+  if (!previewEmail) return null;
+  return buildMinimalRecipient(previewEmail, "email_subscribers");
 }
 
 async function resolveCustomEmailRecipients(
@@ -355,16 +551,93 @@ export async function createCampaignDraft(args?: {
   const normalizedDraft = normalizeDraftInput({
     subject: args?.draft?.subject ?? defaultCampaignSubject(),
     bodyText: args?.draft?.bodyText ?? defaultCampaignBodyText(),
+    headingText: args?.draft?.headingText ?? null,
+    showRelatedNamesFooter: args?.draft?.showRelatedNamesFooter ?? true,
   });
   const { error: draftError } = await db.from("campaign_drafts").insert({
     campaign_id: data.id,
     subject: normalizedDraft.subject,
     body_text: normalizedDraft.bodyText,
+    heading_text: normalizedDraft.headingText ?? null,
+    show_related_names_footer: normalizedDraft.showRelatedNamesFooter !== false,
     custom_emails_text: args?.customEmailsText?.trim() || null,
   });
   if (draftError) throw new Error(draftError.message);
 
   return data as CampaignRecord;
+}
+
+export async function duplicateCampaignDraft(campaignId: string): Promise<CampaignRecord> {
+  const campaign = await getCampaign(campaignId);
+  if (!campaign) throw new Error("Campaign not found.");
+
+  const draft = await getOrCreateCampaignDraft(campaignId);
+  const duplicate = await createCampaignDraft({
+    title: `${campaign.title.trim() || "Campaign"} (Copy)`,
+    sourceKind: campaign.source_kind,
+    series: campaign.series,
+    includeUnsubscribe: campaign.include_unsubscribe,
+    audienceScope: campaign.audience_scope,
+    dedupeMode: campaign.dedupe_mode,
+    personalizationMode: campaign.personalization_mode,
+    customEmailsText: draft.custom_emails_text,
+    draft: {
+      subject: draft.subject,
+      bodyText: draft.body_text,
+      headingText: draft.heading_text,
+      showRelatedNamesFooter: draft.show_related_names_footer,
+    },
+  });
+
+  return duplicate;
+}
+
+export async function deleteCampaignDraftSafely(campaignId: string): Promise<void> {
+  const campaign = await getCampaign(campaignId);
+  if (!campaign) throw new Error("Campaign not found.");
+  if (campaign.status !== "draft") {
+    throw new Error("Only unsent draft campaigns can be deleted.");
+  }
+
+  const [snapshotsResult, attemptsResult, batchesResult] = await Promise.all([
+    db
+      .from("campaign_recipient_snapshots")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaignId),
+    db
+      .from("campaign_send_attempts")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaignId),
+    db
+      .from("campaign_delivery_batches")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaignId),
+  ]);
+
+  if (snapshotsResult.error) throw new Error(snapshotsResult.error.message);
+  if (attemptsResult.error) throw new Error(attemptsResult.error.message);
+  if (batchesResult.error) throw new Error(batchesResult.error.message);
+
+  const snapshotCount = snapshotsResult.count ?? 0;
+  const attemptCount = attemptsResult.count ?? 0;
+  const batchCount = batchesResult.count ?? 0;
+  if (snapshotCount > 0 || attemptCount > 0 || batchCount > 0) {
+    throw new Error(
+      "This campaign can no longer be deleted because delivery records already exist. Cancel or keep it as history instead.",
+    );
+  }
+
+  const { error: draftError } = await db
+    .from("campaign_drafts")
+    .delete()
+    .eq("campaign_id", campaignId);
+  if (draftError) throw new Error(draftError.message);
+
+  const { error: campaignError } = await db
+    .from("campaigns")
+    .delete()
+    .eq("id", campaignId);
+  if (campaignError) throw new Error(campaignError.message);
 }
 
 export async function listDraftCampaigns(): Promise<CampaignRecord[]> {
@@ -412,6 +685,8 @@ export async function getOrCreateCampaignDraft(campaignId: string): Promise<Camp
       campaign_id: campaignId,
       subject: defaultCampaignSubject(),
       body_text: defaultCampaignBodyText(),
+      heading_text: null,
+      show_related_names_footer: true,
       custom_emails_text: null,
     })
     .select("*")
@@ -448,10 +723,18 @@ export async function updateCampaignDraft(
   if (patch.draft || patch.customEmailsText !== undefined) {
     const existingDraft = await getOrCreateCampaignDraft(campaignId);
     const normalized = patch.draft ? normalizeDraftInput(patch.draft) : null;
-    const draftUpdate: Record<string, string | null> = {
+    const draftUpdate: Record<string, string | boolean | null> = {
       campaign_id: campaignId,
       subject: normalized?.subject ?? existingDraft.subject,
       body_text: normalized?.bodyText ?? existingDraft.body_text,
+      heading_text:
+        normalized?.headingText !== undefined
+          ? normalized.headingText ?? null
+          : existingDraft.heading_text,
+      show_related_names_footer:
+        normalized?.showRelatedNamesFooter !== undefined
+          ? normalized.showRelatedNamesFooter !== false
+          : existingDraft.show_related_names_footer,
       updated_at: new Date().toISOString(),
     };
     if (patch.customEmailsText !== undefined) {
@@ -478,54 +761,138 @@ async function resolveCampaignRecipientEstimate(
 
   let recipients: CampaignRecipient[] = [];
   let blocked: CampaignBlockedRecipient[] = [];
+  const draft = await getCampaignDraft(campaign.id);
+  const betaTokenUsage = getCampaignBetaTokenUsage({
+    subject: draft?.subject ?? defaultCampaignSubject(),
+    bodyText: draft?.body_text ?? defaultCampaignBodyText(),
+    headingText: draft?.heading_text ?? null,
+  });
   if (campaign.source_kind === "zn_waitlist") {
-    const draft = await getCampaignDraft(campaign.id);
-    return estimateWaitlistRecipients({
+    const waitlistEstimate = await estimateWaitlistRecipients({
       audienceScope: campaign.audience_scope,
       dedupeMode: campaign.dedupe_mode,
       baseUrl: baseUrl(),
       selectedEmailsText: draft?.custom_emails_text,
+    });
+    if (
+      !betaTokenUsage.usesBetaDisplayName &&
+      !betaTokenUsage.usesBetaInviteCode &&
+      !betaTokenUsage.usesBetaInviteLink
+    ) return waitlistEstimate;
+
+    const waitlistRecipients = await listWaitlistRecipients({
+      audienceScope: campaign.audience_scope,
+      dedupeMode: campaign.dedupe_mode,
+      baseUrl: baseUrl(),
+      selectedEmailsText: draft?.custom_emails_text,
+    });
+    return applyBetaInviteTokenRules({
+      estimate: {
+        count: waitlistRecipients.length,
+        sample: waitlistRecipients,
+        blocked: waitlistEstimate.blocked,
+      },
+      betaTokenUsage,
+      baseUrl: baseUrl(),
     });
   }
 
   if (campaign.source_kind === "email_subscribers") {
     recipients = await resolveSubscriberRecipients(campaign.series.trim());
-    return { count: recipients.length, sample: recipients, blocked: [] };
+    const suppressedEstimate = await applySuppressionFilterToEstimate({
+      count: recipients.length,
+      sample: recipients,
+      blocked: [],
+    });
+    return applyBetaInviteTokenRules({
+      estimate: suppressedEstimate,
+      betaTokenUsage,
+      baseUrl: baseUrl(),
+    });
   }
 
-  const draft = await getCampaignDraft(campaign.id);
   const customEstimate = await resolveCustomEmailRecipients(
     campaign.series,
     draft?.custom_emails_text,
   );
-  recipients = customEstimate.sample;
-  blocked = customEstimate.blocked;
-  return { count: recipients.length, sample: recipients, blocked };
+  const filteredEstimate = await applySuppressionFilterToEstimate(customEstimate);
+  recipients = filteredEstimate.sample;
+  blocked = filteredEstimate.blocked;
+  return applyBetaInviteTokenRules({
+    estimate: { count: recipients.length, sample: recipients, blocked },
+    betaTokenUsage,
+    baseUrl: baseUrl(),
+  });
 }
 
 async function resolveCampaignPreviewRecipient(
   campaign: CampaignRecord,
 ): Promise<CampaignRecipient | null> {
+  const draft = await getCampaignDraft(campaign.id);
+  const betaTokenUsage = getCampaignBetaTokenUsage({
+    subject: draft?.subject ?? defaultCampaignSubject(),
+    bodyText: draft?.body_text ?? defaultCampaignBodyText(),
+    headingText: draft?.heading_text ?? null,
+  });
+
   if (campaign.source_kind === "zn_waitlist") {
-    const draft = await getCampaignDraft(campaign.id);
-    return getWaitlistRecipientSample({
+    const recipient = await getWaitlistRecipientSample({
       audienceScope: campaign.audience_scope,
       dedupeMode: campaign.dedupe_mode,
       baseUrl: baseUrl(),
       selectedEmailsText: draft?.custom_emails_text,
     });
+    if (
+      !recipient ||
+      (!betaTokenUsage.usesBetaDisplayName &&
+        !betaTokenUsage.usesBetaInviteCode &&
+        !betaTokenUsage.usesBetaInviteLink)
+    ) return recipient;
+    const betaInviteByEmail = await getBetaInviteDataByEmail({
+      emails: [recipient.normalizedEmail],
+      baseUrl: baseUrl(),
+    });
+    return {
+      ...recipient,
+      personalization: withBetaInvitePersonalization(
+        recipient.personalization,
+        betaInviteByEmail.get(recipient.normalizedEmail) ?? null,
+      ),
+    };
   }
 
   if (campaign.source_kind === "email_subscribers") {
     if (!isSupportedCampaignSeries(campaign.series)) {
       throw new Error(`Unsupported campaign series: ${campaign.series}`);
     }
-    return resolveSubscriberPreviewRecipient(campaign.series.trim());
+    const recipient = await resolveSubscriberPreviewRecipient(campaign.series.trim());
+    if (
+      !recipient ||
+      (!betaTokenUsage.usesBetaDisplayName &&
+        !betaTokenUsage.usesBetaInviteCode &&
+        !betaTokenUsage.usesBetaInviteLink)
+    ) return recipient;
+    const betaInviteByEmail = await getBetaInviteDataByEmail({
+      emails: [recipient.normalizedEmail],
+      baseUrl: baseUrl(),
+    });
+    return {
+      ...recipient,
+      personalization: withBetaInvitePersonalization(
+        recipient.personalization,
+        betaInviteByEmail.get(recipient.normalizedEmail) ?? null,
+      ),
+    };
   }
 
-  const draft = await getCampaignDraft(campaign.id);
   const estimate = await resolveCustomEmailRecipients(campaign.series, draft?.custom_emails_text);
-  return estimate.sample[0] ?? null;
+  const filteredEstimate = await applySuppressionFilterToEstimate(estimate);
+  const betaFilteredEstimate = await applyBetaInviteTokenRules({
+    estimate: filteredEstimate,
+    betaTokenUsage,
+    baseUrl: baseUrl(),
+  });
+  return betaFilteredEstimate.sample[0] ?? null;
 }
 
 async function snapshotWaitlistCampaignRecipientsViaRpc(args: {
@@ -666,6 +1033,41 @@ export async function getCampaignPreviewRecipient(
   return resolveCampaignPreviewRecipient(campaign);
 }
 
+async function removeSuppressedPendingSnapshots(campaignId: string): Promise<void> {
+  const snapshots = await listCampaignRecipientSnapshots(campaignId);
+  const pendingSnapshots = snapshots.filter((snapshot) => snapshot.send_status === "pending");
+  if (pendingSnapshots.length === 0) return;
+
+  const suppressedEmails = await listActiveSuppressedEmailSet(
+    pendingSnapshots.map((snapshot) => snapshot.normalized_email),
+  );
+  if (suppressedEmails.size === 0) return;
+
+  const normalizedEmails = [...suppressedEmails];
+  const { error: deleteError } = await db
+    .from("campaign_recipient_snapshots")
+    .delete()
+    .eq("campaign_id", campaignId)
+    .eq("send_status", "pending")
+    .in("normalized_email", normalizedEmails);
+  if (deleteError) throw new Error(deleteError.message);
+
+  const { count, error: countError } = await db
+    .from("campaign_recipient_snapshots")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaignId);
+  if (countError) throw new Error(countError.message);
+
+  const { error: campaignError } = await db
+    .from("campaigns")
+    .update({
+      recipient_count: count ?? 0,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", campaignId);
+  if (campaignError) throw new Error(campaignError.message);
+}
+
 export async function snapshotCampaignRecipients(campaignId: string): Promise<CampaignRecipientSnapshotRecord[]> {
   const campaign = await getCampaign(campaignId);
   if (!campaign) throw new Error("Campaign not found.");
@@ -678,6 +1080,8 @@ export async function snapshotCampaignRecipients(campaignId: string): Promise<Ca
       dedupeMode: campaign.dedupe_mode,
       selectedEmailsText: draft?.custom_emails_text,
     });
+    await enrichPendingSnapshotPersonalization(campaignId, draft);
+    await removeSuppressedPendingSnapshots(campaignId);
     return listCampaignRecipientSnapshots(campaignId);
   }
 
@@ -687,6 +1091,8 @@ export async function snapshotCampaignRecipients(campaignId: string): Promise<Ca
     series: campaign.series,
     customEmailsText: draft?.custom_emails_text,
   });
+  await enrichPendingSnapshotPersonalization(campaignId, draft);
+  await removeSuppressedPendingSnapshots(campaignId);
   return listCampaignRecipientSnapshots(campaignId);
 }
 
@@ -829,6 +1235,21 @@ export async function cancelCampaignDelivery(campaignId: string): Promise<void> 
     if (batches.length === 0) {
       const scheduledAttempts = await listScheduledCampaignAttempts(campaignId);
       if (scheduledAttempts.length > 0) {
+        const providerSchedule = getProviderManagedScheduleState({
+          hasDeliveryBatches: false,
+          acceptedCount: scheduledAttempts.length,
+          scheduledAt: scheduledAttempts[0]?.scheduled_for ?? campaign.scheduled_at ?? null,
+          canceledAt: campaign.delivery_canceled_at,
+        });
+        if (!providerSchedule.cancelable) {
+          if (providerSchedule.pastDue) {
+            throw new Error(
+              "Scheduled provider delivery can no longer be canceled because its scheduled send time has already passed.",
+            );
+          }
+          throw new Error("Scheduled provider delivery cannot be canceled.");
+        }
+
         let firstError: string | null = null;
 
         for (const attempt of scheduledAttempts) {
@@ -904,6 +1325,56 @@ export async function cancelCampaignDelivery(campaignId: string): Promise<void> 
   } catch (error) {
     throw normalizeCampaignDeliveryError(error);
   }
+}
+
+export async function requeueFailedCampaignRecipients(
+  campaignId: string,
+  options?: {
+    startAt?: string | null;
+    batchSize?: number;
+    intervalMinutes?: number;
+  },
+): Promise<CampaignDeliveryBatchRecord[]> {
+  const campaign = await getCampaign(campaignId);
+  if (!campaign) throw new Error("Campaign not found.");
+
+  const retryAt = options?.startAt ?? new Date().toISOString();
+  const resetAt = new Date().toISOString();
+  const { data, error } = await db
+    .from("campaign_recipient_snapshots")
+    .update({
+      send_status: "pending",
+      sent_at: null,
+      last_error: null,
+      campaign_delivery_batch_id: null,
+    })
+    .eq("campaign_id", campaignId)
+    .eq("send_status", "failed")
+    .select("id");
+  if (error) throw new Error(error.message);
+
+  const retriedCount = (data ?? []).length;
+  if (retriedCount === 0) {
+    throw new Error("No failed recipients are available to retry.");
+  }
+
+  const { error: campaignError } = await db
+    .from("campaigns")
+    .update({
+      delivery_paused_at: null,
+      delivery_canceled_at: null,
+      send_completed_at: null,
+      scheduled_at: retryAt,
+      updated_at: resetAt,
+    })
+    .eq("id", campaignId);
+  if (campaignError) throw new Error(campaignError.message);
+
+  return createCampaignDeliveryBatches(campaignId, {
+    startAt: retryAt,
+    batchSize: options?.batchSize,
+    intervalMinutes: options?.intervalMinutes,
+  });
 }
 
 async function listBatchSnapshots(batchId: string): Promise<CampaignRecipientSnapshotRecord[]> {
@@ -990,6 +1461,11 @@ export async function scheduleCampaignWithResend(
 
   const referralStatsContext =
     campaign.source_kind === "zn_waitlist" ? await buildCampaignReferralStatsContext() : null;
+  const betaTokenUsage = getCampaignBetaTokenUsage({
+    subject: draft.subject,
+    bodyText: draft.body_text,
+    headingText: draft.heading_text,
+  });
   const includeUnsubscribe = shouldIncludeUnsubscribe(
     campaign.source_kind,
     campaign.series,
@@ -1017,12 +1493,31 @@ export async function scheduleCampaignWithResend(
               : null,
           )
         : withCampaignReferralStats(snapshot.personalization, null);
+      const tokenValidationError = validateRequiredCampaignTokens({
+      betaTokenUsage,
+      personalization,
+    });
+    if (tokenValidationError) {
+      if (!firstError) firstError = tokenValidationError;
+      await recordCampaignAttempt({
+        campaignId,
+        snapshotId: snapshot.id,
+        email: snapshot.email,
+        status: "failed",
+        error: tokenValidationError,
+        personalization,
+      });
+      failedCount += 1;
+      continue;
+    }
 
     try {
       const result = await sendCampaignEmail({
         to: snapshot.email,
         subject: draft.subject,
         bodyText: draft.body_text,
+        headingText: draft.heading_text,
+        showRelatedNamesFooter: draft.show_related_names_footer,
         personalization,
         series: deliverySeries,
         includeUnsubscribe,
@@ -1108,6 +1603,11 @@ async function drainSpecificCampaignBatch(batch: {
     if (!draft) throw new Error("Campaign draft not found.");
     const referralStatsContext =
       campaign.source_kind === "zn_waitlist" ? await buildCampaignReferralStatsContext() : null;
+    const betaTokenUsage = getCampaignBetaTokenUsage({
+      subject: draft.subject,
+      bodyText: draft.body_text,
+      headingText: draft.heading_text,
+    });
     const includeUnsubscribe = shouldIncludeUnsubscribe(
       campaign.source_kind,
       campaign.series,
@@ -1128,7 +1628,6 @@ async function drainSpecificCampaignBatch(batch: {
       snapshot: CampaignRecipientSnapshotRecord;
       personalization: CampaignRecipientSnapshotRecord["personalization"];
       sendArgs: CampaignSendEmailArgs;
-      batchPayload: Awaited<ReturnType<typeof buildCampaignBatchEmailPayload>>;
     }> = [];
 
     for (const snapshot of snapshots) {
@@ -1145,15 +1644,32 @@ async function drainSpecificCampaignBatch(batch: {
         to: snapshot.email,
         subject: draft.subject,
         bodyText: draft.body_text,
+        headingText: draft.heading_text,
+        showRelatedNamesFooter: draft.show_related_names_footer,
         personalization,
         series: deliverySeries,
         includeUnsubscribe,
         skipConsentCheck,
       };
+      const tokenValidationError = validateRequiredCampaignTokens({
+        betaTokenUsage,
+        personalization,
+      });
+      if (tokenValidationError) {
+        await recordCampaignAttempt({
+          campaignId: batch.campaign_id,
+          snapshotId: snapshot.id,
+          email: snapshot.email,
+          status: "failed",
+          error: tokenValidationError,
+          personalization,
+        });
+        failedCount += 1;
+        continue;
+      }
 
       try {
-        const batchPayload = await buildCampaignBatchEmailPayload(sendArgs);
-        prepared.push({ snapshot, personalization, sendArgs, batchPayload });
+        prepared.push({ snapshot, personalization, sendArgs });
       } catch (prepError) {
         const message = extractErrorMessage(prepError).slice(0, 1000);
         await recordCampaignAttempt({
@@ -1168,48 +1684,29 @@ async function drainSpecificCampaignBatch(batch: {
       }
     }
 
-    try {
-      if (prepared.length > 0) {
-        const results = await sendCampaignEmailBatch(prepared.map((entry) => entry.batchPayload));
-        for (let index = 0; index < prepared.length; index += 1) {
-          const entry = prepared[index];
-          const result = results[index];
-          await recordCampaignAttempt({
-            campaignId: batch.campaign_id,
-            snapshotId: entry.snapshot.id,
-            email: entry.snapshot.email,
-            status: "sent",
-            providerMessageId: result?.id ?? null,
-            personalization: entry.personalization,
-          });
-          sentCount += 1;
-        }
-      }
-    } catch (batchError) {
-      for (const entry of prepared) {
-        try {
-          const result = await sendCampaignEmail(entry.sendArgs);
-          await recordCampaignAttempt({
-            campaignId: batch.campaign_id,
-            snapshotId: entry.snapshot.id,
-            email: entry.snapshot.email,
-            status: "sent",
-            providerMessageId: result.id ?? null,
-            personalization: entry.personalization,
-          });
-          sentCount += 1;
-        } catch (error) {
-          const message = extractErrorMessage(error ?? batchError).slice(0, 1000);
-          await recordCampaignAttempt({
-            campaignId: batch.campaign_id,
-            snapshotId: entry.snapshot.id,
-            email: entry.snapshot.email,
-            status: "failed",
-            error: message,
-            personalization: entry.personalization,
-          });
-          failedCount += 1;
-        }
+    for (const entry of prepared) {
+      try {
+        const result = await sendCampaignEmail(entry.sendArgs);
+        await recordCampaignAttempt({
+          campaignId: batch.campaign_id,
+          snapshotId: entry.snapshot.id,
+          email: entry.snapshot.email,
+          status: "sent",
+          providerMessageId: result.id ?? null,
+          personalization: entry.personalization,
+        });
+        sentCount += 1;
+      } catch (error) {
+        const message = extractErrorMessage(error).slice(0, 1000);
+        await recordCampaignAttempt({
+          campaignId: batch.campaign_id,
+          snapshotId: entry.snapshot.id,
+          email: entry.snapshot.email,
+          status: "failed",
+          error: message,
+          personalization: entry.personalization,
+        });
+        failedCount += 1;
       }
     }
 
@@ -1434,32 +1931,81 @@ export async function recordCampaignAttempt(args: {
   if (snapshotError) throw new Error(snapshotError.message);
 }
 
-export async function listCampaignAttempts(campaignId: string): Promise<
-  Array<{
-    id: string;
-    recipient_snapshot_id: string;
-    email: string;
-    status: string;
-    provider_message_id: string | null;
-    scheduled_for: string | null;
-    error: string | null;
-    attempted_at: string;
-  }>
-> {
+function mapCampaignSendAttempt(
+  row: Record<string, unknown>,
+): CampaignSendAttemptRecord {
+  return {
+    id: String(row.id),
+    campaign_id: String(row.campaign_id),
+    recipient_snapshot_id: String(row.recipient_snapshot_id),
+    email: String(row.email),
+    status: String(row.status),
+    provider_message_id: row.provider_message_id
+      ? String(row.provider_message_id)
+      : null,
+    scheduled_for: row.scheduled_for ? String(row.scheduled_for) : null,
+    error: row.error ? String(row.error) : null,
+    attempted_at: String(row.attempted_at),
+  };
+}
+
+export async function listCampaignAttempts(
+  campaignId: string,
+): Promise<CampaignSendAttemptRecord[]> {
   const { data, error } = await db
     .from("campaign_send_attempts")
-    .select("id, recipient_snapshot_id, email, status, provider_message_id, scheduled_for, error, attempted_at")
+    .select("id, campaign_id, recipient_snapshot_id, email, status, provider_message_id, scheduled_for, error, attempted_at")
     .eq("campaign_id", campaignId)
     .order("attempted_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []) as Array<{
-    id: string;
-    recipient_snapshot_id: string;
-    email: string;
-    status: string;
-    provider_message_id: string | null;
-    scheduled_for: string | null;
-    error: string | null;
-    attempted_at: string;
-  }>;
+  return ((data ?? []) as Array<Record<string, unknown>>).map(
+    mapCampaignSendAttempt,
+  );
+}
+
+export async function listCampaignAttemptsForCampaignIds(
+  campaignIds: string[],
+): Promise<CampaignSendAttemptRecord[]> {
+  if (campaignIds.length === 0) return [];
+  const { data, error } = await db
+    .from("campaign_send_attempts")
+    .select("id, campaign_id, recipient_snapshot_id, email, status, provider_message_id, scheduled_for, error, attempted_at")
+    .in("campaign_id", campaignIds)
+    .order("attempted_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Array<Record<string, unknown>>).map(
+    mapCampaignSendAttempt,
+  );
+}
+
+export async function listCampaignDeliveryBatchesForCampaignIds(
+  campaignIds: string[],
+): Promise<CampaignDeliveryBatchRecord[]> {
+  if (campaignIds.length === 0) return [];
+  try {
+    const { data, error } = await db
+      .from("campaign_delivery_batches")
+      .select("*")
+      .in("campaign_id", campaignIds)
+      .order("campaign_id", { ascending: true })
+      .order("batch_number", { ascending: true });
+    if (error) throw error;
+    return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      id: String(row.id),
+      campaign_id: String(row.campaign_id),
+      batch_number: Number(row.batch_number),
+      status: row.status as CampaignDeliveryBatchStatus,
+      recipient_count: Number(row.recipient_count ?? 0),
+      sent_count: Number(row.sent_count ?? 0),
+      failed_count: Number(row.failed_count ?? 0),
+      next_eligible_at: row.next_eligible_at ? String(row.next_eligible_at) : null,
+      started_at: row.started_at ? String(row.started_at) : null,
+      completed_at: row.completed_at ? String(row.completed_at) : null,
+      last_error: row.last_error ? String(row.last_error) : null,
+      created_at: String(row.created_at),
+      updated_at: String(row.updated_at),
+    }));
+  } catch (error) {
+    throw normalizeCampaignDeliveryError(error);
+  }
 }

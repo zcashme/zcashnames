@@ -47,6 +47,8 @@ export type CampaignDeliveryBatchStatus =
 export interface CampaignDraftInput {
   subject: string;
   bodyText: string;
+  headingText?: string | null;
+  showRelatedNamesFooter?: boolean;
 }
 
 export interface CampaignRecord {
@@ -87,6 +89,8 @@ export interface CampaignDraftRecord {
   campaign_id: string;
   subject: string;
   body_text: string;
+  heading_text: string | null;
+  show_related_names_footer: boolean;
   custom_emails_text: string | null;
   created_at: string;
   updated_at: string;
@@ -123,6 +127,9 @@ export interface CampaignRecipientPersonalization {
   humanReferralCode: string | null;
   humanReferralUrl: string | null;
   humanDashboardUrl: string | null;
+  betaDisplayName: string | null;
+  betaInviteCode: string | null;
+  betaInviteLink: string | null;
   referralStats: CampaignReferralStats | null;
   relatedNames: string[];
 }
@@ -142,6 +149,8 @@ export const CAMPAIGN_BLOCK_REASONS = [
   "unsubscribed",
   "unconfirmed",
   "not_on_waitlist",
+  "suppressed",
+  "missing_beta_invite",
 ] as const;
 export type CampaignBlockedReason = (typeof CAMPAIGN_BLOCK_REASONS)[number];
 
@@ -187,4 +196,16 @@ export interface CampaignDeliveryBatchRecord {
   last_error: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface CampaignSendAttemptRecord {
+  id: string;
+  campaign_id: string;
+  recipient_snapshot_id: string;
+  email: string;
+  status: string;
+  provider_message_id: string | null;
+  scheduled_for: string | null;
+  error: string | null;
+  attempted_at: string;
 }

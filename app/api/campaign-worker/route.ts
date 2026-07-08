@@ -3,6 +3,10 @@ import {
   drainEligibleCampaignBatches,
   drainNextEligibleCampaignBatch,
 } from "@/lib/campaigns/repository";
+import {
+  markCampaignWorkerFinished,
+  markCampaignWorkerStarted,
+} from "@/lib/campaigns/worker-health";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -40,8 +44,14 @@ async function handleWorkerRequest(request: Request) {
 
   try {
     const campaignId = await readCampaignId(request);
+    await markCampaignWorkerStarted(campaignId);
     if (campaignId) {
       const result = await drainEligibleCampaignBatches(campaignId);
+      await markCampaignWorkerFinished({
+        campaignId,
+        processedCount: result.processedCount,
+        successful: true,
+      });
       return NextResponse.json({
         ok: true,
         campaignId,
@@ -52,10 +62,22 @@ async function handleWorkerRequest(request: Request) {
     }
 
     const result = await drainNextEligibleCampaignBatch();
+    await markCampaignWorkerFinished({
+      campaignId: result.campaignId ?? null,
+      processedCount: result.processed ? 1 : 0,
+      successful: true,
+    });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await markCampaignWorkerFinished({
+      campaignId: null,
+      processedCount: 0,
+      successful: false,
+      error: message,
+    }).catch(() => undefined);
     return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : String(error) },
+      { ok: false, error: message },
       { status: 500 },
     );
   }

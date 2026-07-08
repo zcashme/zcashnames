@@ -61,7 +61,7 @@ export function EmailLayout({
   unsubscribeLinks,
 }: {
   preview: string;
-  headingText: string;
+  headingText?: string | null;
   children: ReactNode;
   headerMark?: EmailHeaderMark;
   unsubscribeLinks?: {
@@ -139,7 +139,7 @@ export function EmailLayout({
             </table>
           </Section>
 
-          <Heading style={headingStyle}>{headingText}</Heading>
+          {headingText?.trim() ? <Heading style={headingStyle}>{headingText}</Heading> : null}
 
           <Hr style={dividerStyle} />
 

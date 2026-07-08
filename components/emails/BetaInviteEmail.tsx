@@ -1,13 +1,13 @@
 import { Button, Hr, Img, Link, Section, Text } from "@react-email/components";
 import { createZcashNamesHeaderMark, EmailLayout } from "./EmailLayout";
-import { content, paragraph, ctaButton, divider } from "@/lib/email/styles";
-import { parseInlineLinks } from "@/lib/campaigns/content";
+import { content, ctaButton, divider } from "@/lib/email/styles";
+import EmailRichBody from "./EmailRichBody";
 
 interface BetaInviteEmailProps {
   displayName: string;
   joinUrl: string;
   inviteCode: string;
-  bodyParagraphs: string[];
+  bodyText: string;
   headingText?: string;
   previewText?: string;
   walletCta?: {
@@ -24,28 +24,10 @@ interface BetaInviteEmailProps {
   walletLogoRow?: { src: string; alt: string; size: number }[] | null;
 }
 
-function Paragraph({ text }: { text: string }) {
-  const parts = parseInlineLinks(text);
-  return (
-    <Text style={paragraph}>
-      {parts.map((part, index) =>
-        part.type === "link" && part.href ? (
-          <Link key={`${part.href}-${index}`} href={part.href} style={{ color: "#F4B728" }}>
-            {part.text}
-          </Link>
-        ) : (
-          <span key={`${part.text}-${index}`}>{part.text}</span>
-        ),
-      )}
-    </Text>
-  );
-}
-
 export default function BetaInviteEmail({
-  displayName,
   joinUrl,
   inviteCode,
-  bodyParagraphs,
+  bodyText,
   headingText = "You're invited",
   previewText = "You've been accepted to the ZcashNames beta.",
   walletCta,
@@ -61,10 +43,7 @@ export default function BetaInviteEmail({
       })}
     >
       <Section style={content}>
-        <Text style={paragraph}>Hi {displayName},</Text>
-        {bodyParagraphs.map((text, index) => (
-          <Paragraph key={`${index}-${text.slice(0, 24)}`} text={text} />
-        ))}
+        <EmailRichBody bodyText={bodyText} />
       </Section>
 
       <Section style={{ textAlign: "center" as const, padding: "8px 40px 20px" }}>

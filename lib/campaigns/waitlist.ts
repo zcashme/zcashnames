@@ -103,6 +103,9 @@ function buildPersonalization(
     humanReferralCode: code,
     humanReferralUrl: code ? `${baseUrl}/?ref=${encodeURIComponent(code)}` : null,
     humanDashboardUrl: code ? `${baseUrl}/leaders/ref/${encodeURIComponent(code)}` : null,
+    betaDisplayName: null,
+    betaInviteCode: null,
+    betaInviteLink: null,
     referralStats: null,
     relatedNames: sorted
       .map((row) => row.name?.trim())
@@ -283,6 +286,9 @@ function sampleRowToRecipient(
       humanDashboardUrl: humanCode
         ? `${baseUrl}/leaders/ref/${encodeURIComponent(humanCode)}`
         : null,
+      betaDisplayName: null,
+      betaInviteCode: null,
+      betaInviteLink: null,
       referralStats: null,
       relatedNames: Array.isArray(row.related_names)
         ? row.related_names.filter((value): value is string => Boolean(value?.trim()))

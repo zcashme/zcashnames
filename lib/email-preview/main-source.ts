@@ -153,7 +153,7 @@ function loadMainDefault<T>(relativePath: string): T {
   return (mod.default ?? mod) as T;
 }
 
-function resolveMainBetaInviteParagraphs(
+function resolveMainBetaInviteBodyText(
   bodyText: string,
   resolveInviteTemplate: (
     body: string,
@@ -164,7 +164,7 @@ function resolveMainBetaInviteParagraphs(
     inviteCode: string;
     joinUrl: string;
   },
-): string[] {
+): string {
   return resolveInviteTemplate(bodyText, personalization)
     .replace(/\r\n?/g, "\n")
     .split(/\n\s*\n/g)
@@ -173,7 +173,12 @@ function resolveMainBetaInviteParagraphs(
     .filter((paragraph) => {
       const normalized = paragraph.toLowerCase();
       return !normalized.startsWith("join link:") && !normalized.startsWith("access code:");
-    });
+    })
+    .filter(
+      (paragraph) =>
+        paragraph.trim().toLowerCase() !== "you're invited to the zcashnames beta.",
+    )
+    .join("\n\n");
 }
 
 function resolveMainWalletCta(
@@ -383,7 +388,7 @@ export async function renderMainEmailPreview(
         displayName: string;
         joinUrl: string;
         inviteCode: string;
-        bodyParagraphs: string[];
+        bodyText: string;
         headingText?: string;
         previewText?: string;
         walletCta?: {
@@ -442,7 +447,7 @@ export async function renderMainEmailPreview(
 
     const resolvedBaseUrl = "https://www.zcashnames.com";
     const resolvedJoinUrl = `${resolvedBaseUrl}/beta/join?code=${encodeURIComponent(inviteCode)}&stage=mainnet`;
-    const bodyParagraphs = resolveMainBetaInviteParagraphs(
+    const bodyText = resolveMainBetaInviteBodyText(
       defaultInviteBody({ displayName }),
       resolveInviteTemplate,
       {
@@ -465,10 +470,6 @@ export async function renderMainEmailPreview(
     const walletLogoRow = walletCta
       ? null
       : resolveMainWalletLogoRow({ WALLET_BRANDS }, resolvedBaseUrl);
-    const resolvedBodyParagraphs = bodyParagraphs.filter(
-      (paragraph) =>
-        paragraph.trim().toLowerCase() !== "you're invited to the zcashnames beta.",
-    );
     const headingText = walletCta ? `You're invited by ${walletCta.walletName}` : "Your invitation";
 
     return render(
@@ -476,7 +477,7 @@ export async function renderMainEmailPreview(
         displayName,
         joinUrl: resolvedJoinUrl,
         inviteCode,
-        bodyParagraphs: resolvedBodyParagraphs,
+        bodyText,
         headingText,
         walletCta,
         walletLogoRow,

@@ -122,14 +122,14 @@ function resolveWalletLogoRow(baseUrl: string): { src: string; alt: string; size
     .filter((logo): logo is { src: string; alt: string; size: number } => logo !== null);
 }
 
-function resolveInviteParagraphs(
+function resolveInviteBodyText(
   bodyText: string,
   personalization: {
     displayName: string;
     inviteCode: string;
     joinUrl: string;
   },
-): string[] {
+): string {
   return resolveInviteTemplate(bodyText, personalization)
     .replace(/\r\n?/g, "\n")
     .split(/\n\s*\n/g)
@@ -138,7 +138,12 @@ function resolveInviteParagraphs(
     .filter((paragraph) => {
       const normalized = paragraph.toLowerCase();
       return !normalized.startsWith("join link:") && !normalized.startsWith("access code:");
-    });
+    })
+    .filter(
+      (paragraph) =>
+        paragraph.trim().toLowerCase() !== "you're invited to the zcashnames beta.",
+    )
+    .join("\n\n");
 }
 
 export async function renderBetaInvitePreview({
@@ -153,16 +158,13 @@ export async function renderBetaInvitePreview({
   const resolvedJoinUrl =
     joinUrl ??
     `${resolvedBaseUrl}/beta/join?code=${encodeURIComponent(inviteCode)}&stage=mainnet`;
-  const bodyParagraphs = resolveInviteParagraphs(bodyText, {
+  const resolvedBodyText = resolveInviteBodyText(bodyText, {
     displayName,
     inviteCode,
     joinUrl: resolvedJoinUrl,
   });
   const walletCta = resolveWalletCta(walletVariantId, resolvedBaseUrl);
   const walletLogoRow = walletCta ? null : resolveWalletLogoRow(resolvedBaseUrl);
-  const resolvedBodyParagraphs = bodyParagraphs.filter(
-    (paragraph) => paragraph.trim().toLowerCase() !== "you're invited to the zcashnames beta.",
-  );
   const headingText = walletCta ? `You're invited by ${walletCta.walletName}` : "Your invitation";
 
   return render(
@@ -170,7 +172,7 @@ export async function renderBetaInvitePreview({
       displayName,
       joinUrl: resolvedJoinUrl,
       inviteCode,
-      bodyParagraphs: resolvedBodyParagraphs,
+      bodyText: resolvedBodyText,
       headingText,
       walletCta,
       walletLogoRow,

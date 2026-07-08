@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CampaignEditor from "@/components/admin/campaigns/CampaignEditor";
-import { campaignDraftUsesLiveStats } from "@/lib/campaigns/content";
+import CampaignQuickActions from "@/components/admin/campaigns/CampaignQuickActions";
+import {
+  campaignDraftUsesBetaInviteTokens,
+  campaignDraftUsesLiveStats,
+} from "@/lib/campaigns/content";
+import { sampleBetaInviteData } from "@/lib/campaigns/beta-invite";
 import {
   defaultScheduledSendIso,
   formatEasternDateTimeInput,
@@ -78,6 +83,9 @@ export default async function CampaignDraftDetailPage({
     humanReferralCode: "josh",
     humanReferralUrl: "https://zcashnames.com/?ref=josh",
     humanDashboardUrl: "https://zcashnames.com/leaders/ref/josh",
+    betaDisplayName: null,
+    betaInviteCode: null,
+    betaInviteLink: null,
     referralStats: null,
     relatedNames: ["Josh"],
   };
@@ -86,6 +94,7 @@ export default async function CampaignDraftDetailPage({
     campaignDraftUsesLiveStats({
       subject: draft.subject,
       bodyText: draft.body_text,
+      headingText: draft.heading_text,
     })
   ) {
     personalization = await enrichCampaignPreviewPersonalization(
@@ -93,9 +102,24 @@ export default async function CampaignDraftDetailPage({
       campaign.source_kind,
     );
   }
+  if (
+    campaignDraftUsesBetaInviteTokens({
+      subject: draft.subject,
+      bodyText: draft.body_text,
+      headingText: draft.heading_text,
+    }) &&
+    !personalization.betaInviteCode
+  ) {
+    personalization = {
+      ...personalization,
+      ...sampleBetaInviteData(),
+    };
+  }
   const previewHtml = await renderCampaignPreview({
     subject: draft.subject,
     bodyText: draft.body_text,
+    headingText: draft.heading_text,
+    showRelatedNamesFooter: draft.show_related_names_footer,
     personalization,
     includeUnsubscribe: shouldIncludeUnsubscribe(
       campaign.source_kind,
@@ -111,6 +135,14 @@ export default async function CampaignDraftDetailPage({
           Back to drafts
         </Link>
       </div>
+      <CampaignQuickActions
+        campaignId={campaign.id}
+        editHref={`/admin/campaigns/drafts/${encodeURIComponent(campaign.id)}`}
+        showEdit={false}
+        allowDuplicate
+        allowDelete={campaign.status === "draft"}
+        deleteRedirectHref="/admin/campaigns/drafts"
+      />
       <CampaignEditor
         campaignId={campaign.id}
         initialTitle={campaign.title}
@@ -123,6 +155,8 @@ export default async function CampaignDraftDetailPage({
         initialSeriesOptions={seriesOptions}
         initialCustomEmailsText={draft.custom_emails_text ?? ""}
         initialSubject={draft.subject}
+        initialHeadingText={draft.heading_text}
+        initialShowRelatedNamesFooter={draft.show_related_names_footer}
         initialBodyText={draft.body_text}
         initialPreviewHtml={previewHtml}
         initialRecipientCount={campaign.recipient_count}

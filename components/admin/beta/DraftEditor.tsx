@@ -289,9 +289,49 @@ export default function DraftEditor(props: DraftEditorProps) {
 
           <label className="flex flex-col gap-1 text-sm text-zinc-300">
             <span className="text-xs uppercase tracking-wide text-zinc-500">
-              Body — paragraphs separated by blank lines · inline links use{" "}
+              Body - blank lines split paragraphs - use{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">
+                **bold**
+              </code>
+              ,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">
+                *italic*
+              </code>
+              ,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">
+                __underline__
+              </code>
+              ,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">
+                # Heading
+              </code>
+              ,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">
+                ## center: Heading
+              </code>
+              ,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">
+                ![alt](https://...)
+              </code>
+              ,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">
+                [![alt](https://...)](https://...)
+              </code>
+              ,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">
+                ---
+              </code>
+              ,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">
                 [text](url)
+              </code>
+              ,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">
+                :::box
+              </code>
+              ,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">
+                :::codebox
               </code>
             </span>
             <textarea
@@ -300,6 +340,21 @@ export default function DraftEditor(props: DraftEditorProps) {
               rows={22}
               className="min-h-[400px] resize-y rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 font-mono text-[13px] leading-relaxed text-zinc-100 outline-none focus:border-amber-500"
             />
+            <span className="text-xs text-zinc-500">
+              Use <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::box</code> for a filled callout and{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::codebox</code> for an access-code style block. Optional alignment:
+              {" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::box justify</code>
+              {" "}
+              or
+              {" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::codebox left</code>. Headers support{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">left:</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">center:</code>, and{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">justify:</code>. Put{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">---</code>{" "}
+              on its own line for a divider.
+            </span>
           </label>
 
           <div className="flex items-center justify-between text-xs text-zinc-500">

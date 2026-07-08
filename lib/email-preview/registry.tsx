@@ -360,6 +360,9 @@ export function getEmailPreviewRegistry(): EmailPreviewRegistryEntry[] {
               humanReferralCode: null,
               humanReferralUrl: null,
               humanDashboardUrl: null,
+              betaDisplayName: null,
+              betaInviteCode: null,
+              betaInviteLink: null,
               referralStats: null,
               relatedNames: ["Josh", "Jswihart"],
             }}

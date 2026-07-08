@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  scheduleCampaignWithResend,
-  createCampaignDeliveryBatches,
   createCampaignDraft,
   DEFAULT_DELIVERY_BATCH_INTERVAL_MINUTES,
   DEFAULT_DELIVERY_BATCH_SIZE,
+  createCampaignDeliveryBatches,
+  drainEligibleCampaignBatches,
+  deleteCampaignDraftSafely,
+  duplicateCampaignDraft,
   estimateCampaignRecipients,
   getCampaign,
   getCampaignPreviewRecipient,
@@ -15,7 +17,9 @@ import {
   listCampaignDeliveryBatches,
   pauseCampaignDelivery,
   cancelCampaignDelivery,
+  requeueFailedCampaignRecipients,
   resumeCampaignDelivery,
+  scheduleCampaignWithResend,
   updateCampaignDraft,
 } from "@/lib/campaigns/repository";
 import type {
@@ -27,7 +31,13 @@ import type {
   CampaignTargetSeries,
   CampaignSourceKind,
 } from "@/lib/campaigns/types";
+import {
+  clearCampaignSuppression,
+  suppressCampaignEmail,
+} from "@/lib/campaigns/suppression";
 import { campaignDraftUsesLiveStats } from "@/lib/campaigns/content";
+import { campaignDraftUsesBetaInviteTokens } from "@/lib/campaigns/content";
+import { sampleBetaInviteData } from "@/lib/campaigns/beta-invite";
 import {
   renderCampaignPreview,
   enrichCampaignPreviewPersonalization,
@@ -260,6 +270,8 @@ export async function saveCampaignAction(
     customEmailsText: string;
     subject: string;
     bodyText: string;
+    headingText: string | null;
+    showRelatedNamesFooter: boolean;
   },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
@@ -272,7 +284,12 @@ export async function saveCampaignAction(
       dedupeMode: patch.dedupeMode,
       personalizationMode: patch.personalizationMode,
       customEmailsText: patch.customEmailsText,
-      draft: { subject: patch.subject, bodyText: patch.bodyText },
+      draft: {
+        subject: patch.subject,
+        bodyText: patch.bodyText,
+        headingText: patch.headingText,
+        showRelatedNamesFooter: patch.showRelatedNamesFooter,
+      },
     });
     revalidateCampaignPaths(campaignId);
     return { ok: true };
@@ -283,7 +300,12 @@ export async function saveCampaignAction(
 
 export async function renderCampaignPreviewAction(
   campaignId: string,
-  draft: { subject: string; bodyText: string },
+  draft: {
+    subject: string;
+    bodyText: string;
+    headingText?: string | null;
+    showRelatedNamesFooter?: boolean;
+  },
   options?: { hydrateLiveStats?: boolean },
 ): Promise<string> {
   const campaign = await getCampaign(campaignId);
@@ -296,6 +318,9 @@ export async function renderCampaignPreviewAction(
     humanReferralCode: "josh",
     humanReferralUrl: "https://zcashnames.com/?ref=josh",
     humanDashboardUrl: "https://zcashnames.com/leaders/ref/josh",
+    betaDisplayName: null,
+    betaInviteCode: null,
+    betaInviteLink: null,
     referralStats: null,
     relatedNames: ["Josh"],
   };
@@ -314,9 +339,20 @@ export async function renderCampaignPreviewAction(
       campaign.source_kind,
     );
   }
+  if (
+    campaignDraftUsesBetaInviteTokens(draft) &&
+    !personalization.betaInviteCode
+  ) {
+    personalization = {
+      ...personalization,
+      ...sampleBetaInviteData(),
+    };
+  }
   return renderCampaignPreview({
     subject: draft.subject,
     bodyText: draft.bodyText,
+    headingText: draft.headingText ?? null,
+    showRelatedNamesFooter: draft.showRelatedNamesFooter !== false,
     personalization,
     includeUnsubscribe: shouldIncludeUnsubscribe(
       campaign.source_kind,
@@ -355,6 +391,30 @@ export async function estimateCampaignRecipientsAction(
       })),
       generatedAt: new Date().toISOString(),
     };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function duplicateCampaignAction(
+  campaignId: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  try {
+    const campaign = await duplicateCampaignDraft(campaignId);
+    revalidateCampaignPaths(campaign.id);
+    return { ok: true, id: campaign.id };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function deleteCampaignDraftAction(
+  campaignId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await deleteCampaignDraftSafely(campaignId);
+    revalidateCampaignPaths(campaignId);
+    return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
@@ -449,13 +509,21 @@ export async function sendCampaignAction(
       batchSize: DEFAULT_DELIVERY_BATCH_SIZE,
       intervalMinutes: 0,
     });
+    await drainEligibleCampaignBatches(campaignId);
     const summary = await summarizeCampaignDelivery(campaignId);
+    const delivery = buildDeliveryMessage({
+      mode: "immediate",
+      batchCount: summary.batchCount,
+      sentCount: summary.sentCount,
+      failedCount: summary.failedCount,
+      pendingCount: summary.pendingCount,
+    });
     revalidateCampaignPaths(campaignId);
     return {
       ok: true,
       mode: "immediate",
-      outcome: "processing",
-      message: `Send requested. ${summary.batchCount} batch${summary.batchCount === 1 ? "" : "es"} created and queued for immediate delivery.`,
+      outcome: delivery.outcome,
+      message: delivery.message,
       batchCount: summary.batchCount,
       sentCount: summary.sentCount,
       failedCount: summary.failedCount,
@@ -540,6 +608,59 @@ export async function cancelCampaignAction(
     await cancelCampaignDelivery(campaignId);
     revalidateCampaignPaths(campaignId);
     return { ok: true, delivery: await getCampaignDeliveryState(campaignId) };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function retryFailedCampaignAction(
+  campaignId: string,
+): Promise<
+  | { ok: true; delivery: CampaignDeliveryState; message: string }
+  | { ok: false; error: string }
+> {
+  try {
+    const batches = await requeueFailedCampaignRecipients(campaignId, {
+      startAt: new Date().toISOString(),
+      batchSize: DEFAULT_DELIVERY_BATCH_SIZE,
+      intervalMinutes: 0,
+    });
+    revalidateCampaignPaths(campaignId);
+    return {
+      ok: true,
+      delivery: await getCampaignDeliveryState(campaignId),
+      message: `Retry queued for ${batches.length} batch${batches.length === 1 ? "" : "es"}.`,
+    };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function suppressCampaignEmailAction(
+  email: string,
+  notes?: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await suppressCampaignEmail({
+      email,
+      reason: "manual_block",
+      source: "admin_campaigns",
+      notes: notes ?? null,
+    });
+    revalidateCampaignPaths();
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function clearCampaignSuppressionAction(
+  suppressionId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await clearCampaignSuppression(suppressionId);
+    revalidateCampaignPaths();
+    return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
