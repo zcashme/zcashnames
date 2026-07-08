@@ -77,7 +77,7 @@ export type ReferinfoDraftBundle = {
   reportWindow: ReferinfoReportWindow;
   thread: {
     rootKind: ReferinfoCaptionPolicy["rootKind"];
-    xThreadMode: ReferinfoCaptionPolicy["xThreadMode"];
+    xThreadMode: "linear" | "root_only";
     telegramDeliveryMode: ReferinfoCaptionPolicy["telegramDeliveryMode"];
   };
   posts: DraftPost[];
@@ -167,8 +167,9 @@ function buildConfigSummary(args: {
   policy: ReferinfoCaptionPolicy;
   kind: ReferinfoPostKind;
   order: number;
+  xThreadMode?: "linear" | "root_only";
 }): string {
-  return `Order ${args.order + 1}/${args.policy.postOrder.length}; root ${args.policy.rootKind}; X thread ${args.policy.xThreadMode}; Telegram ${args.policy.telegramDeliveryMode}; template ${args.kind}`;
+  return `Order ${args.order + 1}/${args.policy.postOrder.length}; root ${args.policy.rootKind}; X thread ${args.xThreadMode ?? args.policy.xThreadMode}; Telegram ${args.policy.telegramDeliveryMode}; template ${args.kind}`;
 }
 
 function interpolateTemplate(template: string, tokens: Record<string, string>): string {
@@ -565,6 +566,7 @@ function buildLeaderChanges(args: {
   rows: LeaderComparison[];
   caption: string;
   metricsSummary: string;
+  weeklyLeaderDirectReferrals: number;
 } {
   const rewardCurrentByCode = new Map(args.rankingCurrent.map((entry) => [entry.referralCode, entry]));
   const weeklyCurrent = [...args.targetWeekMetrics.entries()]
@@ -646,6 +648,7 @@ function buildLeaderChanges(args: {
     metricsSummary: rows
       .map((row) => `${row.period}: ${row.currentDisplayCode} | prev ${row.previousDisplayCode ?? "none"} | ${row.totalRewards != null ? `${formatZec(row.totalRewards)} $ZEC` : "N/A"}`)
       .join(" ; "),
+    weeklyLeaderDirectReferrals: weeklyCurrent?.[1].directWeekly ?? 0,
   };
 }
 
@@ -663,6 +666,7 @@ function buildSummaryTop10Caption(args: {
   topNewcomerDisplayCode: string | null;
   weeklyLeaderChanged: boolean;
   weeklyLeaderDisplayCode: string | null;
+  standalone: boolean;
 }): string {
   const opener = args.allTimeLeader
     ? `${args.allTimeLeader.displayCode} still leads the all-time rewards board at ${formatZec(args.allTimeLeader.potentialRewards)} $ZEC for making ${formatInteger(args.allTimeLeader.attributedReferrals)} referrals (${formatInteger(args.allTimeLeader.directReferrals)} direct and ${formatInteger(args.allTimeLeader.indirectReferrals)} indirect)`
@@ -677,6 +681,12 @@ function buildSummaryTop10Caption(args: {
   const middle = actionClauses.length > 0
     ? `${opener}, but there was much more action this week: ${joinClauses(actionClauses)}.`
     : `${opener}.`;
+
+  if (args.standalone) {
+    return actionClauses.length > 0
+      ? `${opener}. This week, ${joinClauses(actionClauses)}.`
+      : `${opener}.`;
+  }
 
   return `${middle} More below.`;
 }
@@ -764,6 +774,7 @@ export async function buildReferinfoDraftBundle(args: {
     reportWindow,
   });
 
+  let xThreadMode: "linear" | "root_only" = args.policy.xThreadMode;
   const posts: DraftPost[] = [];
   const top10Template = pickTemplate(args.policy, "summary_top10");
   const top10Rows = rankingCurrent.slice(0, 10);
@@ -775,7 +786,7 @@ export async function buildReferinfoDraftBundle(args: {
     caption: interpolateTemplate(top10Template.captionTemplate, {
       weekLabel: reportWindow.weekLabel,
     }).trim(),
-    configSummary: buildConfigSummary({ policy: args.policy, kind: "summary_top10", order: 0 }),
+    configSummary: buildConfigSummary({ policy: args.policy, kind: "summary_top10", order: 0, xThreadMode }),
     metricsSummary: top10Rows[0]
       ? `Leader: ${top10Rows[0].name} (${top10Rows[0].displayCode}) at ${formatZec(top10Rows[0].potentialRewards)} $ZEC`
       : "No ranked rows available.",
@@ -846,7 +857,7 @@ export async function buildReferinfoDraftBundle(args: {
     title: moversTemplate.title,
     subtitle: moversTemplate.subtitle,
     caption: moverCaption,
-    configSummary: buildConfigSummary({ policy: args.policy, kind: "top_movers", order: 1 }),
+    configSummary: buildConfigSummary({ policy: args.policy, kind: "top_movers", order: 1, xThreadMode }),
     metricsSummary: topMover
       ? `${topMover.displayCode}: ${formatSignedInteger(topMover.delta)} referrals vs prior week; ${formatZecDelta(topMover.rewardDelta)} $ZEC`
       : "No mover metrics available.",
@@ -916,7 +927,7 @@ export async function buildReferinfoDraftBundle(args: {
           rewardDelta: formatZecDelta(topNewcomer.rewardDelta),
         }).trim()
       : "No new referrers broke onto the board this week.",
-    configSummary: buildConfigSummary({ policy: args.policy, kind: "top_newcomers", order: 2 }),
+    configSummary: buildConfigSummary({ policy: args.policy, kind: "top_newcomers", order: 2, xThreadMode }),
     metricsSummary: topNewcomer
       ? `${displayCodeMap[topNewcomer.summary.referralCode] ?? topNewcomer.summary.referralCode}: ${formatInteger(topNewcomer.metrics.attributedWeekly)} referrals; ${formatZecDelta(topNewcomer.rewardDelta)} $ZEC`
       : "No newcomer-qualified codes for the completed week.",
@@ -970,6 +981,15 @@ export async function buildReferinfoDraftBundle(args: {
   const topIndirect = indirectCandidates[0] ?? null;
   const indirectTemplate = pickTemplate(args.policy, "top_indirect");
   const hasIndirectMomentum = indirectCandidates.some((entry) => entry.metrics.indirectWeekly > 0);
+  const qualifyingMovers = moverCandidates.filter((entry) => entry.currentMetrics.attributedWeekly >= 3);
+  const topMoversMeaningful = (topMover?.currentMetrics.attributedWeekly ?? 0) >= 3 && qualifyingMovers.length > 1;
+  const topNewcomersMeaningful = newcomerCandidates.length >= 2;
+  const qualifyingIndirectCandidates = indirectCandidates.filter((entry) => entry.metrics.indirectWeekly > 0);
+  const topIndirectMeaningful = (topIndirect?.metrics.indirectWeekly ?? 0) >= 2 && qualifyingIndirectCandidates.length >= 2;
+  const leaderChangesMeaningful = leaderChanges.weeklyLeaderDirectReferrals >= 3;
+  xThreadMode = topMoversMeaningful && topNewcomersMeaningful && topIndirectMeaningful && leaderChangesMeaningful
+    ? "linear"
+    : "root_only";
   posts.push({
     kind: "top_indirect",
     order: 3,
@@ -983,7 +1003,7 @@ export async function buildReferinfoDraftBundle(args: {
           totalRewards: formatZec(topIndirect.potentialRewards),
         }).trim()
       : "No second-order-or-deeper referrals landed during the completed week.",
-    configSummary: buildConfigSummary({ policy: args.policy, kind: "top_indirect", order: 3 }),
+    configSummary: buildConfigSummary({ policy: args.policy, kind: "top_indirect", order: 3, xThreadMode }),
     metricsSummary: topIndirect
       ? `${topIndirect.displayCode}: ${formatInteger(topIndirect.metrics.indirectWeekly)} indirect referrals; ${formatZecDelta(topIndirect.rewardDelta)} $ZEC`
       : "No indirect metrics available.",
@@ -1026,7 +1046,7 @@ export async function buildReferinfoDraftBundle(args: {
     caption: interpolateTemplate(leaderTemplate.captionTemplate, {
       leaderChangesCaption: leaderChanges.caption,
     }).trim(),
-    configSummary: buildConfigSummary({ policy: args.policy, kind: "leader_changes", order: 4 }),
+    configSummary: buildConfigSummary({ policy: args.policy, kind: "leader_changes", order: 4, xThreadMode }),
     metricsSummary: leaderChanges.metricsSummary,
     table: {
       columns: [
@@ -1053,7 +1073,7 @@ export async function buildReferinfoDraftBundle(args: {
     title: closingTemplate.title,
     subtitle: closingTemplate.subtitle,
     caption: interpolateTemplate(closingTemplate.captionTemplate, {}).trim(),
-    configSummary: buildConfigSummary({ policy: args.policy, kind: "closing_note", order: 5 }),
+    configSummary: buildConfigSummary({ policy: args.policy, kind: "closing_note", order: 5, xThreadMode }),
     metricsSummary: "Text-only closing note.",
     table: {
       columns: [],
@@ -1074,10 +1094,17 @@ export async function buildReferinfoDraftBundle(args: {
         : null,
       weeklyLeaderChanged: weeklyLeaderRow?.changed ?? false,
       weeklyLeaderDisplayCode: weeklyLeaderRow?.currentDisplayCode ?? null,
+      standalone: xThreadMode === "root_only",
     });
   }
 
   for (const post of posts) {
+    post.configSummary = buildConfigSummary({
+      policy: args.policy,
+      kind: post.kind,
+      order: post.order,
+      xThreadMode,
+    });
     post.caption = normalizeCaptionCashtags(formatCaptionParagraphs(post.caption));
   }
 
@@ -1085,7 +1112,7 @@ export async function buildReferinfoDraftBundle(args: {
     reportWindow,
     thread: {
       rootKind: args.policy.rootKind,
-      xThreadMode: args.policy.xThreadMode,
+      xThreadMode,
       telegramDeliveryMode: args.policy.telegramDeliveryMode,
     },
     posts,

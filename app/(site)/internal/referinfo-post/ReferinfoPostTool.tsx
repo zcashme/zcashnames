@@ -688,6 +688,7 @@ function ResultPanel({ result }: { result: ReferinfoPostResult | null }) {
           <div>Week: <span className="font-semibold text-fg-heading">{result.reportWindow.weekLabel}</span></div>
           <div>Previous: <span className="font-semibold text-fg-heading">{result.reportWindow.prevWeekLabel}</span></div>
           <div>Timezone: <span className="font-semibold text-fg-heading">{result.reportWindow.timeZone}</span></div>
+          <div>X thread mode: <span className="font-semibold text-fg-heading">{result.thread?.xThreadMode ?? "N/A"}</span></div>
           <div>Root X post ID: <span className="font-semibold text-fg-heading">{result.rootXPostId ?? "N/A"}</span></div>
         </div>
       ) : null}

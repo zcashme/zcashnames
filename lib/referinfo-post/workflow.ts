@@ -470,14 +470,19 @@ async function dispatchTelegramArtifacts(artifacts: GeneratedArtifact[], planned
   }
 }
 
-async function dispatchXArtifacts(artifacts: GeneratedArtifact[], plannedPosts: ReferinfoPlannedPost[]): Promise<string | null> {
+async function dispatchXArtifacts(
+  artifacts: GeneratedArtifact[],
+  plannedPosts: ReferinfoPlannedPost[],
+  xThreadMode: "linear" | "root_only",
+): Promise<string | null> {
   const config = getXConfig();
   let previousTweetId: string | null = null;
   let rootTweetId: string | null = null;
   let threadBroken = false;
   const artifactByKind = new Map(artifacts.map((artifact) => [artifact.post.kind, artifact]));
+  const xPosts = xThreadMode === "root_only" ? plannedPosts.slice(0, 1) : plannedPosts;
 
-  for (const post of plannedPosts) {
+  for (const post of xPosts) {
     post.delivery.x.attempted = true;
 
     if (threadBroken) {
@@ -578,7 +583,7 @@ export async function runReferinfoPost(run: ReferinfoPostRunArgs): Promise<Refer
 
     let rootXPostId: string | null = null;
     if (run.destination === "x" || run.destination === "both") {
-      rootXPostId = await dispatchXArtifacts(artifacts, preview.plannedPosts);
+      rootXPostId = await dispatchXArtifacts(artifacts, preview.plannedPosts, preview.thread.xThreadMode);
     }
 
     const deliveryErrors = collectDeliveryErrors(preview.plannedPosts, run.destination);

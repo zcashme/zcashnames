@@ -56,7 +56,7 @@ export type ReferinfoPostTable = {
 
 export type ReferinfoPostThreadMeta = {
   rootKind: ReferinfoPostKind;
-  xThreadMode: "linear";
+  xThreadMode: "linear" | "root_only";
   telegramDeliveryMode: "sequential";
 };
 
@@ -129,7 +129,7 @@ export type ReferinfoPostTemplateConfig = {
 export type ReferinfoCaptionPolicy = {
   postOrder: ReferinfoPostKind[];
   rootKind: ReferinfoPostKind;
-  xThreadMode: "linear";
+  xThreadMode: "linear" | "root_only";
   telegramDeliveryMode: "sequential";
   templates: Record<ReferinfoPostKind, ReferinfoPostTemplateConfig>;
 };

@@ -165,6 +165,15 @@ function fallbackNameFromEmail(email: string): string {
   return cleaned.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function slugifyFilenamePart(value: string): string {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || "campaign-preview";
+}
+
 function parseCustomEmailsForEditor(text: string): {
   validEmails: string[];
   invalidEmails: string[];
@@ -311,7 +320,6 @@ export default function CampaignEditor(props: CampaignEditorProps) {
   });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   latestRef.current = {
     title,
     sourceKind,
@@ -822,6 +830,27 @@ export default function CampaignEditor(props: CampaignEditorProps) {
     }
   };
 
+  const onDownloadPreviewHtml = async () => {
+    const saved = await flushSave();
+    if (!saved) return;
+
+    try {
+      const htmlBlob = new Blob([previewHtml], { type: "text/html;charset=utf-8" });
+      const htmlUrl = URL.createObjectURL(htmlBlob);
+      const link = document.createElement("a");
+      link.href = htmlUrl;
+      link.download = `${slugifyFilenamePart(
+        headingText.trim() || subject.trim() || title.trim(),
+      )}.html`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(htmlUrl);
+    } catch {
+      setPreviewError("HTML download failed in this browser.");
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <header className="rounded-md border border-zinc-800 bg-zinc-900/40 p-4">
@@ -1204,6 +1233,14 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                 className={SECONDARY_BUTTON_CLASS}
               >
                 {copied ? "Copied" : "Copy plain text"}
+              </button>
+              <button
+                type="button"
+                onClick={onDownloadPreviewHtml}
+                disabled={previewPending}
+                className={SECONDARY_BUTTON_CLASS}
+              >
+                Download HTML
               </button>
             </div>
           </div>
