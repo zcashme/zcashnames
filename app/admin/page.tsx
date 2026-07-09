@@ -59,11 +59,11 @@ export default function AdminHomePage() {
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-10">
       <header className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Local Only</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Authenticated Access</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-100">Admin Tools</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">
           Private operational views for beta invites, beta feedback reporting, and campaigns.
-          These routes are intended for localhost use only.
+          These routes are available on localhost and on deployed hosts protected by shared admin credentials.
         </p>
       </header>
 

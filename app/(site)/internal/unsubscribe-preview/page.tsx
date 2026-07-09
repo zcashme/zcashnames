@@ -42,7 +42,7 @@ export default async function InternalUnsubscribePreviewPage({
         }}
       >
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-muted">
-          Local Only
+          Authenticated Access
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-fg-heading">
           Unsubscribe Preview

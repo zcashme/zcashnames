@@ -52,11 +52,11 @@ export default function InternalToolsIndexPage() {
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-10">
       <header className="mb-8 rounded-2xl border p-6" style={{ background: "var(--tool-panel-bg)", borderColor: "var(--tool-panel-border)" }}>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-muted">Local Only</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-muted">Authenticated Access</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-fg-heading">Internal Tools</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-fg-muted">
           Preview, QA, and asset-generation utilities that stay off the production branch.
-          Use this page as the local sitemap for internal routes.
+          Use this page as the protected sitemap for internal routes.
         </p>
       </header>
 
