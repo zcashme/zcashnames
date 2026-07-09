@@ -11,12 +11,12 @@ export function defaultCampaignTitle(): string {
 }
 
 export function defaultCampaignSubject(): string {
-  return "An update from ZcashNames";
+  return "An update from Zcash Names";
 }
 
 export function defaultCampaignBodyText(): string {
   return [
-    "Thanks for joining the ZcashNames waitlist.",
+    "Thanks for joining the Zcash Names waitlist.",
     "",
     "We’re sharing a quick update on where things stand and what comes next.",
     "",
@@ -30,6 +30,16 @@ export function normalizeCampaignText(value: string): string {
   return value.replace(/\r\n?/g, "\n").trim();
 }
 
+const WAITLIST_CONFIRM_RESPONSE_TOKEN = "confirm_response_url";
+
+export function campaignTextUsesWaitlistConfirmResponseToken(text: string): boolean {
+  for (const match of text.matchAll(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi)) {
+    const key = String(match[1] ?? "").toLowerCase();
+    if (key === WAITLIST_CONFIRM_RESPONSE_TOKEN) return true;
+  }
+  return false;
+}
+
 export function resolveCampaignTokens(
   text: string,
   personalization: CampaignRecipientPersonalization,
@@ -39,6 +49,7 @@ export function resolveCampaignTokens(
     referral_code: personalization.referralCode ?? "",
     referral_url: personalization.referralUrl ?? "",
     dashboard_url: personalization.dashboardUrl ?? "",
+    confirm_response_url: personalization.confirmResponseUrl ?? "",
   };
   return text.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, rawKey: string) => {
     const key = rawKey.toLowerCase();

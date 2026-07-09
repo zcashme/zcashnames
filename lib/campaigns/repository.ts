@@ -2,11 +2,14 @@ import "server-only";
 
 import { db } from "@/lib/db";
 import {
+  campaignTextUsesWaitlistConfirmResponseToken,
   defaultCampaignBodyText,
   defaultCampaignSubject,
   defaultCampaignTitle,
 } from "@/lib/campaigns/content";
+import { buildWaitlistConfirmResponseTrackingUrl } from "@/lib/campaigns/waitlist-confirm-response";
 import { listWaitlistRecipients } from "@/lib/campaigns/waitlist";
+import { resolveSiteUrl } from "@/lib/site-url";
 import type {
   CampaignAudienceScope,
   CampaignDedupeMode,
@@ -21,7 +24,7 @@ import type {
 } from "@/lib/campaigns/types";
 
 function baseUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL || "https://zcashnames.com";
+  return resolveSiteUrl();
 }
 
 function normalizeDraftInput(draft: CampaignDraftInput): CampaignDraftInput {
@@ -29,6 +32,51 @@ function normalizeDraftInput(draft: CampaignDraftInput): CampaignDraftInput {
     subject: draft.subject.trim(),
     bodyText: draft.bodyText.replace(/\r\n?/g, "\n").trim(),
   };
+}
+
+function waitlistSourceRowId(sourceRowIds: string[]): string | null {
+  return (
+    sourceRowIds
+      .map((value) => value?.trim() ?? "")
+      .find((value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) ??
+    null
+  );
+}
+
+function withWaitlistConfirmResponseUrl(args: {
+  personalization: CampaignRecipient["personalization"];
+  sourceRowIds: string[];
+  campaignId: string;
+  baseUrl?: string;
+}): CampaignRecipient["personalization"] {
+  return {
+    ...args.personalization,
+    confirmResponseUrl: buildWaitlistConfirmResponseTrackingUrl({
+      waitlistId: waitlistSourceRowId(args.sourceRowIds),
+      campaignId: args.campaignId,
+      baseUrl: args.baseUrl ?? baseUrl(),
+    }),
+  };
+}
+
+function validateConfirmResponseTokenAvailability(args: {
+  subject: string;
+  bodyText: string;
+  recipients: CampaignRecipient[];
+}): void {
+  const usesConfirmResponseToken =
+    campaignTextUsesWaitlistConfirmResponseToken(args.subject) ||
+    campaignTextUsesWaitlistConfirmResponseToken(args.bodyText);
+  if (!usesConfirmResponseToken) return;
+
+  const missingRecipient = args.recipients.find(
+    (recipient) => !recipient.personalization.confirmResponseUrl,
+  );
+  if (missingRecipient) {
+    throw new Error(
+      "Waitlist confirm response tracking URL is unavailable. Set WAITLIST_CONFIRM_RESPONSE_REDIRECT_URL and ensure recipients have waitlist row ids.",
+    );
+  }
 }
 
 export async function createCampaignDraft(args?: {
@@ -150,12 +198,20 @@ export async function updateCampaignDraft(
 
 export async function resolveCampaignRecipients(campaign: CampaignRecord): Promise<CampaignRecipient[]> {
   if (campaign.source_kind === "zn_waitlist") {
-    return listWaitlistRecipients({
+    const recipients = await listWaitlistRecipients({
       sourceKind: campaign.source_kind,
       audienceScope: campaign.audience_scope,
       dedupeMode: campaign.dedupe_mode,
       baseUrl: baseUrl(),
     });
+    return recipients.map((recipient) => ({
+      ...recipient,
+      personalization: withWaitlistConfirmResponseUrl({
+        personalization: recipient.personalization,
+        sourceRowIds: recipient.sourceRowIds,
+        campaignId: campaign.id,
+      }),
+    }));
   }
   return [];
 }
@@ -166,7 +222,13 @@ export async function estimateCampaignRecipients(campaignId: string): Promise<{
 }> {
   const campaign = await getCampaign(campaignId);
   if (!campaign) throw new Error("Campaign not found.");
+  const draft = await getCampaignDraft(campaignId);
   const recipients = await resolveCampaignRecipients(campaign);
+  validateConfirmResponseTokenAvailability({
+    subject: draft?.subject ?? defaultCampaignSubject(),
+    bodyText: draft?.body_text ?? defaultCampaignBodyText(),
+    recipients,
+  });
   const { error } = await db
     .from("campaigns")
     .update({
@@ -184,7 +246,13 @@ export async function estimateCampaignRecipients(campaignId: string): Promise<{
 export async function snapshotCampaignRecipients(campaignId: string): Promise<CampaignRecipientSnapshotRecord[]> {
   const campaign = await getCampaign(campaignId);
   if (!campaign) throw new Error("Campaign not found.");
+  const draft = await getCampaignDraft(campaignId);
   const recipients = await resolveCampaignRecipients(campaign);
+  validateConfirmResponseTokenAvailability({
+    subject: draft?.subject ?? defaultCampaignSubject(),
+    bodyText: draft?.body_text ?? defaultCampaignBodyText(),
+    recipients,
+  });
   const nowIso = new Date().toISOString();
 
   const { error: deleteError } = await db

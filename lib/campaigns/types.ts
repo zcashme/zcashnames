@@ -60,6 +60,7 @@ export interface CampaignRecipientPersonalization {
   referralCode: string | null;
   referralUrl: string | null;
   dashboardUrl: string | null;
+  confirmResponseUrl: string | null;
   relatedNames: string[];
 }
 

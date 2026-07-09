@@ -44,6 +44,7 @@ function buildPersonalization(rows: WaitlistRow[], baseUrl: string): CampaignRec
     referralCode: code,
     referralUrl: code ? `${baseUrl}/?ref=${encodeURIComponent(code)}` : null,
     dashboardUrl: code ? `${baseUrl}/leaders/ref/${encodeURIComponent(code)}` : null,
+    confirmResponseUrl: null,
     relatedNames: sorted
       .map((row) => row.name?.trim())
       .filter((name): name is string => Boolean(name)),
