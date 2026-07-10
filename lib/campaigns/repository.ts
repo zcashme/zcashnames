@@ -34,25 +34,16 @@ function normalizeDraftInput(draft: CampaignDraftInput): CampaignDraftInput {
   };
 }
 
-function waitlistSourceRowId(sourceRowIds: string[]): string | null {
-  return (
-    sourceRowIds
-      .map((value) => value?.trim() ?? "")
-      .find((value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) ??
-    null
-  );
-}
-
 function withWaitlistConfirmResponseUrl(args: {
   personalization: CampaignRecipient["personalization"];
-  sourceRowIds: string[];
+  normalizedEmail: string;
   campaignId: string;
   baseUrl?: string;
 }): CampaignRecipient["personalization"] {
   return {
     ...args.personalization,
     confirmResponseUrl: buildWaitlistConfirmResponseTrackingUrl({
-      waitlistId: waitlistSourceRowId(args.sourceRowIds),
+      normalizedEmail: args.normalizedEmail,
       campaignId: args.campaignId,
       baseUrl: args.baseUrl ?? baseUrl(),
     }),
@@ -74,7 +65,7 @@ function validateConfirmResponseTokenAvailability(args: {
   );
   if (missingRecipient) {
     throw new Error(
-      "Waitlist confirm response tracking URL is unavailable. Set WAITLIST_CONFIRM_RESPONSE_REDIRECT_URL and ensure recipients have waitlist row ids.",
+      "Waitlist confirm response tracking URL is unavailable. Ensure the recipient is waitlist-backed and the production click route is deployed.",
     );
   }
 }
@@ -208,7 +199,7 @@ export async function resolveCampaignRecipients(campaign: CampaignRecord): Promi
       ...recipient,
       personalization: withWaitlistConfirmResponseUrl({
         personalization: recipient.personalization,
-        sourceRowIds: recipient.sourceRowIds,
+        normalizedEmail: recipient.normalizedEmail,
         campaignId: campaign.id,
       }),
     }));
