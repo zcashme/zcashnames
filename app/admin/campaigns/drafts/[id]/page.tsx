@@ -83,6 +83,7 @@ export default async function CampaignDraftDetailPage({
     humanReferralCode: "josh",
     humanReferralUrl: "https://zcashnames.com/?ref=josh",
     humanDashboardUrl: "https://zcashnames.com/leaders/ref/josh",
+    confirmResponseUrl: "https://zcashnames.com/api/campaign-click/waitlist-confirm?token=sample-token",
     betaDisplayName: null,
     betaInviteCode: null,
     betaInviteLink: null,

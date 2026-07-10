@@ -360,6 +360,7 @@ export function getEmailPreviewRegistry(): EmailPreviewRegistryEntry[] {
               humanReferralCode: null,
               humanReferralUrl: null,
               humanDashboardUrl: null,
+              confirmResponseUrl: "https://zcashnames.com/api/campaign-click/waitlist-confirm?token=sample-token",
               betaDisplayName: null,
               betaInviteCode: null,
               betaInviteLink: null,

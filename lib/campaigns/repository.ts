@@ -2,11 +2,12 @@ import "server-only";
 
 import { db } from "@/lib/db";
 import {
+  campaignTextUsesWaitlistConfirmResponseToken,
   campaignDraftUsesBetaInviteTokens,
-  getCampaignBetaTokenUsage,
   defaultCampaignBodyText,
   defaultCampaignSubject,
   defaultCampaignTitle,
+  getCampaignBetaTokenUsage,
 } from "@/lib/campaigns/content";
 import {
   getBetaInviteDataByEmail,
@@ -30,6 +31,7 @@ import { listActiveSuppressedEmailSet } from "@/lib/campaigns/suppression";
 import { getProviderManagedScheduleState } from "@/lib/campaigns/provider-schedule";
 import { buildCampaignReferralStatsContext, withCampaignReferralStats } from "@/lib/campaigns/referral-stats";
 import { getDefaultCampaignSeries, isSupportedCampaignSeries } from "@/lib/campaigns/series";
+import { buildWaitlistConfirmResponseTrackingUrl } from "@/lib/campaigns/waitlist-confirm-response";
 import { resolveSiteUrl } from "@/lib/site-url";
 import type {
   CampaignAudienceScope,
@@ -201,6 +203,7 @@ function buildMinimalRecipient(
       humanReferralCode: null,
       humanReferralUrl: null,
       humanDashboardUrl: null,
+      confirmResponseUrl: null,
       betaDisplayName: null,
       betaInviteCode: null,
       betaInviteLink: null,
@@ -299,9 +302,20 @@ async function applyBetaInviteTokenRules(args: {
 }
 
 function validateRequiredCampaignTokens(args: {
+  sourceKind: CampaignSourceKind;
+  subject: string;
+  bodyText: string;
+  headingText?: string | null;
   betaTokenUsage: ReturnType<typeof getCampaignBetaTokenUsage>;
   personalization: CampaignRecipientPersonalization;
 }): string | null {
+  const usesConfirmResponseToken =
+    campaignTextUsesWaitlistConfirmResponseToken(args.subject) ||
+    campaignTextUsesWaitlistConfirmResponseToken(args.bodyText) ||
+    campaignTextUsesWaitlistConfirmResponseToken(args.headingText ?? "");
+  if (usesConfirmResponseToken && !args.personalization.confirmResponseUrl) {
+    return "Waitlist confirm response tracking URL is unavailable. Ensure the recipient is waitlist-backed and the production click route is deployed on zcashnames.com.";
+  }
   if (
     args.betaTokenUsage.usesBetaDisplayName &&
     !args.personalization.betaDisplayName
@@ -315,6 +329,24 @@ function validateRequiredCampaignTokens(args: {
     return "Recipient is missing beta invite code.";
   }
   return null;
+}
+
+function withWaitlistConfirmResponseUrl(args: {
+  personalization: CampaignRecipientPersonalization;
+  normalizedEmail: string;
+  campaignId: string;
+  baseUrl?: string;
+  fallbackToSample?: boolean;
+}): CampaignRecipientPersonalization {
+  return {
+    ...args.personalization,
+    confirmResponseUrl: buildWaitlistConfirmResponseTrackingUrl({
+      normalizedEmail: args.normalizedEmail,
+      campaignId: args.campaignId,
+      baseUrl: args.baseUrl ?? baseUrl(),
+      fallbackToSample: args.fallbackToSample,
+    }),
+  };
 }
 
 async function enrichPendingSnapshotPersonalization(
@@ -475,10 +507,21 @@ async function resolveCustomEmailRecipients(
     throw new Error("Enter at least one valid custom email address.");
   }
 
-  const waitlistPersonalizations = await listWaitlistPersonalizationsByEmail({
-    emails: normalizedEmails,
-    baseUrl: baseUrl(),
-  });
+  const [waitlistPersonalizations, waitlistRecipients] = await Promise.all([
+    listWaitlistPersonalizationsByEmail({
+      emails: normalizedEmails,
+      baseUrl: baseUrl(),
+    }),
+    listWaitlistRecipients({
+      audienceScope: "selected_emails",
+      dedupeMode: "one_per_email",
+      baseUrl: baseUrl(),
+      selectedEmailsText: normalizedEmails.join("\n"),
+    }).catch(() => [] as CampaignRecipient[]),
+  ]);
+  const waitlistRecipientByEmail = new Map(
+    waitlistRecipients.map((recipient) => [recipient.normalizedEmail, recipient]),
+  );
 
   if (!hasSeriesSelection(series)) {
     return {
@@ -487,8 +530,10 @@ async function resolveCustomEmailRecipients(
         buildMinimalRecipient(
           email,
           "custom_emails",
-          undefined,
-          waitlistPersonalizations.get(email) ?? undefined,
+          waitlistRecipientByEmail.get(email)?.sourceRowIds,
+          waitlistRecipientByEmail.get(email)?.personalization ??
+            waitlistPersonalizations.get(email) ??
+            undefined,
         ),
       ),
       blocked: [],
@@ -509,8 +554,10 @@ async function resolveCustomEmailRecipients(
       buildMinimalRecipient(
         email,
         "custom_emails",
-        undefined,
-        waitlistPersonalizations.get(email) ?? undefined,
+        waitlistRecipientByEmail.get(email)?.sourceRowIds,
+        waitlistRecipientByEmail.get(email)?.personalization ??
+          waitlistPersonalizations.get(email) ??
+          undefined,
       ),
     );
   }
@@ -774,11 +821,24 @@ async function resolveCampaignRecipientEstimate(
       baseUrl: baseUrl(),
       selectedEmailsText: draft?.custom_emails_text,
     });
+    const sampleWithConfirmUrl = waitlistEstimate.sample.map((recipient) => ({
+      ...recipient,
+      personalization: withWaitlistConfirmResponseUrl({
+        personalization: recipient.personalization,
+        normalizedEmail: recipient.normalizedEmail,
+        campaignId: campaign.id,
+      }),
+    }));
     if (
       !betaTokenUsage.usesBetaDisplayName &&
       !betaTokenUsage.usesBetaInviteCode &&
       !betaTokenUsage.usesBetaInviteLink
-    ) return waitlistEstimate;
+    ) {
+      return {
+        ...waitlistEstimate,
+        sample: sampleWithConfirmUrl,
+      };
+    }
 
     const waitlistRecipients = await listWaitlistRecipients({
       audienceScope: campaign.audience_scope,
@@ -789,7 +849,14 @@ async function resolveCampaignRecipientEstimate(
     return applyBetaInviteTokenRules({
       estimate: {
         count: waitlistRecipients.length,
-        sample: waitlistRecipients,
+        sample: waitlistRecipients.map((recipient) => ({
+          ...recipient,
+          personalization: withWaitlistConfirmResponseUrl({
+            personalization: recipient.personalization,
+            normalizedEmail: recipient.normalizedEmail,
+            campaignId: campaign.id,
+          }),
+        })),
         blocked: waitlistEstimate.blocked,
       },
       betaTokenUsage,
@@ -818,8 +885,16 @@ async function resolveCampaignRecipientEstimate(
   const filteredEstimate = await applySuppressionFilterToEstimate(customEstimate);
   recipients = filteredEstimate.sample;
   blocked = filteredEstimate.blocked;
+  const sampleWithConfirmUrl = recipients.map((recipient) => ({
+    ...recipient,
+    personalization: withWaitlistConfirmResponseUrl({
+      personalization: recipient.personalization,
+      normalizedEmail: recipient.normalizedEmail,
+      campaignId: campaign.id,
+    }),
+  }));
   return applyBetaInviteTokenRules({
-    estimate: { count: recipients.length, sample: recipients, blocked },
+    estimate: { count: recipients.length, sample: sampleWithConfirmUrl, blocked },
     betaTokenUsage,
     baseUrl: baseUrl(),
   });
@@ -842,21 +917,32 @@ async function resolveCampaignPreviewRecipient(
       baseUrl: baseUrl(),
       selectedEmailsText: draft?.custom_emails_text,
     });
+    const withConfirmUrl = recipient
+      ? {
+          ...recipient,
+          personalization: withWaitlistConfirmResponseUrl({
+            personalization: recipient.personalization,
+            normalizedEmail: recipient.normalizedEmail,
+            campaignId: campaign.id,
+            fallbackToSample: true,
+          }),
+        }
+      : null;
     if (
-      !recipient ||
+      !withConfirmUrl ||
       (!betaTokenUsage.usesBetaDisplayName &&
         !betaTokenUsage.usesBetaInviteCode &&
         !betaTokenUsage.usesBetaInviteLink)
-    ) return recipient;
+    ) return withConfirmUrl;
     const betaInviteByEmail = await getBetaInviteDataByEmail({
-      emails: [recipient.normalizedEmail],
+      emails: [withConfirmUrl.normalizedEmail],
       baseUrl: baseUrl(),
     });
     return {
-      ...recipient,
+      ...withConfirmUrl,
       personalization: withBetaInvitePersonalization(
-        recipient.personalization,
-        betaInviteByEmail.get(recipient.normalizedEmail) ?? null,
+        withConfirmUrl.personalization,
+        betaInviteByEmail.get(withConfirmUrl.normalizedEmail) ?? null,
       ),
     };
   }
@@ -892,7 +978,18 @@ async function resolveCampaignPreviewRecipient(
     betaTokenUsage,
     baseUrl: baseUrl(),
   });
-  return betaFilteredEstimate.sample[0] ?? null;
+  const recipient = betaFilteredEstimate.sample[0] ?? null;
+  return recipient
+    ? {
+        ...recipient,
+        personalization: withWaitlistConfirmResponseUrl({
+          personalization: recipient.personalization,
+          normalizedEmail: recipient.normalizedEmail,
+          campaignId: campaign.id,
+          fallbackToSample: true,
+        }),
+      }
+    : null;
 }
 
 async function snapshotWaitlistCampaignRecipientsViaRpc(args: {
@@ -1484,16 +1581,25 @@ export async function scheduleCampaignWithResend(
   let firstError: string | null = null;
 
   for (const snapshot of snapshots) {
+    const basePersonalization = withWaitlistConfirmResponseUrl({
+      personalization: snapshot.personalization,
+      normalizedEmail: snapshot.normalized_email,
+      campaignId,
+    });
     const personalization =
       campaign.source_kind === "zn_waitlist"
         ? withCampaignReferralStats(
-            snapshot.personalization,
+            basePersonalization,
             snapshot.personalization.referralCode
               ? referralStatsContext?.get(snapshot.personalization.referralCode) ?? null
               : null,
           )
-        : withCampaignReferralStats(snapshot.personalization, null);
-      const tokenValidationError = validateRequiredCampaignTokens({
+        : withCampaignReferralStats(basePersonalization, null);
+    const tokenValidationError = validateRequiredCampaignTokens({
+      sourceKind: campaign.source_kind,
+      subject: draft.subject,
+      bodyText: draft.body_text,
+      headingText: draft.heading_text,
       betaTokenUsage,
       personalization,
     });
@@ -1631,15 +1737,20 @@ async function drainSpecificCampaignBatch(batch: {
     }> = [];
 
     for (const snapshot of snapshots) {
+      const basePersonalization = withWaitlistConfirmResponseUrl({
+        personalization: snapshot.personalization,
+        normalizedEmail: snapshot.normalized_email,
+        campaignId: batch.campaign_id,
+      });
       const personalization =
         campaign.source_kind === "zn_waitlist"
           ? withCampaignReferralStats(
-              snapshot.personalization,
+              basePersonalization,
               snapshot.personalization.referralCode
                 ? referralStatsContext?.get(snapshot.personalization.referralCode) ?? null
                 : null,
             )
-          : withCampaignReferralStats(snapshot.personalization, null);
+          : withCampaignReferralStats(basePersonalization, null);
       const sendArgs: CampaignSendEmailArgs = {
         to: snapshot.email,
         subject: draft.subject,
@@ -1652,6 +1763,10 @@ async function drainSpecificCampaignBatch(batch: {
         skipConsentCheck,
       };
       const tokenValidationError = validateRequiredCampaignTokens({
+        sourceKind: campaign.source_kind,
+        subject: draft.subject,
+        bodyText: draft.body_text,
+        headingText: draft.heading_text,
         betaTokenUsage,
         personalization,
       });
