@@ -103,6 +103,7 @@ function buildPersonalization(
     humanReferralCode: code,
     humanReferralUrl: code ? `${baseUrl}/?ref=${encodeURIComponent(code)}` : null,
     humanDashboardUrl: code ? `${baseUrl}/leaders/ref/${encodeURIComponent(code)}` : null,
+    confirmResponseUrl: null,
     betaDisplayName: null,
     betaInviteCode: null,
     betaInviteLink: null,
@@ -286,6 +287,7 @@ function sampleRowToRecipient(
       humanDashboardUrl: humanCode
         ? `${baseUrl}/leaders/ref/${encodeURIComponent(humanCode)}`
         : null,
+      confirmResponseUrl: null,
       betaDisplayName: null,
       betaInviteCode: null,
       betaInviteLink: null,

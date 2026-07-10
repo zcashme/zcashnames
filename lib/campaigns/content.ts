@@ -83,6 +83,8 @@ const BETA_TOKEN_NAMES = new Set([
   "beta_invite_link",
 ]);
 
+const WAITLIST_CONFIRM_RESPONSE_TOKEN = "confirm_response_url";
+
 export interface CampaignBetaTokenUsage {
   usesBetaDisplayName: boolean;
   usesBetaInviteCode: boolean;
@@ -113,6 +115,14 @@ export function campaignTextUsesBetaInviteTokens(text: string): boolean {
   for (const match of text.matchAll(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi)) {
     const key = String(match[1] ?? "").toLowerCase();
     if (BETA_TOKEN_NAMES.has(key)) return true;
+  }
+  return false;
+}
+
+export function campaignTextUsesWaitlistConfirmResponseToken(text: string): boolean {
+  for (const match of text.matchAll(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi)) {
+    const key = String(match[1] ?? "").toLowerCase();
+    if (key === WAITLIST_CONFIRM_RESPONSE_TOKEN) return true;
   }
   return false;
 }
@@ -187,6 +197,7 @@ export function resolveCampaignTokens(
     human_referral_code: personalization.humanReferralCode ?? "",
     human_referral_url: personalization.humanReferralUrl ?? "",
     human_dashboard_url: personalization.humanDashboardUrl ?? "",
+    confirm_response_url: personalization.confirmResponseUrl ?? "",
     beta_display_name: personalization.betaDisplayName ?? "",
     beta_invite_code: personalization.betaInviteCode ?? "",
     beta_invite_link: personalization.betaInviteLink ?? "",

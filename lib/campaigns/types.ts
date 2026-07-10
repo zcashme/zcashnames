@@ -127,6 +127,7 @@ export interface CampaignRecipientPersonalization {
   humanReferralCode: string | null;
   humanReferralUrl: string | null;
   humanDashboardUrl: string | null;
+  confirmResponseUrl: string | null;
   betaDisplayName: string | null;
   betaInviteCode: string | null;
   betaInviteLink: string | null;
