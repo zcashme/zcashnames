@@ -29,6 +29,14 @@ export type BlockinfoPostRowSummary = {
   bestBlockHash: string | null;
 };
 
+export type BlockinfoPostDataFreshness = {
+  ok: boolean;
+  sourceField: "measured_at" | "measured_date" | null;
+  sourceTimestamp: string | null;
+  maxAgeHours: number;
+  ageHours: number | null;
+};
+
 export type BlockinfoPostDeliveryResult = {
   attempted: boolean;
   ok: boolean;
@@ -211,6 +219,7 @@ export type BlockinfoPostResult = {
     telegram: BlockinfoPostDeliveryResult;
     x: BlockinfoPostDeliveryResult;
   };
+  dataFreshness?: BlockinfoPostDataFreshness;
   schedule?: BlockinfoPostScheduleState;
   scheduled?: boolean;
   skipped?: boolean;

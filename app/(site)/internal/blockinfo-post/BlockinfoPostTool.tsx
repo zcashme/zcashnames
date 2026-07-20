@@ -626,6 +626,14 @@ function ResultPanel({ result }: { result: BlockinfoPostResult | null }) {
             <div>Measured date: <span className="font-semibold text-fg-heading">{result.selectedRowSummary.measuredDate ?? "N/A"}</span></div>
           </div>
           <div>
+            <div className="text-xs font-bold uppercase tracking-[0.18em] text-fg-muted">Freshness</div>
+            <div className="mt-2">Status: <span className="font-semibold text-fg-heading">{result.dataFreshness?.ok ? "Fresh" : "Stale"}</span></div>
+            <div>Source field: <span className="font-semibold text-fg-heading">{result.dataFreshness?.sourceField ?? "N/A"}</span></div>
+            <div>Source timestamp: <span className="font-semibold text-fg-heading">{result.dataFreshness?.sourceTimestamp ?? "N/A"}</span></div>
+            <div>Age hours: <span className="font-semibold text-fg-heading">{result.dataFreshness?.ageHours != null ? result.dataFreshness.ageHours.toFixed(1) : "N/A"}</span></div>
+            <div>Max age hours: <span className="font-semibold text-fg-heading">{result.dataFreshness?.maxAgeHours ?? "N/A"}</span></div>
+          </div>
+          <div className="md:col-span-2">
             <div className="text-xs font-bold uppercase tracking-[0.18em] text-fg-muted">Files</div>
             <div className="mt-2 break-all">Prompt template: <span className="font-semibold text-fg-heading">{result.promptTemplatePath ?? "N/A"}</span></div>
             <div className="break-all">OpenAI image template: <span className="font-semibold text-fg-heading">{result.imageTemplatePath ?? "N/A"}</span></div>

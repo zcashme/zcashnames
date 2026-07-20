@@ -20,6 +20,7 @@ import {
 } from "@/lib/blockinfo-post/store";
 import {
   expandBlockinfoPostDestination,
+  type BlockinfoPostDataFreshness,
   type BlockinfoPostDeliveryResult,
   type BlockinfoPostDestination,
   type BlockinfoPostRenderMode,
@@ -182,6 +183,18 @@ function getTelegramConfig(): TelegramConfig {
   };
 }
 
+function getMaxDataAgeHours(): number {
+  const raw = process.env.BLOCKINFO_POST_MAX_DATA_AGE_HOURS?.trim();
+  if (!raw) return 24;
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    fail("BLOCKINFO_POST_MAX_DATA_AGE_HOURS must be a positive number.");
+  }
+
+  return parsed;
+}
+
 function getXConfig(): XConfig {
   try {
     return {
@@ -320,6 +333,79 @@ function toNullableString(value: unknown): string | null {
 
 function toNullableNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function parseMeasuredDateAtUtcStart(value: string): Date | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = new Date(`${trimmed}T00:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function evaluateDataFreshness(summary: BlockinfoPostRowSummary, now = new Date()): BlockinfoPostDataFreshness {
+  const maxAgeHours = getMaxDataAgeHours();
+
+  if (summary.measuredAt) {
+    const measuredAt = new Date(summary.measuredAt);
+    if (!Number.isNaN(measuredAt.getTime())) {
+      const ageHours = Math.max(0, (now.getTime() - measuredAt.getTime()) / (60 * 60 * 1000));
+      return {
+        ok: ageHours <= maxAgeHours,
+        sourceField: "measured_at",
+        sourceTimestamp: measuredAt.toISOString(),
+        maxAgeHours,
+        ageHours,
+      };
+    }
+  }
+
+  if (summary.measuredDate) {
+    const measuredDate = parseMeasuredDateAtUtcStart(summary.measuredDate);
+    if (measuredDate) {
+      const ageHours = Math.max(0, (now.getTime() - measuredDate.getTime()) / (60 * 60 * 1000));
+      return {
+        ok: ageHours <= maxAgeHours,
+        sourceField: "measured_date",
+        sourceTimestamp: measuredDate.toISOString(),
+        maxAgeHours,
+        ageHours,
+      };
+    }
+  }
+
+  return {
+    ok: false,
+    sourceField: null,
+    sourceTimestamp: null,
+    maxAgeHours,
+    ageHours: null,
+  };
+}
+
+function formatAgeHours(ageHours: number | null): string {
+  if (ageHours == null || !Number.isFinite(ageHours)) return "unknown";
+  return ageHours >= 100 ? ageHours.toFixed(0) : ageHours.toFixed(1);
+}
+
+function buildStaleDataSkipReason(freshness: BlockinfoPostDataFreshness): string {
+  const sourceField = freshness.sourceField ?? "no usable timestamp field";
+  const sourceTimestamp = freshness.sourceTimestamp ?? "N/A";
+  const age = formatAgeHours(freshness.ageHours);
+  return `Skipped scheduled publish because zebra_stats is stale. Source: ${sourceField}; timestamp: ${sourceTimestamp}; age: ${age}h; max allowed: ${freshness.maxAgeHours}h.`;
+}
+
+function buildStaleDataWarningMessage(freshness: BlockinfoPostDataFreshness): string {
+  const sourceField = freshness.sourceField ?? "none";
+  const sourceTimestamp = freshness.sourceTimestamp ?? "N/A";
+  const age = formatAgeHours(freshness.ageHours);
+  return [
+    "Warning: scheduled blockinfo post skipped because zebra_stats is stale.",
+    `Timestamp field: ${sourceField}`,
+    `Latest row timestamp: ${sourceTimestamp}`,
+    `Age hours: ${age}`,
+    `Max allowed age hours: ${freshness.maxAgeHours}`,
+    "Telegram image post and X post were skipped.",
+  ].join("\n");
 }
 
 async function fetchLatestZebraStatsRow(): Promise<{ row: JsonRecord; summary: BlockinfoPostRowSummary }> {
@@ -562,6 +648,32 @@ async function sendTelegramPhoto(
   return payload.result?.message_id ?? null;
 }
 
+async function sendTelegramMessage(config: TelegramConfig, text: string): Promise<number | null> {
+  log("Sending Telegram warning message.");
+  const response = await fetch(`https://api.telegram.org/bot${config.telegramBotToken}/sendMessage`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      chat_id: config.telegramChatId,
+      text,
+    }),
+  });
+
+  const payload = (await response.json().catch(async () => ({ description: await response.text().catch(() => "") }))) as {
+    ok?: boolean;
+    description?: string;
+    result?: { message_id?: number };
+  };
+
+  if (!response.ok || !payload.ok) {
+    fail(`Telegram warning failure: ${payload.description ?? response.statusText}`);
+  }
+
+  return payload.result?.message_id ?? null;
+}
+
 function percentEncode(value: string): string {
   return encodeURIComponent(value)
     .replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
@@ -725,6 +837,7 @@ function baseResult(args: {
   run: BlockinfoPostRunArgs;
   providerModel: string;
   summary: BlockinfoPostRowSummary;
+  dataFreshness: BlockinfoPostDataFreshness;
   prompt: string;
   postText: string;
   promptTemplatePath: string;
@@ -744,6 +857,7 @@ function baseResult(args: {
     providerModel: args.providerModel,
     destinationsRequested: args.run.destination,
     selectedRowSummary: args.summary,
+    dataFreshness: args.dataFreshness,
     renderedPrompt: args.prompt,
     postText: args.postText,
     promptTemplatePath: args.promptTemplatePath,
@@ -851,6 +965,7 @@ export async function runBlockinfoPost(run: BlockinfoPostRunArgs): Promise<Block
     validateDeliveryConfiguration(run.destination);
     const promptTemplate = await loadPromptTemplate(shared);
     const { row, summary } = await fetchLatestZebraStatsRow();
+    const dataFreshness = evaluateDataFreshness(summary);
 
     const openAiConfig = run.renderMode === "openai" ? getOpenAiConfig() : null;
     const deterministicAssets = run.renderMode === "deterministic" ? getDeterministicAssetConfig() : null;
@@ -879,6 +994,7 @@ export async function runBlockinfoPost(run: BlockinfoPostRunArgs): Promise<Block
         run,
         providerModel: "deterministic-template",
         summary,
+        dataFreshness,
         prompt,
         postText: deterministicPostText,
         promptTemplatePath: shared.promptTemplatePath,
@@ -892,6 +1008,10 @@ export async function runBlockinfoPost(run: BlockinfoPostRunArgs): Promise<Block
       });
 
       if (run.mode === "dry-run") {
+        if (run.scheduled && !dataFreshness.ok) {
+          partialResult.skipped = true;
+          partialResult.skipReason = buildStaleDataSkipReason(dataFreshness);
+        }
         partialResult.schedule = await getBlockinfoPostScheduleState().catch(() => undefined);
         log("Dry run completed.");
         return partialResult;
@@ -899,6 +1019,40 @@ export async function runBlockinfoPost(run: BlockinfoPostRunArgs): Promise<Block
 
       const lock = await acquireBlockinfoPostRunLock();
       lockToken = lock.token;
+
+      if (run.scheduled && !dataFreshness.ok) {
+        const warningText = buildStaleDataWarningMessage(dataFreshness);
+        partialResult.skipped = true;
+        partialResult.skipReason = buildStaleDataSkipReason(dataFreshness);
+        partialResult.delivery = emptyDelivery();
+
+        try {
+          partialResult.delivery.telegram.attempted = true;
+          const telegramMessageId = await sendTelegramMessage(getTelegramConfig(), warningText);
+          partialResult.delivery.telegram.ok = true;
+          partialResult.delivery.telegram.telegramMessageId = telegramMessageId;
+          partialResult.telegramMessageId = telegramMessageId;
+          partialResult.schedule = await releaseBlockinfoPostRunLock({
+            token: lockToken,
+            status: "skipped_stale_data",
+            errorMessage: warningText,
+          });
+          lockToken = null;
+          return partialResult;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          partialResult.ok = false;
+          partialResult.error = errorMessage;
+          partialResult.delivery.telegram.error = errorMessage;
+          partialResult.schedule = await releaseBlockinfoPostRunLock({
+            token: lockToken!,
+            status: "stale_data_warning_failed",
+            errorMessage: errorMessage,
+          });
+          lockToken = null;
+          return partialResult;
+        }
+      }
 
       const generated = {
         buffer: await renderDeterministicImage({
@@ -947,6 +1101,7 @@ export async function runBlockinfoPost(run: BlockinfoPostRunArgs): Promise<Block
       run,
       providerModel: openAiConfig!.openAiModel,
       summary,
+      dataFreshness,
       prompt,
       postText,
       promptTemplatePath: shared.promptTemplatePath,
@@ -956,6 +1111,10 @@ export async function runBlockinfoPost(run: BlockinfoPostRunArgs): Promise<Block
     });
 
     if (run.mode === "dry-run") {
+      if (run.scheduled && !dataFreshness.ok) {
+        partialResult.skipped = true;
+        partialResult.skipReason = buildStaleDataSkipReason(dataFreshness);
+      }
       partialResult.schedule = await getBlockinfoPostScheduleState().catch(() => undefined);
       log("Dry run completed.");
       return partialResult;
@@ -963,6 +1122,40 @@ export async function runBlockinfoPost(run: BlockinfoPostRunArgs): Promise<Block
 
     const lock = await acquireBlockinfoPostRunLock();
     lockToken = lock.token;
+
+    if (run.scheduled && !dataFreshness.ok) {
+      const warningText = buildStaleDataWarningMessage(dataFreshness);
+      partialResult.skipped = true;
+      partialResult.skipReason = buildStaleDataSkipReason(dataFreshness);
+      partialResult.delivery = emptyDelivery();
+
+      try {
+        partialResult.delivery.telegram.attempted = true;
+        const telegramMessageId = await sendTelegramMessage(getTelegramConfig(), warningText);
+        partialResult.delivery.telegram.ok = true;
+        partialResult.delivery.telegram.telegramMessageId = telegramMessageId;
+        partialResult.telegramMessageId = telegramMessageId;
+        partialResult.schedule = await releaseBlockinfoPostRunLock({
+          token: lockToken,
+          status: "skipped_stale_data",
+          errorMessage: warningText,
+        });
+        lockToken = null;
+        return partialResult;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        partialResult.ok = false;
+        partialResult.error = errorMessage;
+        partialResult.delivery.telegram.error = errorMessage;
+        partialResult.schedule = await releaseBlockinfoPostRunLock({
+          token: lockToken!,
+          status: "stale_data_warning_failed",
+          errorMessage: errorMessage,
+        });
+        lockToken = null;
+        return partialResult;
+      }
+    }
 
     const generated = await generateOpenAiImage(
       openAiConfig!,
