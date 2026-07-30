@@ -29,22 +29,22 @@ import {
   WAITLIST_VIEW_EARLY_ACCESS_START_AT,
 } from "@/lib/waitlist/view";
 
-type VerifyPageProps = {
+type ReservePageProps = {
   searchParams?: Promise<{ token?: string }>;
 };
 
-type VerifyPageCard = ComponentProps<typeof WaitlistVerifyClient>["cards"][number];
+type ReservePageCard = ComponentProps<typeof WaitlistVerifyClient>["cards"][number];
 
 export const metadata: Metadata = {
-  title: "Verify Waitlist Spot - Zcash Names",
-  description: "Verify your Zcash Names waitlist spot and prepare one ZIP-321 payment request per name.",
+  title: "Reserve Waitlist Spot - Zcash Names",
+  description: "Open your Zcash Names reservation dashboard and prepare one ZIP-321 payment request per name.",
   robots: { index: false, follow: false, nocache: true },
 };
 
 export const dynamic = "force-dynamic";
 const SHAREKIT_PATH = path.join(process.cwd(), "content", "sharekit.md");
 
-async function getVerifyShareDraftPosts(): Promise<string[]> {
+async function getReserveShareDraftPosts(): Promise<string[]> {
   try {
     const markdown = await fs.readFile(SHAREKIT_PATH, "utf8");
     return parseShareKitMarkdown(markdown)
@@ -85,7 +85,7 @@ function ErrorPanel({
   );
 }
 
-export default async function VerifyPage({ searchParams }: VerifyPageProps) {
+export default async function ReservePage({ searchParams }: ReservePageProps) {
   const params = (await searchParams) ?? {};
   const token = params.token?.trim() ?? "";
 
@@ -182,12 +182,12 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
 
   const parsed = parseWaitlistVerifyToken(token);
   if (!parsed) {
-    console.error("[waitlist-verify-page] invalid token");
+    console.error("[waitlist-reserve-page] invalid token");
     return (
       <div className="mx-auto w-full max-w-6xl px-4 py-10">
         <ErrorPanel
-          title="Verify link invalid"
-          body="This verify link is invalid. Open the most recent campaign email and click the link again."
+          title="Reservation link invalid"
+          body="This reservation link is invalid. Open the most recent campaign email and click the link again."
         />
       </div>
     );
@@ -196,7 +196,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
   const paymentAddress = getWaitlistVerifyPaymentAddress();
   const baseAmountZec = getWaitlistVerifyReserveFeeZec();
   if (!paymentAddress || !baseAmountZec) {
-    console.error("[waitlist-verify-page] missing payment config", {
+    console.error("[waitlist-reserve-page] missing payment config", {
       normalizedEmail: parsed.normalizedEmail,
       campaignId: parsed.campaignId,
       hasPaymentAddress: Boolean(paymentAddress),
@@ -205,8 +205,8 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
     return (
       <div className="mx-auto w-full max-w-6xl px-4 py-10">
         <ErrorPanel
-          title="Verify page unavailable"
-          body="The verification payment configuration is incomplete right now."
+          title="Reservation page unavailable"
+          body="The reservation payment configuration is incomplete right now."
         />
       </div>
     );
@@ -217,7 +217,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
     rows = await findWaitlistRowsByNormalizedEmail(parsed.normalizedEmail);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load waitlist entries.";
-    console.error("[waitlist-verify-page] row lookup failed", {
+    console.error("[waitlist-reserve-page] row lookup failed", {
       normalizedEmail: parsed.normalizedEmail,
       campaignId: parsed.campaignId,
       error: message,
@@ -226,14 +226,14 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
       <div className="mx-auto w-full max-w-6xl px-4 py-10">
         <ErrorPanel
           title="Could not load names"
-          body="We couldn't load your waitlist names for verification right now."
+          body="We couldn't load your waitlist names for reservation right now."
         />
       </div>
     );
   }
 
   if (rows.length === 0) {
-    console.error("[waitlist-verify-page] no rows found", {
+    console.error("[waitlist-reserve-page] no rows found", {
       normalizedEmail: parsed.normalizedEmail,
       campaignId: parsed.campaignId,
     });
@@ -241,7 +241,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
       <div className="mx-auto w-full max-w-6xl px-4 py-10">
         <ErrorPanel
           title="No waitlist names found"
-          body="We couldn't find any waitlist names for the email address tied to this verify link."
+          body="We couldn't find any waitlist names for the email address tied to this reservation link."
         />
       </div>
     );
@@ -252,7 +252,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
     nameStats = await getWaitlistVerifyNameStats(rows);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load waitlist name stats.";
-    console.error("[waitlist-verify-page] name stats lookup failed", {
+    console.error("[waitlist-reserve-page] name stats lookup failed", {
       normalizedEmail: parsed.normalizedEmail,
       campaignId: parsed.campaignId,
       error: message,
@@ -272,7 +272,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
     referralStats = await getWaitlistVerifyReferralStats(rows);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load referral stats.";
-    console.error("[waitlist-verify-page] referral stats lookup failed", {
+    console.error("[waitlist-reserve-page] referral stats lookup failed", {
       normalizedEmail: parsed.normalizedEmail,
       campaignId: parsed.campaignId,
       error: message,
@@ -292,7 +292,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
     potentialRewardsByRowId = await getWaitlistVerifyPotentialRewards(rows);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load referral reward stats.";
-    console.error("[waitlist-verify-page] referral reward stats lookup failed", {
+    console.error("[waitlist-reserve-page] referral reward stats lookup failed", {
       normalizedEmail: parsed.normalizedEmail,
       campaignId: parsed.campaignId,
       error: message,
@@ -315,8 +315,8 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Failed to load verify row preferences.";
-    console.error("[waitlist-verify-page] row preference lookup failed", {
+      error instanceof Error ? error.message : "Failed to load reservation row preferences.";
+    console.error("[waitlist-reserve-page] row preference lookup failed", {
       normalizedEmail: parsed.normalizedEmail,
       campaignId: parsed.campaignId,
       error: message,
@@ -339,7 +339,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to load pending delete requests.";
-    console.error("[waitlist-verify-page] delete request lookup failed", {
+    console.error("[waitlist-reserve-page] delete request lookup failed", {
       normalizedEmail: parsed.normalizedEmail,
       campaignId: parsed.campaignId,
       error: message,
@@ -360,7 +360,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to load protected-name data.";
-    console.error("[waitlist-verify-page] protected name lookup failed", {
+    console.error("[waitlist-reserve-page] protected name lookup failed", {
       normalizedEmail: parsed.normalizedEmail,
       campaignId: parsed.campaignId,
       error: message,
@@ -385,7 +385,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to load protected-name requests.";
-    console.error("[waitlist-verify-page] protected request lookup failed", {
+    console.error("[waitlist-reserve-page] protected request lookup failed", {
       normalizedEmail: parsed.normalizedEmail,
       campaignId: parsed.campaignId,
       error: message,
@@ -400,9 +400,9 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
     );
   }
 
-  const shareDraftPosts = await getVerifyShareDraftPosts();
+  const shareDraftPosts = await getReserveShareDraftPosts();
 
-  const cards: VerifyPageCard[] = rows.map((row): VerifyPageCard => {
+  const cards: ReservePageCard[] = rows.map((row): ReservePageCard => {
     const stats = nameStats.get(row.id);
     const rowReferralStats = referralStats.get(row.id);
     const preferredReferralCode =
@@ -412,7 +412,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
       : null;
     const protectedRequest = protectedRequestsByRowId.get(row.id) ?? null;
     const activeDeleteRequest = activeDeleteRequestsByRowId.get(row.id) ?? null;
-    const protectedRequestStatus: VerifyPageCard["protectedRequestStatus"] =
+    const protectedRequestStatus: ReservePageCard["protectedRequestStatus"] =
       protectedRequest?.status ?? "not_submitted";
     try {
       return {
@@ -495,7 +495,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
       };
     }
   });
-  console.info("[waitlist-verify-page] loaded", {
+  console.info("[waitlist-reserve-page] loaded", {
     normalizedEmail: parsed.normalizedEmail,
     campaignId: parsed.campaignId,
     rowCount: rows.length,

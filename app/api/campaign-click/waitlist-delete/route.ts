@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function fallbackRedirect(request: Request): URL {
-  return new URL("/verify", request.url);
+  return new URL("/reserve", request.url);
 }
 
 export async function GET(request: Request) {
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(fallbackRedirect(request), { status: 302 });
     }
 
-    const redirectUrl = new URL(deleteRequest.redirectUrl || "/verify", request.url);
+    const redirectUrl = new URL(deleteRequest.redirectUrl || "/reserve", request.url);
     const successRedirectUrl = new URL(redirectUrl.toString());
     successRedirectUrl.searchParams.set("delete", "success");
     successRedirectUrl.searchParams.set("removed", deleteRequest.requestedName);

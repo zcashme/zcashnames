@@ -172,7 +172,7 @@ export function buildWaitlistVerifyUrl(args: {
   baseUrl: string;
   token: string;
 }): string {
-  return `${formatOrigin(args.baseUrl)}/verify?token=${encodeURIComponent(args.token)}`;
+  return `${formatOrigin(args.baseUrl)}/reserve?token=${encodeURIComponent(args.token)}`;
 }
 
 export function buildWaitlistConfirmResponseTrackingUrl(args: {

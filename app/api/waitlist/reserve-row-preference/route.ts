@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   const parsed = parseWaitlistVerifyToken(token);
   if (!parsed) {
     return NextResponse.json(
-      { ok: false, error: "Invalid verify token.", requestId },
+      { ok: false, error: "Invalid reservation token.", requestId },
       { status: 400 },
     );
   }
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     const row = rows.find((candidate) => candidate.id === rowId);
     if (!row) {
       return NextResponse.json(
-        { ok: false, error: "Waitlist row not found for this verify link.", requestId },
+        { ok: false, error: "Waitlist row not found for this reservation link.", requestId },
         { status: 404 },
       );
     }
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save row preference.";
-    console.error("[waitlist-verify-row-preference] failed", {
+    console.error("[waitlist-reserve-row-preference] failed", {
       requestId,
       rowId,
       normalizedEmail: parsed.normalizedEmail,

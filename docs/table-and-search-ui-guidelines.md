@@ -6,8 +6,8 @@ Current canonical references:
 
 - `/explorer`
 - `/waitlist/view`
-- `/verify`
-- `/verify?token=...`
+- `/reserve`
+- `/reserve?token=...`
 - `/faq`
 
 ## Rule Zero
@@ -37,7 +37,7 @@ Current applied examples:
 
 - `components/Header.tsx`
 - `app/(site)/faq/page.tsx`
-- `app/(site)/verify/page.tsx`
+- `app/(site)/reserve/page.tsx`
 - `components/waitlist/WaitlistViewClient.tsx`
 - `components/verify/WaitlistVerifyClient.tsx`
 - `app/(site)/explorer/ExplorerListPane.tsx`

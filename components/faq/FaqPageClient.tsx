@@ -65,7 +65,7 @@ const groups: FAQGroup[] = [
       {
         question: "How is a reservation marked complete?",
         answer:
-          "Once a qualifying transaction is mined and matched to your waitlist UUID, the reservation is recorded on your waitlist entry. The reserved state then appears on your tokenized /verify page and in the public waitlist view.",
+          "Once a qualifying transaction is mined and matched to your waitlist UUID, the reservation is recorded on your waitlist entry. The reserved state then appears on your tokenized /reserve page and in the public waitlist view.",
       },
       {
         question: "What do Reserved, Protected, Pending, and Available mean on the waitlist view?",
@@ -80,7 +80,7 @@ const groups: FAQGroup[] = [
       {
         question: "How do I request another reservation link?",
         answer:
-          "Use /verify and enter the email address you used on the waitlist. If that address is on the waitlist and has not received a reservation email in the last 48 hours, a fresh reservation link will be sent.",
+          "Use /reserve and enter the email address you used on the waitlist. If that address is on the waitlist and has not received a reservation email in the last 48 hours, a fresh reservation link will be sent.",
       },
       {
         question: "Will the resend form tell me whether my email is on the waitlist?",

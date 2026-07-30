@@ -286,7 +286,7 @@ export async function syncWaitlistReservationFieldsFromReserves(): Promise<{
           normalizedEmail,
           campaignId: getWaitlistReservationResendCampaignId(),
           baseUrl,
-        }) ?? `${baseUrl}/verify`;
+        }) ?? `${baseUrl}/reserve`;
       const queueUrl = `${baseUrl}/waitlist/view?search=${encodeURIComponent(trimmedName)}&searchMode=exact`;
       const dashboardUrl = buildWaitlistReferralDashboardUrl(
         ensuredReferral.preferredCode,

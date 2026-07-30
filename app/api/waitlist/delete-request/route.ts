@@ -62,7 +62,7 @@ export async function POST(request: Request) {
   const parsed = parseWaitlistVerifyToken(token);
   if (!parsed) {
     return NextResponse.json(
-      { ok: false, error: "Invalid verify token.", requestId },
+      { ok: false, error: "Invalid reservation token.", requestId },
       { status: 400 },
     );
   }
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     const row = rows.find((candidate) => candidate.id === rowId);
     if (!row) {
       return NextResponse.json(
-        { ok: false, error: "Waitlist row not found for this verify link.", requestId },
+        { ok: false, error: "Waitlist row not found for this reservation link.", requestId },
         { status: 404 },
       );
     }
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     });
 
     const expiresAt = new Date(Date.now() + DELETE_REQUEST_TTL_MS).toISOString();
-    const verifyUrl = `${new URL(request.url).origin}/verify?token=${encodeURIComponent(token)}`;
+    const reserveUrl = `${new URL(request.url).origin}/reserve?token=${encodeURIComponent(token)}`;
     const deleteRequest = await createWaitlistRowDeleteRequest({
       waitlistRowId: rowId,
       normalizedEmail: parsed.normalizedEmail,
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
         name_reserved_txid: row.name_reserved_txid,
         campaign_email_confirm_response: row.campaign_email_confirm_response,
       },
-      redirectUrl: verifyUrl,
+      redirectUrl: reserveUrl,
       expiresAt,
     });
 

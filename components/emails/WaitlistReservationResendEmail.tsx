@@ -102,8 +102,8 @@ export default function WaitlistReservationResendEmail(props: WaitlistReservatio
   const displayName = name?.trim() || "there";
   const preview =
     variant === "multi-name"
-      ? "Verify your email and complete your reservations for Early Access."
-      : "Verify your email and complete your reservation for Early Access.";
+      ? "Open your reservation link and complete your reservations for Early Access."
+      : "Open your reservation link and complete your reservation for Early Access.";
 
   return (
     <EmailLayout
@@ -114,8 +114,8 @@ export default function WaitlistReservationResendEmail(props: WaitlistReservatio
         <Text style={paragraph}>Hi {variant === "multi-name" ? "there" : displayName},</Text>
         <Text style={paragraph}>
           {variant === "multi-name"
-            ? "Use the link below to verify your email and complete your reservations for Early Access."
-            : "Use the link below to verify your email and complete your reservation for Early Access."}
+            ? "Use the link below to open your reservation link and complete your reservations for Early Access."
+            : "Use the link below to open your reservation link and complete your reservation for Early Access."}
         </Text>
       </Section>
 

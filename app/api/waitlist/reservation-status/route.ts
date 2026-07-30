@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   const parsed = parseWaitlistVerifyToken(token);
   if (!parsed) {
     return NextResponse.json(
-      { ok: false, error: "Invalid verify token.", requestId },
+      { ok: false, error: "Invalid reservation token.", requestId },
       { status: 400 },
     );
   }
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
     if (!row) {
       return NextResponse.json(
-        { ok: false, error: "Waitlist row not found for this verify link.", requestId },
+        { ok: false, error: "Waitlist row not found for this reservation link.", requestId },
         { status: 404 },
       );
     }

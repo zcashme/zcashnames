@@ -749,7 +749,7 @@ export function VerifyEarlyAccessNotice({
   const targetMs = new Date(earlyAccessStartAt).getTime();
   const [now, setNow] = useState(() => Date.now());
   const showOnPath =
-    pathname === "/verify" ||
+    pathname === "/reserve" ||
     pathname === "/faq" ||
     pathname === "/waitlist/view";
 
@@ -774,7 +774,7 @@ export function VerifyEarlyAccessNotice({
     >
       <span className="h-6 w-6" aria-hidden="true" />
       <Link
-        href="/verify"
+        href="/reserve"
         className="col-start-2 flex min-w-0 items-center justify-center gap-2 whitespace-nowrap text-center transition-opacity hover:opacity-90"
       >
         <span
@@ -3623,7 +3623,7 @@ export default function WaitlistVerifyClient({
 
   function clearDeleteSuccess() {
     setRemovedName(null);
-    router.replace(`/verify?token=${encodeURIComponent(verifyToken)}`, { scroll: false });
+    router.replace(`/reserve?token=${encodeURIComponent(verifyToken)}`, { scroll: false });
   }
 
   function updateCard(cardId: string, update: VerifyCardStatusUpdate) {
@@ -3683,7 +3683,7 @@ export default function WaitlistVerifyClient({
     updateCardPreference(card.id, { collapsed: nextCollapsed });
 
     try {
-      const response = await fetch("/api/waitlist/verify-row-preference", {
+      const response = await fetch("/api/waitlist/reserve-row-preference", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

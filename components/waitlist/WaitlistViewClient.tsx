@@ -882,7 +882,7 @@ export default function WaitlistViewClient({
         <p>
           Email confirmation alone is not sybil resistant in this system. A single person can create many email
           addresses, confirm them cheaply, and occupy many positions in the queue without showing meaningful commitment.
-          The reservation flow on <code>/verify</code> raises the cost of spam and duplicate queue abuse by requiring an
+          The reservation flow on <code>/reserve</code> raises the cost of spam and duplicate queue abuse by requiring an
           on-chain Zcash transaction tied to a real wallet action for each reserved name. That does not solve every abuse
           case, but it is much harder to fake at scale than email clicks alone, and it gives the queue a stronger signal
           that a participant intends to actually claim the name.
@@ -1009,7 +1009,7 @@ export default function WaitlistViewClient({
                   <span>Already on the waitlist? Complete your reservation to purchase your name during Early Access.</span>
                   <span className="mt-1 block text-center text-sm">
                     <Link
-                      href="/verify"
+                      href="/reserve"
                       className="text-[0.78rem] font-normal underline"
                       style={{ color: "var(--color-accent-interactive)" }}
                     >
