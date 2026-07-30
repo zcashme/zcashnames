@@ -2,19 +2,14 @@ import "server-only";
 
 import { resolveSecret, safeEqual, signHmac } from "@/lib/hmac";
 
-const DEFAULT_CLICK_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
-const DEFAULT_VERIFY_TOKEN_TTL_SECONDS = 60 * 30;
-
 export interface WaitlistConfirmResponseTokenPayload {
   normalizedEmail: string;
   campaignId: string;
-  exp: number;
 }
 
 export interface WaitlistVerifyTokenPayload {
   normalizedEmail: string;
   campaignId: string;
-  exp: number;
 }
 
 function normalizeEmail(email: string): string {
@@ -59,7 +54,7 @@ function signPayload(secret: string, payload: string): string {
   return signHmac(secret, payload);
 }
 
-function buildSignedToken<T extends { normalizedEmail: string; campaignId: string; exp: number }>(
+function buildSignedToken<T extends { normalizedEmail: string; campaignId: string }>(
   payload: T,
   secret: string,
 ): string {
@@ -68,7 +63,7 @@ function buildSignedToken<T extends { normalizedEmail: string; campaignId: strin
   return `${encodedPayload}.${signature}`;
 }
 
-function parseSignedToken<T extends { normalizedEmail: string; campaignId: string; exp: number }>(
+function parseSignedToken<T extends { normalizedEmail: string; campaignId: string }>(
   token: string,
   secret: string,
 ): T | null {
@@ -86,18 +81,15 @@ function parseSignedToken<T extends { normalizedEmail: string; campaignId: strin
     if (
       !parsed ||
       typeof parsed.normalizedEmail !== "string" ||
-      typeof parsed.campaignId !== "string" ||
-      typeof parsed.exp !== "number"
+      typeof parsed.campaignId !== "string"
     ) {
       return null;
     }
-    if (parsed.exp < Math.floor(Date.now() / 1000)) return null;
 
     return {
       ...parsed,
       normalizedEmail: normalizeEmail(parsed.normalizedEmail),
       campaignId: parsed.campaignId.trim(),
-      exp: parsed.exp,
     } as T;
   } catch {
     return null;
@@ -118,7 +110,9 @@ function parsePositiveZecAmount(rawValue: string | undefined): string | null {
 }
 
 export function getWaitlistVerifyPaymentAddress(): string | null {
-  const value = process.env.WAITLIST_VERIFY_PAYMENT_ADDRESS?.trim();
+  const value =
+    process.env.WAITLIST_ADMIN_WALLET?.trim()
+    ?? process.env.WAITLIST_VERIFY_PAYMENT_ADDRESS?.trim();
   return value ? value : null;
 }
 
@@ -129,7 +123,6 @@ export function getWaitlistVerifyReserveFeeZec(): string | null {
 export function buildWaitlistConfirmResponseToken(args: {
   normalizedEmail: string;
   campaignId: string;
-  ttlSeconds?: number;
 }): string {
   const normalizedEmail = normalizeEmail(args.normalizedEmail);
   if (!normalizedEmail) {
@@ -140,7 +133,6 @@ export function buildWaitlistConfirmResponseToken(args: {
     {
       normalizedEmail,
       campaignId: args.campaignId.trim(),
-      exp: Math.floor(Date.now() / 1000) + (args.ttlSeconds ?? DEFAULT_CLICK_TOKEN_TTL_SECONDS),
     },
     getClickSecret(),
   );
@@ -155,7 +147,6 @@ export function parseWaitlistConfirmResponseToken(
 export function buildWaitlistVerifyToken(args: {
   normalizedEmail: string;
   campaignId: string;
-  ttlSeconds?: number;
 }): string {
   const normalizedEmail = normalizeEmail(args.normalizedEmail);
   if (!normalizedEmail) {
@@ -166,7 +157,6 @@ export function buildWaitlistVerifyToken(args: {
     {
       normalizedEmail,
       campaignId: args.campaignId.trim(),
-      exp: Math.floor(Date.now() / 1000) + (args.ttlSeconds ?? DEFAULT_VERIFY_TOKEN_TTL_SECONDS),
     },
     getVerifySecret(),
   );

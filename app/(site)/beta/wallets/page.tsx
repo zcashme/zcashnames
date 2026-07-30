@@ -5,8 +5,8 @@ import WalletFeatureMatrix from "@/components/wallets/WalletFeatureMatrix";
 import { WALLET_VARIANTS } from "@/lib/wallets/catalog";
 
 export const metadata: Metadata = {
-  title: "Beta Wallets - ZcashNames",
-  description: "Compare ZcashNames beta wallet features by platform.",
+  title: "Beta Wallets - Zcash Names",
+  description: "Compare Zcash Names beta wallet features by platform.",
   robots: { index: false, follow: false, nocache: true },
 };
 

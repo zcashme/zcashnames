@@ -15,7 +15,7 @@ interface CommissionPinEmailProps {
 
 export default function CommissionPinEmail({ name, pin, dashboardUrl }: CommissionPinEmailProps) {
   return (
-    <EmailLayout preview="Your ZcashNames access code." headingText="Your access code">
+    <EmailLayout preview="Your Zcash Names access code." headingText="Your access code">
       <Section style={content}>
         <Text style={{ ...paragraph, margin: "16px 0 16px", textAlign: "center" as const }}>
           Your referral dashboard access code is:

@@ -16,7 +16,7 @@ export const BLOG_SERIES_META: readonly BlogSeries[] = [
   {
     slug: "updates",
     label: "Updates",
-    title: "ZcashNames Updates",
+    title: "Zcash Names Updates",
     description: "Product notes, releases, and operator updates from the core team.",
     href: "/blogs/updates",
   },
@@ -42,7 +42,7 @@ export const BLOG_SUBSCRIPTION_OPTIONS = [
     slug: "general",
     label: "General",
     title: "General Newsletter",
-    description: "General product, launch, and community updates from ZcashNames.",
+    description: "General product, launch, and community updates from Zcash Names.",
     href: "/community",
   },
 ] as const;

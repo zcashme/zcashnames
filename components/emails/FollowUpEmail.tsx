@@ -23,7 +23,7 @@ export default function FollowUpEmail({
 }: FollowUpEmailProps) {
   return (
     <EmailLayout
-      preview="We'd love to chat about ZcashNames with you."
+      preview="We'd love to chat about Zcash Names with you."
       headingText="Let&rsquo;s connect"
       unsubscribeLinks={unsubscribeLinks}
     >

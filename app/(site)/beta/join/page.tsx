@@ -3,7 +3,7 @@ import Link from "next/link";
 import JoinClient from "./JoinClient";
 
 export const metadata: Metadata = {
-  title: "Join the Beta - ZcashNames",
+  title: "Join the Beta - Zcash Names",
   robots: { index: false, follow: false, nocache: true },
 };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { saveUnsubscribePreferencesAction } from "./actions";
 
 type PreferenceMap = Record<string, boolean>;
@@ -208,7 +209,7 @@ export default function UnsubscribePreferencesClient({
         disabled={pending}
         className="w-full rounded-full bg-amber-500 px-5 py-3 text-sm font-semibold text-zinc-900 hover:bg-amber-400 disabled:opacity-60"
       >
-        {pending ? "Saving..." : "Save preferences"}
+        {pending ? <AnimatedLoadingLabel label="Saving" active /> : "Save preferences"}
       </button>
     </form>
   );

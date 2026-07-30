@@ -15,33 +15,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const brand = getWalletBrand(wallet);
   if (!brand) {
     return {
-      title: "Beta - ZcashNames",
+      title: "Beta - Zcash Names",
       robots: { index: false, follow: false, nocache: true },
     };
   }
 
-  const pageTitle = `Test ZcashNames in ${brand.displayName}`;
+  const pageTitle = `Test Zcash Names in ${brand.displayName}`;
 
   return {
     title: `${pageTitle} - ZcashNames`,
-    description: `Read the ${brand.displayName} ZcashNames beta brief.`,
+    description: `Read the ${brand.displayName} Zcash Names beta brief.`,
     openGraph: {
       title: pageTitle,
-      description: `Read the ${brand.displayName} ZcashNames beta brief.`,
+      description: `Read the ${brand.displayName} Zcash Names beta brief.`,
       url: `https://www.zcashnames.com/beta/${brand.slug}`,
       images: [
         {
           url: "/og/beta.png",
           width: 1200,
           height: 630,
-          alt: `${brand.displayName} ZcashNames beta invitation preview`,
+          alt: `${brand.displayName} Zcash Names beta invitation preview`,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
       title: pageTitle,
-      description: `Read the ${brand.displayName} ZcashNames beta brief.`,
+      description: `Read the ${brand.displayName} Zcash Names beta brief.`,
       images: ["/og/beta.png"],
     },
     robots: { index: false, follow: false, nocache: true },
@@ -57,7 +57,7 @@ export default async function BrandedBetaBriefPage({ params }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 md:px-8 py-10">
-      <SiteRouteTitle title={brand ? `Test ZcashNames in ${brand.displayName}` : "Beta"} />
+      <SiteRouteTitle title={brand ? `Test Zcash Names in ${brand.displayName}` : "Beta"} />
       <div className="flex flex-col md:flex-row gap-10">
         <aside className="contents md:block md:w-56 md:shrink-0 md:sticky md:top-24 md:self-start">
           {knownBrand && brand ? (

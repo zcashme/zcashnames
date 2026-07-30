@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 
 type Props = {
   target: "mainnet" | "testnet";
@@ -113,7 +114,7 @@ export default function BetaPasswordModal({ target, onCancel, onSubmit }: Props)
               boxShadow: "var(--sf-search-btn-shadow)",
             }}
           >
-            {checking ? "Checking..." : "Continue"}
+            {checking ? <AnimatedLoadingLabel label="Checking" active /> : "Continue"}
           </button>
         </div>
       </div>

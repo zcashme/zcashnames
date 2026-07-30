@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import ReferralCodeRecovery from "@/components/ReferralCodeRecovery";
 import { useCopy } from "@/components/hooks/useCopy";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import ShareDropdown, { ShareCopyIcon } from "@/components/ShareDropdown";
 import { buildReferralUrl, extractReferralCode } from "@/lib/referral-code";
 import type { ShareKitDraft, ShareKitSection } from "@/lib/sharekit";
@@ -188,7 +189,7 @@ export default function ShareKitClient({
               disabled={submitting}
               className={referralActionButtonClassName}
             >
-              {submitting ? "Checking..." : referralCode ? "Update code" : "Apply code"}
+              {submitting ? <AnimatedLoadingLabel label="Checking" active /> : referralCode ? "Update code" : "Apply code"}
             </button>
             <ReferralCodeRecovery variant="sharekit" controlsId="sharekit-forgot-code" />
           </div>

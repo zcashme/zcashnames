@@ -11,6 +11,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { submitBetaFeedback } from "@/lib/beta/actions";
 import type { ChecklistItem } from "@/lib/beta/checklist";
 import type { WalletVariantId } from "@/lib/wallets/catalog";
@@ -601,7 +602,7 @@ export default function FeedbackForm({
           className="w-full rounded-full py-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           style={primaryBtnStyle}
         >
-          {submitting ? "Submitting…" : "Submit"}
+          {submitting ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit"}
         </button>
       </div>
     </form>

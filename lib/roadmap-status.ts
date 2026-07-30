@@ -42,5 +42,5 @@ export function buildRoadmapShareMessage({
   totalCount: number;
   shareUrl: string;
 }): string {
-  return `ZcashNames is currently focusing on their ${currentFocusTitle}, having completed ${completedCount} of the ${totalCount} phases in their roadmap so far. Check it out: ${shareUrl}`;
+  return `Zcash Names is currently focusing on their ${currentFocusTitle}, having completed ${completedCount} of the ${totalCount} phases in their roadmap so far. Check it out: ${shareUrl}`;
 }

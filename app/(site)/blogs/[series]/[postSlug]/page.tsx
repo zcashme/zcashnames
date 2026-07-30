@@ -27,7 +27,7 @@ export async function generateMetadata({
   if (!isBlogSeriesSlug(series)) return {};
   if (!(await blogPostExists(series, postSlug))) {
     return {
-      title: "This isn't published yet | ZcashNames",
+      title: "This isn't published yet | Zcash Names",
       description: `Subscribe for updates when ${postSlug} is published in the ${series} series.`,
     };
   }

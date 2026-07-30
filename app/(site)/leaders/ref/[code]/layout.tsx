@@ -33,7 +33,7 @@ export async function generateMetadata({
           url: `${BRAND.url}/og/leaders-ref.png`,
           width: 1200,
           height: 630,
-          alt: "ZcashNames referral dashboard preview",
+          alt: "Zcash Names referral dashboard preview",
         },
       ],
     },

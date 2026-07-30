@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Dashboard Offline | ZcashNames",
+  title: "Dashboard Offline | Zcash Names",
   description: "The referral dashboard needs a network connection to load live data.",
   robots: { index: false, follow: false },
 };

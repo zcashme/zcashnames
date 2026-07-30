@@ -103,7 +103,7 @@ export default function BetaInstructionsBrief() {
           className="text-3xl md:text-4xl font-bold tracking-tight"
           style={{ color: "var(--fg-heading)", marginBottom: "0.75rem" }}
         >
-          ZcashNames Beta Instructions
+          Zcash Names Beta Instructions
         </h1>
         <p style={p}>
           Welcome. Zcash Name Service (ZNS) is a name registration protocol on Zcash. You
@@ -112,7 +112,7 @@ export default function BetaInstructionsBrief() {
         </p>
         <p style={p}>
           This beta focuses on the live mainnet wallet experience: buying, selling, resolving, and
-          using ZcashNames inside supported wallets.
+          using Zcash Names inside supported wallets.
         </p>
 
         <div
@@ -417,7 +417,7 @@ export default function BetaInstructionsBrief() {
           </li>
           <li style={li}>
             <Link href="/docs" className="underline" style={{ color: "var(--fg-heading)" }}>
-              ZcashNames Docs
+              Zcash Names Docs
             </Link>
           </li>
           <li style={li}>

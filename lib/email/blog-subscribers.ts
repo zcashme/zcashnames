@@ -16,7 +16,7 @@ export async function sendBlogSubscriberConfirmationEmail({
 }): Promise<void> {
   const blogSeries = getBlogSubscriptionOption(series);
   const subjectTitle =
-    series === "general" ? "ZcashNames newsletter" : blogSeries.title;
+    series === "general" ? "Zcash Names newsletter" : blogSeries.title;
   const bodyTitle = series === "general" ? "our newsletter" : blogSeries.title;
 
   await sendEmail({

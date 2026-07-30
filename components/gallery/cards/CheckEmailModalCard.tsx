@@ -50,7 +50,7 @@ function CheckEmailView() {
           Check your email
         </h2>
         <p style={{ fontSize: "0.875rem", color: "var(--fg-body)", lineHeight: 1.6, margin: 0 }}>
-          We sent a confirmation link to your inbox. Click it to secure your spot on the waitlist.
+          We sent a confirmation link to your inbox. Click it and follow the instructions to gain Early Access.
         </p>
         <button
           type="button"
@@ -170,7 +170,7 @@ function buildSnippet(t: ThemeName): string {
           </svg>
         </span>
         <h2>Check your email</h2>
-        <p>We sent a confirmation link to your inbox. Click it to secure your spot on the waitlist.</p>
+        <p>We sent a confirmation link to your inbox. Click it and follow the instructions to gain Early Access.</p>
         <button type="button" class="primary">Done</button>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { submitBetaRefundClaim, type BetaRefundDefaults } from "@/lib/beta/actions";
 import { validateAddress } from "@/lib/zns/address-validation";
 import {
@@ -473,7 +474,7 @@ export default function BetaRefundForm({ defaults }: Props) {
             cursor: submitting ? "progress" : "pointer",
           }}
         >
-          {submitting ? "Submitting..." : "Submit request"}
+          {submitting ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit request"}
         </button>
       </div>
     </form>

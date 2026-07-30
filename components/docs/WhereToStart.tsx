@@ -17,7 +17,7 @@ const SECTIONS: Section[] = [
   {
     title: "Start Here",
     links: [
-      { label: "What is ZcashNames?", href: "/docs/learn/what-is-zns" },
+      { label: "What is Zcash Names?", href: "/docs/learn/what-is-zns" },
       { label: "I use zcash.me", href: "/docs/learn/what-is-zns#already-using-zcashme" },
       { label: "I already claimed a name", href: "/docs/use/managing" },
       { label: "Will this expose me?", href: "/docs/learn/privacy" },

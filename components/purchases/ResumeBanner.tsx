@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useAnimatedEllipsis } from "@/components/ui/AnimatedLoadingLabel";
 import type { Phase, ScanState } from "@/lib/types";
 import type { ResumeSnapshot } from "@/lib/purchases/resume";
 import {
@@ -102,22 +103,10 @@ function CompactProgress({ snapshot, complete }: { snapshot: ResumeSnapshot; com
 }
 
 function LoadingEllipsis({ active }: { active: boolean }) {
-  const [dotCount, setDotCount] = useState(0);
-
-  useEffect(() => {
-    if (!active) return;
-    const id = window.setInterval(() => {
-      setDotCount((current) => (current + 1) % 4);
-    }, 450);
-    return () => window.clearInterval(id);
-  }, [active]);
+  const dots = useAnimatedEllipsis(active);
 
   if (!active) return null;
-  return (
-    <span className="inline-block w-[1.5em] text-left" aria-hidden="true">
-      {".".repeat(dotCount)}
-    </span>
-  );
+  return <span className="inline-block w-[1.5em] text-left" aria-hidden="true">{dots}</span>;
 }
 
 interface ResumeBannerProps {

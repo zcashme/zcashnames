@@ -1,71 +1,35 @@
 /**
  * ExplorerView — the client-side orchestrator for the explorer page.
- * URL is the single source of truth for navigation state (env, tab, page, name).
- * useSearchParams is read directly; handlers call router.push() to update the URL.
- * Server components own data fetching; this component handles interactivity only.
+ * Name-detail search remains URL/server-driven; list-table navigation is
+ * handled client-side through URL-synced params plus a cached fetch layer.
  */
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ExplorerToolbar from "./ExplorerToolbar";
-import { PAGE_SIZE, parseExplorerTab, type ExplorerTab } from "./tabs";
 import ExplorerNameDetail from "./ExplorerNameDetail";
+import ExplorerListPane from "./ExplorerListPane";
 import Zip321Modal from "@/components/purchases/Zip321Modal";
 import ResumeReplacementDialog from "@/components/purchases/ResumeReplacementDialog";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import ActionBadge from "@/components/ActionBadge";
-
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import CopyIconButton from "@/components/CopyIconButton";
+import SearchResultsSummary from "@/components/table/SearchResultsSummary";
 import { getResumeToReplace } from "@/lib/purchases/resume";
 import type { ResumeSnapshot } from "@/lib/purchases/resume";
-import { zatsToZec } from "@/lib/zns/utils";
-import type { Listing, Network, Registration, ResolveName, ZnsEvent } from "@/lib/types";
+import type { ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
-import { ACTIONS, ACTION_LABELS } from "@/lib/types";
-
-function PaginationControls({
-  page,
-  totalPages,
-  onPageChange,
-}: {
-  page: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-}) {
-  if (totalPages <= 1) return null;
-  const canGoPrev = page > 1;
-  const canGoNext = page < totalPages;
-
-  return (
-    <div
-      className="border-t px-5 py-3 flex items-center justify-between gap-3"
-      style={{ borderColor: "var(--leaders-card-border)" }}
-      data-testid="explorer-pagination"
-    >
-      <button
-        type="button"
-        onClick={() => onPageChange(page - 1)}
-        disabled={!canGoPrev}
-        className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Previous
-      </button>
-      <span className="text-[0.76rem] font-semibold uppercase tracking-[0.08em] text-fg-muted tabular-nums">
-        Page {page} of {totalPages}
-      </span>
-      <button
-        type="button"
-        onClick={() => onPageChange(page + 1)}
-        disabled={!canGoNext}
-        className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Next
-      </button>
-    </div>
-  );
-}
+import {
+  normalizeExplorerSort,
+  parseExplorerNetwork,
+  parseExplorerPage,
+  parseExplorerPageSize,
+  parseExplorerSearchMode,
+  parseExplorerTab,
+  type ExplorerSearchMode,
+} from "./listConfig";
+import type { ExplorerListData } from "./listData";
 
 function UivkVerifiedBadge({ value, verified }: { value: string; verified: boolean }) {
   if (!value) return null;
@@ -97,64 +61,55 @@ function UivkVerifiedBadge({ value, verified }: { value: string; verified: boole
   );
 }
 
-const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "registered", label: "Registered" },
-  { key: "forsale", label: "For Sale" },
-];
-
-const MORE_TABS: { key: ExplorerTab; label: string }[] = ACTIONS.map((a) => ({
-  key: a,
-  label: ACTION_LABELS[a],
-}));
-
-interface ExplorerViewProps {
-  initialEvents: ZnsEvent[];
-  initialEventsTotal: number;
-  initialListings: Listing[];
-  initialRegistrations: Registration[];
-  stats: {
-    claimed: number;
-    forSale: number;
-    syncedHeight: number;
-    uivk: string;
-    uivkVerified: boolean;
-  };
-  network: Network;
-  nameQuery: string;
-  nameResult: ResolveName | null;
-  nameEvents: ZnsEvent[];
+function KeyIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3.5 w-3.5"
+      aria-hidden="true"
+    >
+      <circle cx="7.5" cy="12" r="3.5" />
+      <path d="M11 12h8" />
+      <path d="M16 12v-2.5" />
+      <path d="M19 12v-2.5" />
+    </svg>
+  );
 }
 
 export default function ExplorerView({
-  initialEvents,
-  initialEventsTotal,
-  initialListings,
-  initialRegistrations,
-  stats,
-  network,
+  initialListData,
   nameQuery,
   nameResult,
   nameEvents,
-}: ExplorerViewProps) {
+}: {
+  initialListData: ExplorerListData;
+  nameQuery: string;
+  nameResult: ResolveName | null;
+  nameEvents: ZnsEvent[];
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const usdPerZec = useUsdPrice();
   const [isPending, startTransition] = useTransition();
-  const [optimisticNetwork, setOptimisticNetwork] = useOptimistic(network);
-
-  // ── URL-derived state (single source of truth) ────────────────────────────
-  const tab = parseExplorerTab(searchParams.get("tab") ?? undefined);
-  const rawPage = Number.parseInt(searchParams.get("page") ?? "", 10);
-  const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
-  const selectedName = searchParams.get("name");
-
-  // ── Local UI state (not URL-driven) ──────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState("");
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [isListRefreshing, setIsListRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(
+    initialListData.searchMode === "contains" && initialListData.searchQuery
+      ? initialListData.searchQuery
+      : nameQuery,
+  );
+  const [searchMode, setSearchMode] = useState<ExplorerSearchMode>(
+    nameQuery ? "exact" : (initialListData.searchMode ?? "contains"),
+  );
   const [uivkOpen, setUivkOpen] = useState(false);
   const [uivkCopied, setUivkCopied] = useState(false);
+  const [listRefreshNonce, setListRefreshNonce] = useState(0);
+  const [currentListData, setCurrentListData] = useState(initialListData);
   const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
   const [pendingReplacement, setPendingReplacement] = useState<{
     action: Action;
@@ -162,97 +117,124 @@ export default function ExplorerView({
     existing: ResumeSnapshot;
   } | null>(null);
 
+  const selectedName = searchParams.get("name");
+  const currentNetwork = parseExplorerNetwork(searchParams.get("env"));
+  const currentTab = parseExplorerTab(searchParams.get("tab") ?? undefined);
+  const currentPage = parseExplorerPage(searchParams.get("page"));
+  const currentPageSize = parseExplorerPageSize(searchParams.get("pageSize"));
+  const currentContainsSearch = searchParams.get("search") ?? "";
+  const urlSearchMode = parseExplorerSearchMode(searchParams.get("searchMode"));
+  const currentSort = normalizeExplorerSort(
+    currentTab,
+    searchParams.get("sortKey"),
+    searchParams.get("sortDirection"),
+  );
   const showNameDetail = !!selectedName;
   const nameDataReady = !!nameResult;
+  const activeSearchMode: ExplorerSearchMode = showNameDetail ? "exact" : urlSearchMode;
+  const activeSearchQuery = showNameDetail ? (selectedName ?? "") : currentContainsSearch.trim();
+  const activeSearchMatchCount = showNameDetail ? (nameResult ? 1 : 0) : currentListData.totalCount;
+  const showActiveSearchMatchCount = showNameDetail ? !isPending : !isListRefreshing;
 
-  // ── Tab counts (authoritative server totals; null where unknowable) ─────
-  function getTabCount(key: ExplorerTab): number | null {
-    if (key === "registered") return stats.claimed;
-    if (key === "forsale") return stats.forSale;
-    // Events-style tabs: only the active tab has a known total from the server.
-    if (key === tab) return initialEventsTotal;
-    return null;
-  }
+  useEffect(() => {
+    if (showNameDetail) {
+      setSearchQuery(nameQuery);
+      setSearchMode("exact");
+      return;
+    }
 
-  // ── Active-tab pagination ────────────────────────────────────────────────
-  const totalItems =
-    tab === "registered" ? stats.claimed
-    : tab === "forsale" ? stats.forSale
-    : initialEventsTotal;
-  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
+    if (currentContainsSearch.trim()) {
+      setSearchQuery(currentContainsSearch);
+      setSearchMode("contains");
+      return;
+    }
 
-  const isMoreTabActive = MORE_TABS.some((t) => t.key === tab);
-  const activeMoreLabel = MORE_TABS.find((t) => t.key === tab)?.label;
+    setSearchQuery("");
+    setSearchMode("contains");
+  }, [currentContainsSearch, nameQuery, showNameDetail]);
 
-  // ── URL builder ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    setCurrentListData(initialListData);
+  }, [initialListData]);
+
   function buildUrl(opts: {
-    network?: Network;
+    network?: typeof currentNetwork;
     name?: string | null;
-    tab?: ExplorerTab;
+    tab?: typeof currentTab;
     page?: number;
+    pageSize?: number;
+    sortKey?: typeof currentSort.sortKey;
+    sortDirection?: typeof currentSort.sortDirection;
+    search?: string | null;
+    searchMode?: ExplorerSearchMode | null;
   }) {
+    const nextNetwork = opts.network ?? currentNetwork;
+    const nextTab = opts.tab ?? currentTab;
+    const nextPage = opts.page ?? currentPage;
+    const nextPageSize = opts.pageSize ?? currentPageSize;
+    const nextSort = normalizeExplorerSort(
+      nextTab,
+      opts.sortKey ?? currentSort.sortKey,
+      opts.sortDirection ?? currentSort.sortDirection,
+    );
     const params = new URLSearchParams();
-    const net = opts.network ?? optimisticNetwork;
-    const tabParam = opts.tab ?? tab;
-    const pageParam = opts.page ?? page;
-    if (net !== "mainnet") params.set("env", net);
-    if (tabParam !== "all") params.set("tab", tabParam);
-    if (pageParam > 1) params.set("page", String(pageParam));
-    const name = opts.name === undefined ? selectedName : opts.name;
-    if (name) params.set("name", name);
-    const qs = params.toString();
-    return qs ? `/explorer?${qs}` : "/explorer";
+
+    if (nextNetwork !== "mainnet") params.set("env", nextNetwork);
+    if (nextTab !== "all") params.set("tab", nextTab);
+    if (nextPage > 1) params.set("page", String(nextPage));
+    if (nextPageSize !== 25) params.set("pageSize", String(nextPageSize));
+
+    const defaultSort = normalizeExplorerSort(nextTab, null, null);
+    if (
+      nextSort.sortKey !== defaultSort.sortKey
+      || nextSort.sortDirection !== defaultSort.sortDirection
+    ) {
+      params.set("sortKey", nextSort.sortKey);
+      params.set("sortDirection", nextSort.sortDirection);
+    }
+
+    const nextSearchMode = opts.searchMode === undefined ? activeSearchMode : opts.searchMode;
+    const nextName = opts.name === undefined ? selectedName : opts.name;
+    const nextSearch = opts.search === undefined ? currentContainsSearch : opts.search;
+
+    if (nextSearchMode === "exact" && nextName) {
+      params.set("name", nextName);
+      params.set("searchMode", "exact");
+    } else if (nextSearchMode === "contains" && nextSearch?.trim()) {
+      params.set("search", nextSearch.trim());
+      params.set("searchMode", "contains");
+    }
+
+    return params.toString() ? `/explorer?${params.toString()}` : "/explorer";
   }
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
-  function handleNetworkChange(net: Network) {
-    startTransition(() => {
-      setOptimisticNetwork(net);
-      router.push(buildUrl({ network: net, page: 1 }));
-    });
+  function handleNetworkChange(nextNetwork: typeof currentNetwork) {
+    if (showNameDetail) {
+      startTransition(() => {
+        router.push(buildUrl({ network: nextNetwork, page: 1 }));
+      });
+      return;
+    }
+
+    window.history.pushState(null, "", buildUrl({ network: nextNetwork, page: 1 }));
   }
 
   function handleSearchSubmit() {
-    const q = searchQuery.trim();
-    if (!q) return;
-    startTransition(() => {
-      router.push(buildUrl({ name: q, page: 1 }));
-    });
-  }
+    const query = searchQuery.trim();
+    if (!query) return;
+    if (searchMode === "exact") {
+      startTransition(() => {
+        router.push(buildUrl({ name: query, search: null, searchMode: "exact", page: 1 }));
+      });
+      return;
+    }
 
-  function handleSearchChange(nextQuery: string) {
-    setSearchQuery(nextQuery);
-  }
-
-  function handleNameClick(name: string) {
-    startTransition(() => {
-      router.push(buildUrl({ name, page: 1 }));
-    });
-  }
-
-  function clearNameDetail() {
-    startTransition(() => {
-      router.push(buildUrl({ name: null, page: 1 }));
-    });
-  }
-
-  function handleTabChange(nextTab: ExplorerTab) {
-    startTransition(() => {
-      router.push(buildUrl({ tab: nextTab, page: 1, name: null }));
-    });
-  }
-
-  function handlePageChange(nextPage: number) {
-    const clamped = Math.max(1, nextPage);
-    startTransition(() => {
-      router.push(buildUrl({ page: clamped }));
-    });
+    window.history.pushState(null, "", buildUrl({ name: null, search: query, searchMode: "contains", page: 1 }));
   }
 
   function handleDetailAction(action: Action) {
     if (!nameDataReady || !nameResult) return;
-    const existing = getResumeToReplace({ action, name: nameResult.query, network: optimisticNetwork });
+    const existing = getResumeToReplace({ action, name: nameResult.query, network: currentNetwork });
     if (existing) {
       setPendingReplacement({ action, resolveResult: nameResult, existing });
       return;
@@ -260,32 +242,50 @@ export default function ExplorerView({
     setModalState({ action, resolveResult: nameResult });
   }
 
+  function clearNameDetail() {
+    setSearchQuery("");
+    setSearchMode("contains");
+    if (showNameDetail) {
+      startTransition(() => {
+        router.push(buildUrl({ name: null, search: null, searchMode: null, page: 1 }));
+      });
+      return;
+    }
+
+    window.history.pushState(null, "", buildUrl({ name: null, search: null, searchMode: null, page: 1 }));
+  }
+
   function handleRefresh() {
-    startTransition(() => {
-      router.refresh();
-    });
+    if (showNameDetail) {
+      startTransition(() => {
+        router.refresh();
+      });
+      return;
+    }
+
+    setListRefreshNonce((current) => current + 1);
   }
 
   function copyUivk() {
-    if (!stats.uivk) return;
-    navigator.clipboard.writeText(stats.uivk);
+    if (!currentListData.stats.uivk) return;
+    navigator.clipboard.writeText(currentListData.stats.uivk);
     setUivkCopied(true);
-    setTimeout(() => setUivkCopied(false), 2000);
+    window.setTimeout(() => setUivkCopied(false), 2000);
   }
 
   return (
     <div className="flex flex-col gap-6">
       <SiteRouteTitle title="Explorer" />
-      {/* Header */}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="min-w-[220px] flex-1 text-sm" style={{ color: "var(--fg-muted)" }}>
-          Browse registered ZcashNames, activity, and listings.
+          Browse names, activity, and listings.
         </p>
         <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-2">
           <button
             type="button"
             onClick={handleRefresh}
-            className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted tabular-nums transition-colors hover:text-fg-heading"
+            className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted tabular-nums transition-colors hover:text-[var(--color-accent-interactive)]"
             style={{ borderColor: "var(--leaders-card-border)" }}
             title="Refresh"
           >
@@ -293,140 +293,70 @@ export default function ExplorerView({
             {isPending ? (
               <span className="inline-block h-[0.75em] w-14 animate-pulse rounded-md bg-fg-dim/20 align-middle" />
             ) : (
-              stats.syncedHeight.toLocaleString()
+              currentListData.stats.syncedHeight.toLocaleString()
             )}
             <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
-                <path
-                  d="M13.5 8a5.5 5.5 0 1 1-1.3-3.56"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M12.5 2v3h-3"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <path
+                d="M13.5 8a5.5 5.5 0 1 1-1.3-3.56"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+              <path
+                d="M12.5 2v3h-3"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
-          {stats.uivk && (
+          {currentListData.stats.uivk ? (
             <button
               type="button"
               onClick={() => setUivkOpen(true)}
-              className="cursor-pointer whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
+              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
               style={{ borderColor: "var(--leaders-card-border)" }}
             >
-              UIVK
+              <span>UIVK</span>
+              <KeyIcon />
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {/* Toolbar */}
-      <ExplorerToolbar
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
-        onSearchSubmit={handleSearchSubmit}
-        onClearSearch={clearNameDetail}
-        network={optimisticNetwork}
-        onNetworkChange={handleNetworkChange}
-      />
+      <div className="space-y-4">
+        <ExplorerToolbar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchMode={searchMode}
+          onSearchModeChange={setSearchMode}
+          onSearchSubmit={handleSearchSubmit}
+          onClearSearch={() => {
+            setSearchQuery("");
+            setSearchMode("contains");
+          }}
+          network={currentNetwork}
+          onNetworkChange={handleNetworkChange}
+        />
 
-      {/* Tabs */}
-      <div
-        className="flex items-end gap-0 border-b"
-        style={{ borderColor: "var(--leaders-card-border)" }}
-      >
-        {PRIMARY_TABS.map((t) => {
-          const count = getTabCount(t.key);
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => handleTabChange(t.key)}
-              className="relative shrink-0 cursor-pointer px-4 py-2.5 text-[0.82rem] font-semibold transition-colors whitespace-nowrap"
-              style={{ color: tab === t.key ? "var(--fg-heading)" : "var(--fg-muted)" }}
-            >
-              {t.label}
-              {count != null && (
-                <>
-                  {" "}
-                  <span className="ml-1 tabular-nums">({count})</span>
-                </>
-              )}
-              {tab === t.key && (
-                <span
-                  className="absolute bottom-0 left-0 right-0 h-[2px]"
-                  style={{ background: "var(--fg-heading)" }}
-                />
-              )}
-            </button>
-          );
-        })}
+        {activeSearchQuery ? (
+          <SearchResultsSummary
+            query={activeSearchQuery}
+            matchCount={showActiveSearchMatchCount ? activeSearchMatchCount : null}
+            onClear={clearNameDetail}
+          />
+        ) : null}
 
-        {/* More dropdown */}
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setMoreOpen((v) => !v)}
-            className="relative flex cursor-pointer items-center gap-1 px-4 py-2.5 text-[0.82rem] font-semibold transition-colors whitespace-nowrap"
-            style={{ color: isMoreTabActive ? "var(--fg-heading)" : "var(--fg-muted)" }}
-          >
-            {isMoreTabActive ? activeMoreLabel : "More"}
-            <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
-              <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            {isMoreTabActive && (
-              <span
-                className="absolute bottom-0 left-0 right-0 h-[2px]"
-                style={{ background: "var(--fg-heading)" }}
-              />
-            )}
-          </button>
-          {moreOpen && (
-            <>
-              <div className="fixed inset-0 z-20" onClick={() => setMoreOpen(false)} />
-              <div
-                className="absolute left-0 top-full z-30 mt-1 min-w-[160px] rounded-xl border py-1"
-                style={{
-                  background: "var(--leaders-card-bg-solid, var(--leaders-card-bg))",
-                  borderColor: "var(--leaders-card-border)",
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
-                }}
-              >
-                {MORE_TABS.map((t) => {
-                  const count = getTabCount(t.key);
-                  return (
-                    <button
-                      key={t.key}
-                      type="button"
-                      onClick={() => {
-                        handleTabChange(t.key);
-                        setMoreOpen(false);
-                      }}
-                      className="flex w-full cursor-pointer items-center justify-between px-4 py-2 text-[0.82rem] font-semibold transition-colors"
-                      style={{
-                        color: tab === t.key ? "var(--fg-heading)" : "var(--fg-muted)",
-                        background: tab === t.key ? "var(--market-stats-segment-active-bg)" : "transparent",
-                      }}
-                    >
-                      <span>{t.label}</span>
-                      {count != null && (
-                        <span className="ml-2 tabular-nums text-fg-dim">({count})</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
+        <ExplorerListPane
+          initialData={initialListData}
+          refreshNonce={listRefreshNonce}
+          onDataChange={setCurrentListData}
+          onLoadingChange={setIsListRefreshing}
+        />
       </div>
 
-      {/* Name detail (when a specific name is searched) */}
-      {showNameDetail && (
+      {showNameDetail ? (
         <ExplorerNameDetail
           query={selectedName}
           result={nameDataReady ? nameResult : null}
@@ -435,190 +365,15 @@ export default function ExplorerView({
           usdPerZec={usdPerZec}
           onAction={handleDetailAction}
         />
-      )}
+      ) : null}
 
-      {/* Tab tables (hidden while name detail is showing) */}
-      <div className={showNameDetail ? "hidden" : ""}>
-        <div className={isPending && !showNameDetail ? "opacity-60 pointer-events-none transition-opacity" : "transition-opacity"}>
-          <div className="overflow-hidden rounded-2xl border" style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)" }}>
-            <div className="overflow-x-auto">
-              {tab === "registered" ? (
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr
-                      className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
-                      style={{ borderColor: "var(--leaders-card-border)" }}
-                    >
-                      <th className="px-4 py-3 sm:px-6">Name</th>
-                      <th className="px-4 py-3 sm:px-6">Status</th>
-                      <th className="hidden sm:table-cell px-4 py-3 sm:px-6">Address</th>
-                      <th className="px-4 py-3 text-right sm:px-6">Block</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {initialRegistrations.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
-                          No registered names found.
-                        </td>
-                      </tr>
-                    ) : (
-                      initialRegistrations.map((r) => (
-                        <tr
-                          key={`${r.name}:${r.txid}`}
-                          className="border-b last:border-b-0 transition-colors"
-                          style={{ borderColor: "var(--leaders-card-border)" }}
-                        >
-                          <td className="px-4 py-3 sm:px-6">
-                            <button
-                              type="button"
-                              onClick={() => handleNameClick(r.name)}
-                              className="font-semibold text-fg-heading hover:underline cursor-pointer"
-                            >
-                              {r.name}
-                            </button>
-                          </td>
-                          <td className="px-4 py-3 sm:px-6">
-                            <span
-                              className="rounded px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
-                              style={{ background: "var(--market-stats-segment-active-bg)" }}
-                            >
-                              {r.listing ? "Listed" : "Registered"}
-                            </span>
-                          </td>
-                          <td className="hidden sm:table-cell px-4 py-3 sm:px-6">
-                            <span className="font-mono text-fg-muted text-xs truncate max-w-[14rem] inline-block align-middle">{r.address}</span>
-                          </td>
-                          <td className="px-4 py-3 text-right tabular-nums text-fg-muted text-xs sm:px-6">{r.height.toLocaleString()}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              ) : tab === "forsale" ? (
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr
-                      className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
-                      style={{ borderColor: "var(--leaders-card-border)" }}
-                    >
-                      <th className="px-4 py-3 sm:px-6">Name</th>
-                      <th className="px-4 py-3 text-right sm:px-6">Price</th>
-                      <th className="px-4 py-3 sm:px-6">Status</th>
-                      <th className="px-4 py-3 text-right sm:px-6">Block</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {initialListings.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
-                          No names listed for sale.
-                        </td>
-                      </tr>
-                    ) : (
-                      initialListings.map((l) => (
-                        <tr
-                          key={l.txid}
-                          className="border-b last:border-b-0 transition-colors"
-                          style={{ borderColor: "var(--leaders-card-border)" }}
-                        >
-                          <td className="px-4 py-3 sm:px-6">
-                            <button
-                              type="button"
-                              onClick={() => handleNameClick(l.name)}
-                              className="font-semibold text-fg-heading hover:underline cursor-pointer"
-                            >
-                              {l.name}
-                            </button>
-                          </td>
-                          <td className="px-4 py-3 text-right tabular-nums text-fg-muted sm:px-6">{zatsToZec(l.price)} ZEC</td>
-                          <td className="px-4 py-3 sm:px-6">
-                            <span
-                              className="rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-fg-muted"
-                              style={{ background: "var(--market-stats-segment-active-bg)" }}
-                            >
-                              Active
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right tabular-nums text-fg-muted text-xs sm:px-6">{l.height.toLocaleString()}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              ) : (
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr
-                      className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
-                      style={{ borderColor: "var(--leaders-card-border)" }}
-                    >
-                      <th className="px-4 py-3 sm:px-6">Action</th>
-                      <th className="px-4 py-3 sm:px-6">Name</th>
-                      <th className="hidden sm:table-cell px-4 py-3 sm:px-6">Address</th>
-                      <th className="px-4 py-3 text-right sm:px-6">Block</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {initialEvents.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
-                          No events found.
-                        </td>
-                      </tr>
-                    ) : (
-                      initialEvents.map((ev) => (
-                        <tr
-                          key={ev.id}
-                          className="border-b last:border-b-0 transition-colors"
-                          style={{ borderColor: "var(--leaders-card-border)" }}
-                        >
-                          <td className="px-4 py-3 sm:px-6">
-                            <ActionBadge action={ev.action} />
-                          </td>
-                          <td className="px-4 py-3 sm:px-6">
-                            {ev.name ? (
-                              <button
-                                type="button"
-                                onClick={() => handleNameClick(ev.name)}
-                                className="font-semibold text-fg-heading hover:underline cursor-pointer"
-                              >
-                                {ev.name}
-                              </button>
-                            ) : (
-                              <span className="text-fg-muted">-</span>
-                            )}
-                          </td>
-                          <td className="hidden sm:table-cell px-4 py-3 sm:px-6">
-                            {ev.ua ? (
-                              <span className="font-mono text-fg-muted text-xs truncate max-w-[14rem] inline-block align-middle">{ev.ua}</span>
-                            ) : (
-                              <span className="text-fg-muted">-</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right tabular-nums text-fg-muted text-xs sm:px-6">{ev.height.toLocaleString()}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            <PaginationControls
-              page={safePage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* UIVK Modal */}
-      {uivkOpen && (
+      {uivkOpen ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
-          onClick={(e) => { if (e.target === e.currentTarget) setUivkOpen(false); }}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setUivkOpen(false);
+          }}
         >
           <div
             className="w-full max-w-md rounded-2xl border px-8 py-7 flex flex-col gap-5"
@@ -647,44 +402,48 @@ export default function ExplorerView({
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-                    {network === "mainnet" ? "Mainnet" : "Testnet"}
+                    {currentNetwork === "mainnet" ? "Mainnet" : "Testnet"}
                   </div>
-                  <UivkVerifiedBadge value={stats.uivk} verified={stats.uivkVerified} />
+                  <UivkVerifiedBadge value={currentListData.stats.uivk} verified={currentListData.stats.uivkVerified} />
                 </div>
                 <CopyIconButton
                   onClick={copyUivk}
-                  ariaLabel={`Copy ${network} UIVK`}
-                  title={uivkCopied ? "Copied!" : `Copy ${network} UIVK`}
+                  ariaLabel={`Copy ${currentNetwork} UIVK`}
+                  title={uivkCopied ? "Copied!" : `Copy ${currentNetwork} UIVK`}
                   copied={uivkCopied}
-                  disabled={!stats.uivk}
+                  disabled={!currentListData.stats.uivk}
                 />
               </div>
-              <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{stats.uivk || "Unavailable"}</p>
+              <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{currentListData.stats.uivk || "Unavailable"}</p>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {selectedName && modalState && (
+      {selectedName && modalState ? (
         <Zip321Modal
           action={modalState.action}
           name={modalState.resolveResult.query}
-          network={optimisticNetwork}
+          network={currentNetwork}
           resolveResult={modalState.resolveResult}
           onClose={() => setModalState(null)}
           onSuccess={() => router.refresh()}
         />
-      )}
-      {pendingReplacement && (
+      ) : null}
+
+      {pendingReplacement ? (
         <ResumeReplacementDialog
           existing={pendingReplacement.existing}
           onCancel={() => setPendingReplacement(null)}
           onContinue={() => {
-            setModalState({ action: pendingReplacement.action, resolveResult: pendingReplacement.resolveResult });
+            setModalState({
+              action: pendingReplacement.action,
+              resolveResult: pendingReplacement.resolveResult,
+            });
             setPendingReplacement(null);
           }}
         />
-      )}
+      ) : null}
     </div>
   );
 }

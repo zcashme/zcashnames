@@ -1,3 +1,9 @@
+import {
+  INVALID_EMAIL_ADDRESS_MESSAGE,
+  isValidEmailAddress,
+  normalizeEmailAddress,
+} from "@/lib/email-address";
+
 export type ShareKitRecoveryPublicStatus = "accepted" | "invalid_email" | "error";
 
 export type ShareKitRecoveryInternalStatus =
@@ -20,18 +26,18 @@ export type ShareKitRecoveryRow = {
 export const SHAREKIT_RECOVERY_RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
 export const SHAREKIT_RECOVERY_MIN_RESPONSE_MS = 600;
 export const SHAREKIT_RECOVERY_ACCEPTED_MESSAGE =
-  "If this email matches verified waitlist entries, we’ll send a recovery email listing every verified name and referral code tied to that inbox. If you don’t receive anything, check spam.";
+  "If this email matches verified waitlist entries, we'll send a recovery email listing every verified name and referral code tied to that inbox. If you don't receive anything, check spam.";
 export const SHAREKIT_RECOVERY_INVALID_EMAIL_MESSAGE =
-  "Enter the email address you used to join the waitlist.";
+  INVALID_EMAIL_ADDRESS_MESSAGE;
 export const SHAREKIT_RECOVERY_ERROR_MESSAGE =
   "Could not process referral recovery right now. Please try again.";
 
 export function normalizeShareKitRecoveryEmail(input: string): string {
-  return input.trim().toLowerCase();
+  return normalizeEmailAddress(input);
 }
 
 export function isValidShareKitRecoveryEmail(input: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+  return isValidEmailAddress(input);
 }
 
 export function wasShareKitRecoveryEmailSentToday(value: unknown, now = Date.now()): boolean {

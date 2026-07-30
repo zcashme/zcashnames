@@ -47,7 +47,7 @@ export default function BetaInviteEmail({
   inviteCode,
   bodyParagraphs,
   headingText = "You're invited",
-  previewText = "You've been accepted to the ZcashNames beta.",
+  previewText = "You've been accepted to the Zcash Names beta.",
   walletCta,
   walletLogoRow,
 }: BetaInviteEmailProps) {
@@ -173,7 +173,7 @@ export default function BetaInviteEmail({
             ) : (
               <>
                 <Text style={{ margin: "0 0 6px", fontSize: 13, lineHeight: "20px", color: "#d4d4d8" }}>
-                  Use ZcashNames with
+                  Use Zcash Names with
                 </Text>
                 <table role="presentation" style={{ margin: "0 auto", borderCollapse: "separate", borderSpacing: "10px 0" }}>
                   <tbody>

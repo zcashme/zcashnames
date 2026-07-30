@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { submitSurvey } from "@/lib/waitlist/waitlist";
 
 // Post-waitlist survey form. Collects four data points: use-case preferences
@@ -133,7 +134,7 @@ export default function SurveyForm({
         </div>
 
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>Want to try ZcashNames before launch?</p>
+          <p className="text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>Want to try Zcash Names before launch?</p>
           <div className="flex gap-2">
             {chipBtn("Yes", wantEarlyTrial === "yes", () => setWantEarlyTrial("yes"))}
             {chipBtn("No", wantEarlyTrial === "no", () => setWantEarlyTrial("no"))}
@@ -180,7 +181,7 @@ export default function SurveyForm({
             opacity: submitting ? 0.5 : 1,
           }}
         >
-          {submitting ? "Submitting…" : "Submit"}
+          {submitting ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit"}
         </button>
         <button
           type="button"

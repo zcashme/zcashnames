@@ -6,8 +6,8 @@
 //   - Referral URL builder (lib/referral-code.ts)
 //
 export const BRAND = {
-  name: "ZcashNames",
-  title: "ZcashNames",
+  name: "Zcash Names",
+  title: "Zcash Names",
   description: "Personal names for shielded addresses.",
   url: "https://www.zcashnames.com",
   logoPath: "/brandkit/zcashnames-primary-logo-white-black-square-background-403x403.png",

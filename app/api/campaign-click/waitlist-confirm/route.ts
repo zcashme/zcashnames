@@ -6,6 +6,7 @@ import {
 } from "@/lib/campaigns/waitlist-confirm-response";
 import { db } from "@/lib/db";
 import { findWaitlistRowsByNormalizedEmail } from "@/lib/campaigns/waitlist-verify";
+import { refreshPublicWaitlistViewSnapshotSafe } from "@/lib/waitlist/view";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
   if (!parsed) {
     console.error("[waitlist-confirm-click] invalid token", { requestId });
     return NextResponse.json(
-      { ok: false, error: "Invalid or expired token.", requestId },
+      { ok: false, error: "Invalid token.", requestId },
       { status: 400 },
     );
   }
@@ -65,9 +66,96 @@ export async function GET(request: Request) {
   });
 
   const unconfirmedRows = rows.filter((row) => !row.campaign_email_confirm_response);
+  const unverifiedRows = rows.filter((row) => row.email_verified !== true);
+  const unstampedVerifiedRows = rows.filter(
+    (row) => row.email_verified === true && !row.email_verified_at,
+  );
+  const clickedAt = new Date().toISOString();
+  const unverifiedRowsWithoutStamp = unverifiedRows.filter((row) => !row.email_verified_at);
+  const unverifiedRowsWithExistingStamp = unverifiedRows.filter((row) =>
+    Boolean(row.email_verified_at),
+  );
+
+  if (unverifiedRowsWithoutStamp.length > 0) {
+    const { error: verifyUpdateError } = await db
+      .from("zn_waitlist")
+      .update({
+        email_verified: true,
+        email_verified_at: clickedAt,
+      })
+      .in(
+        "id",
+        unverifiedRowsWithoutStamp.map((row) => row.id),
+      )
+      .eq("email_verified", false);
+    if (verifyUpdateError) {
+      console.error("[waitlist-confirm-click] verify update failed", {
+        requestId,
+        normalizedEmail: parsed.normalizedEmail,
+        campaignId: parsed.campaignId,
+        matchedRows: rows.length,
+        verifyingRows: unverifiedRowsWithoutStamp.length,
+        error: verifyUpdateError.message,
+      });
+      return NextResponse.json(
+        { ok: false, error: verifyUpdateError.message, requestId },
+        { status: 500 },
+      );
+    }
+
+  }
+
+  if (unverifiedRowsWithExistingStamp.length > 0) {
+      const { error: stampPreserveError } = await db
+        .from("zn_waitlist")
+        .update({ email_verified: true })
+        .in(
+          "id",
+          unverifiedRowsWithExistingStamp.map((row) => row.id),
+        )
+        .eq("email_verified", false);
+      if (stampPreserveError) {
+        console.error("[waitlist-confirm-click] verify preserve update failed", {
+          requestId,
+          normalizedEmail: parsed.normalizedEmail,
+          campaignId: parsed.campaignId,
+          matchedRows: rows.length,
+          verifyingRows: unverifiedRowsWithExistingStamp.length,
+          error: stampPreserveError.message,
+        });
+        return NextResponse.json(
+          { ok: false, error: stampPreserveError.message, requestId },
+          { status: 500 },
+        );
+      }
+  }
+
+  if (unstampedVerifiedRows.length > 0) {
+    const { error: stampUpdateError } = await db
+      .from("zn_waitlist")
+      .update({ email_verified_at: clickedAt })
+      .in(
+        "id",
+        unstampedVerifiedRows.map((row) => row.id),
+      )
+      .is("email_verified_at", null);
+    if (stampUpdateError) {
+      console.error("[waitlist-confirm-click] verify timestamp update failed", {
+        requestId,
+        normalizedEmail: parsed.normalizedEmail,
+        campaignId: parsed.campaignId,
+        matchedRows: rows.length,
+        stampingRows: unstampedVerifiedRows.length,
+        error: stampUpdateError.message,
+      });
+      return NextResponse.json(
+        { ok: false, error: stampUpdateError.message, requestId },
+        { status: 500 },
+      );
+    }
+  }
 
   if (unconfirmedRows.length > 0) {
-    const clickedAt = new Date().toISOString();
     const { error: updateError } = await db
       .from("zn_waitlist")
       .update({
@@ -97,12 +185,20 @@ export async function GET(request: Request) {
     }
   }
 
+  if (unverifiedRows.length > 0 || unstampedVerifiedRows.length > 0 || unconfirmedRows.length > 0) {
+    void refreshPublicWaitlistViewSnapshotSafe();
+  }
+
   console.info("[waitlist-confirm-click] success", {
     requestId,
     normalizedEmail: parsed.normalizedEmail,
     campaignId: parsed.campaignId,
     matchedRows: rows.length,
-    updatedRows: unconfirmedRows.length,
+    verifiedBeforeClickCount: rows.filter((row) => row.email_verified === true).length,
+    reservedBeforeClickCount: rows.filter((row) => row.name_reserved === true).length,
+    verificationUpdatedRows: unverifiedRows.length,
+    verificationStampedRows: unstampedVerifiedRows.length,
+    reservationUpdatedRows: unconfirmedRows.length,
     redirectUrl,
   });
 

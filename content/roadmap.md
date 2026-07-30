@@ -33,7 +33,7 @@ Start: 2026-06-19
 End: 2026-06-30
 - Reserved names can be claimed with an unlock code.
 - Names containing emojis can be claimed.
-- ZcashNames is integrated with ZcashMe.
+- Zcash Names is integrated with ZcashMe.
 - Name expiration and auto-renewal rules respond to user activity.
 
 # Beta v3  `TBA`

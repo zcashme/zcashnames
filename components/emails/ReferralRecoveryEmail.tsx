@@ -17,7 +17,7 @@ export default function ReferralRecoveryEmail({
 }) {
   return (
     <EmailLayout
-      preview="Your verified ZcashNames referral codes."
+      preview="Your verified Zcash Names referral codes."
       headingText="Your referral codes"
     >
       <Section style={content}>

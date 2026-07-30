@@ -82,14 +82,14 @@ const groups: FAQGroup[] = [
       {
         question: "What is testnet mode?",
         answer:
-          "Testnet mode lets you explore ZcashNames without using real ZEC. All transactions on testnet use TAZ (testnet ZEC), which has no monetary value. It's a safe way to try registering names, updating addresses, and listing names for sale before going live on mainnet.",
+          "Testnet mode lets you explore Zcash Names without using real ZEC. All transactions on testnet use TAZ (testnet ZEC), which has no monetary value. It's a safe way to try registering names, updating addresses, and listing names for sale before going live on mainnet.",
       },
       {
         question: "How do waitlist referrals work?",
         answer: (
           <>
             When you join the waitlist you receive a unique referral link. Sharing it moves you up the queue - the more
-            people you refer, the earlier you get access when ZcashNames launches. Plus, if they purchase a name after
+            people you refer, the earlier you get access when Zcash Names launches. Plus, if they purchase a name after
             our launch, direct referral rewards are set at 1/5 of the lowest name claim price at purchase time.{" "}
             <a href="/leaders/terms" className="underline">
               View terms
@@ -120,17 +120,17 @@ const groups: FAQGroup[] = [
         ),
       },
       {
-        question: "How do I build on ZcashNames?",
+        question: "How do I build on Zcash Names?",
         answer: (
           <>
             The{" "}
             <a href="/docs" className="underline">Developer&rsquo;s Guide</a>{" "}
-            has implementation guides and references for building apps, integrations, and identity flows on top of ZcashNames.
+            has implementation guides and references for building apps, integrations, and identity flows on top of Zcash Names.
           </>
         ),
       },
       {
-        question: "How do I partner with ZcashNames?",
+        question: "How do I partner with Zcash Names?",
         answer: (
           <>
             We collaborate with wallets, platforms, and products to expand the Zcash ecosystem.{" "}

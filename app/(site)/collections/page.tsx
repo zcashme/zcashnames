@@ -16,20 +16,20 @@ import { decodeNames } from "./codec";
 import CollectionsView from "./CollectionsView";
 
 export const metadata = {
-  title: "Collections - ZcashNames",
+  title: "Collections - Zcash Names",
   description: "Track the names you own and the names you're watching — no account required.",
   alternates: {
     canonical: "https://www.zcashnames.com/collections",
   },
   openGraph: {
-    title: "Collections | ZcashNames",
+    title: "Collections | Zcash Names",
     description: "Track the names you own and the names you're watching — no account required.",
     url: "https://www.zcashnames.com/collections",
-    images: [{ url: "/og/home.png", width: 1200, height: 630, alt: "ZcashNames collections" }],
+    images: [{ url: "/og/home.png", width: 1200, height: 630, alt: "Zcash Names collections" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Collections | ZcashNames",
+    title: "Collections | Zcash Names",
     description: "Track the names you own and the names you're watching — no account required.",
     images: ["/og/home.png"],
   },

@@ -20,7 +20,7 @@ export default function SubscriberConfirmEmail({
       <Section style={content}>
         <Text style={paragraph}>Hi,</Text>
         <Text style={paragraph}>
-          Click below to confirm that <strong>{email}</strong> should receive ZcashNames{" "}
+          Click below to confirm that <strong>{email}</strong> should receive Zcash Names{" "}
           <strong>{series}</strong> emails.
         </Text>
       </Section>

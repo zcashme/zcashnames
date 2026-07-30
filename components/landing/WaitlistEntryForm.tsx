@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { normalizeUsername } from "@/lib/zns/utils";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import {
   getWaitlistCaptcha,
   getWaitlistCountForName,
@@ -392,8 +393,8 @@ export default function WaitlistEntryForm({
                       className="text-sm"
                       style={{ color: "var(--fg-body)", lineHeight: 1.6 }}
                     >
-                      We sent a confirmation link to your inbox. Click it to
-                      secure your spot on the waitlist.
+                      We sent a confirmation link to your inbox. Click it and
+                      follow the instructions to gain Early Access.
                     </p>
                     <button
                       type="button"
@@ -557,6 +558,7 @@ export default function WaitlistEntryForm({
       >
         {/* Entry input */}
         <div
+          id="waitlist-name-entry"
           ref={nameFieldTopRef}
           className={`searchform-shell has-locked-suffix${focused ? " is-focused" : ""}`}
         >
@@ -845,7 +847,7 @@ export default function WaitlistEntryForm({
                   cursor: canSubmit && !submitting ? "pointer" : "not-allowed",
                 }}
               >
-                {submitting ? "Submitting…" : "Submit"}
+                {submitting ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit"}
               </button>
             </div>
 

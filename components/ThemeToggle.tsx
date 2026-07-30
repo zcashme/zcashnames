@@ -90,7 +90,7 @@ export default function ThemeToggle() {
       type="button"
       aria-label={`${activeTheme} theme`}
       onClick={handleToggle}
-      className="relative flex h-8 w-8 items-center justify-center rounded-full text-fg-heading transition-opacity duration-200 cursor-pointer"
+      className="relative flex h-8 w-8 items-center justify-center rounded-full text-fg-heading transition-colors duration-200 cursor-pointer hover:text-[var(--color-accent-interactive)]"
       style={{ background: "var(--color-raised)" }}
     >
       <span className="relative z-10 inline-flex items-center justify-center">

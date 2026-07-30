@@ -74,9 +74,28 @@ type QrBlockProps = {
   amount: string;
   memo: string;
   size?: number;
+  layout?: "default" | "verify";
+  downloadFilename?: string;
 };
 
-export function QrBlock({ address, amount, memo, size = 200 }: QrBlockProps) {
+function DownloadIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M12 3v11" />
+      <path d="M8 10l4 4 4-4" />
+      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+    </svg>
+  );
+}
+
+export function QrBlock({
+  address,
+  amount,
+  memo,
+  size = 200,
+  layout = "default",
+  downloadFilename = "zns-payment.png",
+}: QrBlockProps) {
   const [expanded, setExpanded] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showUri, setShowUri] = useState(false);
@@ -92,8 +111,93 @@ export function QrBlock({ address, amount, memo, size = 200 }: QrBlockProps) {
 
   async function handleSavePng() {
     setQrError("");
-    const err = await downloadQrPng(canvasRef.current, "zns-payment.png");
+    const err = await downloadQrPng(canvasRef.current, downloadFilename);
     if (err) setQrError(err);
+  }
+
+  if (layout === "verify") {
+    return (
+      <>
+        <div className="flex w-full flex-col gap-4">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex w-full justify-center">
+                <div className="relative inline-block">
+                  <a
+                    href={uri}
+                    className="block rounded-[24px] bg-white p-3 transition-transform duration-150 ease-out active:scale-95"
+                    style={{ WebkitTapHighlightColor: "transparent" }}
+                    aria-label="Open in wallet"
+                    title="Open in wallet"
+                  >
+                    <div className="block leading-none">
+                      <QRCodeSVG value={uri} size={size} fgColor="#000000" bgColor="#ffffff" marginSize={4} />
+                      <QRCodeCanvas
+                        ref={canvasRef}
+                        value={uri}
+                        size={768}
+                        fgColor="#000000"
+                        bgColor="#ffffff"
+                        marginSize={4}
+                        className="pointer-events-none absolute h-px w-px opacity-0"
+                        aria-hidden="true"
+                      />
+                    </div>
+                  </a>
+                  <div className="absolute inset-y-0 -right-14 flex h-full min-h-full flex-col justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setExpanded(true)}
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                      style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                      aria-label="Expand QR"
+                      title="Expand QR"
+                    >
+                      <ExpandIcon />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSavePng}
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                      style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                      aria-label="Save QR"
+                      title="Save QR"
+                    >
+                      <DownloadIcon />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p className="text-center text-xs leading-5" style={{ color: "var(--fg-muted)" }}>
+                Scan above or paste the details below into your wallet
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3">
+            <CopyRow label="Address" value={address} copied={addrCopied} onCopy={() => copyAddr(address)} variant="verify" />
+            {hasAmount && (
+              <CopyRow label="Amount" value={`${amount} ZEC`} copied={amtCopied} onCopy={() => copyAmt(amount)} variant="verify" />
+            )}
+            {memo && (
+              <CopyRow label="Memo" value={memo} copied={memoCopied} onCopy={() => copyMemo(memo)} variant="verify" />
+            )}
+          </div>
+
+          {qrError ? (
+            <p className="text-sm" style={{ color: "var(--accent-red, #e05252)" }}>
+              {qrError}
+            </p>
+          ) : null}
+        </div>
+
+        {expanded && (
+          <ExpandedQrModal
+            uriEncoded={uri}
+            onClose={() => setExpanded(false)}
+          />
+        )}
+      </>
+    );
   }
 
   return (
@@ -173,7 +277,7 @@ export function QrBlock({ address, amount, memo, size = 200 }: QrBlockProps) {
                   >
                     Save QR
                   </button>
-                  <p className="m-0">Save the QR, then upload it from the wallet scanner.</p>
+                  <p className="m-0">Save the QR, then upload it to your wallet's QR reader.</p>
                 </div>
                 <p className="m-0">Manual entry: copy the address, memo, and amount into your wallet.</p>
                 {qrError && <p className="m-0" style={{ color: "var(--accent-red, #e05252)" }}>{qrError}</p>}
@@ -212,14 +316,17 @@ type CopyRowProps = {
   value: string;
   copied: boolean;
   onCopy: () => void;
+  variant?: "default" | "verify";
 };
 
-function CopyRow({ label, value, copied, onCopy }: CopyRowProps) {
+function CopyRow({ label, value, copied, onCopy, variant = "default" }: CopyRowProps) {
+  const isVerify = variant === "verify";
+
   return (
-    <div className="grid w-full grid-cols-[4.5rem_1fr_auto] items-center gap-2 text-left">
+    <div className={`grid w-full items-center gap-2 text-left ${isVerify ? "grid-cols-[4.35rem_minmax(0,1fr)_2.75rem]" : "grid-cols-[4.5rem_1fr_auto]"}`}>
       <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>{label}</span>
       <code
-        className="min-w-0 truncate rounded-md px-2 py-1 text-xs font-mono"
+        className={`min-w-0 truncate font-mono ${isVerify ? "rounded-xl px-3 py-3 text-[0.78rem]" : "rounded-md px-2 py-1 text-xs"}`}
         style={{ background: "var(--color-raised)", color: "var(--fg-body)", border: "1px solid var(--border-muted)" }}
         title={value}
       >
@@ -229,7 +336,7 @@ function CopyRow({ label, value, copied, onCopy }: CopyRowProps) {
         type="button"
         onClick={onCopy}
         disabled={!value}
-        className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-lg cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+        className={`shrink-0 inline-flex items-center justify-center rounded-lg cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed ${isVerify ? "h-11 w-11 rounded-xl" : "h-7 w-7"}`}
         style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
         aria-label={`Copy ${label.toLowerCase()}`}
         title={copied ? "Copied!" : `Copy ${label.toLowerCase()}`}

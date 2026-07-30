@@ -2,7 +2,7 @@
 import type { MetaRecord } from 'nextra'
 
 const meta: MetaRecord = {
-  'what-is-zns': 'What is ZcashNames?',
+  'what-is-zns': 'What is Zcash Names?',
   'how-it-works': 'How it works',
   'trust-model': 'Trust model',
   privacy: 'Privacy',

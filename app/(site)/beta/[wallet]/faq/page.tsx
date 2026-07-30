@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const wallet = await readWalletParam(params);
   if (!wallet) {
     return {
-      title: "Beta FAQ - ZcashNames",
+      title: "Beta FAQ - Zcash Names",
       robots: { index: false, follow: false, nocache: true },
     };
   }
@@ -34,16 +34,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!brand || !hasFaq) {
     return {
-      title: "Beta FAQ - ZcashNames",
+      title: "Beta FAQ - Zcash Names",
       robots: { index: false, follow: false, nocache: true },
     };
   }
 
   const pageTitle = `${brand.displayName} Beta FAQ`;
-  const description = `Read the ${brand.displayName} ZcashNames beta FAQ.`;
+  const description = `Read the ${brand.displayName} Zcash Names beta FAQ.`;
 
   return {
-    title: `${pageTitle} - ZcashNames`,
+    title: `${pageTitle} - Zcash Names`,
     description,
     openGraph: {
       title: pageTitle,
@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           url: "/og/beta.png",
           width: 1200,
           height: 630,
-          alt: `${brand.displayName} ZcashNames beta FAQ preview`,
+          alt: `${brand.displayName} Zcash Names beta FAQ preview`,
         },
       ],
     },

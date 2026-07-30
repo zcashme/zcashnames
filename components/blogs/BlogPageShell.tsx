@@ -35,7 +35,7 @@ export default function BlogPageShell({
       <SiteRouteTitle title={routeTitle} />
       <div className="blog-shell-header">
         <div className="blog-shell-copy">
-          {seriesMeta ? <p className="blog-shell-kicker">{seriesMeta.title}</p> : <p className="blog-shell-kicker">ZcashNames blogs</p>}
+          {seriesMeta ? <p className="blog-shell-kicker">{seriesMeta.title}</p> : <p className="blog-shell-kicker">Zcash Names blogs</p>}
           {showTitle ? <h1 className="blog-shell-title">{title}</h1> : null}
           {description ? <p className="blog-shell-description">{description}</p> : null}
         </div>

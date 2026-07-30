@@ -9,7 +9,7 @@ export default function Header() {
     <header className="relative z-50 bg-transparent">
       <div className="mx-auto max-w-[1320px] px-4 py-4">
         <div
-          className="grid min-h-[60px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-[18px] border px-3 py-2 sm:gap-4 sm:px-4"
+          className="grid min-h-[60px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-2xl border px-3 py-2 sm:gap-4 sm:px-4"
           style={{
             borderColor: "color-mix(in srgb, var(--feature-heading-line-to) 28%, var(--faq-border))",
             background:
@@ -22,17 +22,17 @@ export default function Header() {
             <HeaderMenu />
             <Link
               href="/"
-              aria-label="ZcashNames"
+              aria-label="Zcash Names"
               className="group type-section-subtitle inline-flex shrink-0 items-center gap-4 whitespace-nowrap text-fg-heading font-bold tracking-tight leading-tight [[data-theme=dark]_&]:hover:opacity-80 [[data-theme=monochrome]_&]:hover:opacity-80 transition-opacity"
             >
               <ZcashNamesLogoMark
-                alt="ZcashNames"
+                alt="Zcash Names"
                 size={40}
                 priority
                 className="transition-transform duration-200 group-hover:rotate-90"
               />
               <span className="hidden font-normal tracking-normal sm:inline" style={{ fontFamily: "var(--font-brand)" }}>
-                ZcashNames
+                Zcash Names
               </span>
             </Link>
             <span id="site-route-title" className="min-w-0 flex-1" />

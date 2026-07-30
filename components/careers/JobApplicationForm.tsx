@@ -2,6 +2,7 @@
 
 import type { CSSProperties, FormEvent } from "react";
 import { useState, useTransition } from "react";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import type { CareerJob } from "@/lib/careers";
 import { submitCareerApplication } from "@/lib/careers/actions";
 
@@ -226,7 +227,7 @@ export default function JobApplicationForm({ job }: { job: CareerJob }) {
           boxShadow: "var(--home-result-primary-shadow)",
         }}
       >
-        {pending ? "Submitting..." : "Submit application"}
+        {pending ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit application"}
       </button>
 
       <p className="mt-4 text-center text-xs leading-6" style={{ color: "var(--fg-muted)" }}>

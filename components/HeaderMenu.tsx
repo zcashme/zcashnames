@@ -82,7 +82,7 @@ const MAIN_MENU_LINKS: MenuLink[] = [
     href: "/docs",
     displayPath: "/docs/learn",
     children: [
-      { label: "What is ZcashNames?", href: "/docs/learn/what-is-zns", displayPath: ".../what-is-zns" },
+      { label: "What is Zcash Names?", href: "/docs/learn/what-is-zns", displayPath: ".../what-is-zns" },
       { label: "How it works", href: "/docs/learn/how-it-works", displayPath: ".../how-it-works" },
       { label: "Pricing", href: "/docs/learn/pricing", displayPath: ".../pricing" },
       { label: "Privacy", href: "/docs/learn/privacy", displayPath: ".../privacy" },

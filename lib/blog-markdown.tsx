@@ -100,7 +100,7 @@ export async function loadBlogMarkdown(parts: string[], fallbackTitle: string): 
 
 export function blogMarkdownMetadata(title: string, description?: string): Metadata {
   return {
-    title: `${title} | ZcashNames`,
+    title: `${title} | Zcash Names`,
     description,
   };
 }

@@ -7,7 +7,7 @@
 import { ImageResponse } from "next/og";
 import { BRAND } from "@/lib/zns/brand";
 
-export const alt = "ZcashNames - Personal names for shielded addresses.";
+export const alt = "Zcash Names - Personal names for shielded addresses.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -49,7 +49,7 @@ export default async function OGImage() {
               letterSpacing: "-2px",
             }}
           >
-            ZcashNames
+            Zcash Names
           </span>
           <span
             style={{

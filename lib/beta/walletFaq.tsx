@@ -182,7 +182,7 @@ const BASE_FAQ_TEMPLATE: readonly WalletFaqSectionTemplate[] = [
           return (
             <>
               <p>
-                This beta retests the core ZcashNames marketplace and wallet flows on Zcash mainnet
+                This beta retests the core Zcash Names marketplace and wallet flows on Zcash mainnet
                 and adds non-custodial name transfer to the broader launch path.
               </p>
               <p>
@@ -203,7 +203,7 @@ const BASE_FAQ_TEMPLATE: readonly WalletFaqSectionTemplate[] = [
               ) : (
                 <p>
                   In {walletDisplay(context)}, the beta currently emphasizes compatible payment
-                  request handling and broader ZcashNames testing rather than full in-wallet name
+                  request handling and broader Zcash Names testing rather than full in-wallet name
                   resolution.
                 </p>
               )}
@@ -266,7 +266,7 @@ const BASE_FAQ_TEMPLATE: readonly WalletFaqSectionTemplate[] = [
                 for supported payment-request handling rather than a full in-wallet name experience.
               </p>
               <p>
-                Name registration and management may still begin through the ZcashNames flow, with
+                Name registration and management may still begin through the Zcash Names flow, with
                 wallet usage varying by app version and platform.
               </p>
             </>
@@ -365,7 +365,7 @@ const BASE_FAQ_TEMPLATE: readonly WalletFaqSectionTemplate[] = [
             <p>
               Claim fees and listing fees may be refundable during testing if requested through the
               feedback panel. Secondary-market purchases between users should be treated as real
-              trades and are not generally refundable by the ZcashNames team.
+              trades and are not generally refundable by the Zcash Names team.
             </p>
           </>
         ),

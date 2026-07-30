@@ -120,7 +120,7 @@ export default function CommunityPageClient() {
             Join the movement
           </h1>
           <p className="type-section-subtitle text-fg-body">
-            Find community pages, partner resources, and ways to help ZcashNames reach more Zcash users.
+            Find community pages, partner resources, and ways to help Zcash Names reach more Zcash users.
           </p>
         </div>
 

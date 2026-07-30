@@ -4,13 +4,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Leaderboard Terms | ZcashNames",
+  title: "Leaderboard Terms | Zcash Names",
   description: "Terms for referral rewards and early access waitlist participation.",
   alternates: {
     canonical: "https://www.zcashnames.com/leaders/terms",
   },
   openGraph: {
-    title: "Leaderboard Terms | ZcashNames",
+    title: "Leaderboard Terms | Zcash Names",
     description: "Referral rewards and early access terms.",
     url: "https://www.zcashnames.com/leaders/terms",
     images: [
@@ -18,13 +18,13 @@ export const metadata: Metadata = {
         url: "/og/leaders-terms.png",
         width: 1200,
         height: 630,
-        alt: "ZcashNames leaders terms preview",
+        alt: "Zcash Names leaders terms preview",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Leaderboard Terms | ZcashNames",
+    title: "Leaderboard Terms | Zcash Names",
     description: "Referral rewards and early access terms.",
     images: ["/og/leaders-terms.png"],
   },
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 const terms = [
   {
     title: "Eligibility and Referrals",
-    body: "Referral rewards are available to eligible early access participants who receive a ZcashNames referral link and share it with users who sign up through that link. A referral qualifies only after the referred user signs up through the link and completes a valid name purchase during the early access period.",
+    body: "Referral rewards are available to eligible early access participants who receive a Zcash Names referral link and share it with users who sign up through that link. A referral qualifies only after the referred user signs up through the link and completes a valid name purchase during the early access period.",
   },
   {
     title: "Reward Basis",
@@ -53,7 +53,7 @@ const terms = [
   },
   {
     title: "Changes",
-    body: "ZcashNames may update, pause, or end referral rewards and early access waitlist rules, including reward amounts, invite handling, and eligibility criteria, at any time.",
+    body: "Zcash Names may update, pause, or end referral rewards and early access waitlist rules, including reward amounts, invite handling, and eligibility criteria, at any time.",
   },
   {
     title: "Payouts",
@@ -69,12 +69,12 @@ export default function ReferralTermsPage() {
         style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)" }}
       >
         <p className="text-sm font-semibold uppercase tracking-wide text-fg-muted">
-          ZcashNames
+          Zcash Names
         </p>
         <p className="mt-1 text-sm font-semibold text-fg-heading">Referral Rewards and Early Access</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-fg-heading">Terms and Conditions</h1>
         <p className="mt-4 max-w-2xl text-sm leading-6 text-fg-muted">
-          These terms apply to ZcashNames referral rewards and early access waitlist. They are intended to
+          These terms apply to Zcash Names referral rewards and early access waitlist. They are intended to
           support fair distribution of access and rewards.
         </p>
 

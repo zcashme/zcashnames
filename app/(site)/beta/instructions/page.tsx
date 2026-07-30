@@ -6,8 +6,8 @@ import BetaInstructionsBrief, {
 import BetaInstructionsToc from "@/components/beta/BetaInstructionsToc";
 
 export const metadata: Metadata = {
-  title: "Beta Instructions - ZcashNames",
-  description: "Step-by-step instructions for ZcashNames beta testers.",
+  title: "Beta Instructions - Zcash Names",
+  description: "Step-by-step instructions for Zcash Names beta testers.",
   robots: { index: false, follow: false, nocache: true },
 };
 

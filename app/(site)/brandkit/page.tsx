@@ -10,8 +10,8 @@ import type { CSSProperties } from "react";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 
 export const metadata: Metadata = {
-  title: "Brand Kit | ZcashNames",
-  description: "Download ZcashNames logo, banner, and brand lockup assets.",
+  title: "Brand Kit | Zcash Names",
+  description: "Download Zcash Names logo, banner, and brand lockup assets.",
 };
 
 type Asset = {
@@ -42,7 +42,7 @@ const assetBase = "/brandkit/";
 const groups: AssetGroup[] = [
   {
     title: "Primary Logo",
-    description: "Transparent logo marks derived from the rough primary ZcashNames mark.",
+    description: "Transparent logo marks derived from the rough primary Zcash Names mark.",
     assets: [
       logo("Primary Logo Black", "zcashnames-primary-logo-black-transparent-377x403.png", "377x403", "Black", "checker", true),
       logo("Primary Logo White", "zcashnames-primary-logo-white-transparent-377x403.png", "377x403", "White", "checker", true),
@@ -164,7 +164,7 @@ export default async function BrandKitPage({
       <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
         <div className="flex max-w-3xl flex-col gap-4">
           <p className="type-section-subtitle text-fg-body">
-            Download logo marks, banners, and stacked brand lockups for ZcashNames.
+            Download logo marks, banners, and stacked brand lockups for Zcash Names.
           </p>
         </div>
 

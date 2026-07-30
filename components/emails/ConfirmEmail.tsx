@@ -14,12 +14,12 @@ interface ConfirmEmailProps {
 
 export default function ConfirmEmail({ name, confirmUrl }: ConfirmEmailProps) {
   return (
-    <EmailLayout preview="Confirm your email to join the ZcashNames waitlist." headingText="Confirm your email">
+    <EmailLayout preview="Confirm your email to join the Zcash Names waitlist." headingText="Confirm your email">
       <Section style={content}>
         <Text style={paragraph}>Hi {name},</Text>
         <Text style={paragraph}>
           Click the button below to confirm your email and secure your spot on the
-          ZcashNames waitlist.
+          Zcash Names waitlist.
         </Text>
       </Section>
 
@@ -41,7 +41,7 @@ export default function ConfirmEmail({ name, confirmUrl }: ConfirmEmailProps) {
 
       <Section style={{ textAlign: "left" as const, padding: "16px 40px 32px" }}>
         <Text style={{ ...paragraph, margin: 0, color: "#a1a1aa", fontSize: 13 }}>
-          If you didn&apos;t sign up for ZcashNames, you can ignore this email.
+          If you didn&apos;t sign up for Zcash Names, you can ignore this email.
         </Text>
       </Section>
     </EmailLayout>

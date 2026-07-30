@@ -1,0 +1,1366 @@
+﻿"use client";
+
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
+import { useCopy } from "@/components/hooks/useCopy";
+import useVisibleContainerCenter from "@/components/hooks/useVisibleContainerCenter";
+import PaginationControls from "@/components/PaginationControls";
+import { InlineSearchField } from "@/components/search/InlineSearchField";
+import DataViewTabs from "@/components/table/DataViewTabs";
+import SearchResultsSummary from "@/components/table/SearchResultsSummary";
+import { TableRowsMenu, TableSortMenu } from "@/components/table/TableIconMenus";
+import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
+import type {
+  PublicWaitlistViewData,
+  PublicWaitlistViewRow,
+  WaitlistViewSearchMode,
+  WaitlistViewSortDirection,
+  WaitlistViewSortKey,
+} from "@/lib/waitlist/view";
+
+type WaitlistViewClientProps = {
+  initialRows: PublicWaitlistViewRow[];
+  initialAllCount: number;
+  initialTotalCount: number;
+  initialReservedOnlyCount: number;
+  initialProtectedOnlyCount: number;
+  initialHeroAllCount: number;
+  initialHeroReservedCount: number;
+  initialHeroProtectedCount: number;
+  initialPage: number;
+  initialPageSize: number;
+  initialHasMore: boolean;
+  initialSortKey: WaitlistViewSortKey;
+  initialSortDirection: WaitlistViewSortDirection;
+  initialSearchQuery: string;
+  initialSearchMode: WaitlistViewSearchMode;
+  earlyAccessStartAt: string;
+  earlyAccessLabel: string;
+  adminWalletUivk: string;
+  referralsPerSpot: number;
+};
+
+type WaitlistFaqItem = {
+  question: string;
+  answer: ReactNode;
+};
+
+const WAITLIST_VIEW_CACHE_LIMIT = 25;
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const SORT_OPTIONS: Array<{
+  key: string;
+  label: string;
+  sortKey: WaitlistViewSortKey;
+  sortDirection: WaitlistViewSortDirection;
+}> = [
+  { key: "line-asc", label: "Queue #", sortKey: "line", sortDirection: "asc" },
+  { key: "name-asc", label: "Name (A-Z)", sortKey: "name", sortDirection: "asc" },
+  { key: "name-desc", label: "Name (Z-A)", sortKey: "name", sortDirection: "desc" },
+  { key: "interest-desc", label: "Interest (high to low)", sortKey: "interest", sortDirection: "desc" },
+  { key: "interest-asc", label: "Interest (low to high)", sortKey: "interest", sortDirection: "asc" },
+  { key: "protected-desc", label: "Protected first", sortKey: "protected", sortDirection: "desc" },
+  { key: "reserved-desc", label: "Reserved first", sortKey: "reserved", sortDirection: "desc" },
+  { key: "direct-desc", label: "Direct referrals (high to low)", sortKey: "directReferrals", sortDirection: "desc" },
+  { key: "indirect-desc", label: "Indirect referrals (high to low)", sortKey: "indirectReferrals", sortDirection: "desc" },
+];
+
+function formatRemaining(targetMs: number, nowMs: number): string {
+  const diff = Math.max(0, targetMs - nowMs);
+  const totalSeconds = Math.floor(diff / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+}
+
+function formatHeroCountdown(targetMs: number, nowMs: number) {
+  const diff = Math.max(0, targetMs - nowMs);
+  const totalSeconds = Math.floor(diff / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  return { days, hours, minutes };
+}
+
+function formatHeroDeadlineLabel(value: string) {
+  const date = new Date(value);
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "America/New_York",
+  }).format(date);
+}
+
+function buildWaitlistViewCacheKey(args: {
+  page: number;
+  pageSize: number;
+  sortKey: WaitlistViewSortKey;
+  sortDirection: WaitlistViewSortDirection;
+  searchQuery: string;
+  searchMode: WaitlistViewSearchMode;
+  reservedOnly: boolean;
+  protectedOnly: boolean;
+}): string {
+  return JSON.stringify({
+    page: args.page,
+    pageSize: args.pageSize,
+    sortKey: args.sortKey,
+    sortDirection: args.sortDirection,
+    searchQuery: args.searchQuery.trim(),
+    searchMode: args.searchMode,
+    reservedOnly: args.reservedOnly,
+    protectedOnly: args.protectedOnly,
+  });
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3.5 w-3.5"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 10v6" />
+      <path d="M12 7h.01" />
+    </svg>
+  );
+}
+
+function HeaderInfoModal({
+  title,
+  body,
+  onClose,
+}: {
+  title: string;
+  body: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[10002] flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.42)", backdropFilter: "blur(6px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-[24px] border p-5 text-center"
+        style={{ borderColor: "var(--faq-border)", background: "var(--color-raised)" }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h3 className="text-base font-bold" style={{ color: "var(--fg-heading)" }}>
+          {title}
+        </h3>
+        <p className="mt-3 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
+          {body}
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-5 inline-flex rounded-full px-4 py-2 text-sm font-semibold transition hover:opacity-80"
+          style={{
+            border: "1px solid var(--faq-border)",
+            background: "color-mix(in srgb, var(--color-bg-elevated, transparent) 78%, transparent)",
+            color: "var(--fg-body)",
+          }}
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function WaitlistFaq({
+  items,
+}: {
+  items: WaitlistFaqItem[];
+}) {
+  const [openKey, setOpenKey] = useState<string | null>("0");
+
+  return (
+    <section className="mx-auto mt-12 w-full max-w-3xl px-0 pb-4">
+      <div className="mb-8 flex items-center gap-4">
+        <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
+          Frequently Asked Questions
+        </h2>
+        <div
+          className="h-px flex-1"
+          style={{ background: "color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))" }}
+        />
+      </div>
+
+      <div
+        className="overflow-hidden rounded-xl"
+        style={{ border: "1px solid var(--faq-border)", backgroundColor: "transparent" }}
+      >
+        {items.map((item, index) => {
+          const key = `${index}`;
+          const isOpen = openKey === key;
+          const isLast = index === items.length - 1;
+
+          return (
+            <div
+              key={key}
+              style={{ borderBottom: isLast ? "none" : "1px solid var(--faq-border)" }}
+            >
+              <button
+                type="button"
+                onClick={() => setOpenKey((current) => (current === key ? null : key))}
+                className="flex w-full cursor-pointer items-center justify-between px-6 py-5 text-left transition-colors duration-200"
+                style={{
+                  backgroundColor: "transparent",
+                  borderLeft: isOpen ? "3px solid var(--faq-active-border)" : "3px solid transparent",
+                }}
+                onMouseEnter={(event) => {
+                  if (!isOpen) {
+                    event.currentTarget.style.borderLeftColor = "var(--faq-active-border)";
+                  }
+                }}
+                onMouseLeave={(event) => {
+                  if (!isOpen) {
+                    event.currentTarget.style.borderLeftColor = "transparent";
+                  }
+                }}
+              >
+                <span className="type-body pr-4" style={{ color: "var(--fg-heading)" }}>
+                  {item.question}
+                </span>
+                <span
+                  className="shrink-0 text-xl leading-none transition-transform duration-200"
+                  style={{
+                    color: "var(--fg-muted)",
+                    transform: isOpen ? "rotate(45deg)" : "rotate(0deg)",
+                  }}
+                >
+                  +
+                </span>
+              </button>
+
+              <div
+                className="overflow-hidden transition-all duration-300 ease-in-out"
+                style={{
+                  maxHeight: isOpen ? "720px" : "0px",
+                  opacity: isOpen ? 1 : 0,
+                  backgroundColor: "transparent",
+                }}
+              >
+                <div
+                  className="px-6 pb-5 type-body"
+                  style={{
+                    color: "var(--fg-muted)",
+                    paddingLeft: "calc(1.5rem + 3px)",
+                  }}
+                >
+                  {item.answer}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function PadlockSymbol({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+      className={className}
+      style={{ width: "1.05em", height: "1.05em" }}
+    >
+      <rect x="4.5" y="9" width="11" height="7.5" rx="1.8" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M7 9V6.6C7 4.61 8.57 3 10.5 3C12.43 3 14 4.61 14 6.6V9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function HeaderCell({
+  label,
+  sortable = false,
+  active = false,
+  direction = "asc",
+  disabled = false,
+  onClick,
+}: {
+  label: string;
+  sortable?: boolean;
+  active?: boolean;
+  direction?: WaitlistViewSortDirection;
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex w-full items-center gap-2 border-0 bg-transparent p-0 text-left transition hover:text-[var(--fg-heading)] focus:outline-none disabled:cursor-default disabled:hover:text-inherit"
+      style={{
+        font: "inherit",
+        letterSpacing: "inherit",
+        textTransform: "none",
+        color: active ? "var(--fg-heading)" : undefined,
+        appearance: "none",
+        WebkitAppearance: "none",
+        MozAppearance: "none",
+      }}
+    >
+      {sortable ? (
+        <span
+          aria-hidden="true"
+          className="shrink-0 text-[0.72rem]"
+        >
+          {active ? (direction === "desc" ? "â†“" : "â†‘") : "â†•"}
+        </span>
+      ) : null}
+      <span className="min-w-0">{label}</span>
+    </button>
+  );
+}
+
+function maskQueueViewKey(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length <= 12) return trimmed;
+  return `${trimmed.slice(0, 6)}...${trimmed.slice(-6)}`;
+}
+
+async function downloadQrPng(canvas: HTMLCanvasElement | null, filename: string): Promise<string | null> {
+  if (!canvas) return "QR download is unavailable. Try again or copy the view key.";
+  try {
+    const padding = 96;
+    const qrSize = 768;
+    const out = document.createElement("canvas");
+    out.width = qrSize + padding * 2;
+    out.height = qrSize + padding * 2;
+    const ctx = out.getContext("2d");
+    if (!ctx) throw new Error("Canvas is unavailable.");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(canvas, padding, padding, qrSize, qrSize);
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      out.toBlob((value) => (value ? resolve(value) : reject(new Error("QR PNG export failed."))), "image/png");
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return null;
+  } catch {
+    return "Could not save the QR. Try a screenshot or copy the view key.";
+  }
+}
+
+function CopyIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function ExpandIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M12 3v11" />
+      <path d="M8 10l4 4 4-4" />
+      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+    </svg>
+  );
+}
+
+function ViewKeyCopyRow({
+  value,
+  copied,
+  onCopy,
+}: {
+  value: string;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="mx-auto inline-grid w-fit max-w-[292px] grid-cols-[1fr_auto] items-center gap-2 text-left">
+      <code
+        className="flex h-9 min-w-0 items-center truncate rounded-md px-2 text-xs font-mono"
+        style={{ background: "var(--color-raised)", color: "var(--fg-body)", border: "1px solid var(--border-muted)" }}
+        title={value}
+      >
+        {value}
+      </code>
+      <button
+        type="button"
+        onClick={onCopy}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition-opacity hover:opacity-80"
+        style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+        aria-label="Copy view key"
+        title={copied ? "Copied!" : "Copy view key"}
+      >
+        {copied ? <CheckIcon /> : <CopyIcon />}
+      </button>
+    </div>
+  );
+}
+
+function ExpandedQrModal({
+  value,
+  onClose,
+}: {
+  value: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[10002] flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.82)", backdropFilter: "blur(8px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-[28px] border bg-white p-4"
+        style={{ borderColor: "rgba(255,255,255,0.12)" }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <QRCodeSVG value={value} size={Math.min(window.innerWidth - 64, 640)} fgColor="#000000" bgColor="#ffffff" marginSize={4} />
+      </div>
+    </div>
+  );
+}
+
+function QueueViewKeyModal({
+  value,
+  onClose,
+}: {
+  value: string;
+  onClose: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [qrError, setQrError] = useState("");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { copied, copy } = useCopy();
+
+  async function handleSavePng() {
+    setQrError("");
+    const error = await downloadQrPng(canvasRef.current, "zcashnames-queue-view-key.png");
+    if (error) setQrError(error);
+  }
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
+        style={{ backgroundColor: "rgba(0,0,0,0.72)", backdropFilter: "blur(8px)" }}
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-xl rounded-[28px] border p-5 sm:p-6"
+          style={{
+            borderColor: "var(--faq-border)",
+            background: "var(--color-raised)",
+          }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="mx-auto flex max-w-md flex-col items-center text-center">
+            <h3 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
+              Queue view key
+            </h3>
+            <p className="mt-2 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
+              Use this key to inspect incoming reservation payments. You can scan the QR, save it, expand it, or copy the full view key.
+            </p>
+          </div>
+
+          <div className="mt-5 flex flex-col items-center gap-4">
+            <div className="mx-auto grid w-fit grid-cols-[auto_auto_auto] items-start justify-center gap-3">
+              <div className="mt-2 flex h-full min-h-[244px] flex-col justify-start">
+                <button
+                  type="button"
+                  onClick={handleSavePng}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
+                  style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                  aria-label="Save QR"
+                  title="Save QR"
+                >
+                  <DownloadIcon />
+                </button>
+              </div>
+              <div className="rounded-xl bg-white p-3">
+                <QRCodeSVG value={value} size={220} fgColor="#000000" bgColor="#ffffff" marginSize={4} />
+                <QRCodeCanvas
+                  ref={canvasRef}
+                  value={value}
+                  size={768}
+                  fgColor="#000000"
+                  bgColor="#ffffff"
+                  marginSize={4}
+                  className="pointer-events-none absolute h-px w-px opacity-0"
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="mt-2 flex h-full min-h-[244px] flex-col justify-start">
+                <button
+                  type="button"
+                  onClick={() => setExpanded(true)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
+                  style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                  aria-label="Expand QR"
+                  title="Expand QR"
+                >
+                  <ExpandIcon />
+                </button>
+              </div>
+            </div>
+
+            {qrError ? (
+              <p className="text-center text-sm" style={{ color: "var(--accent-red, #e05252)" }}>
+                {qrError}
+              </p>
+            ) : null}
+
+            <div className="flex w-full justify-center">
+              <ViewKeyCopyRow value={value} copied={copied} onCopy={() => copy(value)} />
+            </div>
+
+            <div className="flex w-full justify-center pt-1">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full px-3 py-1 text-sm font-semibold transition hover:opacity-80"
+                style={{ color: "var(--fg-body)" }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {expanded ? <ExpandedQrModal value={value} onClose={() => setExpanded(false)} /> : null}
+    </>
+  );
+}
+
+function buildWaitlistViewUrl(args: {
+  page: number;
+  pageSize: number;
+  sortKey: WaitlistViewSortKey;
+  sortDirection: WaitlistViewSortDirection;
+  searchQuery: string;
+  searchMode: WaitlistViewSearchMode;
+  reservedOnly: boolean;
+  protectedOnly: boolean;
+}) {
+  const searchParams = new URLSearchParams({
+    page: String(args.page),
+    pageSize: String(args.pageSize),
+    sortKey: args.sortKey,
+    sortDirection: args.sortDirection,
+    searchMode: args.searchMode,
+    reservedOnly: String(args.reservedOnly),
+    protectedOnly: String(args.protectedOnly),
+  });
+  if (args.searchQuery.trim()) {
+    searchParams.set("search", args.searchQuery.trim());
+  }
+  return `/api/waitlist/view?${searchParams.toString()}`;
+}
+
+export default function WaitlistViewClient({
+  initialRows,
+  initialAllCount,
+  initialTotalCount,
+  initialReservedOnlyCount,
+  initialProtectedOnlyCount,
+  initialHeroAllCount,
+  initialHeroReservedCount,
+  initialHeroProtectedCount,
+  initialPage,
+  initialPageSize,
+  initialHasMore,
+  initialSortKey,
+  initialSortDirection,
+  initialSearchQuery,
+  initialSearchMode,
+  earlyAccessStartAt,
+  earlyAccessLabel,
+  adminWalletUivk,
+  referralsPerSpot,
+}: WaitlistViewClientProps) {
+  const [rows, setRows] = useState(initialRows);
+  const [allCount, setAllCount] = useState(initialAllCount);
+  const [totalCount, setTotalCount] = useState(initialTotalCount);
+  const [reservedOnlyCount, setReservedOnlyCount] = useState(initialReservedOnlyCount);
+  const [protectedOnlyCount, setProtectedOnlyCount] = useState(initialProtectedOnlyCount);
+  const [heroAllCount, setHeroAllCount] = useState(initialHeroAllCount);
+  const [heroReservedCount, setHeroReservedCount] = useState(initialHeroReservedCount);
+  const [heroProtectedCount, setHeroProtectedCount] = useState(initialHeroProtectedCount);
+  const [draftSearch, setDraftSearch] = useState(initialSearchQuery);
+  const [appliedSearch, setAppliedSearch] = useState(initialSearchQuery);
+  const [searchMode, setSearchMode] = useState<WaitlistViewSearchMode>(
+    initialSearchQuery.trim() ? initialSearchMode : "contains",
+  );
+  const [reservedOnly, setReservedOnly] = useState(false);
+  const [protectedOnly, setProtectedOnly] = useState(false);
+  const [pageSize, setPageSize] = useState(initialPageSize);
+  const [sortKey, setSortKey] = useState<WaitlistViewSortKey>(initialSortKey);
+  const [sortDirection, setSortDirection] = useState<WaitlistViewSortDirection>(initialSortDirection);
+  const [page, setPage] = useState(initialPage);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [showViewKeyModal, setShowViewKeyModal] = useState(false);
+  const [headerInfo, setHeaderInfo] = useState<{ title: string; body: string } | null>(null);
+  const firstLoadRef = useRef(true);
+  const queryCacheRef = useRef<Map<string, PublicWaitlistViewData>>(new Map());
+  const tableShellRef = useRef<HTMLDivElement | null>(null);
+  const effectiveSearchMode: WaitlistViewSearchMode = appliedSearch.trim() ? searchMode : "contains";
+  const overlayCenter = useVisibleContainerCenter(tableShellRef.current, isRefreshing);
+
+  function applyViewData(data: PublicWaitlistViewData) {
+    setRows(data.rows);
+    setAllCount(data.allCount);
+    setTotalCount(data.totalCount);
+    setReservedOnlyCount(data.reservedOnlyCount);
+    setProtectedOnlyCount(data.protectedOnlyCount);
+    setHeroAllCount(data.heroAllCount);
+    setHeroReservedCount(data.heroReservedCount);
+    setHeroProtectedCount(data.heroProtectedCount);
+    setPage(data.page);
+    setPageSize(data.pageSize);
+    setHasMore(data.hasMore);
+  }
+
+  function writeQueryCache(key: string, data: PublicWaitlistViewData) {
+    const cache = queryCacheRef.current;
+    if (cache.has(key)) {
+      cache.delete(key);
+    }
+    cache.set(key, data);
+
+    while (cache.size > WAITLIST_VIEW_CACHE_LIMIT) {
+      const oldestKey = cache.keys().next().value;
+      if (!oldestKey) break;
+      cache.delete(oldestKey);
+    }
+  }
+
+  const initialCacheKey = buildWaitlistViewCacheKey({
+    page: initialPage,
+    pageSize: initialPageSize,
+    sortKey: initialSortKey,
+    sortDirection: initialSortDirection,
+    searchQuery: initialSearchQuery,
+    searchMode: initialSearchQuery.trim() ? initialSearchMode : "contains",
+    reservedOnly: false,
+    protectedOnly: false,
+  });
+  if (!queryCacheRef.current.has(initialCacheKey)) {
+    writeQueryCache(initialCacheKey, {
+      rows: initialRows,
+      allCount: initialAllCount,
+      totalCount: initialTotalCount,
+      reservedOnlyCount: initialReservedOnlyCount,
+      protectedOnlyCount: initialProtectedOnlyCount,
+      heroAllCount: initialHeroAllCount,
+      heroReservedCount: initialHeroReservedCount,
+      heroProtectedCount: initialHeroProtectedCount,
+      page: initialPage,
+      pageSize: initialPageSize,
+      hasMore: initialHasMore,
+      sortKey: initialSortKey,
+      sortDirection: initialSortDirection,
+      searchQuery: initialSearchQuery,
+      searchMode: initialSearchMode,
+      earlyAccessStartAt,
+      earlyAccessLabel,
+      adminWalletUivk,
+      referralsPerSpot,
+    });
+  }
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    if (firstLoadRef.current) {
+      firstLoadRef.current = false;
+      return;
+    }
+    let cancelled = false;
+    const queryKey = buildWaitlistViewCacheKey({
+      page,
+      pageSize,
+      sortKey,
+      sortDirection,
+      searchQuery: appliedSearch,
+      searchMode: effectiveSearchMode,
+      reservedOnly,
+      protectedOnly,
+    });
+
+    async function refreshRows() {
+      const cachedData = queryCacheRef.current.get(queryKey);
+      if (cachedData) {
+        setLoadError(null);
+        applyViewData(cachedData);
+        return;
+      }
+
+      setIsRefreshing(true);
+      setLoadError(null);
+
+      try {
+        const response = await fetch(
+          buildWaitlistViewUrl({
+            page,
+            pageSize,
+            sortKey,
+            sortDirection,
+            searchQuery: appliedSearch,
+            searchMode: effectiveSearchMode,
+            reservedOnly,
+            protectedOnly,
+          }),
+          { cache: "no-store" },
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to refresh waitlist rows.");
+        }
+
+        const data = (await response.json()) as PublicWaitlistViewData;
+        if (cancelled) return;
+        writeQueryCache(queryKey, data);
+        applyViewData(data);
+      } catch (error) {
+        if (cancelled) return;
+        setLoadError(error instanceof Error ? error.message : "Failed to refresh waitlist rows.");
+      } finally {
+        if (!cancelled) {
+          setIsRefreshing(false);
+        }
+      }
+    }
+
+    void refreshRows();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [appliedSearch, effectiveSearchMode, page, pageSize, protectedOnly, reservedOnly, sortDirection, sortKey]);
+
+  const countdownText = formatRemaining(new Date(earlyAccessStartAt).getTime(), nowMs);
+  const allActive = !reservedOnly && !protectedOnly && appliedSearch.trim() === "";
+  const visibleRows = rows;
+  const maskedQueueViewKey = maskQueueViewKey(adminWalletUivk);
+  const hasSearchInput = !!draftSearch.trim();
+  const activeSortOptionKey =
+    SORT_OPTIONS.find((option) => option.sortKey === sortKey && option.sortDirection === sortDirection)?.key
+    ?? SORT_OPTIONS[0].key;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const heroNamesCount = heroAllCount;
+
+  function applySearch() {
+    setPage(1);
+    setAppliedSearch(draftSearch.trim());
+  }
+
+  function setSort(nextKey: WaitlistViewSortKey, nextDirection: WaitlistViewSortDirection) {
+    setPage(1);
+    setSortKey(nextKey);
+    setSortDirection(nextDirection);
+  }
+
+  function applySortOption(optionKey: string) {
+    const option = SORT_OPTIONS.find((entry) => entry.key === optionKey);
+    if (!option) return;
+    setSort(option.sortKey, option.sortDirection);
+  }
+
+  function goToPage(nextPage: number) {
+    if (nextPage < 1 || nextPage > totalPages || nextPage === page) return;
+    setPage(nextPage);
+  }
+
+  function getStatusLabel(row: PublicWaitlistViewRow): "Protected" | "Reserved" | "Pending" | "Available" {
+    if (row.protected) return "Protected";
+    if (row.reserved) return "Reserved";
+    return "Pending";
+  }
+
+  function getStatusStyle(status: ReturnType<typeof getStatusLabel>) {
+    if (status === "Protected") {
+      return {
+        color: "var(--color-accent-interactive)",
+        background: "color-mix(in srgb, var(--color-accent-interactive) 12%, transparent)",
+      };
+    }
+    if (status === "Reserved") {
+      return {
+        color: "var(--accent-green, #27b36a)",
+        background: "color-mix(in srgb, var(--accent-green, #27b36a) 12%, transparent)",
+      };
+    }
+    if (status === "Pending") {
+      return {
+        color: "var(--accent-red, #d67452)",
+        background: "color-mix(in srgb, var(--accent-red, #d67452) 12%, transparent)",
+      };
+    }
+    return {
+      color: "var(--fg-muted)",
+      background: "var(--market-stats-segment-active-bg)",
+    };
+  }
+
+  function formatReferrals(row: PublicWaitlistViewRow): string {
+    if (row.directReferrals <= 0 && row.indirectReferrals <= 0) return "0";
+    if (row.directReferrals <= 0) return `${row.indirectReferrals} indirect`;
+    if (row.indirectReferrals <= 0) return `${row.directReferrals} direct`;
+    return `${row.directReferrals} direct Â· ${row.indirectReferrals} indirect`;
+  }
+
+  const faqItems: WaitlistFaqItem[] = [
+    {
+      question: "Why are reservations required after email confirmation?",
+      answer: (
+        <p>
+          Email confirmation alone is not sybil resistant in this system. A single person can create many email
+          addresses, confirm them cheaply, and occupy many positions in the queue without showing meaningful commitment.
+          The reservation flow on <code>/verify</code> raises the cost of spam and duplicate queue abuse by requiring an
+          on-chain Zcash transaction tied to a real wallet action for each reserved name. That does not solve every abuse
+          case, but it is much harder to fake at scale than email clicks alone, and it gives the queue a stronger signal
+          that a participant intends to actually claim the name.
+        </p>
+      ),
+    },
+    {
+      question: "How do I reserve my place and how do referrals affect it?",
+      answer: (
+        <p>
+          Open the reservation link sent to your email and send the Zcash transaction shown on the page. This records
+          your reservation on-chain. You can also earn ZEC when a referral claims their name, and rewards are sent to
+          your Zcash name after you reserve it.
+        </p>
+      ),
+    },
+    {
+      question: "What does â€œadjusted by referrals who also completed reservationsâ€ mean?",
+      answer: (
+        <p>
+          Only referrals who also finish their own reservations count toward your queue position. The <strong>Pos.</strong>{" "}
+          column is shown for reserved names only. Within the reserved queue, every {referralsPerSpot} direct reserved
+          referrals moves your position up 1 spot, and every 9 indirect reserved referrals moves it up 1 additional
+          spot. Referrals who joined by email but did not complete a reservation do not improve your queue position.
+        </p>
+      ),
+    },
+    {
+      question: "Why would I want to use the queue viewing key?",
+      answer: (
+        <p>
+          The queue viewing key gives participants and observers a way to inspect incoming reservation payments without
+          exposing spending authority. It helps the community verify that reservations are reaching the expected wallet
+          and adds transparency to queue activity. You can open the queue viewing key here:{" "}
+          <button
+            type="button"
+            onClick={() => setShowViewKeyModal(true)}
+            className="cursor-pointer underline underline-offset-4 transition hover:opacity-80"
+            style={{ color: "var(--fg-body)" }}
+          >
+            <strong>{maskedQueueViewKey}</strong>
+          </button>
+          .
+        </p>
+      ),
+    },
+    {
+      question: "When do reservations close and when are access codes sent?",
+      answer: (
+        <p>
+          Reservations close when the early access period begins, which is <strong>{earlyAccessLabel}</strong>. That is
+          when access codes will be sent in the order presented in the queue to participants who completed reservations,
+          adjusted by referrals who also completed reservations. The current time remaining is <strong>{countdownText}</strong>.
+        </p>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <VerifyAmbientHeroSection
+        earlyAccessStartAt={earlyAccessStartAt}
+        bandInsetClassName="-mt-5 pt-5 sm:-mt-6 sm:pt-6"
+        hero={
+          <section
+            className="mb-6 rounded-2xl border px-6 py-8 sm:px-8 sm:py-10"
+            style={{
+              borderColor: "var(--faq-border)",
+              background:
+                "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
+            }}
+          >
+            <div className="grid gap-6">
+              <div className="min-w-0 text-center">
+                <h1
+                  className="text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
+                  style={{ color: "var(--fg-heading)" }}
+                >
+                  Waitlist
+                </h1>
+                <p className="mx-auto mt-4 max-w-2xl text-lg leading-8" style={{ color: "var(--fg-body)" }}>
+                  Search names, check position, and view reservation status.
+                </p>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm lg:text-base">
+                  <span className="inline-flex items-center gap-2" style={{ color: "var(--fg-body)" }}>
+                    <span
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full"
+                      style={{ background: "var(--color-accent-interactive-soft)", color: "var(--color-accent-interactive)" }}
+                    >
+                      <SearchIcon />
+                    </span>
+                    <span>
+                      <strong style={{ color: "var(--fg-heading)" }}>{heroNamesCount.toLocaleString()}</strong> names
+                    </span>
+                  </span>
+                  <span className="inline-flex items-center gap-2" style={{ color: "var(--fg-body)" }}>
+                    <span
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full"
+                      style={{ background: "var(--color-accent-interactive-soft)", color: "var(--color-accent-interactive)" }}
+                    >
+                      <CheckIcon />
+                    </span>
+                    <span>
+                      <strong style={{ color: "var(--fg-heading)" }}>{heroReservedCount.toLocaleString()}</strong> reserved
+                    </span>
+                  </span>
+                  <span className="inline-flex items-center gap-2" style={{ color: "var(--fg-body)" }}>
+                    <span
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full"
+                      style={{ background: "var(--color-accent-interactive-soft)", color: "var(--color-accent-interactive)" }}
+                    >
+                      <PadlockSymbol className="h-4 w-4" />
+                    </span>
+                    <span><strong style={{ color: "var(--fg-heading)" }}>{heroProtectedCount.toLocaleString()}</strong> protected</span>
+                  </span>
+                </div>
+                <div
+                  className="mx-auto mt-6 max-w-[30rem] border-t pt-5 text-center text-base leading-7"
+                  style={{
+                    color: "var(--fg-body)",
+                    borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
+                  }}
+                >
+                  <span>Already on the waitlist? Complete your reservation to purchase your name during Early Access.</span>
+                  <span className="mt-1 block text-center text-sm">
+                    <Link
+                      href="/verify"
+                      className="text-[0.78rem] font-normal underline"
+                      style={{ color: "var(--color-accent-interactive)" }}
+                    >
+                      Get started
+                    </Link>
+                  </span>
+                </div>
+              </div>
+
+            </div>
+          </section>
+        }
+      />
+
+      <div className="space-y-4">
+        <section>
+          <div className="flex flex-wrap items-center gap-2">
+            <InlineSearchField
+              value={draftSearch}
+              onChange={setDraftSearch}
+              onSubmit={applySearch}
+              variant="table"
+              placeholder="Names"
+              ariaLabel="Search waitlist names"
+              searchMode={searchMode}
+              onSearchModeChange={(value) => setSearchMode(value as WaitlistViewSearchMode)}
+              onClear={() => {
+                setDraftSearch("");
+                setSearchMode("contains");
+              }}
+              submitDisabled={!hasSearchInput}
+              showClear={hasSearchInput}
+              clearAriaLabel="Clear search text"
+            />
+          </div>
+        </section>
+
+        {appliedSearch.trim() ? (
+          <SearchResultsSummary
+            query={appliedSearch}
+            matchCount={isRefreshing ? null : totalCount}
+            onClear={() => {
+              setDraftSearch("");
+              setAppliedSearch("");
+              setSearchMode("contains");
+              setPage(1);
+            }}
+          />
+        ) : null}
+        <DataViewTabs
+          borderColor="var(--faq-border)"
+          tabs={[
+            {
+              key: "all",
+              label: `All (${allCount})`,
+              active: allActive,
+              onClick: () => {
+                setDraftSearch("");
+                setAppliedSearch("");
+                setSearchMode("contains");
+                setPage(1);
+                setReservedOnly(false);
+                setProtectedOnly(false);
+              },
+            },
+            {
+              key: "reserved",
+              label: `Reserved only (${reservedOnlyCount})`,
+              active: reservedOnly,
+              onClick: () => {
+                setPage(1);
+                setReservedOnly(true);
+                setProtectedOnly(false);
+              },
+            },
+            {
+              key: "protected",
+              label: `Protected (${protectedOnlyCount})`,
+              active: protectedOnly,
+              onClick: () => {
+                setPage(1);
+                setProtectedOnly(true);
+                setReservedOnly(false);
+              },
+            },
+          ]}
+          endContent={
+            <>
+              <TableSortMenu
+                value={activeSortOptionKey}
+                options={SORT_OPTIONS}
+                onChange={applySortOption}
+                borderColor="var(--faq-border)"
+              />
+              <TableRowsMenu
+                value={pageSize}
+                options={PAGE_SIZE_OPTIONS}
+                onChange={(next) => {
+                  setPage(1);
+                  setPageSize(next);
+                }}
+                borderColor="var(--faq-border)"
+              />
+            </>
+          }
+        />
+
+        <div
+          ref={tableShellRef}
+          className="relative overflow-hidden rounded-2xl border"
+          style={{
+            borderColor: "var(--faq-border)",
+            background: "color-mix(in srgb, var(--color-bg-elevated, transparent) 72%, transparent)",
+          }}
+        >
+          <div className="overflow-x-auto">
+            <div className="min-w-full">
+              <table
+                className="min-w-full w-full table-auto border-separate border-spacing-0"
+                style={{ color: "var(--fg-body)" }}
+              >
+              <thead>
+                <tr>
+                  {[
+                    { label: "#", info: "The verified waitlist line number in join order." },
+                    { label: "Adj#", info: "Referral-adjusted waitlist line number. This is the original line number minus one spot for each 3 direct reserved referrals and minus one spot for each 9 indirect reserved referrals." },
+                    { label: "Name", info: "The waitlisted name and its referral code." },
+                    { label: "Rank", info: "Rank among all entries with the same name, ordered by referral-adjusted line number and then original line number as the tie-breaker." },
+                    { label: "Status", info: "Protected names are held back, reserved names have paid, pending names are waiting on reservation, and available names have no current conflict or hold." },
+                    { label: "Referrals", info: "Reserved referral totals. When both direct and indirect counts exist, both are shown together." },
+                  ].map((column, index) => (
+                    <th
+                      key={column.label}
+                      className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] align-middle sm:px-6"
+                      style={{
+                        background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                        borderBottom: "1px solid var(--faq-border)",
+                        borderRight:
+                          index === 5 ? "none" : "1px solid color-mix(in srgb, var(--faq-border) 78%, transparent)",
+                        color: "var(--fg-muted)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <span className="inline-flex items-center gap-2 align-middle">
+                        <span className="leading-none">{column.label}</span>
+                        <button
+                          type="button"
+                          onClick={() => setHeaderInfo({ title: column.label, body: column.info })}
+                          className="inline-flex h-5 w-5 shrink-0 items-center justify-center self-center align-middle leading-none text-[color:var(--fg-muted)] transition-colors hover:text-[var(--color-accent-interactive)]"
+                          aria-label={`About ${column.label}`}
+                        >
+                          <InfoIcon />
+                        </button>
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loadError ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-4 text-sm"
+                      style={{ color: "var(--accent-red, #e05252)" }}
+                    >
+                      {loadError}
+                    </td>
+                  </tr>
+                ) : null}
+
+                {visibleRows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-10 text-center text-sm"
+                      style={{ color: "var(--fg-muted)" }}
+                    >
+                      {isRefreshing ? "Loading waitlist names..." : "No waitlist names matched your current search."}
+                    </td>
+                  </tr>
+                ) : (
+                  visibleRows.map((row) => {
+                    const status = getStatusLabel(row);
+                    const statusStyle = getStatusStyle(status);
+                    return (
+                      <tr key={row.id}>
+                        <td
+                          className="px-5 py-4 text-sm sm:px-6"
+                          style={{
+                            borderBottom: "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
+                            borderRight: "1px solid color-mix(in srgb, var(--faq-border) 78%, transparent)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <span className="font-mono font-semibold" style={{ color: "var(--fg-heading)" }}>
+                            {row.basePosition}
+                          </span>
+                        </td>
+                        <td
+                          className="px-5 py-4 text-sm sm:px-6"
+                          style={{
+                            borderBottom: "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
+                            borderRight: "1px solid color-mix(in srgb, var(--faq-border) 78%, transparent)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <span className="font-mono font-semibold" style={{ color: "var(--fg-heading)" }}>
+                            {row.adjustedLineNumber}
+                          </span>
+                        </td>
+                        <td
+                          className="px-5 py-4 text-sm sm:px-6"
+                          style={{
+                            borderBottom: "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
+                            borderRight: "1px solid color-mix(in srgb, var(--faq-border) 78%, transparent)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {row.leaderHref ? (
+                            <Link href={row.leaderHref} className="block transition hover:opacity-80" title={row.name}>
+                              <span className="block" style={{ color: "var(--fg-body)" }}>
+                                {row.name}
+                              </span>
+                              {row.displayReferralCode ? (
+                                <span className="mt-1 block text-xs" style={{ color: "var(--fg-muted)" }} title={row.displayReferralCode}>
+                                  {row.displayReferralCode}
+                                </span>
+                              ) : null}
+                            </Link>
+                          ) : (
+                            <>
+                              <span className="block" style={{ color: "var(--fg-body)" }} title={row.name}>
+                                {row.name}
+                              </span>
+                              {row.displayReferralCode ? (
+                                <span className="mt-1 block text-xs" style={{ color: "var(--fg-muted)" }} title={row.displayReferralCode}>
+                                  {row.displayReferralCode}
+                                </span>
+                              ) : null}
+                            </>
+                          )}
+                        </td>
+                        <td
+                          className="px-5 py-4 text-sm sm:px-6"
+                          style={{
+                            borderBottom: "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
+                            borderRight: "1px solid color-mix(in srgb, var(--faq-border) 78%, transparent)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {row.interestCount > 1 ? (
+                            <Link
+                              href={`/waitlist/view?search=${encodeURIComponent(row.name)}&searchMode=exact`}
+                              className="font-mono font-semibold underline decoration-transparent underline-offset-4 transition hover:decoration-current"
+                              style={{ color: "var(--fg-heading)" }}
+                              title={`Show all waitlist entries for ${row.name}`}
+                            >
+                              {row.reserved ? `${row.rankPosition} of ${row.rankTotal}` : `N/A of ${row.interestCount}`}
+                            </Link>
+                          ) : (
+                            <span className="font-mono font-semibold" style={{ color: "var(--fg-heading)" }}>
+                              {row.reserved ? `${row.rankPosition} of ${row.rankTotal}` : `N/A of ${row.interestCount}`}
+                            </span>
+                          )}
+                        </td>
+                        <td
+                          className="px-5 py-4 text-sm sm:px-6"
+                          style={{
+                            borderBottom: "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
+                            borderRight: "1px solid color-mix(in srgb, var(--faq-border) 78%, transparent)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <span
+                            className="rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
+                            style={statusStyle}
+                          >
+                            {status}
+                          </span>
+                        </td>
+                        <td
+                          className="px-5 py-4 text-sm sm:px-6"
+                          style={{
+                            borderBottom: "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <span className="font-mono tabular-nums" style={{ color: "var(--fg-body)" }}>
+                            {formatReferrals(row)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+            </div>
+          </div>
+
+          {rows.length > 0 ? (
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              onPageChange={goToPage}
+              disabled={isRefreshing}
+              style={{
+                borderTop: "1px solid var(--faq-border)",
+              }}
+            />
+          ) : null}
+
+          {isRefreshing ? (
+            <div
+              className="pointer-events-none absolute inset-0 z-10 rounded-2xl"
+              style={{
+                background: "color-mix(in srgb, var(--color-background) 36%, transparent)",
+                backdropFilter: "blur(3px)",
+              }}
+              aria-hidden="true"
+            >
+              <div
+                className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 px-5 py-4"
+                style={{
+                  left: `${overlayCenter.x}px`,
+                  top: `${overlayCenter.y}px`,
+                }}
+              >
+                <div
+                  className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  style={{ color: "var(--color-accent-interactive)" }}
+                />
+                <p className="text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>
+                  Loading waitlist...
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <WaitlistFaq items={faqItems} />
+
+      {showViewKeyModal ? (
+        <QueueViewKeyModal value={adminWalletUivk} onClose={() => setShowViewKeyModal(false)} />
+      ) : null}
+      {headerInfo ? (
+        <HeaderInfoModal title={headerInfo.title} body={headerInfo.body} onClose={() => setHeaderInfo(null)} />
+      ) : null}
+    </>
+  );
+}
+

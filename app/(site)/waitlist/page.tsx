@@ -8,26 +8,26 @@ type WaitlistPageProps = {
 };
 
 const WAITLIST_METADATA: Metadata = {
-  title: "ZcashNames | Join the Waitlist",
-  description: "Claim your Zcash name. Get early access to ZcashNames.",
+  title: "Zcash Names | Join the Waitlist",
+  description: "Claim your Zcash name. Get early access to Zcash Names.",
   alternates: { canonical: "https://www.zcashnames.com/waitlist" },
   openGraph: {
-    title: "ZcashNames | Join the Waitlist",
-    description: "Claim your Zcash name. Get early access to ZcashNames.",
+    title: "Zcash Names | Join the Waitlist",
+    description: "Claim your Zcash name. Get early access to Zcash Names.",
     url: "https://www.zcashnames.com/waitlist",
     images: [
       {
         url: "https://www.zcashnames.com/og/home.png",
         width: 1200,
         height: 630,
-        alt: "ZcashNames waitlist",
+        alt: "Zcash Names waitlist",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ZcashNames | Join the Waitlist",
-    description: "Claim your Zcash name. Get early access to ZcashNames.",
+    title: "Zcash Names | Join the Waitlist",
+    description: "Claim your Zcash name. Get early access to Zcash Names.",
     images: ["https://www.zcashnames.com/og/home.png"],
   },
 };
@@ -71,7 +71,7 @@ export async function generateMetadata({ searchParams }: WaitlistPageProps): Pro
           url: ogImageUrl,
           width: 1200,
           height: 630,
-          alt: `ZcashNames invite from ${inviterName}`,
+          alt: `Zcash Names invite from ${inviterName}`,
         },
       ],
     },

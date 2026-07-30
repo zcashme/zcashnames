@@ -7,6 +7,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { submitBetaV2Application } from "@/lib/beta-v2/actions";
 import {
   CONTACT_KINDS,
@@ -808,7 +809,7 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
         className="w-full rounded-full py-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         style={primaryBtnStyle}
       >
-        {pending ? "Submitting..." : "Submit application"}
+        {pending ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit application"}
       </button>
 
       <p className="text-xs text-center" style={{ color: "var(--fg-muted)", lineHeight: 1.6 }}>

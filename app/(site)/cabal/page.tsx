@@ -7,8 +7,8 @@ import InfluencerDeck, { type InfluencerSlide } from "@/components/influencer/In
 import { readCurrentCabalInvite } from "@/lib/cabal/access";
 
 export const metadata: Metadata = {
-  title: "Cabal - ZcashNames",
-  description: "ZcashNames cabal deck.",
+  title: "Cabal - Zcash Names",
+  description: "Zcash Names cabal deck.",
   robots: { index: false, follow: false, nocache: true },
 };
 

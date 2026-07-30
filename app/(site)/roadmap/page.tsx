@@ -9,28 +9,28 @@ import { parseRoadmapMarkdown } from "@/lib/roadmap";
 import RoadmapTimeline from "./RoadmapTimeline";
 
 export const metadata: Metadata = {
-  title: "Roadmap | ZcashNames",
-  description: "Calendar roadmap for the next ZcashNames product phases and tasks.",
+  title: "Roadmap | Zcash Names",
+  description: "Calendar roadmap for the next Zcash Names product phases and tasks.",
   alternates: {
     canonical: "https://www.zcashnames.com/roadmap",
   },
   openGraph: {
-    title: "Roadmap | ZcashNames",
-    description: "Calendar roadmap for the next ZcashNames product phases and tasks.",
+    title: "Roadmap | Zcash Names",
+    description: "Calendar roadmap for the next Zcash Names product phases and tasks.",
     url: "https://www.zcashnames.com/roadmap",
     images: [
       {
         url: "https://www.zcashnames.com/og/roadmap.png",
         width: 1200,
         height: 630,
-        alt: "Roadmap | ZcashNames",
+        alt: "Roadmap | Zcash Names",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Roadmap | ZcashNames",
-    description: "Calendar roadmap for the next ZcashNames product phases and tasks.",
+    title: "Roadmap | Zcash Names",
+    description: "Calendar roadmap for the next Zcash Names product phases and tasks.",
     images: ["https://www.zcashnames.com/og/roadmap.png"],
   },
 };

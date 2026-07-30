@@ -12,13 +12,13 @@ import { parseShareKitMarkdown } from "@/lib/sharekit";
 import ShareKitClient from "./ShareKitClient";
 
 export const metadata: Metadata = {
-  title: "Share Kit | ZcashNames",
+  title: "Share Kit | Zcash Names",
   description: "Copy and share prepared draft posts with your waitlist referral link.",
   alternates: {
     canonical: "https://www.zcashnames.com/sharekit",
   },
   openGraph: {
-    title: "Share Kit | ZcashNames",
+    title: "Share Kit | Zcash Names",
     description: "Copy and share prepared draft posts with your waitlist referral link.",
     url: "https://www.zcashnames.com/sharekit",
     images: [
@@ -26,13 +26,13 @@ export const metadata: Metadata = {
         url: "/og/sharekit.png",
         width: 1200,
         height: 630,
-        alt: "Share Kit | ZcashNames",
+        alt: "Share Kit | Zcash Names",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Share Kit | ZcashNames",
+    title: "Share Kit | Zcash Names",
     description: "Copy and share prepared draft posts with your waitlist referral link.",
     images: ["/og/sharekit.png"],
   },

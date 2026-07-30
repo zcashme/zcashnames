@@ -9,8 +9,8 @@ import SiteRouteTitle from "@/components/SiteRouteTitle";
 import IndexerLaunchAlertForm from "@/components/indexerbb/IndexerLaunchAlertForm";
 
 export const metadata: Metadata = {
-  title: "Indexer Bug Bounty - ZcashNames",
-  description: "Indexer bug bounty details and submission guidance for ZcashNames.",
+  title: "Indexer Bug Bounty - Zcash Names",
+  description: "Indexer bug bounty details and submission guidance for Zcash Names.",
   robots: { index: false, follow: false, nocache: true },
 };
 

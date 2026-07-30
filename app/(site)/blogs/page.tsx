@@ -28,7 +28,7 @@ export default async function BlogsIndexPage() {
       <BlogSubscribeCallout
         defaultSeries="general"
         title="Subscribe for general updates"
-        body="Get general ZcashNames product notes, launch updates, builder stories, and community news in your inbox."
+        body="Get general Zcash Names product notes, launch updates, builder stories, and community news in your inbox."
       />
     </BlogPageShell>
   );

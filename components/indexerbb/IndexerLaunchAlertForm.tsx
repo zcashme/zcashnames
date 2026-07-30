@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { submitIndexerLaunchAlert } from "@/lib/indexer-launch-alert/actions";
 import {
   CONTACT_KINDS,
@@ -370,7 +371,7 @@ export default function IndexerLaunchAlertForm() {
           className="w-full cursor-pointer rounded-full py-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
           style={primaryBtnStyle}
         >
-          {pending ? "Submitting..." : "Notify me when it launches"}
+          {pending ? <AnimatedLoadingLabel label="Submitting" active /> : "Notify me when it launches"}
         </button>
 
         <p className="text-xs text-center" style={{ color: "var(--fg-muted)", lineHeight: 1.6 }}>

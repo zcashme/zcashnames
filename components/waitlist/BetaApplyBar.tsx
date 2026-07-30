@@ -21,7 +21,7 @@ export default function BetaApplyBar() {
   const href = onWaitlist ? "/beta/apply" : "/beta/refund";
   const badgeLabel = onWaitlist ? "Earn ZEC" : "Refund";
   const ctaLabel = onWaitlist
-    ? "Apply for the ZcashNames beta \u2192"
+    ? "Apply for the Zcash Names beta \u2192"
     : " Names are temporary during beta testing. \u2192";
   const barStyle: CSSProperties = onWaitlist
     ? {

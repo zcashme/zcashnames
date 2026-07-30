@@ -1,25 +1,29 @@
 /**
  * Server-side explorer page — the single data-fetching entry point.
- * Fetches chain stats plus exactly one tab's page of data, server-paginated.
- * Tab counts come from chain stats; the active tab's total drives pagination.
- * Also resolves a name when ?name is set.
+ * Resolves the initial list state plus optional name-detail data from URL params.
  */
-import { getCurrentRegistrations, getEvents, getListings, resolveName } from "@/lib/zns/resolve";
-import { getChainStats } from "@/lib/network-stats";
-import type { Action, Listing, Network, Registration, ZnsEvent } from "@/lib/types";
-import { ACTIONS } from "@/lib/types";
+import { getEvents, resolveName } from "@/lib/zns/resolve";
+import type { Network } from "@/lib/types";
 import type { ResolveName } from "@/lib/types";
 import ExplorerView from "./ExplorerView";
-import { PAGE_SIZE, parseExplorerTab, type ExplorerTab } from "./tabs";
+import {
+  normalizeExplorerSort,
+  parseExplorerNetwork,
+  parseExplorerPage,
+  parseExplorerPageSize,
+  parseExplorerSearchMode,
+  parseExplorerTab,
+} from "./listConfig";
+import { getExplorerListData } from "./listData";
 
 export const metadata = {
-  title: "Explorer - ZcashNames",
+  title: "Explorer - Zcash Names",
   description: "Browse registered names, event history, and marketplace listings.",
   alternates: {
     canonical: "https://www.zcashnames.com/explorer",
   },
   openGraph: {
-    title: "Name Explorer | ZcashNames",
+    title: "Name Explorer | Zcash Names",
     description: "Browse registered names, event history, and marketplace listings.",
     url: "https://www.zcashnames.com/explorer",
     images: [
@@ -27,59 +31,56 @@ export const metadata = {
         url: "/og/explorer.png",
         width: 1200,
         height: 630,
-        alt: "ZcashNames explorer preview",
+        alt: "Zcash Names explorer preview",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Name Explorer | ZcashNames",
+    title: "Name Explorer | Zcash Names",
     description: "Browse registered names, event history, and marketplace listings.",
     images: ["/og/explorer.png"],
   },
 };
 
-function getEventActionFilter(tab: ExplorerTab): Action | undefined {
-  return (ACTIONS as readonly string[]).includes(tab) ? (tab as Action) : undefined;
-}
-
 export default async function ExplorerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ env?: string; name?: string; tab?: string; page?: string }>;
+  searchParams: Promise<{
+    env?: string;
+    name?: string;
+    tab?: string;
+    page?: string;
+    pageSize?: string;
+    sortKey?: string;
+    sortDirection?: string;
+    search?: string;
+    searchMode?: string;
+  }>;
 }) {
   const params = await searchParams;
-  const network: Network = params.env === "testnet" ? "testnet" : "mainnet";
+  const network: Network = parseExplorerNetwork(params.env);
   const tab = parseExplorerTab(params.tab);
-  const rawPage = Number.parseInt(params.page ?? "", 10);
-  const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
+  const page = parseExplorerPage(params.page);
+  const pageSize = parseExplorerPageSize(params.pageSize);
+  const searchMode = parseExplorerSearchMode(params.searchMode);
+  const searchQuery = searchMode === "contains" ? params.search ?? "" : "";
+  const { sortKey, sortDirection } = normalizeExplorerSort(tab, params.sortKey, params.sortDirection);
   const nameQuery = params.name ?? "";
-  const action = getEventActionFilter(tab);
-  const offset = (page - 1) * PAGE_SIZE;
 
-  let registrationsP: Promise<Registration[]> = Promise.resolve([]);
-  let listingsP: Promise<{ listings: Listing[]; total: number }> = Promise.resolve({ listings: [], total: 0 });
-  let eventsP: Promise<{ events: ZnsEvent[]; total: number }> = Promise.resolve({ events: [], total: 0 });
-  if (tab === "registered") {
-    registrationsP = getCurrentRegistrations(network, PAGE_SIZE, offset);
-  } else if (tab === "forsale") {
-    listingsP = getListings(network, PAGE_SIZE, offset);
-  } else {
-    eventsP = getEvents({ action, limit: PAGE_SIZE, offset }, network);
-  }
-
-  const [stats, registrations, listingsResult, eventsResult] = await Promise.all([
-    getChainStats(network),
-    registrationsP,
-    listingsP,
-    eventsP,
-  ]);
-  const listings = listingsResult.listings;
-  const initialEvents = eventsResult.events;
-  const initialEventsTotal = eventsResult.total;
+  const initialListData = await getExplorerListData({
+    network,
+    tab,
+    page,
+    pageSize,
+    sortKey,
+    sortDirection,
+    searchQuery,
+    searchMode,
+  });
 
   let nameResult: ResolveName | null = null;
-  let nameEvents: typeof initialEvents = [];
+  let nameEvents: typeof initialListData.events = [];
   if (nameQuery) {
     try {
       const [resolved, evResult] = await Promise.all([
@@ -96,12 +97,7 @@ export default async function ExplorerPage({
   return (
     <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-4 sm:px-6">
       <ExplorerView
-        initialEvents={initialEvents}
-        initialEventsTotal={initialEventsTotal}
-        initialListings={listings}
-        initialRegistrations={registrations}
-        stats={stats}
-        network={network}
+        initialListData={initialListData}
         nameQuery={nameQuery}
         nameResult={nameResult}
         nameEvents={nameEvents}

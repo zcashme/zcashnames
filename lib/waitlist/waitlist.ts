@@ -20,9 +20,12 @@ import { headers } from "next/headers";
 import emailValidator from "node-email-verifier";
 import { db } from "@/lib/db";
 import { sendFollowUp } from "@/lib/email/followup";
-import { sendWaitlistConfirmationEmail } from "@/lib/email/waitlist";
 import {
-  buildWaitlistConfirmToken,
+  buildWaitlistShareKitUrl,
+  sendWaitlistReservationEmail,
+} from "@/lib/email/waitlist";
+import { buildWaitlistConfirmResponseTrackingUrl } from "@/lib/campaigns/waitlist-confirm-response";
+import {
   isWaitlistConfirmSignatureValid,
   isWaitlistConfirmTokenExpired,
   parseWaitlistConfirmToken,
@@ -34,6 +37,8 @@ import {
   verifyWaitlistCaptcha,
   type WaitlistCaptchaChallenge,
 } from "@/lib/waitlist/captcha";
+import { getWaitlistReservationResendCampaignId } from "@/lib/waitlist/reservation-resend";
+import { refreshPublicWaitlistViewSnapshotSafe } from "@/lib/waitlist/view";
 import { normalizeUsername } from "@/lib/zns/utils";
 import { resolveSiteUrl } from "@/lib/site-url";
 
@@ -204,6 +209,7 @@ type WaitlistRow = {
   human_referral_code?: string | null;
   referred_by: string | null;
   email_verified: boolean;
+  email_verified_at?: string | null;
 };
 
 function isUniqueViolation(error: { code?: string } | null | undefined): boolean {
@@ -464,18 +470,38 @@ export async function submitWaitlist(
     }
   }
 
-  const confirmToken = buildWaitlistConfirmToken({
-    waitlistId,
-    email: normalizedEmail,
-  });
+  let preferredReferralCode = referralCode;
+  try {
+    const ensured = await ensureHumanReferralCode({
+      id: waitlistId,
+      name: normalizedName,
+      referral_code: referralCode,
+      human_referral_code: null,
+      email: normalizedEmail,
+    });
+    preferredReferralCode = ensured.preferredCode;
+  } catch (error) {
+    console.error("Waitlist human referral code ensure error:", error);
+  }
+
   const baseUrl = resolveSiteUrl(headerStore);
-  const confirmUrl = `${baseUrl}/waitlist?token=${encodeURIComponent(confirmToken)}`;
+  const confirmUrl = buildWaitlistConfirmResponseTrackingUrl({
+    normalizedEmail,
+    campaignId: getWaitlistReservationResendCampaignId(),
+    baseUrl,
+  });
+
+  if (!confirmUrl) {
+    console.error("Waitlist confirm response URL error: missing tracking URL.");
+    return { status: "error", error: GENERIC_ERROR };
+  }
 
   try {
-    await sendWaitlistConfirmationEmail({
+    await sendWaitlistReservationEmail({
       email: normalizedEmail,
       name: normalizedName,
       confirmUrl,
+      shareKitUrl: buildWaitlistShareKitUrl(preferredReferralCode),
     });
 
     const { error: sentAtError } = await db
@@ -492,12 +518,14 @@ export async function submitWaitlist(
   }
 
   if (existingMatch) {
+    void refreshPublicWaitlistViewSnapshotSafe();
     return {
       status: "resent",
-      message: "You're already on the waitlist for this name. Check your email for the confirmation link.",
+      message: "You're already on the waitlist for this name. Check your email for the reservation link.",
     };
   }
 
+  void refreshPublicWaitlistViewSnapshotSafe();
   return { status: "submitted" };
 }
 
@@ -535,8 +563,8 @@ export async function submitSurvey(
   if (shouldContact && data?.email && data?.email_verified) {
     try {
       const reasons: string[] = [];
-      if (want_early_trial) reasons.push("You expressed interest in trying ZcashNames before launch.");
-      if (integrateSelected) reasons.push("You're interested in integrating ZcashNames with your app.");
+      if (want_early_trial) reasons.push("You expressed interest in trying Zcash Names before launch.");
+      if (integrateSelected) reasons.push("You're interested in integrating Zcash Names with your app.");
       if (may_contact && reasons.length === 0) reasons.push("You said we could reach out.");
       const reasonCopy = reasons.join(" ");
 
@@ -586,7 +614,7 @@ export async function confirmWaitlistEmail(
 
   const { data, error } = await db
     .from("zn_waitlist")
-    .select("id, name, email, referral_code, human_referral_code, email_verified")
+    .select("id, name, email, referral_code, human_referral_code, referred_by, email_verified, email_verified_at")
     .eq("id", parsed.waitlistId)
     .single();
 
@@ -605,7 +633,10 @@ export async function confirmWaitlistEmail(
 
   const { error: updateError } = await db
     .from("zn_waitlist")
-    .update({ email_verified: true })
+    .update({
+      email_verified: true,
+      email_verified_at: new Date().toISOString(),
+    })
     .eq("id", row.id);
 
   if (updateError) {
@@ -633,6 +664,8 @@ export async function confirmWaitlistEmail(
   } catch (emailError) {
     console.error("Waitlist welcome email error:", emailError);
   }
+
+  void refreshPublicWaitlistViewSnapshotSafe();
 
   return {
     status: "success",

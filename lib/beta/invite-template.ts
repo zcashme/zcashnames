@@ -3,17 +3,17 @@ import { getWalletVariant, type WalletVariantId } from "@/lib/wallets/catalog";
 
 export function defaultInviteSubject(args?: { walletVariantId?: WalletVariantId | null }): string {
   const walletVariantId = args?.walletVariantId ?? null;
-  if (!walletVariantId) return "Accepted! ZcashNames beta test";
+  if (!walletVariantId) return "Accepted! Zcash Names beta test";
 
   const variant = getWalletVariant(walletVariantId);
-  if (!variant) return "Accepted! ZcashNames beta test";
+  if (!variant) return "Accepted! Zcash Names beta test";
 
-  return `ZcashNames beta test with ${variant.displayName}`;
+  return `Zcash Names beta test with ${variant.displayName}`;
 }
 
 export function defaultInviteBody({ displayName: _displayName }: { displayName: string }): string {
   return [
-    "Your application was accepted! This is your invitation to join the latest ZcashNames beta.",
+    "Your application was accepted! This is your invitation to join the latest Zcash Names beta.",
     "",
     "Send bug reports through the feedback panel for your chance to earn ZEC. Start by using the sign-in link below.",
   ].join("\n");

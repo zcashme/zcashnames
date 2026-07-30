@@ -5,7 +5,7 @@ import BetaRefundForm from "@/components/beta/BetaRefundForm";
 import { getCurrentBetaRefundDefaults } from "@/lib/beta/actions";
 
 export const metadata: Metadata = {
-  title: "Claim Your Refund - ZcashNames",
+  title: "Claim Your Refund - Zcash Names",
   description: "Submit a refund request for mainnet beta claim and buy actions.",
   robots: { index: false, follow: false, nocache: true },
 };
@@ -22,8 +22,8 @@ export default async function BetaRefundPage() {
         <span
           className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
           style={{
-            background: "color-mix(in srgb, var(--color-brand-blue) 14%, transparent)",
-            color: "var(--color-brand-blue)",
+            background: "var(--color-accent-interactive-soft)",
+            color: "var(--color-accent-interactive)",
           }}
         >
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" />

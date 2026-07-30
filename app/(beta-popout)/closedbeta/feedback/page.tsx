@@ -4,7 +4,7 @@ import FeedbackPanelBody from "@/components/closedbeta/FeedbackPanelBody";
 import { readCurrentBetaAccessSession, readCurrentStage } from "@/lib/beta/gate";
 
 export const metadata: Metadata = {
-  title: "Submit Feedback - ZcashNames Beta",
+  title: "Submit Feedback - Zcash Names Beta",
   robots: { index: false, follow: false, nocache: true },
 };
 

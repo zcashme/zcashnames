@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 
 export const metadata = {
-  title: "Indexers - ZcashNames",
+  title: "Indexers - Zcash Names",
   description: "Community-run ZNS indexers for resolving .zcash names.",
 };
 
@@ -22,7 +22,7 @@ export default async function IndexersPage() {
       <SiteRouteTitle title="Indexers" />
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <p className="min-w-[220px] flex-1 text-sm text-fg-muted">
-          Community-run ZNS indexers. Point your client at any of these to resolve ZcashNames.
+          Community-run ZNS indexers. Point your client at any of these to resolve Zcash names.
         </p>
         <span
           className="inline-flex shrink-0 cursor-not-allowed items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold opacity-50"

@@ -6,7 +6,7 @@ import SiteRouteTitle from "@/components/SiteRouteTitle";
 import AddressMeComposer from "./AddressMeComposer";
 
 export const metadata: Metadata = {
-  title: "Address Me By My Name | ZcashNames",
+  title: "Address Me By My Name | Zcash Names",
   description: "Create a square Address Me By My Name image with custom artwork and text color.",
   openGraph: { title: "Address Me By My Name" },
   twitter: { title: "Address Me By My Name" },

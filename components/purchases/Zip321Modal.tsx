@@ -25,6 +25,7 @@ import { generateSessionId, buildZvsMemo } from "@/lib/purchases/memo";
 import { zip321Uri } from "@/lib/purchases/zip321";
 import { checkUtxo } from "@/lib/zns/mempool";
 import { resolveName } from "@/lib/zns/resolve";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { QrBlock } from "@/components/ui/QrBlock";
 import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
 import {
@@ -638,7 +639,7 @@ export default function Zip321Modal({
               <button type="button" onClick={handleUnlock} disabled={s.unlockLoading}
                 className="px-5 py-2.5 rounded-full text-sm font-semibold disabled:opacity-50"
                 style={{ background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-                {s.unlockLoading ? "Verifying…" : "Unlock"}
+                {s.unlockLoading ? <AnimatedLoadingLabel label="Verifying" active /> : "Unlock"}
               </button>
             </div>
           </div>
@@ -839,7 +840,7 @@ export default function Zip321Modal({
                 style={s.otpVerified
                   ? { background: "var(--color-accent-green-light)", color: "var(--color-accent-green)", border: "1.5px solid var(--color-accent-green)" }
                   : { background: "var(--home-result-primary-bg)", color: "var(--home-result-primary-fg)", boxShadow: "var(--home-result-primary-shadow)" }}>
-                {s.otpVerified ? "Verified!" : s.otpLoading ? "Verifying…" : "Verify Code"}
+                {s.otpVerified ? "Verified!" : s.otpLoading ? <AnimatedLoadingLabel label="Verifying" active /> : "Verify Code"}
               </button>
             </div>
           </div>

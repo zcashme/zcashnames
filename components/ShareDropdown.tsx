@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTheme } from "next-themes";
 import { useCopy } from "@/components/hooks/useCopy";
 import {
@@ -29,6 +30,7 @@ type ActionDropdownProps = {
   menuAlign?: "left" | "right";
   menuClassName?: string;
   menuDirection?: "down" | "up";
+  portalMenu?: boolean;
   menuStyle?: CSSProperties;
   onOpenChange?: (open: boolean) => void;
   open?: boolean;
@@ -139,8 +141,8 @@ function MenuItem({
 }) {
   const baseClassName = `flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold text-fg-heading transition-colors ${
     monochrome
-      ? "hover:bg-[rgba(155,188,15,0.16)] hover:text-[var(--mono-3)]"
-      : "hover:bg-[var(--color-raised)]"
+      ? "hover:bg-[var(--verify-menu-hover-fill)] hover:text-[var(--mono-3)]"
+      : "hover:bg-[var(--verify-menu-hover-fill)]"
   } ${className ?? ""}`.trim();
   const iconClassName = monochrome ? "shrink-0 text-fg-heading" : "shrink-0 text-fg-muted";
   const content = iconPosition === "right"
@@ -200,6 +202,7 @@ export function ActionDropdown({
   menuAlign = "right",
   menuClassName: customMenuClassName,
   menuDirection = "down",
+  portalMenu = false,
   menuStyle,
   onOpenChange,
   open: controlledOpen,
@@ -211,7 +214,9 @@ export function ActionDropdown({
   const { resolvedTheme } = useTheme();
   const monochrome = resolvedTheme === "monochrome";
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const [portalStyle, setPortalStyle] = useState<CSSProperties | null>(null);
   const open = controlledOpen ?? uncontrolledOpen;
 
   function setOpen(next: boolean | ((current: boolean) => boolean)) {
@@ -226,7 +231,11 @@ export function ActionDropdown({
     if (!open) return;
 
     function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const targetNode = event.target as Node;
+      if (
+        !rootRef.current?.contains(targetNode) &&
+        !menuRef.current?.contains(targetNode)
+      ) {
         setOpen(false);
       }
     }
@@ -245,6 +254,48 @@ export function ActionDropdown({
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open || !portalMenu) {
+      setPortalStyle(null);
+      return;
+    }
+
+    function updatePortalPosition() {
+      const triggerRect = rootRef.current?.getBoundingClientRect();
+      const menuRect = menuRef.current?.getBoundingClientRect();
+
+      if (!triggerRect || !menuRect) return;
+
+      const viewportPadding = 12;
+      const gap = 8;
+      const desiredLeft = menuAlign === "left"
+        ? triggerRect.left
+        : triggerRect.right - menuRect.width;
+      const desiredTop = menuDirection === "up"
+        ? triggerRect.top - menuRect.height - gap
+        : triggerRect.bottom + gap;
+      const maxLeft = Math.max(viewportPadding, window.innerWidth - menuRect.width - viewportPadding);
+      const maxTop = Math.max(viewportPadding, window.innerHeight - menuRect.height - viewportPadding);
+
+      setPortalStyle({
+        position: "fixed",
+        left: Math.min(Math.max(viewportPadding, desiredLeft), maxLeft),
+        top: Math.min(Math.max(viewportPadding, desiredTop), maxTop),
+        zIndex: 120,
+        ...menuStyle,
+      });
+    }
+
+    updatePortalPosition();
+    window.addEventListener("resize", updatePortalPosition);
+    window.addEventListener("scroll", updatePortalPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePortalPosition);
+      window.removeEventListener("scroll", updatePortalPosition, true);
+    };
+  }, [menuAlign, menuDirection, menuStyle, open, portalMenu]);
+
   const triggerClassName =
     buttonClassName ??
     "inline-flex min-h-11 items-center gap-2 rounded-md border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading";
@@ -254,8 +305,8 @@ export function ActionDropdown({
   const rootAlignmentClassName = menuAlign === "left" ? "items-start" : "items-end";
   const triggerRowClassName = menuAlign === "left" ? "items-start" : "items-end";
   const defaultMenuClassName = monochrome
-    ? "border-[rgba(155,188,15,0.62)] bg-[rgba(15,56,15,0.96)] shadow-[0_18px_40px_rgba(15,56,15,0.62)]"
-    : "border-border-muted bg-[var(--color-card)] shadow-lg";
+    ? "border-[rgba(155,188,15,0.62)] bg-[var(--verify-menu-fill)] shadow-[0_18px_40px_rgba(15,56,15,0.62)]"
+    : "border-border-muted bg-[var(--verify-menu-fill)] shadow-lg";
   const menuItems = items.map((item) => (
     <MenuItem
       className={itemClassName}
@@ -270,10 +321,24 @@ export function ActionDropdown({
     />
   ));
   const orderedMenuItems = menuDirection === "up" ? [...menuItems].reverse() : menuItems;
+  const visibilityClassName = open
+    ? "visible translate-y-0 opacity-100"
+    : `pointer-events-none invisible ${hiddenOffsetClassName} opacity-0`;
+  const menuNode = (
+    <div
+      ref={menuRef}
+      className={`flex min-w-[220px] flex-col rounded-lg border p-2 transition-all duration-200 ease-out ${defaultMenuClassName} ${customMenuClassName ?? ""} ${visibilityClassName} ${portalMenu ? "" : `absolute z-20 ${menuPositionClassName} ${menuDirectionClassName}`}`}
+      style={portalMenu ? portalStyle ?? { position: "fixed", left: -9999, top: -9999, zIndex: 120, ...menuStyle } : menuStyle}
+      role="menu"
+      aria-hidden={!open}
+    >
+      {orderedMenuItems}
+    </div>
+  );
 
   return (
-    <div ref={rootRef} className={`relative flex flex-col gap-2 ${rootAlignmentClassName}`}>
-      <div className={`flex flex-col gap-2 ${triggerRowClassName}`}>
+    <div ref={rootRef} className={`relative flex w-full flex-col gap-2 ${rootAlignmentClassName}`}>
+      <div className={`flex w-full flex-col gap-2 ${triggerRowClassName}`}>
         <button
           type="button"
           onClick={() => setOpen((current) => !current)}
@@ -292,17 +357,7 @@ export function ActionDropdown({
             )}
         </button>
       </div>
-
-      <div
-        className={`absolute z-20 flex min-w-[220px] flex-col rounded-lg border p-2 transition-all duration-200 ease-out ${menuPositionClassName} ${menuDirectionClassName} ${defaultMenuClassName} ${customMenuClassName ?? ""} ${
-          open ? "visible translate-y-0 opacity-100" : `pointer-events-none invisible ${hiddenOffsetClassName} opacity-0`
-        }`}
-        style={menuStyle}
-        role="menu"
-        aria-hidden={!open}
-      >
-        {orderedMenuItems}
-      </div>
+      {portalMenu && typeof document !== "undefined" ? createPortal(menuNode, document.body) : menuNode}
     </div>
   );
 }

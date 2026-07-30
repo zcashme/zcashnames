@@ -1,6 +1,6 @@
 # Wallet: Resolve a Name
 
-The minimum viable ZcashNames integration is:
+The minimum viable Zcash Names integration is:
 
 1. detect a name in the recipient field
 2. call `resolveName`
@@ -58,7 +58,7 @@ For Rust, Swift, Kotlin, Dart, Go, Python, and React Native, see [SDKs](/docs/sd
 
 ## Substitute and send
 
-Once you have the returned `address`, hand it to your existing send pipeline as if the user had pasted it directly. ZcashNames does not require any change to how you build the Orchard output, attach memos, or sign the transaction. The name was resolved client-side; the transaction your wallet broadcasts is a normal Zcash payment to a unified address.
+Once you have the returned `address`, hand it to your existing send pipeline as if the user had pasted it directly. Zcash Names does not require any change to how you build the Orchard output, attach memos, or sign the transaction. The name was resolved client-side; the transaction your wallet broadcasts is a normal Zcash payment to a unified address.
 
 Show the original name in the confirmation screen alongside the underlying address so the user can sanity-check that `alice.zcash` resolved to the address they expect. A truncated form like `u1gph…hkg36` is enough; the goal is to make swap attacks visible, not to make the user verify 200 characters.
 

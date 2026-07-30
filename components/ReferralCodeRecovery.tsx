@@ -2,8 +2,10 @@
 
 import { useState, type FormEvent } from "react";
 import { useTheme } from "next-themes";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import type { ShareKitRecoveryPublicStatus } from "@/lib/sharekit-recovery";
 import { recoverShareKitReferralByEmail } from "@/app/(site)/sharekit/actions";
+import { getEmailAddressValidationMessage, normalizeEmailAddress } from "@/lib/email-address";
 
 export default function ReferralCodeRecovery({
   variant = "leaders",
@@ -24,6 +26,8 @@ export default function ReferralCodeRecovery({
   const [status, setStatus] = useState<ShareKitRecoveryPublicStatus | null>(null);
   const [message, setMessage] = useState("");
   const { resolvedTheme } = useTheme();
+  const validationMessage = getEmailAddressValidationMessage(input);
+  const emailIsValid = !validationMessage && normalizeEmailAddress(input).length > 0;
 
   const isSharekit = variant === "sharekit";
   const isLightSharekit = isSharekit && resolvedTheme === "light";
@@ -39,6 +43,7 @@ export default function ReferralCodeRecovery({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!emailIsValid) return;
     setRecovering(true);
     const result = await recoverShareKitReferralByEmail(input);
     setRecovering(false);
@@ -86,14 +91,19 @@ export default function ReferralCodeRecovery({
             className={`${inputClassName} ${isSharekit ? "bg-[var(--color-card)]" : ""}`}
             style={isSharekit ? undefined : { borderColor: "var(--leaders-card-border)" }}
           />
+          {validationMessage ? (
+            <p className="text-xs" style={{ color: "var(--accent-red, #e05252)" }}>
+              {validationMessage}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
-              disabled={recovering}
+              disabled={!emailIsValid || recovering}
               className={buttonClassNameBase}
               style={isSharekit ? undefined : { borderColor: "var(--leaders-card-border)" }}
             >
-              {recovering ? "Checking..." : "Recover codes"}
+              {recovering ? <AnimatedLoadingLabel label="Checking" active /> : "Recover codes"}
             </button>
           </div>
           {message ? (

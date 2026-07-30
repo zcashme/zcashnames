@@ -38,6 +38,8 @@
   --color-accent-green-dark: #16a34a;
   --color-accent-yellow: #f4b728;
   --color-accent-yellow-light: rgba(244, 183, 40, 0.18);
+  --color-accent-interactive: var(--color-accent-yellow);
+  --color-accent-interactive-soft: var(--color-accent-yellow-light);
   --waitlist-indicator-bg: #f4b728;
   --checkbox-accent: #f4b728;
   --checkbox-check-color: #1a1a1a;
@@ -213,6 +215,17 @@
   --home-error-bg: rgba(255, 116, 116, 0.12);
   --home-error-text: #ffc0c0;
 
+  /* Verify page surfaces */
+  --verify-badge-success-fill: var(--color-accent-green-light);
+  --verify-badge-warning-fill: var(--color-accent-interactive-soft);
+  --verify-badge-danger-fill: color-mix(in srgb, var(--accent-red, #e05252) 14%, transparent);
+  --verify-panel-fill: color-mix(in srgb, var(--color-card) 92%, transparent);
+  --verify-panel-soft-fill: color-mix(in srgb, var(--color-card) 94%, transparent);
+  --verify-accent-panel-fill: color-mix(in srgb, var(--color-brand-blue) 8%, var(--color-card));
+  --verify-input-fill: var(--color-raised);
+  --verify-menu-fill: color-mix(in srgb, var(--color-card) 96%, transparent);
+  --verify-menu-hover-fill: var(--color-raised);
+
   /* Dot animations */
   --testnet-dot-rgb: 34, 197, 94;
   --waitlist-dot-rgb: 244, 183, 40;
@@ -245,9 +258,9 @@
   --fg-dim: #7a8398;
 
   /* Borders */
-  --border: #e5e7eb;
-  --border-light: #e3e8f2;
-  --border-muted: #d7dbe7;
+  --border: #d9deea;
+  --border-light: #d4dae7;
+  --border-muted: #c7cfde;
 
   /* Brand */
   --color-brand-blue: #1d4ed8;
@@ -257,6 +270,8 @@
   --color-accent-green-dark: #15803d;
   --color-accent-yellow: #c8921a;
   --color-accent-yellow-light: #fef3c7;
+  --color-accent-interactive: var(--color-brand-blue);
+  --color-accent-interactive-soft: color-mix(in srgb, var(--color-brand-blue) 14%, transparent);
   --waitlist-indicator-bg: #f4b728;
   --checkbox-accent: #2b8feb;
   --checkbox-check-color: #ffffff;
@@ -318,7 +333,7 @@
   --features-pattern-mask: radial-gradient(ellipse at center, rgba(0,0,0,0.85) 20%, rgba(0,0,0,0) 88%);
 
   /* FAQ */
-  --faq-border: #e5e7eb;
+  --faq-border: #d6dce8;
   --faq-active-border: #93b4f5;
 
   /* Partners */
@@ -422,6 +437,8 @@
   --color-accent-green-dark: var(--mono-2);
   --color-accent-yellow: var(--mono-3);
   --color-accent-yellow-light: rgba(139, 172, 15, 0.2);
+  --color-accent-interactive: var(--color-accent-green);
+  --color-accent-interactive-soft: var(--color-accent-green-light);
   --waitlist-indicator-bg: var(--mono-3);
   --checkbox-accent: var(--mono-3);
   --checkbox-check-color: var(--mono-0);
@@ -595,6 +612,17 @@
   --home-error-bg: rgba(48, 98, 48, 0.64);
   --home-error-text: var(--mono-3);
 
+  /* Verify page surfaces */
+  --verify-badge-success-fill: transparent;
+  --verify-badge-warning-fill: transparent;
+  --verify-badge-danger-fill: transparent;
+  --verify-panel-fill: transparent;
+  --verify-panel-soft-fill: transparent;
+  --verify-accent-panel-fill: transparent;
+  --verify-input-fill: transparent;
+  --verify-menu-fill: transparent;
+  --verify-menu-hover-fill: transparent;
+
   /* Dot animations */
   --testnet-dot-rgb: 155, 188, 15;
   --waitlist-dot-rgb: 139, 172, 15;
@@ -630,6 +658,8 @@
   /* Brand */
   --color-brand-blue: var(--color-brand-blue);
   --color-brand-blue-dark: var(--color-brand-blue-dark);
+  --color-accent-interactive: var(--color-accent-interactive);
+  --color-accent-interactive-soft: var(--color-accent-interactive-soft);
   --color-accent-green: var(--color-accent-green);
   --color-accent-green-light: var(--color-accent-green-light);
   --color-accent-green-dark: var(--color-accent-green-dark);
@@ -704,6 +734,280 @@ body {
   font-size: var(--type-section-subtitle);
   font-weight: 600;
   line-height: 1;
+}
+
+.ambient-signal-field {
+  pointer-events: none;
+  position: absolute;
+  overflow: hidden;
+  z-index: 0;
+  mask-image:
+    linear-gradient(90deg, transparent 0%, black 8%, black 94%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, black 2%, black 98%, transparent 100%);
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent 0%, black 8%, black 94%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, black 2%, black 98%, transparent 100%);
+}
+
+.signal-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.signal-layer--background {
+  filter: blur(8px);
+}
+
+.signal-layer--middle {
+  filter: blur(4px);
+}
+
+.signal-layer--foreground {
+  filter: blur(1px);
+}
+
+.signal-curve,
+.signal-particle {
+  position: absolute;
+  top: var(--signal-y);
+  left: 0;
+  width: 100%;
+  height: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+  animation-name: ambient-signal-path-0;
+  animation-duration: var(--signal-duration);
+  animation-delay: var(--signal-delay);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.signal-path-1 {
+  animation-name: ambient-signal-path-1;
+}
+
+.signal-path-2 {
+  animation-name: ambient-signal-path-2;
+}
+
+.signal-path-3 {
+  animation-name: ambient-signal-path-3;
+}
+
+.signal-path-4 {
+  animation-name: ambient-signal-path-4;
+}
+
+.signal-curve__visual,
+.signal-particle__visual {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform, opacity;
+}
+
+.signal-curve--background .signal-curve__visual {
+  color: color-mix(in srgb, var(--fg-heading) 26%, var(--color-accent-interactive));
+}
+
+.signal-curve--middle .signal-curve__visual {
+  color: color-mix(in srgb, var(--color-accent-interactive) 54%, var(--fg-heading));
+}
+
+.signal-curve--foreground .signal-curve__visual {
+  color: color-mix(in srgb, var(--color-accent-interactive) 66%, var(--fg-heading));
+}
+
+.signal-curve__visual {
+  width: var(--signal-curve-width);
+  height: var(--signal-curve-height);
+  transform: rotate(var(--signal-curve-rotate));
+  transform-origin: left center;
+}
+
+.signal-curve--up .signal-curve__visual {
+  border-top: 1px solid color-mix(in srgb, currentColor 82%, transparent);
+  border-radius: 999px 999px 0 0;
+}
+
+.signal-curve--down .signal-curve__visual {
+  border-bottom: 1px solid color-mix(in srgb, currentColor 82%, transparent);
+  border-radius: 0 0 999px 999px;
+}
+
+.signal-particle--background .signal-particle__visual {
+  color: color-mix(in srgb, var(--fg-heading) 48%, var(--color-accent-interactive));
+}
+
+.signal-particle--middle .signal-particle__visual {
+  color: color-mix(in srgb, var(--color-accent-interactive) 72%, var(--fg-heading));
+}
+
+.signal-particle--foreground .signal-particle__visual {
+  color: color-mix(in srgb, var(--color-accent-interactive) 82%, var(--fg-heading));
+}
+
+.signal-particle--node .signal-particle__visual {
+  width: var(--signal-size);
+  height: var(--signal-size);
+  border-radius: 9999px;
+  background: currentColor;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, currentColor 18%, transparent),
+    0 0 20px color-mix(in srgb, currentColor 24%, transparent);
+}
+
+.signal-particle--ring .signal-particle__visual {
+  width: calc(var(--signal-size) * 1.15);
+  height: calc(var(--signal-size) * 1.15);
+  border-radius: 9999px;
+  border: 1.5px solid currentColor;
+  box-shadow: 0 0 18px color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.signal-particle--streak .signal-particle__visual {
+  position: relative;
+  width: var(--signal-width);
+  height: max(3px, calc(var(--signal-size) * 0.28));
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    currentColor 0%,
+    color-mix(in srgb, currentColor 74%, transparent) 26%,
+    color-mix(in srgb, currentColor 22%, transparent) 74%,
+    transparent 100%
+  );
+  box-shadow: 0 0 16px color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.signal-particle--streak .signal-particle__visual::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: calc(var(--signal-size) * 0.55);
+  height: calc(var(--signal-size) * 0.55);
+  border-radius: 9999px;
+  background: currentColor;
+  transform: translateY(-50%);
+}
+
+@keyframes ambient-signal-path-0 {
+  0% {
+    transform: translate3d(var(--signal-start-x), 0, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: calc(var(--signal-opacity) * 0.8);
+  }
+  50% {
+    transform: translate3d(calc((var(--signal-start-x) + var(--signal-end-x)) * 0.5), calc(var(--signal-drift) * -0.4), 0);
+    opacity: var(--signal-opacity);
+  }
+  100% {
+    transform: translate3d(var(--signal-end-x), var(--signal-drift), 0);
+    opacity: 0;
+  }
+}
+
+@keyframes ambient-signal-path-1 {
+  0% {
+    transform: translate3d(var(--signal-start-x), calc(var(--signal-drift) * -0.15), 0);
+    opacity: 0;
+  }
+  15% {
+    opacity: calc(var(--signal-opacity) * 0.82);
+  }
+  55% {
+    transform: translate3d(calc((var(--signal-start-x) + var(--signal-end-x)) * 0.5), calc(var(--signal-drift) * 0.35), 0);
+    opacity: var(--signal-opacity);
+  }
+  100% {
+    transform: translate3d(var(--signal-end-x), calc(var(--signal-drift) * -0.75), 0);
+    opacity: 0;
+  }
+}
+
+@keyframes ambient-signal-path-2 {
+  0% {
+    transform: translate3d(var(--signal-start-x), calc(var(--signal-drift) * -0.55), 0);
+    opacity: 0;
+  }
+  18% {
+    opacity: calc(var(--signal-opacity) * 0.78);
+  }
+  48% {
+    transform: translate3d(calc((var(--signal-start-x) + var(--signal-end-x)) * 0.5), 0, 0);
+    opacity: var(--signal-opacity);
+  }
+  100% {
+    transform: translate3d(var(--signal-end-x), calc(var(--signal-drift) * 0.65), 0);
+    opacity: 0;
+  }
+}
+
+@keyframes ambient-signal-path-3 {
+  0% {
+    transform: translate3d(var(--signal-start-x), 0, 0);
+    opacity: 0;
+  }
+  10% {
+    opacity: calc(var(--signal-opacity) * 0.7);
+  }
+  58% {
+    transform: translate3d(calc((var(--signal-start-x) + var(--signal-end-x)) * 0.5), calc(var(--signal-drift) * -0.6), 0);
+    opacity: var(--signal-opacity);
+  }
+  100% {
+    transform: translate3d(var(--signal-end-x), calc(var(--signal-drift) * 0.25), 0);
+    opacity: 0;
+  }
+}
+
+@keyframes ambient-signal-path-4 {
+  0% {
+    transform: translate3d(var(--signal-start-x), calc(var(--signal-drift) * 0.2), 0);
+    opacity: 0;
+  }
+  14% {
+    opacity: calc(var(--signal-opacity) * 0.76);
+  }
+  52% {
+    transform: translate3d(calc((var(--signal-start-x) + var(--signal-end-x)) * 0.5), calc(var(--signal-drift) * -0.2), 0);
+    opacity: var(--signal-opacity);
+  }
+  100% {
+    transform: translate3d(var(--signal-end-x), calc(var(--signal-drift) * -0.85), 0);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .signal-layer--background {
+    filter: blur(6px);
+  }
+
+  .signal-layer--middle {
+    filter: blur(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signal-curve,
+  .signal-particle {
+    animation: none;
+    opacity: calc(var(--signal-opacity) * 0.58);
+    transform: translate3d(0, 0, 0);
+  }
+
+  .signal-layer--foreground {
+    opacity: 0.42;
+  }
+
+  .signal-particle--streak .signal-particle__visual {
+    width: calc(var(--signal-width) * 0.72);
+  }
 }
 
 #site-route-title {
@@ -4219,6 +4523,41 @@ body.app-shell-standalone {
 .blog-confirm-card {
   text-align: center;
   justify-items: center;
+}
+
+.site-support-actions {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(0.6rem);
+  transition:
+    grid-template-rows 200ms ease,
+    opacity 160ms ease,
+    transform 200ms ease;
+}
+
+.site-support-actions[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.site-support-actions-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.site-support-actions-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.9rem;
+  padding-bottom: 0;
+  transition: padding-bottom 200ms ease;
+}
+
+.site-support-actions[data-open="true"] .site-support-actions-stack {
+  padding-bottom: 0.75rem;
 }
 
 @media (max-width: 900px) {

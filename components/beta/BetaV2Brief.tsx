@@ -81,7 +81,7 @@ export default function BetaV2Brief() {
           Name Service (ZNS) SDK.
         </p>
         <p style={p}>
-          In this beta, you can test buying, selling, and using ZcashNames inside supported wallets.
+          In this beta, you can test buying, selling, and using Zcash Names inside supported wallets.
           Testing uses public Zcash mainnet, so transactions are real. Beta prices are 1% of planned
           launch pricing.
         </p>

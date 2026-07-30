@@ -184,7 +184,7 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
             <button
               type="button"
               onClick={focusCurrentPeriod}
-              className="mt-2 inline-flex items-center gap-2 text-left text-base font-semibold text-fg-heading transition-colors hover:text-[var(--color-brand-blue)]"
+              className="mt-2 inline-flex items-center gap-2 text-left text-base font-semibold text-fg-heading transition-colors hover:text-[var(--color-accent-interactive)]"
             >
               {!activePeriods.length && upcomingPeriod ? (
                 <span

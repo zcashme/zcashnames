@@ -5,7 +5,7 @@ import GalleryCard, { type Snippets, type ThemeName } from "@/components/gallery
 import { PALETTE } from "@/components/gallery/theme-palette";
 
 const STATS: Array<{ key: "waitlist" | "referred" | "rewards"; label: string; value: string; help: string }> = [
-  { key: "waitlist", label: "Waitlist", value: "3,148", help: "Total number of people on the ZcashNames waitlist." },
+  { key: "waitlist", label: "Waitlist", value: "3,148", help: "Total number of people on the Zcash Names waitlist." },
   { key: "referred", label: "Referred", value: "918", help: "Number of waitlist members who were referred by someone." },
   { key: "rewards", label: "Rewards", value: "18.36", help: "Total estimated rewards from all referrals." },
 ];
@@ -172,7 +172,7 @@ function buildSnippet(t: ThemeName): string {
           <div class="stat-label">Rewards</div>
         </button>
       </div>
-      <div class="help">Total number of people on the ZcashNames waitlist.</div>
+      <div class="help">Total number of people on the Zcash Names waitlist.</div>
     </section>
   </div>
 </body>
