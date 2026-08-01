@@ -57,6 +57,7 @@ const STAT_META: Array<{ key: BlockinfoPostStatKey; label: string }> = [
   { key: "sprout", label: "Sprout" },
   { key: "sapling", label: "Sapling" },
   { key: "orchard", label: "Orchard" },
+  { key: "ironwood", label: "Ironwood" },
   { key: "lockbox", label: "Lockbox" },
   { key: "total_shielded", label: "Total Shielded" },
 ];
@@ -230,7 +231,7 @@ export function getDefaultDeterministicLayout(): BlockinfoPostDeterministicLayou
       statRows: STAT_META.map((entry) => ({
         key: entry.key,
         label: entry.label,
-        visible: entry.key !== "verification_progress",
+        visible: entry.key !== "verification_progress" && entry.key !== "height",
       })),
     },
     footer: defaultTextBlock({
@@ -268,9 +269,11 @@ function mergeCaptionPolicy(
     transparent30dMax: { ...base.transparent30dMax, ...(next.transparent30dMax ?? {}) },
     difficulty30dMax: { ...base.difficulty30dMax, ...(next.difficulty30dMax ?? {}) },
     orchardDaily: { ...base.orchardDaily, ...(next.orchardDaily ?? {}) },
+    ironwoodDaily: { ...base.ironwoodDaily, ...(next.ironwoodDaily ?? {}) },
     totalShieldedDaily: { ...base.totalShieldedDaily, ...(next.totalShieldedDaily ?? {}) },
     transparentDaily: { ...base.transparentDaily, ...(next.transparentDaily ?? {}) },
     orchardWeekly: { ...base.orchardWeekly, ...(next.orchardWeekly ?? {}) },
+    ironwoodWeekly: { ...base.ironwoodWeekly, ...(next.ironwoodWeekly ?? {}) },
     totalShieldedWeekly: { ...base.totalShieldedWeekly, ...(next.totalShieldedWeekly ?? {}) },
     blockDailyFallback: { ...base.blockDailyFallback, ...(next.blockDailyFallback ?? {}) },
     latestSnapshotFallback: { ...base.latestSnapshotFallback, ...(next.latestSnapshotFallback ?? {}) },

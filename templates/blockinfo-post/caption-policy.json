@@ -26,6 +26,12 @@
     "absoluteThreshold": 10000,
     "percentThreshold": 1
   },
+  "ironwoodDaily": {
+    "enabled": true,
+    "priority": 675,
+    "absoluteThreshold": 10000,
+    "percentThreshold": 1
+  },
   "totalShieldedDaily": {
     "enabled": true,
     "priority": 650,
@@ -41,6 +47,12 @@
   "orchardWeekly": {
     "enabled": true,
     "priority": 500,
+    "absoluteThreshold": 25000,
+    "percentThreshold": 2
+  },
+  "ironwoodWeekly": {
+    "enabled": true,
+    "priority": 475,
     "absoluteThreshold": 25000,
     "percentThreshold": 2
   },

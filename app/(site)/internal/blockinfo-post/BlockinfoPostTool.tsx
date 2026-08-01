@@ -1336,6 +1336,13 @@ export default function BlockinfoPostTool(props: {
                 onChange={(patch) => setCaptionPolicy((current) => ({ ...current, orchardDaily: { ...current.orchardDaily, ...patch } }))}
               />
               <CaptionThresholdRuleEditor
+                title="Ironwood 1-day"
+                rule={captionPolicy.ironwoodDaily}
+                showAbsolute
+                showPercent
+                onChange={(patch) => setCaptionPolicy((current) => ({ ...current, ironwoodDaily: { ...current.ironwoodDaily, ...patch } }))}
+              />
+              <CaptionThresholdRuleEditor
                 title="Total Shielded 1-day"
                 rule={captionPolicy.totalShieldedDaily}
                 showAbsolute
@@ -1355,6 +1362,13 @@ export default function BlockinfoPostTool(props: {
                 showAbsolute
                 showPercent
                 onChange={(patch) => setCaptionPolicy((current) => ({ ...current, orchardWeekly: { ...current.orchardWeekly, ...patch } }))}
+              />
+              <CaptionThresholdRuleEditor
+                title="Ironwood 7-day"
+                rule={captionPolicy.ironwoodWeekly}
+                showAbsolute
+                showPercent
+                onChange={(patch) => setCaptionPolicy((current) => ({ ...current, ironwoodWeekly: { ...current.ironwoodWeekly, ...patch } }))}
               />
               <CaptionThresholdRuleEditor
                 title="Total Shielded 7-day"

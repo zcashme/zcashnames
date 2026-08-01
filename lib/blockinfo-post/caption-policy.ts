@@ -29,16 +29,23 @@ export type BlockinfoPostCaptionPolicy = {
   transparent30dMax: BlockinfoPostCaptionSimpleRule;
   difficulty30dMax: BlockinfoPostCaptionSimpleRule;
   orchardDaily: BlockinfoPostCaptionThresholdRule;
+  ironwoodDaily: BlockinfoPostCaptionThresholdRule;
   totalShieldedDaily: BlockinfoPostCaptionThresholdRule;
   transparentDaily: BlockinfoPostCaptionThresholdRule;
   orchardWeekly: BlockinfoPostCaptionThresholdRule;
+  ironwoodWeekly: BlockinfoPostCaptionThresholdRule;
   totalShieldedWeekly: BlockinfoPostCaptionThresholdRule;
   blockDailyFallback: BlockinfoPostCaptionSimpleRule;
   latestSnapshotFallback: BlockinfoPostCaptionSimpleRule;
 };
 
+export type BlockinfoPostCaptionRuleId =
+  | keyof BlockinfoPostCaptionPolicy
+  | "orchardIronwoodDailyCombined"
+  | "orchardIronwoodWeeklyCombined";
+
 export type BlockinfoPostCaptionDecision = {
-  ruleId: keyof BlockinfoPostCaptionPolicy;
+  ruleId: BlockinfoPostCaptionRuleId;
   text: string;
   priority: number;
   configSummary: string;
@@ -94,6 +101,12 @@ export function getDefaultBlockinfoPostCaptionPolicy(): BlockinfoPostCaptionPoli
       absoluteThreshold: 10000,
       percentThreshold: 1,
     },
+    ironwoodDaily: {
+      enabled: true,
+      priority: 675,
+      absoluteThreshold: 10000,
+      percentThreshold: 1,
+    },
     totalShieldedDaily: {
       enabled: true,
       priority: 650,
@@ -109,6 +122,12 @@ export function getDefaultBlockinfoPostCaptionPolicy(): BlockinfoPostCaptionPoli
     orchardWeekly: {
       enabled: true,
       priority: 500,
+      absoluteThreshold: 25000,
+      percentThreshold: 2,
+    },
+    ironwoodWeekly: {
+      enabled: true,
+      priority: 475,
       absoluteThreshold: 25000,
       percentThreshold: 2,
     },
@@ -143,6 +162,13 @@ function configSummaryForRule(policy: BlockinfoPostCaptionPolicy, ruleId: keyof 
   return `priority ${rule.priority}`;
 }
 
+function configSummaryForCombinedRules(
+  policy: BlockinfoPostCaptionPolicy,
+  ruleIds: Array<keyof BlockinfoPostCaptionPolicy>,
+): string {
+  return ruleIds.map((ruleId) => `${ruleId}: ${configSummaryForRule(policy, ruleId)}`).join(" | ");
+}
+
 function passesThresholdRule(
   absolute: number | null,
   percent: number | null,
@@ -157,6 +183,47 @@ function passesThresholdRule(
 function isThirtyDayMax(snapshot: BlockinfoPostDeterministicSnapshot, key: BlockinfoPostStatKey): boolean {
   const stat = snapshot.stats[key];
   return stat.max30d.value != null && stat.current != null && stat.max30d.isCurrent && stat.current === stat.max30d.value;
+}
+
+function formatPoolFlowObservation(poolLabel: string, absolute: number, windowText: string): string {
+  const amount = formatZecAmount(absolute);
+  return absolute >= 0
+    ? `${amount} more $ZEC entered the ${poolLabel} pool`
+    : `${amount} $ZEC left the ${poolLabel} pool`;
+}
+
+function maybeBuildCombinedPoolCaption(args: {
+  orchardDelta: ReturnType<typeof getDelta>;
+  orchardRule: BlockinfoPostCaptionThresholdRule;
+  orchardRuleId: "orchardDaily" | "orchardWeekly";
+  ironwoodDelta: ReturnType<typeof getDelta>;
+  ironwoodRule: BlockinfoPostCaptionThresholdRule;
+  ironwoodRuleId: "ironwoodDaily" | "ironwoodWeekly";
+  combinedRuleId: "orchardIronwoodDailyCombined" | "orchardIronwoodWeeklyCombined";
+  windowText: "over the last 24 hours." | "over the last 7 days.";
+  policy: BlockinfoPostCaptionPolicy;
+}): BlockinfoPostCaptionDecision | null {
+  if (
+    !passesThresholdRule(args.orchardDelta.absolute, args.orchardDelta.percent, args.orchardRule) ||
+    !passesThresholdRule(args.ironwoodDelta.absolute, args.ironwoodDelta.percent, args.ironwoodRule)
+  ) {
+    return null;
+  }
+
+  if (args.orchardDelta.absolute == null || args.ironwoodDelta.absolute == null) {
+    return null;
+  }
+
+  if (Math.sign(args.orchardDelta.absolute) === Math.sign(args.ironwoodDelta.absolute)) {
+    return null;
+  }
+
+  return {
+    ruleId: args.combinedRuleId,
+    priority: Math.max(args.orchardRule.priority, args.ironwoodRule.priority),
+    configSummary: configSummaryForCombinedRules(args.policy, [args.orchardRuleId, args.ironwoodRuleId]),
+    text: `${formatPoolFlowObservation("Orchard", args.orchardDelta.absolute, args.windowText)} while ${formatPoolFlowObservation("Ironwood", args.ironwoodDelta.absolute, args.windowText)} ${args.windowText}`,
+  };
 }
 
 export function buildDeterministicCaptionDecision(
@@ -221,7 +288,21 @@ export function buildDeterministicCaptionDecision(
   }
 
   const orchard1d = getDelta(snapshot, "orchard", "1d");
-  if (passesThresholdRule(orchard1d.absolute, orchard1d.percent, policy.orchardDaily)) {
+  const ironwood1d = getDelta(snapshot, "ironwood", "1d");
+  const combinedDaily = maybeBuildCombinedPoolCaption({
+    orchardDelta: orchard1d,
+    orchardRule: policy.orchardDaily,
+    orchardRuleId: "orchardDaily",
+    ironwoodDelta: ironwood1d,
+    ironwoodRule: policy.ironwoodDaily,
+    ironwoodRuleId: "ironwoodDaily",
+    combinedRuleId: "orchardIronwoodDailyCombined",
+    windowText: "over the last 24 hours.",
+    policy,
+  });
+  if (combinedDaily) {
+    candidates.push(combinedDaily);
+  } else if (passesThresholdRule(orchard1d.absolute, orchard1d.percent, policy.orchardDaily)) {
     const amount = formatZecAmount(orchard1d.absolute as number);
     candidates.push({
       ruleId: "orchardDaily",
@@ -231,6 +312,19 @@ export function buildDeterministicCaptionDecision(
         (orchard1d.absolute as number) >= 0
           ? `${amount} more $ZEC entered the Orchard pool over the last 24 hours.`
           : `${amount} $ZEC left the Orchard pool over the last 24 hours.`,
+    });
+  }
+
+  if (!combinedDaily && passesThresholdRule(ironwood1d.absolute, ironwood1d.percent, policy.ironwoodDaily)) {
+    const amount = formatZecAmount(ironwood1d.absolute as number);
+    candidates.push({
+      ruleId: "ironwoodDaily",
+      priority: policy.ironwoodDaily.priority,
+      configSummary: configSummaryForRule(policy, "ironwoodDaily"),
+      text:
+        (ironwood1d.absolute as number) >= 0
+          ? `${amount} more $ZEC entered the Ironwood pool over the last 24 hours.`
+          : `${amount} $ZEC left the Ironwood pool over the last 24 hours.`,
     });
   }
 
@@ -263,7 +357,21 @@ export function buildDeterministicCaptionDecision(
   }
 
   const orchard7d = getDelta(snapshot, "orchard", "7d");
-  if (passesThresholdRule(orchard7d.absolute, orchard7d.percent, policy.orchardWeekly)) {
+  const ironwood7d = getDelta(snapshot, "ironwood", "7d");
+  const combinedWeekly = maybeBuildCombinedPoolCaption({
+    orchardDelta: orchard7d,
+    orchardRule: policy.orchardWeekly,
+    orchardRuleId: "orchardWeekly",
+    ironwoodDelta: ironwood7d,
+    ironwoodRule: policy.ironwoodWeekly,
+    ironwoodRuleId: "ironwoodWeekly",
+    combinedRuleId: "orchardIronwoodWeeklyCombined",
+    windowText: "over the last 7 days.",
+    policy,
+  });
+  if (combinedWeekly) {
+    candidates.push(combinedWeekly);
+  } else if (passesThresholdRule(orchard7d.absolute, orchard7d.percent, policy.orchardWeekly)) {
     const amount = formatZecAmount(orchard7d.absolute as number);
     candidates.push({
       ruleId: "orchardWeekly",
@@ -273,6 +381,19 @@ export function buildDeterministicCaptionDecision(
         (orchard7d.absolute as number) >= 0
           ? `${amount} more $ZEC entered the Orchard pool over the last 7 days.`
           : `${amount} $ZEC left the Orchard pool over the last 7 days.`,
+    });
+  }
+
+  if (!combinedWeekly && passesThresholdRule(ironwood7d.absolute, ironwood7d.percent, policy.ironwoodWeekly)) {
+    const amount = formatZecAmount(ironwood7d.absolute as number);
+    candidates.push({
+      ruleId: "ironwoodWeekly",
+      priority: policy.ironwoodWeekly.priority,
+      configSummary: configSummaryForRule(policy, "ironwoodWeekly"),
+      text:
+        (ironwood7d.absolute as number) >= 0
+          ? `${amount} more $ZEC entered the Ironwood pool over the last 7 days.`
+          : `${amount} $ZEC left the Ironwood pool over the last 7 days.`,
     });
   }
 

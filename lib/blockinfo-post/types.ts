@@ -10,6 +10,7 @@ export const BLOCKINFO_POST_STAT_KEYS = [
   "sprout",
   "sapling",
   "orchard",
+  "ironwood",
   "lockbox",
   "total_shielded",
 ] as const;
@@ -99,16 +100,23 @@ export type BlockinfoPostCaptionPolicy = {
   transparent30dMax: BlockinfoPostCaptionSimpleRule;
   difficulty30dMax: BlockinfoPostCaptionSimpleRule;
   orchardDaily: BlockinfoPostCaptionThresholdRule;
+  ironwoodDaily: BlockinfoPostCaptionThresholdRule;
   totalShieldedDaily: BlockinfoPostCaptionThresholdRule;
   transparentDaily: BlockinfoPostCaptionThresholdRule;
   orchardWeekly: BlockinfoPostCaptionThresholdRule;
+  ironwoodWeekly: BlockinfoPostCaptionThresholdRule;
   totalShieldedWeekly: BlockinfoPostCaptionThresholdRule;
   blockDailyFallback: BlockinfoPostCaptionSimpleRule;
   latestSnapshotFallback: BlockinfoPostCaptionSimpleRule;
 };
 
+export type BlockinfoPostCaptionRuleId =
+  | keyof BlockinfoPostCaptionPolicy
+  | "orchardIronwoodDailyCombined"
+  | "orchardIronwoodWeeklyCombined";
+
 export type BlockinfoPostCaptionDecision = {
-  ruleId: keyof BlockinfoPostCaptionPolicy;
+  ruleId: BlockinfoPostCaptionRuleId;
   text: string;
   priority: number;
   configSummary: string;
