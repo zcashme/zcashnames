@@ -105,11 +105,13 @@ function viewTransform(
 interface WaitlistEntryFormProps {
   onConfirm?: () => void;
   onReset?: () => void;
+  showNewsletter?: boolean;
 }
 
 export default function WaitlistEntryForm({
   onConfirm,
   onReset,
+  showNewsletter = true,
 }: WaitlistEntryFormProps = {}) {
   const [mounted, setMounted] = useState(false);
   // ── Form state ──
@@ -261,7 +263,7 @@ export default function WaitlistEntryForm({
     const result = await submitWaitlist({
       name: confirmedName,
       email,
-      newsletter,
+      newsletter: showNewsletter ? newsletter : false,
       referral_code: referralCode,
       referred_by: referredByRef.current || null,
       captcha_token: captchaChallenge.token,
@@ -292,6 +294,7 @@ export default function WaitlistEntryForm({
     email,
     loadCaptchaChallenge,
     newsletter,
+    showNewsletter,
   ]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -712,50 +715,51 @@ export default function WaitlistEntryForm({
                 )}
               </div>
 
-              {/* Newsletter */}
-              <div className="flex items-center gap-3">
-                <label
-                  className="flex items-center gap-3 cursor-pointer select-none text-sm"
-                  style={{ color: "var(--fg-body)" }}
-                >
-                  <span
-                    className="relative flex items-center justify-center shrink-0 rounded"
-                    style={{
-                      width: 16,
-                      height: 16,
-                      background: newsletter
-                        ? "var(--checkbox-accent)"
-                        : "var(--color-surface)",
-                      border: `1.5px solid ${newsletter ? "var(--checkbox-accent)" : "var(--border-muted)"}`,
-                      transition: "background 0.15s, border-color 0.15s",
-                    }}
+              {showNewsletter && (
+                <div className="flex items-center gap-3">
+                  <label
+                    className="flex items-center gap-3 cursor-pointer select-none text-sm"
+                    style={{ color: "var(--fg-body)" }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={newsletter}
-                      onChange={(e) => setNewsletter(e.target.checked)}
-                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer m-0"
-                    />
-                    {newsletter && (
-                      <svg
-                        viewBox="0 0 10 8"
-                        width="10"
-                        height="8"
-                        fill="none"
-                        stroke="var(--checkbox-check-color, #1a1a1a)"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                        style={{ pointerEvents: "none" }}
-                      >
-                        <path d="M1 4l2.5 2.5L9 1" />
-                      </svg>
-                    )}
-                  </span>
-                  Get newsletter
-                </label>
-              </div>
+                    <span
+                      className="relative flex items-center justify-center shrink-0 rounded"
+                      style={{
+                        width: 16,
+                        height: 16,
+                        background: newsletter
+                          ? "var(--checkbox-accent)"
+                          : "var(--color-surface)",
+                        border: `1.5px solid ${newsletter ? "var(--checkbox-accent)" : "var(--border-muted)"}`,
+                        transition: "background 0.15s, border-color 0.15s",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={newsletter}
+                        onChange={(e) => setNewsletter(e.target.checked)}
+                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer m-0"
+                      />
+                      {newsletter && (
+                        <svg
+                          viewBox="0 0 10 8"
+                          width="10"
+                          height="8"
+                          fill="none"
+                          stroke="var(--checkbox-check-color, #1a1a1a)"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          style={{ pointerEvents: "none" }}
+                        >
+                          <path d="M1 4l2.5 2.5L9 1" />
+                        </svg>
+                      )}
+                    </span>
+                    Get newsletter
+                  </label>
+                </div>
+              )}
 
               {/* Human check */}
               <div

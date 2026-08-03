@@ -152,25 +152,47 @@ export default function SiteSupportMenu({
       return;
     }
 
-    const footer = document.querySelector<HTMLElement>("[data-site-footer]");
-    if (!footer) {
+    const footerElement = document.querySelector<HTMLElement>("[data-site-footer]");
+    if (!footerElement) {
       setFooterHidden(false);
       return;
     }
+    const footer = footerElement;
 
-    const hideDistance = Math.max(120, menuHeight + 28);
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setFooterHidden(entry.isIntersecting);
-      },
-      {
-        threshold: 0,
-        rootMargin: `0px 0px -${hideDistance}px 0px`,
-      },
-    );
+    let frameId = 0;
+    const footerResizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => scheduleUpdate())
+        : null;
 
-    observer.observe(footer);
-    return () => observer.disconnect();
+    function updateFooterVisibility() {
+      const shellBottom = window.innerHeight - 20;
+      const shellTop = shellBottom - menuHeight;
+      const clearance = 12;
+      const footerRect = footer.getBoundingClientRect();
+      const overlapsFooter =
+        footerRect.top <= shellBottom + clearance &&
+        footerRect.bottom >= shellTop - clearance;
+
+      setFooterHidden(overlapsFooter);
+    }
+
+    function scheduleUpdate() {
+      cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(updateFooterVisibility);
+    }
+
+    scheduleUpdate();
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+    footerResizeObserver?.observe(footer);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+      footerResizeObserver?.disconnect();
+    };
   }, [menuHeight, pathname, shouldHideForFeedback]);
 
   useEffect(() => {

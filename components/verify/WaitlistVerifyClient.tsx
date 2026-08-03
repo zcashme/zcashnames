@@ -10,6 +10,8 @@ import {
   TelegramIcon,
   XIcon,
 } from "@/components/ShareDropdown";
+import { useCopy } from "@/components/hooks/useCopy";
+import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { QrBlock } from "@/components/ui/QrBlock";
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
@@ -318,6 +320,7 @@ function VerifyInfoModal({
   title,
   paragraphs,
   actions,
+  customActions,
   onClose,
 }: {
   title: string;
@@ -328,8 +331,20 @@ function VerifyInfoModal({
     external?: boolean;
     icon?: React.ReactNode;
   }>;
+  customActions?: React.ReactNode;
   onClose: () => void;
 }) {
+  function getDisplayParagraph(paragraph: string): string {
+    if (
+      paragraph.includes("option to purchase this name during Early Access") &&
+      paragraph.includes("Pricing to be announced.")
+    ) {
+      return "You’ll have the option to purchase this name during Early Access. Access code will be sent by email when available. Pricing to be announced.";
+    }
+
+    return paragraph;
+  }
+
   return (
     <div
       className="fixed inset-0 z-[10002] flex items-center justify-center p-4"
@@ -358,21 +373,26 @@ function VerifyInfoModal({
           </svg>
         </button>
         <div className="mx-auto max-w-md text-center">
-        <p
-          className="text-sm font-semibold uppercase tracking-[0.22em]"
-          style={{ color: "var(--color-accent-interactive)" }}
-        >
-          Reserved name
-        </p>
-        <h3 className="mt-2 text-3xl font-black tracking-[-0.05em] sm:text-4xl" style={{ color: "var(--fg-heading)" }}>
-          {title}
-        </h3>
-        <div className="mx-auto mt-4 max-w-md space-y-4 text-base leading-8 sm:text-[1.1rem]" style={{ color: "var(--fg-body)" }}>
-          {paragraphs.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
-        </div>
-        <SummaryModalActionRow actions={actions} />
+          <p
+            className="text-sm font-semibold uppercase tracking-[0.22em]"
+            style={{ color: "var(--color-accent-interactive)" }}
+          >
+            Reserved name
+          </p>
+          <h3 className="mt-2 text-3xl font-black tracking-[-0.05em] sm:text-4xl" style={{ color: "var(--fg-heading)" }}>
+            {title}
+          </h3>
+          <div className="mx-auto mt-4 max-w-md space-y-4 text-base leading-8 sm:text-[1.1rem]" style={{ color: "var(--fg-body)" }}>
+            {paragraphs.map((paragraph, index) => (
+              <p key={`${index}-${paragraph}`}>{getDisplayParagraph(paragraph)}</p>
+            ))}
+          </div>
+          {customActions || actions.length > 0 ? (
+            <div className="mx-auto mt-8 grid max-w-sm gap-3">
+              {customActions ?? <AccessCodeField />}
+              <SummaryModalActionRow actions={actions} />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
@@ -391,9 +411,30 @@ function formatZecAmount(value: number): string {
   return value.toFixed(8).replace(/(?:\.0+|(\.\d*?[1-9])0+)$/, "$1");
 }
 
+function roundZecAmount(value: number): number {
+  return Math.round(value * 100_000_000) / 100_000_000;
+}
+
+const MAX_PENDING_RESERVATION_AMOUNT = 999.9999;
+
+function clampPendingZecAmount(value: number): number {
+  return Math.min(MAX_PENDING_RESERVATION_AMOUNT, Math.max(0, value));
+}
+
+function roundPendingZecAmount(value: number): number {
+  return Math.round(clampPendingZecAmount(value) * 10_000) / 10_000;
+}
+
+function formatPendingZecAmount(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "0";
+  return roundPendingZecAmount(value)
+    .toFixed(4)
+    .replace(/(?:\.0+|(\.\d*?[1-9])0+)$/, "$1");
+}
+
 function parseZecAmount(value: string): number {
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  return Number.isFinite(parsed) && parsed > 0 ? roundZecAmount(parsed) : 0;
 }
 
 function formatOrdinal(value: number): string {
@@ -411,6 +452,12 @@ function formatOrdinal(value: number): string {
 function buildCipherscanTxHref(txid: string | null | undefined): string | null {
   const trimmed = txid?.trim();
   return trimmed ? `https://cipherscan.app/tx/${encodeURIComponent(trimmed)}` : null;
+}
+
+function getCardSortPriority(card: VerifyCard): number {
+  if (!card.reserved && !card.protectedName) return 0;
+  if (card.protectedName && !card.reserved) return 1;
+  return 2;
 }
 
 function TrashIcon({ className = "h-4 w-4" }: { className?: string }) {
@@ -471,6 +518,26 @@ function EyeIcon({ className = "h-4 w-4" }: { className?: string }) {
     >
       <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" />
       <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function GearIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      enableBackground="new 0 0 32 32"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeMiterlimit="10"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="16" cy="16" r="4" />
+      <path d="M27.758,10.366l-1-1.732c-0.552-0.957-1.775-1.284-2.732-0.732L23.5,8.206C21.5,9.36,19,7.917,19,5.608V5c0-1.105-0.895-2-2-2h-2 c-1.105,0-2,0.895-2,2v0.608c0,2.309-2.5,3.753-4.5,2.598L7.974,7.902C7.017,7.35,5.794,7.677,5.242,8.634l-1,1.732 c-0.552,0.957-0.225,2.18,0.732,2.732L5.5,13.402c2,1.155,2,4.041,0,5.196l-0.526,0.304c-0.957,0.552-1.284,1.775-0.732,2.732 l1,1.732c0.552,0.957,1.775,1.284,2.732,0.732L8.5,23.794c2-1.155,4.5,0.289,4.5,2.598V27c0,1.105,0.895,2,2,2h2 c1.105,0,2-0.895,2-2v-0.608c0-2.309,2.5-3.753,4.5-2.598l0.526,0.304c0.957,0.552,2.18,0.225,2.732-0.732l1-1.732 c0.552-0.957,0.225-2.18-0.732-2.732L26.5,18.598c-2-1.155-2-4.041,0-5.196l0.526-0.304C27.983,12.546,28.311,11.323,27.758,10.366z" />
     </svg>
   );
 }
@@ -622,6 +689,25 @@ function ExternalArrowIcon() {
   );
 }
 
+function PlusIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
 function SearchIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg
@@ -766,7 +852,7 @@ export function VerifyEarlyAccessNotice({
 
   return (
     <div
-      className={`grid w-full grid-cols-[1.5rem_minmax(0,1fr)_1.5rem] items-center gap-2 px-3 py-1.5 text-[0.72rem] font-semibold sm:text-sm ${hideOnWide ? "" : ""}`}
+      className={`grid w-full min-w-0 overflow-hidden grid-cols-[1.5rem_minmax(0,1fr)_1.5rem] items-center gap-2 px-3 py-1.5 text-[0.72rem] font-semibold sm:text-sm ${hideOnWide ? "" : ""}`}
       style={{
         background: "var(--announce-bar-bg)",
         color: "var(--announce-bar-fg)",
@@ -775,7 +861,7 @@ export function VerifyEarlyAccessNotice({
       <span className="h-6 w-6" aria-hidden="true" />
       <Link
         href="/reserve"
-        className="col-start-2 flex min-w-0 items-center justify-center gap-2 whitespace-nowrap text-center transition-opacity hover:opacity-90"
+        className="col-start-2 flex min-w-0 items-center justify-center gap-2 overflow-hidden text-center transition-opacity hover:opacity-90"
       >
         <span
           className="inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider sm:text-[0.65rem]"
@@ -1330,6 +1416,7 @@ function SummaryStrip({
   displayEmail,
   activeFilter,
   onFilterChange,
+  onAddMoreNames,
 }: {
   totalCount: number;
   pendingCount: number;
@@ -1338,6 +1425,7 @@ function SummaryStrip({
   displayEmail: string;
   activeFilter: "all" | "pending" | "reserved" | "protected";
   onFilterChange: (filter: "all" | "pending" | "reserved" | "protected") => void;
+  onAddMoreNames: () => void;
 }) {
   let body = `You have ${totalCount} ${pluralizeNames(totalCount)} on the waitlist.`;
 
@@ -1374,10 +1462,26 @@ function SummaryStrip({
         </div>
         <div className="flex w-full flex-wrap items-center justify-center gap-2">
           {[
-            { key: "all" as const, label: `All (${totalCount})` },
-            { key: "pending" as const, label: `Pending (${pendingCount})` },
-            { key: "reserved" as const, label: `Reserved (${reservedCount})` },
-            { key: "protected" as const, label: `Protected (${protectedCount})` },
+            {
+              key: "all" as const,
+              label: `All (${totalCount})`,
+              borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
+            },
+            {
+              key: "pending" as const,
+              label: `Pending (${pendingCount})`,
+              borderColor: "color-mix(in srgb, var(--color-accent-interactive) 32%, var(--faq-border))",
+            },
+            {
+              key: "protected" as const,
+              label: `Protected (${protectedCount})`,
+              borderColor: "color-mix(in srgb, var(--accent-red, #e05252) 38%, var(--faq-border))",
+            },
+            {
+              key: "reserved" as const,
+              label: `Reserved (${reservedCount})`,
+              borderColor: "color-mix(in srgb, var(--color-accent-green) 44%, var(--faq-border))",
+            },
           ].map((option) => {
             const active = activeFilter === option.key;
             return (
@@ -1389,7 +1493,7 @@ function SummaryStrip({
                 style={{
                   background: active ? "var(--home-result-primary-bg)" : "transparent",
                   color: active ? "var(--home-result-primary-fg)" : "var(--fg-body)",
-                  border: "1.5px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
+                  border: `1.5px solid ${option.borderColor}`,
                   boxShadow: active ? "var(--home-result-primary-shadow)" : "none",
                 }}
               >
@@ -1397,6 +1501,21 @@ function SummaryStrip({
               </button>
             );
           })}
+          <button
+            type="button"
+            onClick={onAddMoreNames}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-85"
+            style={{
+              background: "transparent",
+              color: "var(--fg-body)",
+              border: "1.5px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
+              boxShadow: "none",
+            }}
+            aria-label="Add more names"
+            title="Add more names"
+          >
+            <PlusIcon className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </section>
@@ -1420,7 +1539,7 @@ function ReservationMetaBox({
 }) {
   const content = (
     <div
-      className="relative min-w-[9.5rem] rounded-[18px] border px-4 py-2.5 text-center transition hover:opacity-85"
+      className="relative min-w-0 rounded-[18px] border px-4 py-2.5 text-center transition hover:opacity-85"
       style={{
         borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
         background: "transparent",
@@ -1528,8 +1647,16 @@ function SummaryModalActionRow({
     return null;
   }
 
+  const actionButtonClassName =
+    "flex h-16 w-full items-center justify-between rounded-[1.15rem] border px-4 py-4 text-left transition hover:opacity-85";
+  const actionButtonStyle = {
+    borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
+    background: "var(--verify-panel-soft-fill)",
+    color: "var(--fg-heading)",
+  } satisfies React.CSSProperties;
+
   return (
-    <div className="mx-auto mt-8 grid max-w-sm gap-3">
+    <div className="mx-auto grid w-full max-w-sm gap-3">
       {actions.map((action) => {
         const content = (
           <>
@@ -1543,27 +1670,24 @@ function SummaryModalActionRow({
           </>
         );
 
-        const className =
-          "flex h-16 w-full items-center justify-between rounded-[1.15rem] border px-4 py-4 text-left transition hover:opacity-85";
-        const style = {
-          borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
-          background: "var(--verify-panel-soft-fill)",
-          color: "var(--fg-heading)",
-        } satisfies React.CSSProperties;
-
         return action.external ? (
           <a
             key={action.label}
             href={action.href}
             target="_blank"
             rel="noopener noreferrer"
-            className={className}
-            style={style}
+            className={actionButtonClassName}
+            style={actionButtonStyle}
           >
             {content}
           </a>
         ) : (
-          <Link key={action.label} href={action.href} className={className} style={style}>
+          <Link
+            key={action.label}
+            href={action.href}
+            className={actionButtonClassName}
+            style={actionButtonStyle}
+          >
             {content}
           </Link>
         );
@@ -1654,8 +1778,12 @@ function SummaryDetailModal({
             ))}
           </div>
 
-          {customActions}
-          <SummaryModalActionRow actions={actions} />
+          {customActions || actions.length > 0 ? (
+            <div className="mx-auto mt-8 grid max-w-sm gap-3">
+              {customActions}
+              <SummaryModalActionRow actions={actions} />
+            </div>
+          ) : null}
         </div>
 
         {footer ? (
@@ -1976,8 +2104,15 @@ function RenderSummaryModal({
   const shareUrl = card.referralCode?.trim()
     ? `${typeof window !== "undefined" ? window.location.origin : "https://www.zcashnames.com"}/?ref=${encodeURIComponent(card.referralCode.trim())}`
     : null;
+  const summaryActionButtonClassName =
+    "flex h-16 w-full items-center justify-between rounded-[1.15rem] border px-4 py-4 text-left transition hover:opacity-85";
+  const summaryActionButtonStyle = {
+    borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
+    background: "var(--verify-panel-soft-fill)",
+    color: "var(--fg-heading)",
+  } satisfies React.CSSProperties;
   const shareReferralAction = shareUrl ? (
-    <div className="mx-auto mt-8 grid w-full max-w-sm gap-3">
+    <div className="mx-auto grid w-full max-w-sm gap-3">
       <div className="w-full">
         <ActionDropdown
           label="Referral Link"
@@ -2059,12 +2194,8 @@ function RenderSummaryModal({
           itemClassName="rounded-[1.15rem] px-4 py-4 text-base font-semibold"
           renderTriggerContent={(open) => (
             <div
-              className="flex h-16 w-full items-center justify-between rounded-[1.15rem] border px-4 py-4 text-left transition hover:opacity-85"
-              style={{
-                borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
-                background: "var(--verify-panel-soft-fill)",
-                color: "var(--fg-heading)",
-              }}
+              className={summaryActionButtonClassName}
+              style={summaryActionButtonStyle}
             >
               <span className="flex min-w-0 items-center gap-3">
                 <span style={{ color: "var(--fg-muted)" }}>
@@ -2095,7 +2226,7 @@ function RenderSummaryModal({
         title={name}
         paragraphs={
           card.reserved && card.reservedAt
-            ? [`You'll receive an access code to purchase ${name} during Early Access.`]
+            ? [`You'll have the option to purchase ${name} during Early Access. Access code will be sent by email when available. Pricing to be announced.`]
             : ["This name has not been reserved yet. Complete payment to secure your place for Early Access."]
         }
         actions={txHref ? [{ label: "View on-chain transaction", href: txHref, external: true, icon: <ChainLinkIcon className="h-4 w-4" /> }] : []}
@@ -2194,7 +2325,7 @@ function WhatToDoSteps({
   ];
 
   return (
-    <div>
+    <div className="w-full max-w-full overflow-x-hidden">
       <h3 className="text-lg font-bold tracking-tight" style={{ color: "var(--fg-heading)" }}>
         Next steps
       </h3>
@@ -2411,7 +2542,58 @@ function ReservationStatusPane({
   );
 }
 
-function ProtectedHowAccessWorks() {
+function AccessCodeField({
+  value = "Not available yet",
+  copyValue = "",
+}: {
+  value?: string;
+  copyValue?: string;
+}) {
+  const { copied, copy } = useCopy();
+  const canCopy = copyValue.trim().length > 0;
+
+  return (
+    <div className="mx-auto w-full max-w-sm text-left">
+      <div className="grid w-full items-center gap-2 grid-cols-[auto_minmax(0,1fr)_2.75rem]">
+        <span className="pr-1 text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+          Access Code
+        </span>
+        <code
+          className="min-w-0 truncate rounded-xl px-3 py-3 text-[0.78rem] font-mono"
+          style={{
+            background: "var(--color-raised)",
+            color: "var(--fg-body)",
+            border: "1px solid var(--border-muted)",
+          }}
+          title={value}
+        >
+          {value}
+        </code>
+        <button
+          type="button"
+          onClick={() => void copy(copyValue)}
+          disabled={!canCopy}
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+          style={{
+            background: "transparent",
+            border: "1.5px solid var(--border-muted)",
+            color: "var(--fg-body)",
+          }}
+          aria-label="Copy access code"
+          title={canCopy ? (copied ? "Copied!" : "Copy access code") : "Access code unavailable"}
+        >
+          {copied ? <CheckIcon className="h-4 w-4" /> : <ShareCopyIcon />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProtectedHowAccessWorks({
+  firstStepComplete = false,
+}: {
+  firstStepComplete?: boolean;
+}) {
   const steps = [
     {
       title: "Submit a request",
@@ -2426,7 +2608,7 @@ function ProtectedHowAccessWorks() {
       body: "We'll send the result using your preferred contact method.",
     },
     {
-      title: "Reserve the name",
+      title: "Claim the name",
       body: "If approved, you'll receive an access code and instructions to continue.",
     },
   ];
@@ -2441,25 +2623,75 @@ function ProtectedHowAccessWorks() {
           {steps.map((step, index) => (
             <li
               key={step.title}
-              className="grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-3 px-4 py-2"
+              className="relative grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-3 px-4 py-2"
             >
               <span
                 className="relative z-[1] inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
                 style={{
-                  background: "color-mix(in srgb, var(--accent-red, #d95b5b) 16%, transparent)",
-                  color: "var(--accent-red, #d95b5b)",
+                  background:
+                    index === 0 && firstStepComplete
+                      ? "color-mix(in srgb, var(--accent-red, #d95b5b) 16%, transparent)"
+                      : "color-mix(in srgb, var(--accent-red, #d95b5b) 16%, transparent)",
+                  color:
+                    index === 0 && firstStepComplete
+                      ? "var(--accent-red, #d95b5b)"
+                      : "var(--accent-red, #d95b5b)",
                 }}
               >
-                {index + 1}
+                {index === 0 && firstStepComplete ? <CheckIcon className="h-4 w-4" /> : index + 1}
               </span>
               <span>
                 <span className="block text-sm font-semibold leading-6" style={{ color: "var(--fg-heading)" }}>
-                  {step.title}
+                  {index === 0 && firstStepComplete ? (
+                    <span className="relative inline-block">
+                      <span>{step.title}</span>
+                      <span
+                        aria-hidden="true"
+                        className="absolute left-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full"
+                        style={{
+                          width: "100%",
+                          background: "currentColor",
+                          transformOrigin: "left center",
+                          transition: "transform 650ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+                          transform: "scaleX(1)",
+                        }}
+                      />
+                    </span>
+                  ) : (
+                    step.title
+                  )}
                 </span>
                 <span className="mt-1 block text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-                  {step.body}
+                  {index === 0 && firstStepComplete ? (
+                    <span className="relative inline-block">
+                      <span>{step.body}</span>
+                      <span
+                        aria-hidden="true"
+                        className="absolute left-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full"
+                        style={{
+                          width: "100%",
+                          background: "currentColor",
+                          transformOrigin: "left center",
+                          transition: "transform 650ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+                          transform: "scaleX(1)",
+                        }}
+                      />
+                    </span>
+                  ) : (
+                    step.body
+                  )}
                 </span>
               </span>
+              {index === 0 && firstStepComplete ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute left-8 top-10 h-8 w-px -translate-x-1/2"
+                  style={{
+                    background:
+                      "linear-gradient(180deg, color-mix(in srgb, var(--accent-red, #d95b5b) 34%, transparent) 0%, color-mix(in srgb, var(--accent-red, #d95b5b) 18%, transparent) 100%)",
+                  }}
+                />
+              ) : null}
             </li>
           ))}
         </ol>
@@ -2494,7 +2726,7 @@ function ProtectedRequestAction({
     <>
       <span className="flex min-w-0 items-center gap-3">
         <span style={{ color: "var(--fg-muted)" }}>{icon}</span>
-        <span className="text-base font-semibold sm:text-lg">{label}</span>
+        <span className="text-sm font-semibold sm:text-base">{label}</span>
       </span>
       <span style={{ color: "var(--fg-muted)" }}>
         <ExternalArrowIcon />
@@ -2864,7 +3096,7 @@ function ProtectedAccessRequestPanel({
         <div className="mt-6">
           <ProtectedRequestAction
             label="Update request details"
-            icon={<MailIcon className="h-4 w-4" />}
+            icon={<GearIcon className="h-4 w-4" />}
             onClick={() => setIsEditing(true)}
           />
         </div>
@@ -3187,15 +3419,18 @@ function VerifyPaymentCard({
   onRequestDelete: (card: VerifyCard) => void;
   onReservationConfirmed: (card: VerifyCard) => void;
 }) {
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [activeTab, setActiveTab] = useState<"payment" | "sent">("payment");
-  const baseAmountValue = parseZecAmount(baseAmountZec);
+  const baseAmountValue = roundPendingZecAmount(parseZecAmount(baseAmountZec));
   const [selectedAmount, setSelectedAmount] = useState(baseAmountValue);
+  const [draftAmount, setDraftAmount] = useState(() => formatPendingZecAmount(baseAmountValue));
   const repeatTimeoutRef = useRef<number | null>(null);
   const repeatIntervalRef = useRef<number | null>(null);
+  const amountFieldRef = useRef<HTMLDivElement | null>(null);
   const reservedDate = formatReservedDate(card.reservedAt);
-  const selectedAmountText = formatZecAmount(selectedAmount);
+  const selectedAmountText = formatPendingZecAmount(selectedAmount);
   const isSupporting = selectedAmount > baseAmountValue;
-  const firstSupportAmount = Math.max(0.005, baseAmountValue);
+  const firstSupportAmount = roundPendingZecAmount(Math.max(0.005, baseAmountValue));
   const deletePending = card.deleteRequestStatus === "pending";
   const compactCardClassName = card.collapsed
     ? "max-w-full rounded-[32px] border shadow-[0_28px_80px_rgba(22,35,66,0.10)]"
@@ -3235,16 +3470,84 @@ function VerifyPaymentCard({
     }
   }
 
-  function increaseAmount() {
-    setSelectedAmount((current) =>
-      current <= baseAmountValue ? firstSupportAmount : current + 0.005,
+  function setAmount(nextAmount: number) {
+    const normalizedAmount = roundPendingZecAmount(nextAmount);
+    setSelectedAmount(normalizedAmount);
+    setDraftAmount(formatPendingZecAmount(normalizedAmount));
+  }
+
+  function triggerInvalidAmountFeedback() {
+    setDraftAmount(selectedAmountText);
+
+    if (prefersReducedMotion || !amountFieldRef.current) {
+      return;
+    }
+
+    amountFieldRef.current.animate(
+      [
+        { transform: "translate3d(0, 0, 0)" },
+        { transform: "translate3d(-8px, 0, 0)" },
+        { transform: "translate3d(7px, 0, 0)" },
+        { transform: "translate3d(-5px, 0, 0)" },
+        { transform: "translate3d(4px, 0, 0)" },
+        { transform: "translate3d(0, 0, 0)" },
+      ],
+      {
+        duration: 420,
+        easing: "cubic-bezier(0.36, 0.07, 0.19, 0.97)",
+      },
     );
   }
 
+  function validateDraftAmount() {
+    const trimmedAmount = draftAmount.trim();
+    const parsedAmount = roundPendingZecAmount(parseZecAmount(trimmedAmount));
+
+    if (trimmedAmount && parsedAmount >= baseAmountValue) {
+      setAmount(parsedAmount);
+      return;
+    }
+
+    triggerInvalidAmountFeedback();
+  }
+
+  function increaseAmount() {
+    setSelectedAmount((current) => {
+      const nextAmount = current <= baseAmountValue ? firstSupportAmount : current + 0.005;
+      const normalizedAmount = roundPendingZecAmount(nextAmount);
+      setDraftAmount(formatPendingZecAmount(normalizedAmount));
+      return normalizedAmount;
+    });
+  }
+
+  function handleAmountDraftChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const nextValue = event.currentTarget.value;
+    if (/^\d{0,3}(?:\.\d{0,4})?$/.test(nextValue)) {
+      setDraftAmount(nextValue);
+    }
+  }
+
+  function handleAmountDraftKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      event.currentTarget.blur();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setDraftAmount(selectedAmountText);
+      event.currentTarget.blur();
+    }
+  }
+
   function decreaseAmount() {
-    setSelectedAmount((current) =>
-      current <= firstSupportAmount ? baseAmountValue : Math.max(firstSupportAmount, current - 0.005),
-    );
+    setSelectedAmount((current) => {
+      const nextAmount =
+        current <= firstSupportAmount ? baseAmountValue : Math.max(firstSupportAmount, current - 0.005);
+      const normalizedAmount = roundPendingZecAmount(nextAmount);
+      setDraftAmount(formatPendingZecAmount(normalizedAmount));
+      return normalizedAmount;
+    });
   }
 
   function startAmountRepeat(direction: "increase" | "decrease") {
@@ -3255,6 +3558,12 @@ function VerifyPaymentCard({
       repeatIntervalRef.current = window.setInterval(action, 90);
     }, 325);
   }
+
+  useEffect(() => {
+    if (selectedAmount < baseAmountValue) {
+      setAmount(baseAmountValue);
+    }
+  }, [baseAmountValue, selectedAmount]);
 
   if (card.protectedName && !card.reserved) {
     return (
@@ -3270,24 +3579,28 @@ function VerifyPaymentCard({
           <section className="px-5 py-5 sm:px-6 sm:py-6">
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex min-w-0 items-start gap-2">
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <div className="min-w-0">
+                      <h2 className="min-w-0 text-[1.65rem] font-bold tracking-tight" style={{ color: "var(--fg-heading)" }}>
+                        {card.name?.trim() || "Protected name"}
+                      </h2>
+                    </div>
+                    <VerifyCardActionMenu
+                      collapsed={card.collapsed}
+                      deletePending={deletePending}
+                      onViewDetails={handleViewDetails}
+                      onToggleCollapsed={() => onToggleCollapsed(card)}
+                      onDelete={() => onRequestDelete(card)}
+                    />
+                  </div>
                   <div className="min-w-0">
-                    <h2 className="text-[1.65rem] font-bold tracking-tight" style={{ color: "var(--fg-heading)" }}>
-                      {card.name?.trim() || "Protected name"}
-                    </h2>
                     {!card.collapsed ? (
                       <p className="mt-1 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
                         This name is protected to reduce impersonation. Request access if you represent the person, organization, or identity associated with this name.
                       </p>
                     ) : null}
                   </div>
-                  <VerifyCardActionMenu
-                    collapsed={card.collapsed}
-                    deletePending={deletePending}
-                    onViewDetails={handleViewDetails}
-                    onToggleCollapsed={() => onToggleCollapsed(card)}
-                    onDelete={() => onRequestDelete(card)}
-                  />
                 </div>
                 <div className="shrink-0">
                   <StatusBadge label="Protected" tone="danger" />
@@ -3297,7 +3610,7 @@ function VerifyPaymentCard({
 
             {!card.collapsed ? (
               <div className="mt-6">
-                <ProtectedHowAccessWorks />
+                <ProtectedHowAccessWorks firstStepComplete={card.protectedRequestStatus !== "not_submitted"} />
               </div>
             ) : null}
           </section>
@@ -3390,28 +3703,32 @@ function VerifyPaymentCard({
         }}
       >
         <div className="px-5 py-5 sm:px-6 sm:py-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="flex min-w-0 items-start gap-2">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-start gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
+                    Reservation unavailable
+                  </p>
+                  <h2 className="mt-1 text-[1.65rem] font-bold tracking-tight" style={{ color: "var(--fg-heading)" }}>
+                    {card.name?.trim() || "Unavailable name"}
+                  </h2>
+                </div>
+                <VerifyCardActionMenu
+                  collapsed={card.collapsed}
+                  deletePending={deletePending}
+                  onViewDetails={handleViewDetails}
+                  onToggleCollapsed={() => onToggleCollapsed(card)}
+                  onDelete={() => onRequestDelete(card)}
+                />
+              </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
-                  Reservation unavailable
-                </p>
-                <h2 className="mt-1 text-[1.65rem] font-bold tracking-tight" style={{ color: "var(--fg-heading)" }}>
-                  {card.name?.trim() || "Unavailable name"}
-                </h2>
                 {!card.collapsed ? (
                   <p className="mt-4 text-sm leading-7" style={{ color: "var(--fg-body)" }}>
                     {card.memoError}
                   </p>
                 ) : null}
               </div>
-              <VerifyCardActionMenu
-                collapsed={card.collapsed}
-                deletePending={deletePending}
-                onViewDetails={handleViewDetails}
-                onToggleCollapsed={() => onToggleCollapsed(card)}
-                onDelete={() => onRequestDelete(card)}
-              />
             </div>
             <div className="shrink-0">
               <StatusBadge label="Pending" tone="warning" />
@@ -3435,24 +3752,28 @@ function VerifyPaymentCard({
         <section className="px-5 py-5 sm:px-6 sm:py-6">
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-4">
-              <div className="flex min-w-0 items-start gap-2">
+              <div className="min-w-0">
+                <div className="flex min-w-0 items-start gap-2">
+                  <div className="min-w-0">
+                    <h2 className="min-w-0 text-[1.65rem] font-bold tracking-tight" style={{ color: "var(--fg-heading)" }}>
+                      {card.name?.trim() || "Unavailable name"}
+                    </h2>
+                  </div>
+                  <VerifyCardActionMenu
+                    collapsed={card.collapsed}
+                    deletePending={deletePending}
+                    onViewDetails={handleViewDetails}
+                    onToggleCollapsed={() => onToggleCollapsed(card)}
+                    onDelete={() => onRequestDelete(card)}
+                  />
+                </div>
                 <div className="min-w-0">
-                  <h2 className="text-[1.65rem] font-bold tracking-tight" style={{ color: "var(--fg-heading)" }}>
-                    {card.name?.trim() || "Unavailable name"}
-                  </h2>
                   {!card.collapsed ? (
                     <p className="mt-1 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
                       Pay the reservation fee to qualify for Early Access.
                     </p>
                   ) : null}
                 </div>
-                <VerifyCardActionMenu
-                  collapsed={card.collapsed}
-                  deletePending={deletePending}
-                  onViewDetails={handleViewDetails}
-                  onToggleCollapsed={() => onToggleCollapsed(card)}
-                  onDelete={() => onRequestDelete(card)}
-                />
               </div>
               <div className="shrink-0">
                 <StatusBadge label="Pending" tone="warning" />
@@ -3466,7 +3787,7 @@ function VerifyPaymentCard({
                 <p className="text-center text-sm font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
                   {isSupporting ? "Thanks for your support" : "Send at least"}
                 </p>
-                <div className="mt-2 grid grid-cols-[2.5rem_minmax(12rem,auto)_2.5rem] items-center justify-center gap-3">
+                <div className="mt-2 grid grid-cols-[2.5rem_minmax(0,auto)_2.5rem] items-center justify-center gap-3">
                   {isSupporting ? (
                     <button
                       type="button"
@@ -3489,9 +3810,35 @@ function VerifyPaymentCard({
                   ) : (
                     <span className="h-10 w-10" aria-hidden="true" />
                   )}
-                  <p className="text-center text-[2.35rem] font-black tracking-[-0.05em]" style={{ color: "var(--fg-heading)" }}>
-                    {selectedAmountText} ZEC
-                  </p>
+                  <div
+                    ref={amountFieldRef}
+                    className="flex items-baseline justify-center text-center text-[2.35rem] font-black tracking-[-0.05em]"
+                    style={{ color: "var(--fg-heading)" }}
+                  >
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      spellCheck={false}
+                      value={draftAmount}
+                      onChange={handleAmountDraftChange}
+                      onBlur={validateDraftAmount}
+                      onKeyDown={handleAmountDraftKeyDown}
+                      onFocus={(event) => event.currentTarget.select()}
+                      aria-label="Reservation amount"
+                      className="min-w-0 border-0 bg-transparent p-0 text-right outline-none"
+                      style={{
+                        width: `${Math.max(draftAmount.length, 1)}ch`,
+                        color: "inherit",
+                        font: "inherit",
+                        letterSpacing: "inherit",
+                        lineHeight: "inherit",
+                        caretColor: "currentColor",
+                        appearance: "none",
+                      }}
+                    />
+                    <span className="ml-[0.24em]">ZEC</span>
+                  </div>
                   <button
                     type="button"
                     onClick={increaseAmount}
@@ -3512,7 +3859,7 @@ function VerifyPaymentCard({
                   </button>
                 </div>
               </div>
-              <WhatToDoSteps minimumAmountZec={baseAmountZec} />
+              <WhatToDoSteps minimumAmountZec={formatPendingZecAmount(baseAmountValue)} />
             </div>
           ) : null}
         </section>
@@ -3587,19 +3934,43 @@ export default function WaitlistVerifyClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const reducedMotion = usePrefersReducedMotion();
+  const addMoreNamesRef = useRef<HTMLDivElement | null>(null);
   const [cardState, setCardState] = useState(cards);
   const [activeFilter, setActiveFilter] = useState<"all" | "pending" | "reserved" | "protected">("all");
   const pendingCount = cardState.filter((card) => !card.reserved && !card.protectedName).length;
   const reservedCount = cardState.filter((card) => card.reserved).length;
   const protectedCount = cardState.filter((card) => card.protectedName && !card.reserved).length;
-  const filteredCards = cardState.filter((card) => {
-    if (activeFilter === "pending") return !card.reserved && !card.protectedName;
-    if (activeFilter === "reserved") return card.reserved;
-    if (activeFilter === "protected") return card.protectedName && !card.reserved;
-    return true;
-  });
-  const expandedCards = filteredCards.filter((card) => !card.collapsed);
-  const collapsedCards = filteredCards.filter((card) => card.collapsed);
+  const filteredCards = cardState
+    .filter((card) => {
+      if (activeFilter === "pending") return !card.reserved && !card.protectedName;
+      if (activeFilter === "reserved") return card.reserved;
+      if (activeFilter === "protected") return card.protectedName && !card.reserved;
+      return true;
+    })
+    .sort((left, right) => getCardSortPriority(left) - getCardSortPriority(right));
+  const orderedCardGroups: Array<{
+    type: "expanded" | "collapsed";
+    cards: VerifyCard[];
+  }> = [];
+  let collapsedBuffer: VerifyCard[] = [];
+
+  for (const card of filteredCards) {
+    if (card.collapsed) {
+      collapsedBuffer.push(card);
+      continue;
+    }
+
+    if (collapsedBuffer.length > 0) {
+      orderedCardGroups.push({ type: "collapsed", cards: collapsedBuffer });
+      collapsedBuffer = [];
+    }
+
+    orderedCardGroups.push({ type: "expanded", cards: [card] });
+  }
+
+  if (collapsedBuffer.length > 0) {
+    orderedCardGroups.push({ type: "collapsed", cards: collapsedBuffer });
+  }
   const [showReservedInfo, setShowReservedInfo] = useState(false);
   const [showPendingInfo, setShowPendingInfo] = useState(false);
   const [protectedInfoCard, setProtectedInfoCard] = useState<VerifyCard | null>(null);
@@ -3612,6 +3983,21 @@ export default function WaitlistVerifyClient({
     kind: SummaryCardKind;
     card: VerifyCard;
   } | null>(null);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    const previousRootOverflowX = root.style.overflowX;
+    const previousBodyOverflowX = body.style.overflowX;
+
+    root.style.overflowX = "hidden";
+    body.style.overflowX = "hidden";
+
+    return () => {
+      root.style.overflowX = previousRootOverflowX;
+      body.style.overflowX = previousBodyOverflowX;
+    };
+  }, []);
 
   useEffect(() => {
     const deleteStatus = searchParams.get("delete");
@@ -3675,6 +4061,13 @@ export default function WaitlistVerifyClient({
     setCelebrationCard({
       ...card,
       reserved: true,
+    });
+  }
+
+  function scrollToAddMoreNames() {
+    addMoreNamesRef.current?.scrollIntoView({
+      behavior: reducedMotion ? "auto" : "smooth",
+      block: "start",
     });
   }
 
@@ -3764,6 +4157,31 @@ export default function WaitlistVerifyClient({
     ),
   );
 
+  function renderVerifyPaymentCard(card: VerifyCard) {
+    return (
+      <VerifyPaymentCard
+        key={card.id}
+        verifyToken={verifyToken}
+        paymentAddress={paymentAddress}
+        baseAmountZec={baseAmountZec}
+        card={card}
+        displayEmail={displayEmail || normalizedEmail}
+        onStatusUpdate={updateCard}
+        onOpenReservedInfo={() => setShowReservedInfo(true)}
+        onOpenPendingInfo={() => setShowPendingInfo(true)}
+        onOpenProtectedInfo={(protectedCard) => setProtectedInfoCard(protectedCard)}
+        onProtectedRequestUpdate={updateProtectedRequest}
+        onOpenSummary={(kind, summaryCard) => setActiveSummary({ kind, card: summaryCard })}
+        onToggleCollapsed={handleToggleCollapsed}
+        onRequestDelete={(deleteTarget) => {
+          setDeleteErrorMessage(null);
+          setDeleteCard(deleteTarget);
+        }}
+        onReservationConfirmed={handleReservationConfirmed}
+      />
+    );
+  }
+
   return (
     <div>
       <style jsx global>{`
@@ -3828,79 +4246,50 @@ export default function WaitlistVerifyClient({
           displayEmail={displayEmail || normalizedEmail}
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
+          onAddMoreNames={scrollToAddMoreNames}
         />
 
         <div className="mt-6">
-          {expandedCards.length > 0 ? (
+          {orderedCardGroups.length > 0 ? (
             <div className="space-y-6">
-              {expandedCards.map((card) => (
-                <VerifyPaymentCard
-                  key={card.id}
-                  verifyToken={verifyToken}
-                  paymentAddress={paymentAddress}
-                  baseAmountZec={baseAmountZec}
-                  card={card}
-                  displayEmail={displayEmail || normalizedEmail}
-                  onStatusUpdate={updateCard}
-                  onOpenReservedInfo={() => setShowReservedInfo(true)}
-                  onOpenPendingInfo={() => setShowPendingInfo(true)}
-                  onOpenProtectedInfo={(protectedCard) => setProtectedInfoCard(protectedCard)}
-                  onProtectedRequestUpdate={updateProtectedRequest}
-                  onOpenSummary={(kind, summaryCard) => setActiveSummary({ kind, card: summaryCard })}
-                  onToggleCollapsed={handleToggleCollapsed}
-                  onRequestDelete={(deleteTarget) => {
-                    setDeleteErrorMessage(null);
-                    setDeleteCard(deleteTarget);
-                  }}
-                  onReservationConfirmed={handleReservationConfirmed}
-                />
-              ))}
-            </div>
-          ) : null}
-
-          {collapsedCards.length > 0 ? (
-            <div className={expandedCards.length > 0 ? "mt-6" : ""}>
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {collapsedCards.map((card) => (
-                  <VerifyPaymentCard
-                    key={card.id}
-                    verifyToken={verifyToken}
-                    paymentAddress={paymentAddress}
-                    baseAmountZec={baseAmountZec}
-                    card={card}
-                    displayEmail={displayEmail || normalizedEmail}
-                    onStatusUpdate={updateCard}
-                    onOpenReservedInfo={() => setShowReservedInfo(true)}
-                    onOpenPendingInfo={() => setShowPendingInfo(true)}
-                    onOpenProtectedInfo={(protectedCard) => setProtectedInfoCard(protectedCard)}
-                    onProtectedRequestUpdate={updateProtectedRequest}
-                    onOpenSummary={(kind, summaryCard) => setActiveSummary({ kind, card: summaryCard })}
-                    onToggleCollapsed={handleToggleCollapsed}
-                    onRequestDelete={(deleteTarget) => {
-                      setDeleteErrorMessage(null);
-                      setDeleteCard(deleteTarget);
-                    }}
-                    onReservationConfirmed={handleReservationConfirmed}
-                  />
-                ))}
-              </div>
+              {orderedCardGroups.map((group, index) =>
+                group.type === "collapsed" ? (
+                  <div key={`collapsed-${index}`} className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    {group.cards.map((card) => renderVerifyPaymentCard(card))}
+                  </div>
+                ) : (
+                  group.cards.map((card) => renderVerifyPaymentCard(card))
+                ),
+              )}
             </div>
           ) : null}
         </div>
 
-        <div className="mt-6">
-          <Link
-            href="https://www.zcashnames.com/waitlist#waitlist-name-entry"
-            className="inline-flex h-[42px] w-full items-center justify-center gap-3 rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-85"
-            style={{
-              background: "var(--home-result-primary-bg)",
-              color: "var(--home-result-primary-fg)",
-              boxShadow: "var(--home-result-primary-shadow)",
-            }}
-          >
-            <SearchIcon />
-            Reserve another name
-          </Link>
+        <div
+          ref={addMoreNamesRef}
+          className="mt-10 border-t pt-8 sm:mt-12 sm:pt-10"
+          style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}
+        >
+          <div className="mx-auto max-w-4xl">
+            <h2
+              className="text-balance text-center text-[1.65rem] font-bold tracking-tight"
+              style={{ color: "var(--hero-headline-primary)" }}
+            >
+              Add more <span style={{ color: "var(--color-accent-interactive)" }}>names</span>
+            </h2>
+            <p
+              className="mx-auto mt-3 max-w-2xl text-center text-sm leading-6 sm:text-base"
+              style={{ color: "var(--fg-body)" }}
+            >
+              <strong>
+                Add your name to the waitlist, reserve your place, and refer others to move up
+                before receiving your access code.
+              </strong>
+            </p>
+          </div>
+          <div className="mt-6 flex justify-center">
+            <WaitlistEntryForm showNewsletter={false} />
+          </div>
         </div>
       </section>
 
@@ -3937,7 +4326,11 @@ export default function WaitlistVerifyClient({
           paragraphs={[
             "Some names are protected because they are strongly associated with a person, organization, brand, or public identity. This review helps reduce impersonation and misleading claims.",
           ]}
-          actions={[]}
+          actions={[
+            { label: "Frequently Asked Questions", href: "/faq", icon: <DocumentIcon className="h-4 w-4" /> },
+            { label: "Discord", href: "https://discord.gg/z2H23QgAGf", external: true, icon: <DiscordIcon className="h-4 w-4" /> },
+          ]}
+          customActions={<AccessCodeField />}
           onClose={() => setProtectedInfoCard(null)}
         />
       ) : null}

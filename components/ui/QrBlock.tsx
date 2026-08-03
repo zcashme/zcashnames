@@ -122,7 +122,7 @@ export function QrBlock({
           <div className="flex flex-col items-center gap-4">
             <div className="flex flex-col items-center gap-3">
               <div className="flex w-full justify-center">
-                <div className="relative inline-block">
+                <div className="grid grid-cols-[auto_2.5rem] items-stretch gap-4">
                   <a
                     href={uri}
                     className="block rounded-[24px] bg-white p-3 transition-transform duration-150 ease-out active:scale-95"
@@ -139,12 +139,12 @@ export function QrBlock({
                         fgColor="#000000"
                         bgColor="#ffffff"
                         marginSize={4}
-                        className="pointer-events-none absolute h-px w-px opacity-0"
+                        className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
                         aria-hidden="true"
                       />
                     </div>
                   </a>
-                  <div className="absolute inset-y-0 -right-14 flex h-full min-h-full flex-col justify-between">
+                  <div className="flex h-full min-h-full flex-col justify-between">
                     <button
                       type="button"
                       onClick={() => setExpanded(true)}
@@ -221,7 +221,7 @@ export function QrBlock({
                 fgColor="#000000"
                 bgColor="#ffffff"
                 marginSize={4}
-                className="pointer-events-none absolute h-px w-px opacity-0"
+                className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
                 aria-hidden="true"
               />
             </div>

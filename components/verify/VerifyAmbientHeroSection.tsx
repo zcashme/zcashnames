@@ -38,11 +38,11 @@ export default function VerifyAmbientHeroSection({
   return (
     <section
       ref={sectionRef}
-      className={["relative isolate", bandInsetClassName].join(" ")}
+      className={["relative isolate overflow-x-clip", bandInsetClassName].join(" ")}
     >
       <AmbientSignalField
         density="medium"
-        className="absolute left-1/2 top-0 w-screen -translate-x-1/2"
+        className="absolute left-1/2 top-0 w-[100dvw] max-w-none -translate-x-1/2"
         styleOverride={fieldHeight ? { height: `${fieldHeight}px` } : undefined}
       />
       <div className="relative z-10">
