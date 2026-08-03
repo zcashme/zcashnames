@@ -13,6 +13,7 @@ import {
 } from "@/lib/blockinfo-post/deterministic";
 import { buildDeterministicCaptionDecision } from "@/lib/blockinfo-post/caption-policy";
 import { getDefaultBlockinfoOutputDir } from "@/lib/blockinfo-post/runtime";
+import { sanitizeXPostText } from "@/lib/blockinfo-post/x-post-text";
 import {
   acquireBlockinfoPostRunLock,
   getBlockinfoPostScheduleState,
@@ -823,7 +824,7 @@ async function createXPost(config: XConfig, text: string, mediaId: string): Prom
 async function sendXPost(config: XConfig, buffer: Buffer, text: string): Promise<string | null> {
   log("Sending generated image to X.");
   const mediaId = await uploadMediaToX(config, buffer);
-  return createXPost(config, text, mediaId);
+  return createXPost(config, sanitizeXPostText(text), mediaId);
 }
 
 function emptyDelivery(): NonNullable<BlockinfoPostResult["delivery"]> {
