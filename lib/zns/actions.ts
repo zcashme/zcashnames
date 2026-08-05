@@ -13,7 +13,11 @@ interface PreparedAction {
 import { getZns, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
 import { getNamePricing } from "@/lib/network-stats";
 import { MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
-import { getReservedName, verifyUnlockCode } from "@/lib/zns/reserved";
+import {
+  getProtectedClaimGate,
+  markProtectedNameRedeemed,
+  verifyUnlockCode,
+} from "@/lib/zns/protected-claim";
 import { verifyProof, verifyProofKind, issueProof, parseProofSubject } from "@/lib/zns/proof";
 import { verifyOtp as _verifyOtp } from "@/lib/purchases/otp";
 
@@ -78,7 +82,7 @@ function completeAction(
 //
 
 // CLAIM: register an unowned name. Requires only a unified address.
-// Reserved names additionally need an unlock proof from checkUnlockCode().
+// Protected names additionally need an unlock proof from checkUnlockCode().
 export async function claimAction(
   name: string,
   address: string,
@@ -92,9 +96,8 @@ export async function claimAction(
   const addrResult = validateAddress(address.trim());
   if (addrResult.status !== "unified") return { ok: false, error: addrResult.warning || "Unified address required." };
 
-  const reserved = await getReservedName(n);
-  if (reserved && !reserved.redeemed) {
-    if (reserved.category === "offensive") return { ok: false, error: "This name is not available." };
+  const protectedGate = await getProtectedClaimGate(n);
+  if (protectedGate) {
     if (!unlockProof || !verifyProof(unlockProof, "unlock", n)) {
       return { ok: false, error: "Unlock code required for this name." };
     }
@@ -293,18 +296,43 @@ export async function verifyOtp(
 }
 
 //
-// Reserved name unlock: some names (brands, protocol terms) are set aside.
-// The unlock code is an HMAC-derived 12-character code generated server-side.
-// Verifying it returns a proof token that claimAction() requires.
+// Protected-name unlock: names with status=protected (not yet redeemed) are
+// set aside. The unlock code is an HMAC-derived 12-character code generated
+// server-side. Verifying it returns a proof token that claimAction() requires.
 //
 export async function checkUnlockCode(
   name: string,
   code: string,
 ): Promise<{ ok: true; proof: string } | { ok: false; error: string }> {
+  try {
+    const normalized = normalizeUsername(name);
+    const protectedGate = await getProtectedClaimGate(normalized);
+    if (!protectedGate) return { ok: false, error: "This name is not protected." };
+    if (!verifyUnlockCode(normalized, code)) return { ok: false, error: "Invalid unlock code." };
+    return { ok: true, proof: issueProof("unlock", normalized) };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unlock verification failed.";
+    // Missing server secrets should not look like a bad unlock code.
+    if (message.includes("environment variable is required")) {
+      return { ok: false, error: "Server is missing unlock configuration. Try again later." };
+    }
+    return { ok: false, error: message };
+  }
+}
+
+//
+// After a protected CLAIM is mined, mark the matching protected row(s) redeemed
+// so the unlock gate is cleared.
+//
+export async function markProtectedNameRedeemedAction(
+  name: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const normalized = normalizeUsername(name);
-  const reserved = await getReservedName(normalized);
-  if (!reserved || reserved.redeemed) return { ok: false, error: "This name is not reserved." };
-  if (reserved.category === "offensive") return { ok: false, error: "This name is not available." };
-  if (!verifyUnlockCode(normalized, code)) return { ok: false, error: "Invalid unlock code." };
-  return { ok: true, proof: issueProof("unlock", normalized) };
+  if (!isValidUsername(normalized)) return { ok: false, error: "Invalid name." };
+  try {
+    await markProtectedNameRedeemed(normalized);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Failed to mark name redeemed." };
+  }
 }

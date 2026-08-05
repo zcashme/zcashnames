@@ -113,7 +113,7 @@ async function classifySeed(
       address: result.registration.address,
     };
   }
-  // available / reserved / blocked → valid name, nobody owns it
+  // available / protected / blocked → valid name, nobody owns it
   return { resolved: { seed: name, kind: "name", status: "unregistered" }, address: null };
 }
 

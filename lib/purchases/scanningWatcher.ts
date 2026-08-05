@@ -113,7 +113,7 @@ export function isExpectedMined(reg: ResolveName | null, expected: Expected): bo
     case "DELIST":
       return reg.status === "registered";
     case "RELEASE":
-      return reg.status === "available" || reg.status === "reserved";
+      return reg.status === "available" || reg.status === "protected";
   }
 }
 

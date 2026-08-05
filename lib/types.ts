@@ -56,15 +56,15 @@ export const ACTION_NOUNS = {
 
 // Auth shape for the zns server actions. Two orthogonal axes:
 //   - `owner`: proof of ownership over the name (none / otp / sign).
-//   - `reservedUnlock`: only meaningful when CLAIMing a reserved name. A
-//     reserved sovereign claim sends both in one dispatch.
+//   - `protectedUnlock`: only meaningful when CLAIMing a protected name. A
+//     protected sovereign claim sends both in one dispatch.
 export type NameOwnership =
   | { kind: "none" }
   | { kind: "otp"; token: string }
   | { kind: "sign"; signature: string; pubkey: string };
 
 export interface ActionAuth {
-  reservedUnlock?: string;
+  protectedUnlock?: string;
   owner: NameOwnership;
 }
 
@@ -123,7 +123,7 @@ export const ACTION_CAPS: Record<Action, ActionCaps> = {
  * Derive the linear phase list for an action given the runtime context.
  *
  * Rules:
- *   - Reserved CLAIM prepends `unlock`.
+ *   - Protected CLAIM prepends `unlock`.
  *   - `input` appears if the action collects user data.
  *   - The `otp` phase appears for owner actions (needsAuth).
  *   - `confirm` always appears.
@@ -140,7 +140,7 @@ export function phasesFor(
   const caps = ACTION_CAPS[action];
   const phases: Phase[] = [];
 
-  if (action === "CLAIM" && resolve.status === "reserved") phases.push("unlock");
+  if (action === "CLAIM" && resolve.status === "protected") phases.push("unlock");
   if (caps.needsInput) phases.push("input");
   if (caps.needsAuth) phases.push("otp");
 
@@ -161,7 +161,7 @@ export type NameAvailabilityState =
   | "available"
   | "forsale"
   | "unavailable"
-  | "reserved"
+  | "protected"
   | "blocked";
 
 /* ── Auth ─────────────────────────────────────────────────────────────── */
@@ -235,7 +235,7 @@ export interface ZnsEvent {
 
 export type ResolveName =
   | { status: "available"; query: string; claimCost: { zats: number; zec: number } }
-  | { status: "reserved";  query: string; claimCost: { zats: number; zec: number } }
+  | { status: "protected"; query: string; claimCost: { zats: number; zec: number } }
   | { status: "blocked";   query: string }
   | {
       status: "registered";

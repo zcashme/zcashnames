@@ -5,12 +5,13 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { useCopy } from "@/components/hooks/useCopy";
-import useVisibleContainerCenter from "@/components/hooks/useVisibleContainerCenter";
 import PaginationControls from "@/components/PaginationControls";
 import { InlineSearchField } from "@/components/search/InlineSearchField";
 import DataViewTabs from "@/components/table/DataViewTabs";
 import SearchResultsSummary from "@/components/table/SearchResultsSummary";
 import { TableRowsMenu, TableSortMenu } from "@/components/table/TableIconMenus";
+import TableLoadingOverlay from "@/components/table/TableLoadingOverlay";
+import useCachedRemoteTableData from "@/components/table/useCachedRemoteTableData";
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import type {
   PublicWaitlistViewData,
@@ -637,14 +638,6 @@ export default function WaitlistViewClient({
   adminWalletUivk,
   referralsPerSpot,
 }: WaitlistViewClientProps) {
-  const [rows, setRows] = useState(initialRows);
-  const [allCount, setAllCount] = useState(initialAllCount);
-  const [totalCount, setTotalCount] = useState(initialTotalCount);
-  const [reservedOnlyCount, setReservedOnlyCount] = useState(initialReservedOnlyCount);
-  const [protectedOnlyCount, setProtectedOnlyCount] = useState(initialProtectedOnlyCount);
-  const [heroAllCount, setHeroAllCount] = useState(initialHeroAllCount);
-  const [heroReservedCount, setHeroReservedCount] = useState(initialHeroReservedCount);
-  const [heroProtectedCount, setHeroProtectedCount] = useState(initialHeroProtectedCount);
   const [draftSearch, setDraftSearch] = useState(initialSearchQuery);
   const [appliedSearch, setAppliedSearch] = useState(initialSearchQuery);
   const [searchMode, setSearchMode] = useState<WaitlistViewSearchMode>(
@@ -656,46 +649,33 @@ export default function WaitlistViewClient({
   const [sortKey, setSortKey] = useState<WaitlistViewSortKey>(initialSortKey);
   const [sortDirection, setSortDirection] = useState<WaitlistViewSortDirection>(initialSortDirection);
   const [page, setPage] = useState(initialPage);
-  const [hasMore, setHasMore] = useState(initialHasMore);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [showViewKeyModal, setShowViewKeyModal] = useState(false);
   const [headerInfo, setHeaderInfo] = useState<{ title: string; body: string } | null>(null);
-  const firstLoadRef = useRef(true);
-  const queryCacheRef = useRef<Map<string, PublicWaitlistViewData>>(new Map());
+  const initialDataRef = useRef<PublicWaitlistViewData>({
+    rows: initialRows,
+    allCount: initialAllCount,
+    totalCount: initialTotalCount,
+    reservedOnlyCount: initialReservedOnlyCount,
+    protectedOnlyCount: initialProtectedOnlyCount,
+    heroAllCount: initialHeroAllCount,
+    heroReservedCount: initialHeroReservedCount,
+    heroProtectedCount: initialHeroProtectedCount,
+    page: initialPage,
+    pageSize: initialPageSize,
+    hasMore: initialHasMore,
+    sortKey: initialSortKey,
+    sortDirection: initialSortDirection,
+    searchQuery: initialSearchQuery,
+    searchMode: initialSearchMode,
+    earlyAccessStartAt,
+    earlyAccessLabel,
+    adminWalletUivk,
+    referralsPerSpot,
+  });
   const tableShellRef = useRef<HTMLDivElement | null>(null);
   const effectiveSearchMode: WaitlistViewSearchMode = appliedSearch.trim() ? searchMode : "contains";
-  const overlayCenter = useVisibleContainerCenter(tableShellRef.current, isRefreshing);
-
-  function applyViewData(data: PublicWaitlistViewData) {
-    setRows(data.rows);
-    setAllCount(data.allCount);
-    setTotalCount(data.totalCount);
-    setReservedOnlyCount(data.reservedOnlyCount);
-    setProtectedOnlyCount(data.protectedOnlyCount);
-    setHeroAllCount(data.heroAllCount);
-    setHeroReservedCount(data.heroReservedCount);
-    setHeroProtectedCount(data.heroProtectedCount);
-    setPage(data.page);
-    setPageSize(data.pageSize);
-    setHasMore(data.hasMore);
-  }
-
-  function writeQueryCache(key: string, data: PublicWaitlistViewData) {
-    const cache = queryCacheRef.current;
-    if (cache.has(key)) {
-      cache.delete(key);
-    }
-    cache.set(key, data);
-
-    while (cache.size > WAITLIST_VIEW_CACHE_LIMIT) {
-      const oldestKey = cache.keys().next().value;
-      if (!oldestKey) break;
-      cache.delete(oldestKey);
-    }
-  }
+  const initialData = initialDataRef.current;
 
   const initialCacheKey = buildWaitlistViewCacheKey({
     page: initialPage,
@@ -707,113 +687,59 @@ export default function WaitlistViewClient({
     reservedOnly: false,
     protectedOnly: false,
   });
-  if (!queryCacheRef.current.has(initialCacheKey)) {
-    writeQueryCache(initialCacheKey, {
-      rows: initialRows,
-      allCount: initialAllCount,
-      totalCount: initialTotalCount,
-      reservedOnlyCount: initialReservedOnlyCount,
-      protectedOnlyCount: initialProtectedOnlyCount,
-      heroAllCount: initialHeroAllCount,
-      heroReservedCount: initialHeroReservedCount,
-      heroProtectedCount: initialHeroProtectedCount,
-      page: initialPage,
-      pageSize: initialPageSize,
-      hasMore: initialHasMore,
-      sortKey: initialSortKey,
-      sortDirection: initialSortDirection,
-      searchQuery: initialSearchQuery,
-      searchMode: initialSearchMode,
-      earlyAccessStartAt,
-      earlyAccessLabel,
-      adminWalletUivk,
-      referralsPerSpot,
-    });
-  }
+  const queryKey = buildWaitlistViewCacheKey({
+    page,
+    pageSize,
+    sortKey,
+    sortDirection,
+    searchQuery: appliedSearch,
+    searchMode: effectiveSearchMode,
+    reservedOnly,
+    protectedOnly,
+  });
+  const { data: viewData, isRefreshing, loadError } = useCachedRemoteTableData({
+    initialCacheKey,
+    initialData,
+    queryKey,
+    cacheLimit: WAITLIST_VIEW_CACHE_LIMIT,
+    fetchData: async () => {
+      const response = await fetch(
+        buildWaitlistViewUrl({
+          page,
+          pageSize,
+          sortKey,
+          sortDirection,
+          searchQuery: appliedSearch,
+          searchMode: effectiveSearchMode,
+          reservedOnly,
+          protectedOnly,
+        }),
+        { cache: "no-store" },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to refresh waitlist rows.");
+      }
+
+      return (await response.json()) as PublicWaitlistViewData;
+    },
+  });
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(intervalId);
   }, []);
 
-  useEffect(() => {
-    if (firstLoadRef.current) {
-      firstLoadRef.current = false;
-      return;
-    }
-    let cancelled = false;
-    const queryKey = buildWaitlistViewCacheKey({
-      page,
-      pageSize,
-      sortKey,
-      sortDirection,
-      searchQuery: appliedSearch,
-      searchMode: effectiveSearchMode,
-      reservedOnly,
-      protectedOnly,
-    });
-
-    async function refreshRows() {
-      const cachedData = queryCacheRef.current.get(queryKey);
-      if (cachedData) {
-        setLoadError(null);
-        applyViewData(cachedData);
-        return;
-      }
-
-      setIsRefreshing(true);
-      setLoadError(null);
-
-      try {
-        const response = await fetch(
-          buildWaitlistViewUrl({
-            page,
-            pageSize,
-            sortKey,
-            sortDirection,
-            searchQuery: appliedSearch,
-            searchMode: effectiveSearchMode,
-            reservedOnly,
-            protectedOnly,
-          }),
-          { cache: "no-store" },
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to refresh waitlist rows.");
-        }
-
-        const data = (await response.json()) as PublicWaitlistViewData;
-        if (cancelled) return;
-        writeQueryCache(queryKey, data);
-        applyViewData(data);
-      } catch (error) {
-        if (cancelled) return;
-        setLoadError(error instanceof Error ? error.message : "Failed to refresh waitlist rows.");
-      } finally {
-        if (!cancelled) {
-          setIsRefreshing(false);
-        }
-      }
-    }
-
-    void refreshRows();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [appliedSearch, effectiveSearchMode, page, pageSize, protectedOnly, reservedOnly, sortDirection, sortKey]);
-
   const countdownText = formatRemaining(new Date(earlyAccessStartAt).getTime(), nowMs);
   const allActive = !reservedOnly && !protectedOnly && appliedSearch.trim() === "";
-  const visibleRows = rows;
+  const visibleRows = viewData.rows;
   const maskedQueueViewKey = maskQueueViewKey(adminWalletUivk);
   const hasSearchInput = !!draftSearch.trim();
   const activeSortOptionKey =
     SORT_OPTIONS.find((option) => option.sortKey === sortKey && option.sortDirection === sortDirection)?.key
     ?? SORT_OPTIONS[0].key;
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-  const heroNamesCount = heroAllCount;
+  const totalPages = Math.max(1, Math.ceil(viewData.totalCount / pageSize));
+  const heroNamesCount = viewData.heroAllCount;
 
   function applySearch() {
     setPage(1);
@@ -986,7 +912,7 @@ export default function WaitlistViewClient({
                       <CheckIcon />
                     </span>
                     <span>
-                      <strong style={{ color: "var(--fg-heading)" }}>{heroReservedCount.toLocaleString()}</strong> reserved
+                      <strong style={{ color: "var(--fg-heading)" }}>{viewData.heroReservedCount.toLocaleString()}</strong> reserved
                     </span>
                   </span>
                   <span className="inline-flex items-center gap-2" style={{ color: "var(--fg-body)" }}>
@@ -996,7 +922,7 @@ export default function WaitlistViewClient({
                     >
                       <PadlockSymbol className="h-4 w-4" />
                     </span>
-                    <span><strong style={{ color: "var(--fg-heading)" }}>{heroProtectedCount.toLocaleString()}</strong> protected</span>
+                    <span><strong style={{ color: "var(--fg-heading)" }}>{viewData.heroProtectedCount.toLocaleString()}</strong> protected</span>
                   </span>
                 </div>
                 <div
@@ -1007,10 +933,10 @@ export default function WaitlistViewClient({
                   }}
                 >
                   <span>Already on the waitlist? Complete your reservation to purchase your name during Early Access.</span>
-                  <span className="mt-1 block text-center text-sm">
+                  <span className="mt-1 block text-center text-base">
                     <Link
                       href="/reserve"
-                      className="text-[0.78rem] font-normal underline"
+                      className="font-normal underline"
                       style={{ color: "var(--color-accent-interactive)" }}
                     >
                       Get started
@@ -1050,7 +976,7 @@ export default function WaitlistViewClient({
         {appliedSearch.trim() ? (
           <SearchResultsSummary
             query={appliedSearch}
-            matchCount={isRefreshing ? null : totalCount}
+            matchCount={isRefreshing ? null : viewData.totalCount}
             onClear={() => {
               setDraftSearch("");
               setAppliedSearch("");
@@ -1064,7 +990,7 @@ export default function WaitlistViewClient({
           tabs={[
             {
               key: "all",
-              label: `All (${allCount})`,
+              label: `All (${viewData.allCount})`,
               active: allActive,
               onClick: () => {
                 setDraftSearch("");
@@ -1077,7 +1003,7 @@ export default function WaitlistViewClient({
             },
             {
               key: "reserved",
-              label: `Reserved only (${reservedOnlyCount})`,
+              label: `Reserved only (${viewData.reservedOnlyCount})`,
               active: reservedOnly,
               onClick: () => {
                 setPage(1);
@@ -1087,7 +1013,7 @@ export default function WaitlistViewClient({
             },
             {
               key: "protected",
-              label: `Protected (${protectedOnlyCount})`,
+              label: `Protected (${viewData.protectedOnlyCount})`,
               active: protectedOnly,
               onClick: () => {
                 setPage(1);
@@ -1311,7 +1237,7 @@ export default function WaitlistViewClient({
             </div>
           </div>
 
-          {rows.length > 0 ? (
+          {viewData.rows.length > 0 ? (
             <PaginationControls
               page={page}
               totalPages={totalPages}
@@ -1323,32 +1249,11 @@ export default function WaitlistViewClient({
             />
           ) : null}
 
-          {isRefreshing ? (
-            <div
-              className="pointer-events-none absolute inset-0 z-10 rounded-2xl"
-              style={{
-                background: "color-mix(in srgb, var(--color-background) 36%, transparent)",
-                backdropFilter: "blur(3px)",
-              }}
-              aria-hidden="true"
-            >
-              <div
-                className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 px-5 py-4"
-                style={{
-                  left: `${overlayCenter.x}px`,
-                  top: `${overlayCenter.y}px`,
-                }}
-              >
-                <div
-                  className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent"
-                  style={{ color: "var(--color-accent-interactive)" }}
-                />
-                <p className="text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>
-                  Loading waitlist...
-                </p>
-              </div>
-            </div>
-          ) : null}
+          <TableLoadingOverlay
+            active={isRefreshing}
+            anchorElement={tableShellRef.current}
+            label="Loading waitlist..."
+          />
         </div>
       </div>
 

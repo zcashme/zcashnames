@@ -28,8 +28,9 @@ type WaitlistViewDbRow = {
   campaign_email_confirm_response: boolean | null;
 };
 
-type ReservedNameRow = {
+type ProtectedNameRow = {
   name: string | null;
+  normalized_name: string | null;
 };
 
 type PublicWaitlistViewSnapshotRow = {
@@ -180,14 +181,16 @@ async function fetchAllWaitlistRows(): Promise<WaitlistViewDbRow[]> {
   return rows.sort(compareByCreatedAtThenId);
 }
 
-async function fetchAllReservedNames(): Promise<ReservedNameRow[]> {
-  return fetchAllSupabaseRows<ReservedNameRow>({
+async function fetchAllProtectedNames(): Promise<ProtectedNameRow[]> {
+  return fetchAllSupabaseRows<ProtectedNameRow>({
     pageSize: WAITLIST_VIEW_SOURCE_BATCH_SIZE,
     fetchPage: async (from, to) =>
       await db
-        .from("zn_reserved_names")
-        .select("name")
-        .order("name", { ascending: true })
+        .from("zn_protected_names")
+        .select("name, normalized_name")
+        .eq("status", "protected")
+        .eq("redeemed", false)
+        .order("normalized_name", { ascending: true })
         .range(from, to),
   });
 }
@@ -227,7 +230,7 @@ async function fetchRankPeerRows(normalizedNames: string[]): Promise<RankPeerSna
 
 function buildSnapshotRows(args: {
   waitlistRows: WaitlistViewDbRow[];
-  reservedNames: ReservedNameRow[];
+  protectedNames: ProtectedNameRow[];
 }): PublicWaitlistViewSnapshotRow[] {
   const allRows = args.waitlistRows;
   const verifiedRows = allRows.filter((row) => row.email_verified === true);
@@ -236,9 +239,9 @@ function buildSnapshotRows(args: {
   );
   const reservedVerifiedIds = new Set(reservedVerifiedRows.map((row) => row.id));
   const nameCounts = new Map<string, number>();
-  const reservedNames = new Set(
-    args.reservedNames
-      .map((row) => normalizeName(row.name))
+  const protectedNames = new Set(
+    args.protectedNames
+      .map((row) => normalizeName(row.normalized_name) ?? normalizeName(row.name))
       .filter((value): value is string => Boolean(value)),
   );
   const reservedChildrenByParent = new Map<string, WaitlistViewDbRow[]>();
@@ -325,7 +328,7 @@ function buildSnapshotRows(args: {
       source_created_at: row.created_at,
       base_position: basePosition,
       interest_count: interestCount,
-      is_protected: reservedNames.has(normalizedName),
+      is_protected: protectedNames.has(normalizedName),
       direct_referrals: directReferrals,
       reserved_referrals: reservedReferrals,
       indirect_referrals: indirectReferrals,
@@ -384,13 +387,13 @@ function buildSnapshotRows(args: {
 }
 
 export async function rebuildPublicWaitlistViewSnapshot(): Promise<{ rowCount: number }> {
-  const [, waitlistRows, reservedNames, existingSnapshotIds] = await Promise.all([
+  const [, waitlistRows, protectedNames, existingSnapshotIds] = await Promise.all([
     syncWaitlistReservationFieldsFromReserves(),
     fetchAllWaitlistRows(),
-    fetchAllReservedNames(),
+    fetchAllProtectedNames(),
     fetchAllSnapshotIds(),
   ]);
-  const snapshotRows = buildSnapshotRows({ waitlistRows, reservedNames });
+  const snapshotRows = buildSnapshotRows({ waitlistRows, protectedNames });
   const currentIds = new Set(snapshotRows.map((row) => row.source_waitlist_id));
 
   for (let start = 0; start < snapshotRows.length; start += WAITLIST_VIEW_SNAPSHOT_WRITE_BATCH_SIZE) {

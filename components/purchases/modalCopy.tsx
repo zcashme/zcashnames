@@ -45,7 +45,7 @@ export function SentenceLines({ children }: { children: React.ReactNode }) {
 }
 
 export function phaseHeader(action: Action, phase: Phase): string {
-  if (phase === "unlock") return "Reserved Name";
+  if (phase === "unlock") return "Protected Name";
   if (phase === "input") return `${ACTION_LABELS[action]}`;
   if (phase === "otp") return "Verify Ownership";
   if (phase === "confirm") return action === "BUY" ? "Intent to Purchase" : "Send Payment";
@@ -163,7 +163,7 @@ export function modalDescription(
   options?: { isResume?: boolean; listingPriceZec?: number },
 ): React.ReactNode {
   if (phase === "unlock") {
-    return <><NameBadge name={name} /> is reserved. Enter unlock code to continue.</>;
+    return <><NameBadge name={name} /> is protected. Enter unlock code to continue.</>;
   }
   if (phase === "input") {
     if (options?.isResume) {

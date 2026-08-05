@@ -10,7 +10,7 @@
  *
  * Two kinds:
  *  - "otp"      Subject passed OTP / social verification (subject is usually an email).
- *  - "unlock"   Subject (a reserved name) was unlocked with the correct unlock code.
+ *  - "unlock"   Subject (a protected name) was unlocked with the correct unlock code.
  *
  * Properties this design gives us:
  *  - Stateless:    the secret + HMAC is the source of truth; nothing to store.

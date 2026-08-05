@@ -8,7 +8,7 @@ import {
   zatsToZec,
 } from "@/lib/zns/utils";
 import type { Network, Action, ResolveName, Registration } from "@/lib/types";
-import { getReservedName } from "@/lib/zns/reserved";
+import { getProtectedClaimGate } from "@/lib/zns/protected-claim";
 import { getNamePricing } from "@/lib/network-stats";
 
 //
@@ -16,8 +16,9 @@ import { getNamePricing } from "@/lib/network-stats";
 // explorer and search — every name lookup in the app flows through here.
 //
 // resolveName() is the central dispatch: it normalises the input, queries
-// the ZNS indexer, checks the reserved-names table (Supabase), computes
-// the claim cost, and returns a typed ResolveName union the UI can switch on.
+// the ZNS indexer, checks zn_protected_names (status=protected, not redeemed),
+// computes the claim cost, and returns a typed ResolveName union the UI can
+// switch on.
 //
 // The other exports (getCurrentRegistrations, getListings, getEvents,
 // getHomeStats) power the explorer page — they fetch paginated / filtered
@@ -51,21 +52,15 @@ export async function resolveName(
   const registration = await zns.resolveName(normalized);
   const nameStatus = registrationStatus(registration);
 
-  // Name is unregistered — check if it's reserved or blocked, then compute cost
+  // Name is unregistered — check protected-name gate, then compute cost.
+  // status=protected + !redeemed requires an unlock code (status "protected").
   if (nameStatus === "available") {
-    const reserved = await getReservedName(normalized);
-
-    // Some names (slurs, impersonation targets) are permanently blocked
-    if (reserved && !reserved.redeemed && reserved.category === "offensive") {
-      return { status: "blocked", query: normalized };
-    }
-
+    const protectedGate = await getProtectedClaimGate(normalized);
     const claimCostZats = await getNamePricing(network, normalized.length);
 
-    // Reserved names (brands, protocol terms, community) need an unlock code
-    if (reserved && !reserved.redeemed) {
+    if (protectedGate) {
       return {
-        status: "reserved",
+        status: "protected",
         query: normalized,
         claimCost: { zats: claimCostZats, zec: zatsToZec(claimCostZats) },
       };

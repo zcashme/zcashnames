@@ -85,7 +85,7 @@ export interface CardProps {
 export function buildCardProps(result: ResolveName): CardProps {
   switch (result.status) {
     case "available":
-    case "reserved": {
+    case "protected": {
       const zec = result.claimCost.zec;
       return {
         availabilityState: result.status,

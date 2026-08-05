@@ -17,8 +17,9 @@ export type WaitlistProtectedContactMethod = {
   value: string;
 };
 
-type ReservedNameLookupRow = {
+type ProtectedNameLookupRow = {
   name: string;
+  normalized_name: string;
   category: string | null;
   redeemed: boolean | null;
 };
@@ -137,24 +138,31 @@ export async function getProtectedNameInfoByName(
   }
 
   const { data, error } = await db
-    .from("zn_reserved_names")
-    .select("name, category, redeemed")
-    .in("name", normalizedNames);
+    .from("zn_protected_names")
+    .select("name, normalized_name, category, redeemed")
+    .in("normalized_name", normalizedNames)
+    .eq("status", "protected");
 
   if (error) {
     throw new Error(error.message);
   }
 
-  for (const row of (data ?? []) as ReservedNameLookupRow[]) {
-    const normalizedName = normalizeNameValue(row.name);
+  for (const row of (data ?? []) as ProtectedNameLookupRow[]) {
+    const normalizedName = normalizeNameValue(row.normalized_name) ?? normalizeNameValue(row.name);
     if (!normalizedName) continue;
 
+    // Prefer keeping an unredeemed row if multiple match the same name.
+    const existing = protectedByName.get(normalizedName);
     const redeemed = row.redeemed === true;
+    if (existing && existing.isProtected && redeemed) {
+      continue;
+    }
+
     protectedByName.set(normalizedName, {
       name: row.name,
       category: row.category,
       redeemed,
-      isProtected: !redeemed && row.category !== "offensive",
+      isProtected: !redeemed,
     });
   }
 

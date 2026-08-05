@@ -35,6 +35,7 @@ type ActionDropdownProps = {
   onOpenChange?: (open: boolean) => void;
   open?: boolean;
   renderTriggerContent?: (open: boolean) => ReactNode;
+  rootClassName?: string;
   showTriggerIcon?: boolean;
   triggerAriaLabel?: string;
   triggerIcon?: ReactNode;
@@ -207,6 +208,7 @@ export function ActionDropdown({
   onOpenChange,
   open: controlledOpen,
   renderTriggerContent,
+  rootClassName,
   showTriggerIcon = true,
   triggerAriaLabel,
   triggerIcon,
@@ -337,8 +339,20 @@ export function ActionDropdown({
   );
 
   return (
-    <div ref={rootRef} className={`relative flex w-full flex-col gap-2 ${rootAlignmentClassName}`}>
-      <div className={`flex w-full flex-col gap-2 ${triggerRowClassName}`}>
+    <div
+      ref={rootRef}
+      className={
+        rootClassName
+        ?? `relative flex w-full flex-col gap-2 ${rootAlignmentClassName}`
+      }
+    >
+      <div
+        className={
+          rootClassName
+            ? "flex flex-col gap-2 items-center"
+            : `flex w-full flex-col gap-2 ${triggerRowClassName}`
+        }
+      >
         <button
           type="button"
           onClick={() => setOpen((current) => !current)}

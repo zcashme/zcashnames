@@ -19,6 +19,7 @@ type StoredResume = ResumeSnapshot<S>;
 import {
   checkUnlockCode, verifyOtp, claimAction, buyAction,
   updateAction, listAction, delistAction, releaseAction,
+  markProtectedNameRedeemedAction,
 } from "@/lib/zns/actions";
 import { validateAddress } from "@/lib/zns/utils";
 import { generateSessionId, buildZvsMemo } from "@/lib/purchases/memo";
@@ -52,7 +53,7 @@ function parsePrice(raw: string): number | null {
 // ---- Auth dispatch ---------------------------------------------------------
 //
 // NameOwnership / ActionAuth live in lib/types.ts (next to Action, Network,
-// Phase). The two-axis split — name-ownership proof vs. reserved-claim
+// Phase). The two-axis split — name-ownership proof vs. protected-claim
 // unlock — is a domain concept, not a modal-local one.
 
 interface ActionData {
@@ -76,7 +77,7 @@ async function dispatchAction(
   const pub = auth.owner.kind === "sign" ? auth.owner.pubkey : undefined;
   const otp = auth.owner.kind === "otp" ? auth.owner.token : undefined;
   switch (action) {
-    case "CLAIM":   return claimAction(name, data.address, network, auth.reservedUnlock, sig, pub);
+    case "CLAIM":   return claimAction(name, data.address, network, auth.protectedUnlock, sig, pub);
     case "BUY":     return buyAction(name, data.address, network, undefined, sig, pub);
     case "UPDATE":  return updateAction(name, data.address, network, otp, sig, pub);
     case "LIST":    return listAction(name, data.priceZats, data.payTaddr, network, otp, sig, pub);
@@ -276,8 +277,9 @@ export default function Zip321Modal({
       // handleInputContinue once the user has entered their address — calling
       // claimAction here would fail server-side address validation.
       advance({ unlockProof: result.proof, unlockLoading: false });
-    } catch {
-      set({ unlockError: "Something went wrong. Try again.", unlockLoading: false });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong. Try again.";
+      set({ unlockError: message || "Something went wrong. Try again.", unlockLoading: false });
     }
   }
 
@@ -342,7 +344,7 @@ export default function Zip321Modal({
       const addr = s.addressInput.trim();
       const ar = await dispatchAction(action, name, network,
         { address: addr, priceZats: 0, payTaddr: "" },
-        { reservedUnlock: action === "CLAIM" ? s.unlockProof || undefined : undefined, owner: { kind: "none" } });
+        { protectedUnlock: action === "CLAIM" ? s.unlockProof || undefined : undefined, owner: { kind: "none" } });
       if (!ar.ok) { set({ inputError: ar.error }); return; }
       advance({ address: addr, uri: ar.uri, memo: ar.memo, paymentAddress: ar.paymentAddress ?? "", amountZec: ar.amountZec ?? "", ...otpPatch });
     } else {
@@ -441,6 +443,9 @@ export default function Zip321Modal({
       }
       if (next === "mined" && !cur.successFired) {
         set({ scanState: "mined", successFired: true });
+        if (action === "CLAIM") {
+          void markProtectedNameRedeemedAction(name);
+        }
         onSuccess?.(name);
         return;
       }
@@ -617,7 +622,7 @@ export default function Zip321Modal({
         {progressSegments && <div className="mb-5">{progressSegments}</div>}
         {phase === "unlock" && (
           <div className="flex flex-col gap-4">
-            <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Reserved Name</h2>
+            <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>Protected Name</h2>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               {modalDescription(action, "unlock", name, s)}
             </p>

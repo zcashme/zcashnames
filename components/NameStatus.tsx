@@ -97,11 +97,11 @@ export function NameStatusBadge({ status }: { status: NameAvailabilityState }) {
     );
   }
 
-  if (status === "reserved") {
+  if (status === "protected") {
     return (
       <StatusBadge
         variant="neutral"
-        label="Reserved"
+        label="Protected"
         icon={
           <svg
             viewBox="0 0 16 16"
@@ -147,7 +147,7 @@ export function NameStatusBadge({ status }: { status: NameAvailabilityState }) {
 // Pure predicate: does this status have an associated price/listing?
 // Used to conditionally show price info in search results and explorer rows.
 export function statusSupportsPrice(status: NameAvailabilityState): boolean {
-  return status === "available" || status === "forsale" || status === "reserved";
+  return status === "available" || status === "forsale" || status === "protected";
 }
 
 // Renders the correct set of action buttons for a given name status.
@@ -275,7 +275,7 @@ export function NameStatusButtons({
     );
   }
 
-  if (status === "reserved") {
+  if (status === "protected") {
     return (
       <div
         className={`relative z-[1] mt-3 flex items-center gap-2 ${justifyClass} max-[700px]:flex-wrap`}

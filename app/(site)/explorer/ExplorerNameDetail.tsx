@@ -1,7 +1,7 @@
 /**
  * ExplorerNameDetail — the name resolution panel that appears when a user
  * searches for a specific name in the explorer. Displays the resolved status
- * (available / registered / listed / reserved), ownership details (address,
+ * (available / registered / listed / protected), ownership details (address,
  * block, txid), a link to ZcashMe, listing info (payout, pending buyer), and
  * an event history table. Accepts an onAction callback that opens Zip321Modal
  * for buy/claim flows.
@@ -25,7 +25,7 @@ function toAvailabilityState(result: ResolveName): NameAvailabilityState {
   if (result.status === "available") return "available";
   if (result.status === "listed") return "forsale";
   if (result.status === "registered") return "unavailable";
-  if (result.status === "reserved") return "reserved";
+  if (result.status === "protected") return "protected";
   return "blocked";
 }
 
@@ -63,8 +63,8 @@ export default function ExplorerNameDetail({
   const availabilityState = result ? toAvailabilityState(result) : null;
   const encodedName = encodeURIComponent(result?.query ?? query);
   const zcashMeUrl = `https://zcash.me/${encodedName}`;
-  const reserved = result?.status === "reserved" ? result : null;
-  const priceZec = listed?.listingPrice.zec ?? available?.claimCost.zec ?? reserved?.claimCost.zec;
+  const protectedName = result?.status === "protected" ? result : null;
+  const priceZec = listed?.listingPrice.zec ?? available?.claimCost.zec ?? protectedName?.claimCost.zec;
   const usdLabel = priceZec != null ? formatUsdEquivalent(priceZec, usdPerZec) : "";
   const showCenteredActionLayout = !!availabilityState;
 

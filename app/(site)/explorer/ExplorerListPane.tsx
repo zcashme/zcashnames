@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PaginationControls from "@/components/PaginationControls";
 import ActionBadge from "@/components/ActionBadge";
-import useVisibleContainerCenter from "@/components/hooks/useVisibleContainerCenter";
 import DataViewTabs from "@/components/table/DataViewTabs";
 import { TableRowsMenu, TableSortMenu } from "@/components/table/TableIconMenus";
+import TableLoadingOverlay from "@/components/table/TableLoadingOverlay";
+import useCachedRemoteTableData from "@/components/table/useCachedRemoteTableData";
 import { ACTIONS, ACTION_COLORS, ACTION_LABELS } from "@/lib/types";
 import { zatsToZec } from "@/lib/zns/utils";
 import type { Listing, Network, Registration, ZnsEvent } from "@/lib/types";
@@ -49,11 +50,6 @@ export default function ExplorerListPane({
 }: ExplorerListPaneProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [data, setData] = useState(initialData);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const cacheRef = useRef<Map<string, ExplorerListData>>(new Map());
-  const lastRefreshNonceRef = useRef(refreshNonce);
   const tableShellRef = useRef<HTMLDivElement | null>(null);
 
   const selectedName = searchParams.get("name");
@@ -79,26 +75,16 @@ export default function ExplorerListPane({
     searchQuery,
     searchMode,
   });
-  const overlayCenter = useVisibleContainerCenter(tableShellRef.current, isRefreshing);
-
-  function writeCache(key: string, nextData: ExplorerListData) {
-    const cache = cacheRef.current;
-    if (cache.has(key)) {
-      cache.delete(key);
-    }
-    cache.set(key, nextData);
-
-    while (cache.size > EXPLORER_CACHE_LIMIT) {
-      const oldestKey = cache.keys().next().value;
-      if (!oldestKey) break;
-      cache.delete(oldestKey);
-    }
-  }
-
-  function applyData(nextData: ExplorerListData) {
-    setData(nextData);
-    onDataChange(nextData);
-  }
+  const initialKey = buildExplorerListCacheKey({
+    network: initialData.network,
+    tab: initialData.tab,
+    page: initialData.page,
+    pageSize: initialData.pageSize,
+    sortKey: initialData.sortKey,
+    sortDirection: initialData.sortDirection,
+    searchQuery: initialData.searchQuery,
+    searchMode: initialData.searchMode,
+  });
 
   function buildUrl(args: {
     network?: Network;
@@ -164,78 +150,35 @@ export default function ExplorerListPane({
     window.history.pushState(null, "", buildUrl(args));
   }
 
-  useEffect(() => {
-    const initialKey = buildExplorerListCacheKey({
-      network: initialData.network,
-      tab: initialData.tab,
-      page: initialData.page,
-      pageSize: initialData.pageSize,
-      sortKey: initialData.sortKey,
-      sortDirection: initialData.sortDirection,
-      searchQuery: initialData.searchQuery,
-      searchMode: initialData.searchMode,
-    });
-    writeCache(initialKey, initialData);
-    applyData(initialData);
-  }, [initialData, onDataChange]);
+  const { data, isRefreshing, loadError } = useCachedRemoteTableData({
+    initialCacheKey: initialKey,
+    initialData,
+    queryKey: currentKey,
+    cacheLimit: EXPLORER_CACHE_LIMIT,
+    enabled: !showNameDetail,
+    forceRefreshToken: refreshNonce,
+    fetchData: async () => {
+      const response = await fetch(
+        `/api/explorer?${new URLSearchParams({
+          env: network,
+          tab,
+          page: String(page),
+          pageSize: String(pageSize),
+          sortKey,
+          sortDirection,
+          search: searchQuery,
+          searchMode,
+        }).toString()}`,
+        { cache: "no-store" },
+      );
 
-  useEffect(() => {
-    if (showNameDetail) return;
-
-    const forceRefresh = refreshNonce !== lastRefreshNonceRef.current;
-    lastRefreshNonceRef.current = refreshNonce;
-    const cached = forceRefresh ? null : cacheRef.current.get(currentKey);
-
-    if (cached) {
-      setLoadError(null);
-      applyData(cached);
-      return;
-    }
-
-    let cancelled = false;
-    setIsRefreshing(true);
-    setLoadError(null);
-
-    async function refreshList() {
-      try {
-        const response = await fetch(
-          `/api/explorer?${new URLSearchParams({
-            env: network,
-            tab,
-            page: String(page),
-            pageSize: String(pageSize),
-            sortKey,
-            sortDirection,
-            search: searchQuery,
-            searchMode,
-          }).toString()}`,
-          { cache: "no-store" },
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to refresh explorer rows.");
-        }
-
-        const nextData = (await response.json()) as ExplorerListData;
-        if (cancelled) return;
-        writeCache(currentKey, nextData);
-        applyData(nextData);
-      } catch (error) {
-        if (cancelled) return;
-        setLoadError(error instanceof Error ? error.message : "Failed to refresh explorer rows.");
-      } finally {
-        if (!cancelled) {
-          setIsRefreshing(false);
-        }
+      if (!response.ok) {
+        throw new Error("Failed to refresh explorer rows.");
       }
-    }
 
-    void refreshList();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentKey, network, onDataChange, page, pageSize, refreshNonce, searchMode, searchQuery, showNameDetail, sortDirection, sortKey, tab]);
+      return (await response.json()) as ExplorerListData;
+    },
+  });
 
   const totalPages = Math.max(1, Math.ceil(data.totalCount / pageSize));
   const activeEventsTotal = data.totalCount;
@@ -250,6 +193,10 @@ export default function ExplorerListPane({
   useEffect(() => {
     onLoadingChange?.(isRefreshing);
   }, [isRefreshing, onLoadingChange]);
+
+  useEffect(() => {
+    onDataChange(data);
+  }, [data, onDataChange]);
 
   function getRegistrationStatusBadgeStyle(listing: boolean) {
     if (listing) {
@@ -684,32 +631,11 @@ export default function ExplorerListPane({
             testId="explorer-pagination"
           />
 
-          {isRefreshing ? (
-            <div
-              className="pointer-events-none absolute inset-0 z-10 rounded-2xl"
-              style={{
-                background: "color-mix(in srgb, var(--color-background) 36%, transparent)",
-                backdropFilter: "blur(3px)",
-              }}
-              aria-hidden="true"
-            >
-              <div
-                className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 px-5 py-4"
-                style={{
-                  left: `${overlayCenter.x}px`,
-                  top: `${overlayCenter.y}px`,
-                }}
-              >
-                <div
-                  className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent"
-                  style={{ color: "var(--color-accent-interactive)" }}
-                />
-                <p className="text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>
-                  Loading explorer...
-                </p>
-              </div>
-            </div>
-          ) : null}
+          <TableLoadingOverlay
+            active={isRefreshing}
+            anchorElement={tableShellRef.current}
+            label="Loading explorer..."
+          />
         </div>
       </div>
     </>

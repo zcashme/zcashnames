@@ -1,24 +1,25 @@
-# Reserved Names
+# Protected Names
 
-Reserved names are a policy layer on top of the protocol. The indexer has no concept of "reserved" - to it, a name is either in `registrations` or it isn't. Reservation is enforced by the signing service: the admin key will not produce a `CLAIM` signature for a reserved name unless the requester presents a valid **unlock code**.
+Protected names are a policy layer on top of the protocol. The indexer has no concept of "protected" - to it, a name is either in `registrations` or it isn't. Protection is enforced by the signing service: the admin key will not produce a `CLAIM` signature for a protected name unless the requester presents a valid **unlock code**.
 
-For the end-user perspective see [Reserved Names (Use ZNS)](/docs/use/reserved-names).
+For the end-user perspective see [Protected Names (Use ZNS)](/docs/use/reserved-names).
 
 ## Storage
 
-Reserved names live in a Supabase table (`zn_reserved_names`) queried by the web app's server actions. The schema:
+Protected names live in a Supabase table (`zn_protected_names`) queried by the web app's server actions. The claim gate uses:
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `name` | text, primary key | Lowercased normalized name |
-| `category` | text | One of `brand`, `protocol`, `community`, `offensive` |
+| `normalized_name` | text | Lowercased normalized name used for lookups |
+| `status` | text | Only `protected` rows gate claims |
 | `redeemed` | boolean | True once the name has been claimed by its rightful owner |
+| `category` | text | Taxonomy (person, organization, brand, technology, community, abuse, other) — not used for claim gating |
 
-The table is outside the indexer's scope. Running your own indexer does not give you access to the reserved list - it's a policy-layer table specific to the `zcashnames.com` deployment. Third-party signing services can implement their own reservation policy (or skip it entirely).
+The table is outside the indexer's scope. Running your own indexer does not give you access to the protected list - it's a policy-layer table specific to the `zcashnames.com` deployment. Third-party signing services can implement their own protection policy (or skip it entirely).
 
 ## Unlock codes
 
-An unlock code is a deterministic HMAC fingerprint that the signing service can regenerate for any reserved name. It is distributed out-of-band (Discord, email) to the rightful owner.
+An unlock code is a deterministic HMAC fingerprint that the signing service can regenerate for any protected name. It is distributed out-of-band (Discord, email) to the rightful owner.
 
 
 Properties:
@@ -31,28 +32,21 @@ Properties:
 
 ## Claim flow
 
-1. User types a reserved name in the web UI.
-2. Server action calls `getReservedName(name)` and finds a non-redeemed row.
-3. UI prompts for the unlock code.
+1. User types a protected name in the web UI.
+2. Server action calls `getProtectedClaimGate(name)` and finds a row with `status = protected` and `redeemed = false`.
+3. UI prompts for the unlock code (status shown as **Protected**).
 4. User submits code. Server calls `verifyUnlockCode(name, code)`.
-5. If the code is valid and the category is not `offensive`, the server proceeds with the normal `buildSignedClaimMemo` flow: resolves (expects null), builds the canonical `CLAIM:{name}:{address}` pre-image, signs with the admin key, returns the memo to the client.
-6. Client shows the ZIP-321 URI. User sends the tx. Indexer processes the block normally - it has no idea this name was reserved.
-7. After confirmation, the server should mark `redeemed = true` in the reservation row so subsequent claim attempts are not gated on the unlock code. (Redemption tracking is operator-specific and not part of the protocol.)
+5. If the code is valid, the server proceeds with the normal `buildSignedClaimMemo` flow: resolves (expects null), builds the canonical `CLAIM:{name}:{address}` pre-image, signs with the admin key, returns the memo to the client.
+6. Client shows the ZIP-321 URI. User sends the tx. Indexer processes the block normally - it has no idea this name was protected.
+7. After the claim is mined, the server marks `redeemed = true` on matching protected rows so subsequent claim attempts are not gated on the unlock code.
 
 ## Category semantics
 
-| Category | Claim gated on | Blocks forever? |
-|----------|----------------|-----------------|
-| `brand` | Valid unlock code | No - once redeemed, the row is out of the way |
-| `protocol` | Valid unlock code | No |
-| `community` | Valid unlock code | No |
-| `offensive` | Nothing can unlock it | Yes - the signing service will not produce a CLAIM signature, period |
-
-`offensive` is the one place where the web UI acts as a censor. The `isBlocked` helper checks for this category explicitly. Other reservation tiers are discretionary: if a brand doesn't want their reserved name, they can simply not redeem it and it stays blocked by policy until the operator removes the row.
+Category is informational for operators and the protected-names admin UI. **Claim gating depends only on `status = protected` and `redeemed = false`.** Once redeemed, the row no longer requires an unlock code.
 
 ## Security properties and weaknesses
 
-- **Policy, not protocol.** Anyone running their own signing service can implement a different reservation policy - or none. The indexer will accept any validly-signed CLAIM.
-- **Admin-key trust.** This scheme only works because the admin key is the sole source of CLAIM signatures. If the signing key leaks, reserved names are no longer protected.
+- **Policy, not protocol.** Anyone running their own signing service can implement a different protection policy - or none. The indexer will accept any validly-signed CLAIM.
+- **Admin-key trust.** This scheme only works because the admin key is the sole source of CLAIM signatures. If the signing key leaks, protected names are no longer gated.
 - **Secret-rotation burden.** Rotating `ZNS_UNLOCK_SECRET` invalidates every previously issued unlock code. Do this only in concert with re-issuing codes to holders.
-- **Single point of failure.** The signing service's refusal is the entire enforcement mechanism. There is no on-chain way to distinguish a reserved name from any other name after it's been claimed.
+- **Single point of failure.** The signing service's refusal is the entire enforcement mechanism. There is no on-chain way to distinguish a protected name from any other name after it's been claimed.

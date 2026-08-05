@@ -1,44 +1,35 @@
-# Reserved Names
+# Protected Names
 
-Some names are set aside at launch so that brands, projects, legally protected terms, and community handles cannot be sniped by squatters. Reserved names are surfaced by the web app with a **Reserved** status and require an **unlock code** to claim.
+Some names are set aside at launch so that brands, projects, legally protected terms, and community handles cannot be sniped by squatters. These names are stored as **protected** rows and are surfaced by the web app with a **Protected** status. Claiming them requires an **unlock code**.
 
-## Categories
+## What is protected?
 
-| Category | What it means | Can be claimed? |
-|----------|---------------|-----------------|
-| **Brand** | A company, product, or wallet brand (`zcash`, `zingo`, `zashi`…) | With the correct unlock code, usually issued to the brand holder |
-| **Protocol** | Protocol-level terms (`zip`, `orchard`, `sapling`…) | With the correct unlock code |
-| **Community** | Well-known community handles or contributors | With the correct unlock code |
-| **Offensive** | Slurs, impersonation, abusive terms | Never - permanently blocked |
+A name is protected for claim when it exists in the protected-names list with:
 
-Once the rightful party claims a reserved name, the block lifts and the name behaves like any other registration.
+- `status = protected`, and
+- `redeemed = false`
+
+Category (person, organization, brand, technology, community, abuse, other) is used for operator review and display; it does not change whether an unlock code is required.
+
+Once the rightful party claims a protected name, `redeemed` is set to true and the unlock gate lifts. The name then behaves like any other registration.
 
 ## How unlock codes work
 
 An unlock code is a fixed 12-character fingerprint in the form `XXXX-XXXX-XXXX`. You don't choose it; the maintainers issue it to you. Brand owners get a code after verifying control of the brand; community handles get a code after coordinating with the maintainer.
 
-If you think a reserved name should be released to you, contact the maintainers via [Discord](https://discord.gg/z2H23QgAGf) or by opening an issue on the [directory repo](https://github.com/zcashme/directory).
+If you think a protected name should be released to you, contact the maintainers via [Discord](https://discord.gg/z2H23QgAGf) or by opening an issue on the [directory repo](https://github.com/zcashme/directory).
 
-For the HMAC derivation and the database shape, see [Reserved Names (protocol)](/docs/protocol/reserved-names).
+For the HMAC derivation and the database shape, see [Protected Names (protocol)](/docs/protocol/reserved-names).
 
-## Claiming a reserved name
+## Claiming a protected name
 
-1. Search for the name. It will show as **Reserved**.
+1. Search for the name. It will show as **Protected**.
 2. Enter the unlock code you were given (`XXXX-XXXX-XXXX`).
 3. Enter your Zcash unified address.
 4. Complete the normal claim flow - send the ZIP-321 transaction with the claim-cost amount.
 
 The web app verifies the unlock code server-side before issuing the signed `CLAIM` memo. The unlock code is not part of the on-chain memo - it is strictly a gate on the web UI's signing service.
 
-## What if I claim a reserved name directly via the memo protocol?
+## What if I claim a protected name directly via the memo protocol?
 
-You would need the admin's signature over the `CLAIM:{name}:{address}` pre-image, which is what the unlock code gates access to. Without the signature the indexer will reject the memo. Reserved status is therefore an honor-system policy layered on top of the protocol, enforced by the entity that holds the admin key.
-
-## Blocked names
-
-Names in the `offensive` category can never be claimed, not even with an unlock code. The web app refuses them and the signing service will not produce a signature for them. This is the one explicit exception to the otherwise first-come-first-served model.
-
-## Next
-
-- [Claiming a Name](/docs/use/claiming) - the normal claim flow.
-- [Reserved Names (protocol)](/docs/protocol/reserved-names) - the HMAC spec and database shape.
+You would need the admin's signature over the `CLAIM:{name}:{address}` pre-image, which is what the unlock code gates access to. Without the signature the indexer will reject the memo. Protected status is therefore an honor-system policy layered on top of the protocol, enforced by the entity that holds the admin key.

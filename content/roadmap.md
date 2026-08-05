@@ -28,7 +28,7 @@ End: 2026-06-09
 - Mempool feedback improves transaction transparency.
 
 # Beta v2  `TBA`
-Beta testers can unlock reserved names, claim names with emojis, and test how renewal and expiry rules respond to activity.
+Beta testers can unlock protected names, claim names with emojis, and test how renewal and expiry rules respond to activity.
 Start: 2026-06-19
 End: 2026-06-30
 - Reserved names can be claimed with an unlock code.

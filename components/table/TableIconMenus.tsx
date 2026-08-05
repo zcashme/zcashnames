@@ -8,6 +8,14 @@ type TableMenuOption<T extends string | number> = {
   label: string;
 };
 
+type TableIconButtonProps = {
+  ariaLabel: string;
+  borderColor: string;
+  icon: ReactNode;
+  onClick: () => void;
+  triggerBackground?: string;
+};
+
 type TableIconMenuProps<T extends string | number> = {
   ariaLabel: string;
   value: T;
@@ -93,6 +101,29 @@ function RowsIcon() {
   );
 }
 
+export function TableIconButton({
+  ariaLabel,
+  borderColor,
+  icon,
+  onClick,
+  triggerBackground = "color-mix(in srgb, var(--color-bg-elevated, transparent) 78%, transparent)",
+}: TableIconButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[color:var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)]"
+      style={{
+        border: `1px solid ${borderColor}`,
+        background: triggerBackground,
+      }}
+      aria-label={ariaLabel}
+    >
+      {icon}
+    </button>
+  );
+}
+
 function TableIconMenu<T extends string | number>({
   ariaLabel,
   value,
@@ -124,20 +155,15 @@ function TableIconMenu<T extends string | number>({
 
   return (
     <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[color:var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)]"
-        style={{
-          border: `1px solid ${borderColor}`,
-          background: triggerBackground,
-        }}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={ariaLabel}
-      >
-        {icon}
-      </button>
+      <div aria-haspopup="menu" aria-expanded={open}>
+        <TableIconButton
+          ariaLabel={ariaLabel}
+          borderColor={borderColor}
+          icon={icon}
+          onClick={() => setOpen((current) => !current)}
+          triggerBackground={triggerBackground}
+        />
+      </div>
 
       {open ? (
         <div

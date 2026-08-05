@@ -5,7 +5,7 @@ const meta: MetaRecord = {
   claiming: 'Claiming a Name',
   'buying-and-selling': 'Buying & Selling',
   managing: 'Managing Names',
-  'reserved-names': 'Reserved Names',
+  'reserved-names': 'Protected Names',
   'otp-verification': 'OTP Verification',
   wallets: 'Wallet Compatibility',
 }
