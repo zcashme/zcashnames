@@ -34,7 +34,18 @@ function ArrowLeftIcon({ className }: { className?: string }) {
   );
 }
 
-export default function ProtectedDisputePage() {
+type ProtectedDisputePageProps = {
+  searchParams?: Promise<{
+    name?: string;
+  }>;
+};
+
+export default async function ProtectedDisputePage({
+  searchParams,
+}: ProtectedDisputePageProps) {
+  const params = (await searchParams) ?? {};
+  const initialName = typeof params.name === "string" ? params.name : null;
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
       <SiteRouteTitle title="Dispute a Name" href="/protected/dispute" />
@@ -87,7 +98,7 @@ export default function ProtectedDisputePage() {
             className="pointer-events-none absolute right-0 top-[-1rem] z-10 block h-8 w-px"
             style={{ background: "var(--faq-border)" }}
           />
-          <ProtectedDisputeForm returnHref="/protected" />
+          <ProtectedDisputeForm returnHref="/protected" initialName={initialName} />
         </div>
       </div>
     </div>

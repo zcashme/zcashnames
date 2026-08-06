@@ -3,7 +3,7 @@ import "server-only";
 import { db } from "@/lib/db";
 
 const PROTECTED_VIEW_SELECT =
-  "name, normalized_name, parent_name, category, status, redeemed, protected_at, rejected_at, rejected_reason, updated_at, created_at, reason";
+  "name, normalized_name, parent_name, category, status, redeemed, protected_at, rejected_at, rejected_reason, updated_at, created_at, reason, evidence";
 
 export const PROTECTED_VIEW_PAGE_SIZE = 25;
 
@@ -20,6 +20,26 @@ export type ProtectedViewSortKey =
   | "updated_at"
   | "created_at";
 
+/** Dispute review_status values stored in zn_protected_names_disputes. */
+export type ProtectedViewDisputeReviewStatus =
+  | "under_review"
+  | "accepted"
+  | "dismissed"
+  | string;
+
+export type ProtectedViewDispute = {
+  id: string;
+  protected_name: string;
+  normalized_name: string;
+  review_status: ProtectedViewDisputeReviewStatus;
+  reason: string;
+  category: string;
+  parent_name: string | null;
+  evidence: string[];
+  name_status_at_submission: string;
+  created_at: string;
+};
+
 export type ProtectedViewRow = {
   name: string;
   normalized_name: string;
@@ -33,6 +53,25 @@ export type ProtectedViewRow = {
   updated_at: string | null;
   created_at: string;
   reason: string;
+  evidence: string[];
+  disputes: ProtectedViewDispute[];
+};
+
+type ProtectedNameDbRow = Omit<ProtectedViewRow, "evidence" | "disputes"> & {
+  evidence?: unknown;
+};
+
+type ProtectedDisputeDbRow = {
+  id: string;
+  protected_name: string;
+  normalized_name: string;
+  review_status: string;
+  reason: string;
+  category: string;
+  parent_name: string | null;
+  evidence: unknown;
+  name_status_at_submission: string;
+  created_at: string;
 };
 
 export type ProtectedViewData = {
@@ -96,6 +135,60 @@ function sanitizePageSize(value: number | string | null | undefined): number {
 
 function sanitizeBooleanFlag(value: boolean | string | null | undefined): boolean {
   return value === true || value === "true";
+}
+
+function normalizeEvidenceUrls(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .filter(Boolean);
+}
+
+async function loadDisputesByProtectedNames(
+  names: string[],
+): Promise<Map<string, ProtectedViewDispute[]>> {
+  const map = new Map<string, ProtectedViewDispute[]>();
+  if (names.length === 0) return map;
+
+  const { data, error } = await db
+    .from("zn_protected_names_disputes")
+    .select(
+      "id, protected_name, normalized_name, review_status, reason, category, parent_name, evidence, name_status_at_submission, created_at",
+    )
+    .in("protected_name", names)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    // Disputes table may not exist yet in some environments; fail soft.
+    if (
+      error.message.includes("zn_protected_names_disputes")
+      || error.message.includes("does not exist")
+      || error.code === "42P01"
+    ) {
+      return map;
+    }
+    throw new Error(error.message);
+  }
+
+  for (const row of (data ?? []) as ProtectedDisputeDbRow[]) {
+    const dispute: ProtectedViewDispute = {
+      id: row.id,
+      protected_name: row.protected_name,
+      normalized_name: row.normalized_name,
+      review_status: row.review_status,
+      reason: row.reason,
+      category: row.category,
+      parent_name: row.parent_name,
+      evidence: normalizeEvidenceUrls(row.evidence),
+      name_status_at_submission: row.name_status_at_submission,
+      created_at: row.created_at,
+    };
+    const existing = map.get(row.protected_name) ?? [];
+    existing.push(dispute);
+    map.set(row.protected_name, existing);
+  }
+
+  return map;
 }
 
 function applySearch(query: any, searchQuery: string, searchMode: ProtectedViewSearchMode) {
@@ -213,7 +306,7 @@ export async function getProtectedViewData(args?: {
     .eq("status", "rejected");
 
   const [
-    { data, error, count },
+    primaryResult,
     { count: allCount, error: allCountError },
     { count: redeemedCount, error: redeemedCountError },
     { count: underReviewCount, error: underReviewCountError },
@@ -232,8 +325,35 @@ export async function getProtectedViewData(args?: {
     heroRejectedCountQuery,
   ]);
 
-  if (error) {
-    throw new Error(error.message);
+  let pageData = primaryResult.data as ProtectedNameDbRow[] | null;
+  let pageError = primaryResult.error;
+  let pageCount = primaryResult.count;
+
+  // If evidence column is not migrated yet, retry without it.
+  if (pageError?.message?.includes("evidence")) {
+    let fallbackQuery = db
+      .from("zn_protected_names")
+      .select(
+        "name, normalized_name, parent_name, category, status, redeemed, protected_at, rejected_at, rejected_reason, updated_at, created_at, reason",
+        { count: "exact" },
+      );
+    fallbackQuery = applySearch(fallbackQuery, searchQuery, searchMode);
+    fallbackQuery = applyViewFilters(fallbackQuery, {
+      redeemedOnly,
+      underReviewOnly,
+      rejectedOnly,
+    });
+    fallbackQuery = applyPrimaryOrder(fallbackQuery, sortKey, sortDirection).order("name", {
+      ascending: true,
+    });
+    const fallback = await fallbackQuery.range(from, to);
+    pageData = (fallback.data ?? null) as ProtectedNameDbRow[] | null;
+    pageError = fallback.error;
+    pageCount = fallback.count;
+  }
+
+  if (pageError) {
+    throw new Error(pageError.message);
   }
   if (allCountError) throw new Error(allCountError.message);
   if (redeemedCountError) throw new Error(redeemedCountError.message);
@@ -243,7 +363,13 @@ export async function getProtectedViewData(args?: {
   if (heroUnderReviewCountError) throw new Error(heroUnderReviewCountError.message);
   if (heroRejectedCountError) throw new Error(heroRejectedCountError.message);
 
-  const rows = (data ?? []) as ProtectedViewRow[];
+  const rawRows = pageData ?? [];
+  const disputeMap = await loadDisputesByProtectedNames(rawRows.map((row) => row.name));
+  const rows: ProtectedViewRow[] = rawRows.map((row) => ({
+    ...row,
+    evidence: normalizeEvidenceUrls(row.evidence),
+    disputes: disputeMap.get(row.name) ?? [],
+  }));
 
   return {
     rows,
@@ -254,10 +380,10 @@ export async function getProtectedViewData(args?: {
     heroAllCount: heroAllCount ?? 0,
     heroUnderReviewCount: heroUnderReviewCount ?? 0,
     heroRejectedCount: heroRejectedCount ?? 0,
-    totalCount: count ?? 0,
+    totalCount: pageCount ?? 0,
     page,
     pageSize,
-    hasMore: from + rows.length < (count ?? 0),
+    hasMore: from + rows.length < (pageCount ?? 0),
     sortKey,
     sortDirection,
     searchQuery,

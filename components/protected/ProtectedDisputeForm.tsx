@@ -16,6 +16,8 @@ import { validateAddress } from "@/lib/zns/address-validation";
 
 type ProtectedDisputeFormProps = {
   returnHref?: string;
+  /** Prefill / auto-select name (from ?name= on the dispute page). */
+  initialName?: string | null;
 };
 
 type ContactRow = {
@@ -551,7 +553,7 @@ function NameDetailsCard({ selected }: { selected: ProtectedDisputeNameOption })
 
 function useDisputeNameOptions(query: string, refreshKey = 0) {
   const [options, setOptions] = useState<ProtectedDisputeNameOption[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -596,14 +598,17 @@ function useDisputeNameOptions(query: string, refreshKey = 0) {
 
 export default function ProtectedDisputeForm({
   returnHref = "/protected",
+  initialName = null,
 }: ProtectedDisputeFormProps) {
   void returnHref;
+  const prefilledName = (initialName ?? "").trim();
   const initialContact = useMemo(
     () => ({ uid: crypto.randomUUID(), kind: "email" as const, value: "" }),
     [],
   );
-  const [nameInput, setNameInput] = useState("");
+  const [nameInput, setNameInput] = useState(prefilledName);
   const [selectedName, setSelectedName] = useState<ProtectedDisputeNameOption | null>(null);
+  const [hasAppliedPrefill, setHasAppliedPrefill] = useState(false);
   const [category, setCategory] = useState("");
   const [reason, setReason] = useState("");
   const [evidenceLinks, setEvidenceLinks] = useState<string[]>([""]);
@@ -672,6 +677,27 @@ export default function ProtectedDisputeForm({
     setReasonConfirmed(false);
     setEvidenceLinks([""]);
   }
+
+  useEffect(() => {
+    if (hasAppliedPrefill || !prefilledName || isNameLoading) return;
+
+    const match =
+      nameOptions.find(
+        (option) =>
+          option.value.toLowerCase() === prefilledName.toLowerCase()
+          || option.normalizedName.toLowerCase() === prefilledName.toLowerCase()
+          || option.label.toLowerCase() === prefilledName.toLowerCase(),
+      ) ?? null;
+
+    if (!match) {
+      setHasAppliedPrefill(true);
+      setNameError("Select a non-redeemed protected or rejected name from the list.");
+      return;
+    }
+
+    selectNameOption(match);
+    setHasAppliedPrefill(true);
+  }, [hasAppliedPrefill, prefilledName, isNameLoading, nameOptions]);
 
   function handleNameInputChange(next: string) {
     setNameInput(next);

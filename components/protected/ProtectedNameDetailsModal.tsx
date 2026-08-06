@@ -1,0 +1,446 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import type { ProtectedViewDispute, ProtectedViewRow } from "@/lib/protected/view";
+
+type ProtectedNameDetailsModalProps = {
+  row: ProtectedViewRow | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onDispute: (row: ProtectedViewRow) => void;
+};
+
+function EllipsisIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className ?? "h-7 w-7"}
+      aria-hidden="true"
+    >
+      <circle cx="5" cy="12" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <circle cx="19" cy="12" r="1.8" />
+    </svg>
+  );
+}
+
+function renderDetailValue(value: string | null | undefined) {
+  return value && value.length > 0 ? value : "—";
+}
+
+function formatTimestamp(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getNameStatusLabel(status: string) {
+  const normalized = status.toLowerCase();
+  if (normalized === "under_review") return "Under Review";
+  if (normalized === "protected") return "Protected";
+  if (normalized === "rejected") return "Rejected";
+  return status.replaceAll("_", " ");
+}
+
+function getNameStatusStyle(status: string) {
+  const normalized = status.toLowerCase();
+
+  if (normalized === "protected") {
+    return {
+      color: "var(--accent-green, #27b36a)",
+      background: "color-mix(in srgb, var(--accent-green, #27b36a) 12%, transparent)",
+    };
+  }
+
+  if (normalized === "under_review") {
+    return {
+      color: "var(--accent-yellow, #d6a852)",
+      background: "color-mix(in srgb, var(--accent-yellow, #d6a852) 12%, transparent)",
+    };
+  }
+
+  if (normalized === "rejected") {
+    return {
+      color: "var(--accent-red, #e05252)",
+      background: "color-mix(in srgb, var(--accent-red, #e05252) 12%, transparent)",
+    };
+  }
+
+  return {
+    color: "var(--fg-muted)",
+    background: "var(--market-stats-segment-active-bg)",
+  };
+}
+
+/** Map DB review_status → display labels the product uses. */
+function getDisputeStatusLabel(status: string) {
+  const normalized = status.toLowerCase();
+  if (normalized === "accepted" || normalized === "approved") return "Approved";
+  if (normalized === "dismissed" || normalized === "denied") return "Denied";
+  if (normalized === "under_review") return "Under Review";
+  return status.replaceAll("_", " ");
+}
+
+function getDisputeStatusStyle(status: string) {
+  const normalized = status.toLowerCase();
+
+  if (normalized === "accepted" || normalized === "approved") {
+    return {
+      color: "var(--accent-green, #27b36a)",
+      background: "color-mix(in srgb, var(--accent-green, #27b36a) 12%, transparent)",
+    };
+  }
+
+  if (normalized === "under_review") {
+    return {
+      color: "var(--accent-yellow, #d6a852)",
+      background: "color-mix(in srgb, var(--accent-yellow, #d6a852) 12%, transparent)",
+    };
+  }
+
+  if (
+    normalized === "dismissed"
+    || normalized === "denied"
+    || normalized === "rejected"
+  ) {
+    return {
+      color: "var(--accent-red, #e05252)",
+      background: "color-mix(in srgb, var(--accent-red, #e05252) 12%, transparent)",
+    };
+  }
+
+  return {
+    color: "var(--fg-muted)",
+    background: "var(--market-stats-segment-active-bg)",
+  };
+}
+
+function StatusBadge({
+  label,
+  style,
+}: {
+  label: string;
+  style: { color: string; background: string };
+}) {
+  return (
+    <span
+      className="rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
+      style={style}
+    >
+      {label}
+    </span>
+  );
+}
+
+function FieldBlock({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt
+        className="text-[0.68rem] font-semibold uppercase tracking-[0.14em]"
+        style={{ color: "var(--fg-muted)" }}
+      >
+        {label}
+      </dt>
+      <dd className="mt-1 break-words text-sm leading-6" style={{ color: "var(--fg-body)" }}>
+        {children}
+      </dd>
+    </div>
+  );
+}
+
+function UrlList({ urls }: { urls: string[] }) {
+  if (urls.length === 0) {
+    return <span style={{ color: "var(--fg-muted)" }}>—</span>;
+  }
+
+  return (
+    <ul className="flex flex-col gap-1.5">
+      {urls.map((url) => (
+        <li key={url} className="min-w-0">
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="break-all font-medium underline underline-offset-2 transition-opacity hover:opacity-85"
+            style={{ color: "var(--color-accent-interactive)" }}
+          >
+            {url}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function DisputeCard({
+  dispute,
+  index,
+}: {
+  dispute: ProtectedViewDispute;
+  index: number;
+}) {
+  return (
+    <article
+      className="rounded-2xl border px-4 py-3.5"
+      style={{
+        borderColor: "color-mix(in srgb, var(--faq-border) 88%, transparent)",
+        background: "color-mix(in srgb, var(--color-bg-elevated, transparent) 55%, transparent)",
+      }}
+    >
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>
+          Dispute {index}
+        </p>
+        <StatusBadge
+          label={getDisputeStatusLabel(dispute.review_status)}
+          style={getDisputeStatusStyle(dispute.review_status)}
+        />
+      </div>
+      <dl className="grid grid-cols-2 gap-3">
+        <FieldBlock label="Submitted">{formatTimestamp(dispute.created_at)}</FieldBlock>
+        <FieldBlock label="Category">{renderDetailValue(dispute.category)}</FieldBlock>
+        <FieldBlock label="Name status at filing">
+          {getNameStatusLabel(dispute.name_status_at_submission)}
+        </FieldBlock>
+        <FieldBlock label="Parent name">
+          {renderDetailValue(dispute.parent_name)}
+        </FieldBlock>
+        <div className="col-span-2">
+          <FieldBlock label="Reason">{renderDetailValue(dispute.reason)}</FieldBlock>
+        </div>
+        <div className="col-span-2">
+          <FieldBlock label="Evidence">
+            <UrlList urls={dispute.evidence} />
+          </FieldBlock>
+        </div>
+      </dl>
+    </article>
+  );
+}
+
+export default function ProtectedNameDetailsModal({
+  row,
+  isOpen,
+  onClose,
+  onDispute,
+}: ProtectedNameDetailsModalProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !row || typeof document === "undefined") return null;
+
+  const canDispute =
+    !row.redeemed
+    && (row.status.toLowerCase() === "protected" || row.status.toLowerCase() === "rejected");
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="protected-name-details-title"
+        className="relative isolate w-full max-w-lg overflow-visible"
+        style={{
+          height: "50vh",
+          maxHeight: "50vh",
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <span
+          className="absolute left-1/2 top-0 z-20 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border"
+          style={{
+            background: "var(--color-raised)",
+            borderColor: "var(--faq-border)",
+            color: "var(--fg-heading)",
+            boxShadow: "0 18px 42px rgba(0,0,0,0.28)",
+          }}
+          aria-hidden="true"
+        >
+          <EllipsisIcon />
+        </span>
+
+        {/* Inner shell clips the scrollbar to the rounded corners */}
+        <div
+          className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl"
+          style={{
+            background: "var(--feature-card-bg)",
+            border: "1px solid var(--faq-border)",
+            boxShadow: "0 24px 64px rgba(0,0,0,0.45)",
+          }}
+        >
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-5 pt-12 sm:px-8 [scrollbar-gutter:stable]"
+            onWheel={(event) => event.stopPropagation()}
+          >
+            <div
+              className="mb-5 pb-5"
+              style={{
+                borderBottom: "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
+              }}
+            >
+              <div className="relative flex items-center">
+                <h2
+                  id="protected-name-details-title"
+                  className="w-full px-20 text-center text-xl font-bold leading-none"
+                  style={{ color: "var(--fg-heading)" }}
+                >
+                  {row.normalized_name}
+                </h2>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center">
+                  <span className="pointer-events-auto">
+                    <StatusBadge
+                      label={getNameStatusLabel(row.status)}
+                      style={getNameStatusStyle(row.status)}
+                    />
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <dl className="grid grid-cols-2 gap-4">
+              <FieldBlock label="Parent name">{renderDetailValue(row.parent_name)}</FieldBlock>
+              <FieldBlock label="Category">{renderDetailValue(row.category)}</FieldBlock>
+              <div className="col-span-2">
+                <FieldBlock label="Reason">{renderDetailValue(row.reason)}</FieldBlock>
+              </div>
+              <div className="col-span-2">
+                <FieldBlock label="Evidence URLs">
+                  <UrlList urls={row.evidence ?? []} />
+                </FieldBlock>
+              </div>
+              <FieldBlock label="Protected">{formatTimestamp(row.protected_at)}</FieldBlock>
+              <FieldBlock label="Redeemed">
+                {row.redeemed ? (
+                  <Link
+                    href={`/explorer?name=${encodeURIComponent(row.normalized_name || row.name)}`}
+                    className="font-medium underline underline-offset-2 transition-opacity hover:opacity-85"
+                    style={{ color: "var(--color-accent-interactive)" }}
+                  >
+                    View on Explorer
+                  </Link>
+                ) : (
+                  "No"
+                )}
+              </FieldBlock>
+              {row.status.toLowerCase() === "rejected" ? (
+                <>
+                  <FieldBlock label="Rejected">{formatTimestamp(row.rejected_at)}</FieldBlock>
+                  <div className="col-span-2">
+                    <FieldBlock label="Rejected reason">
+                      {renderDetailValue(row.rejected_reason)}
+                    </FieldBlock>
+                  </div>
+                </>
+              ) : null}
+              <FieldBlock label="Updated">{formatTimestamp(row.updated_at)}</FieldBlock>
+              <FieldBlock label="Created">{formatTimestamp(row.created_at)}</FieldBlock>
+            </dl>
+
+            <section
+              className="mt-6 pt-5"
+              style={{
+                borderTop: "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
+              }}
+            >
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3
+                  className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]"
+                  style={{ color: "var(--fg-muted)" }}
+                >
+                  Disputes
+                </h3>
+                <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                  {(row.disputes ?? []).length}
+                </span>
+              </div>
+              {(row.disputes ?? []).length === 0 ? (
+                <p className="text-sm leading-6" style={{ color: "var(--fg-muted)" }}>
+                  No disputes have been submitted for this name.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {(row.disputes ?? []).map((dispute, disputeIndex) => (
+                    <DisputeCard
+                      key={dispute.id}
+                      dispute={dispute}
+                      index={disputeIndex + 1}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+
+          <div
+            className="shrink-0 border-t px-6 py-4 sm:px-8"
+            style={{
+              borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
+              background: "var(--feature-card-bg)",
+            }}
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => onDispute(row)}
+                disabled={!canDispute}
+                title={
+                  canDispute
+                    ? "Open the dispute form with this name selected"
+                    : "Only non-redeemed protected or rejected names can be disputed"
+                }
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{
+                  background: "var(--home-result-primary-bg)",
+                  color: "var(--home-result-primary-fg)",
+                  boxShadow: canDispute ? "var(--home-result-primary-shadow)" : "none",
+                }}
+              >
+                Dispute
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-border-muted bg-transparent px-5 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}

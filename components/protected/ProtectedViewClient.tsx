@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import PaginationControls from "@/components/PaginationControls";
+import ProtectedNameDetailsModal from "@/components/protected/ProtectedNameDetailsModal";
 import { InlineSearchField } from "@/components/search/InlineSearchField";
 import DataViewTabs from "@/components/table/DataViewTabs";
 import SearchResultsSummary from "@/components/table/SearchResultsSummary";
@@ -13,7 +14,6 @@ import {
   TableSortMenu,
 } from "@/components/table/TableIconMenus";
 import TableLoadingOverlay from "@/components/table/TableLoadingOverlay";
-import TableRowDetailsMenu from "@/components/table/TableRowDetailsMenu";
 import useCachedRemoteTableData from "@/components/table/useCachedRemoteTableData";
 import type {
   ProtectedViewData,
@@ -102,31 +102,20 @@ function buildProtectedViewUrl(args: {
   return `/api/protected/view?${searchParams.toString()}`;
 }
 
-function renderDetailValue(value: string | null) {
-  return value && value.length > 0 ? value : "-";
-}
-
-function buildRowDetailFields(row: ProtectedViewRow) {
-  const fields = [
-    { label: "Reason", value: renderDetailValue(row.reason) },
-    { label: "Protected", value: renderDetailValue(row.protected_at) },
-  ];
-
-  if (row.status.toLowerCase() === "rejected") {
-    if (row.rejected_at) {
-      fields.push({ label: "Rejected", value: row.rejected_at });
-    }
-    if (row.rejected_reason?.trim()) {
-      fields.push({ label: "Rejected reason", value: row.rejected_reason.trim() });
-    }
-  }
-
-  fields.push(
-    { label: "Updated", value: renderDetailValue(row.updated_at) },
-    { label: "Created", value: renderDetailValue(row.created_at) },
+function EllipsisIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <circle cx="5" cy="12" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <circle cx="19" cy="12" r="1.8" />
+    </svg>
   );
-
-  return fields;
 }
 
 function getStatusLabel(status: string) {
@@ -263,6 +252,7 @@ export default function ProtectedViewClient({
   const [redeemedOnly, setRedeemedOnly] = useState(initialData.redeemedOnly);
   const [underReviewOnly, setUnderReviewOnly] = useState(initialData.underReviewOnly);
   const [rejectedOnly, setRejectedOnly] = useState(initialData.rejectedOnly);
+  const [detailsRow, setDetailsRow] = useState<ProtectedViewRow | null>(null);
   const router = useRouter();
   const initialDataRef = useRef(initialData);
   const tableShellRef = useRef<HTMLDivElement | null>(null);
@@ -436,24 +426,14 @@ export default function ProtectedViewClient({
                 borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
               }}
             >
-              <span>Want to protect a name that is missing from the list?</span>
+              <span>Want to protect a name that is missing here?</span>
               <span className="mt-1 block text-center text-base">
                 <Link
                   href="/protected/suggest"
                   className="font-normal underline"
                   style={{ color: "var(--color-accent-interactive)" }}
                 >
-                  Suggest a name for protection
-                </Link>
-              </span>
-              <span className="mt-3 block text-center text-base">
-                Disagree with a protected or rejected decision?{" "}
-                <Link
-                  href="/protected/dispute"
-                  className="font-normal underline"
-                  style={{ color: "var(--color-accent-interactive)" }}
-                >
-                  Dispute a name
+                  Suggest one
                 </Link>
               </span>
             </div>
@@ -718,10 +698,14 @@ export default function ProtectedViewClient({
                         }}
                       >
                         <div className="flex justify-center">
-                          <TableRowDetailsMenu
-                            triggerLabel={`Details for ${row.normalized_name}`}
-                            fields={buildRowDetailFields(row)}
-                          />
+                          <button
+                            type="button"
+                            aria-label={`Details for ${row.normalized_name}`}
+                            onClick={() => setDetailsRow(row)}
+                            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[color:var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)]"
+                          >
+                            <EllipsisIcon />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -751,6 +735,20 @@ export default function ProtectedViewClient({
           label="Loading names..."
         />
       </div>
+
+      <ProtectedNameDetailsModal
+        row={detailsRow}
+        isOpen={!!detailsRow}
+        onClose={() => setDetailsRow(null)}
+        onDispute={(row) => {
+          setDetailsRow(null);
+          router.push(
+            `/protected/dispute?${new URLSearchParams({
+              name: row.name,
+            }).toString()}`,
+          );
+        }}
+      />
     </div>
   );
 }
