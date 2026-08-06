@@ -292,7 +292,7 @@ export default function ExplorerListPane({
                     <button
                       type="button"
                       onClick={() => {
-                        router.push(buildUrl({ name: row.name, page: 1 }));
+                        router.push(buildUrl({ name: row.name, searchMode: "exact", search: null, page: 1 }));
                       }}
                       className="font-semibold text-fg-heading hover:underline cursor-pointer"
                     >
@@ -393,7 +393,7 @@ export default function ExplorerListPane({
                   <button
                     type="button"
                     onClick={() => {
-                      router.push(buildUrl({ name: row.name, page: 1 }));
+                      router.push(buildUrl({ name: row.name, searchMode: "exact", search: null, page: 1 }));
                     }}
                     className="font-semibold text-fg-heading hover:underline cursor-pointer"
                   >
@@ -498,7 +498,7 @@ export default function ExplorerListPane({
                   <button
                     type="button"
                     onClick={() => {
-                      router.push(buildUrl({ name: row.name, page: 1 }));
+                      router.push(buildUrl({ name: row.name, searchMode: "exact", search: null, page: 1 }));
                     }}
                     className="font-semibold text-fg-heading hover:underline cursor-pointer"
                   >

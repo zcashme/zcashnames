@@ -1874,11 +1874,12 @@ body {
   border: 0;
   border-radius: 999px;
   min-height: 34px;
-  padding: 0 16px;
+  padding: 7px 14px;
   display: inline-flex;
   align-items: center;
-  font-size: 0.9rem;
+  font-size: 0.79rem;
   font-weight: 700;
+  line-height: 1;
   cursor: pointer;
   transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
@@ -1896,13 +1897,18 @@ body {
 .home-result-action.is-secondary {
   color: var(--home-result-secondary-fg);
   background: transparent;
-  border: 1px solid var(--home-result-secondary-accent-border, var(--home-result-secondary-border));
+  /* Match identity link border (View on ZcashMe / View in Explorer). */
+  border: 1px solid var(--home-result-link-border);
+}
+
+.home-result-action.is-secondary:hover {
+  background: var(--home-result-link-hover-bg);
 }
 
 .home-result-action.is-compact-unavailable {
   min-height: 34px;
-  padding: 0 14px;
-  font-size: 0.9rem;
+  padding: 7px 14px;
+  font-size: 0.79rem;
 }
 
 .home-result-trust {
@@ -2030,6 +2036,8 @@ body {
 
   .home-result-action {
     justify-content: center;
+    padding: 6px 11px;
+    font-size: 0.75rem;
   }
 
   .home-result-main {

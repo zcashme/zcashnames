@@ -15,6 +15,7 @@ import type { Action } from "@/lib/types";
 import { formatUsdEquivalent, zatsToZec } from "@/lib/zns/utils";
 import ActionBadge from "@/components/ActionBadge";
 import CopyIconButton from "@/components/CopyIconButton";
+import { usePointerProximity } from "@/components/hooks/usePointerProximity";
 import {
   NameStatusBadge,
   NameStatusButtons,
@@ -45,6 +46,16 @@ export default function ExplorerNameDetail({
   onAction: (action: Action) => void;
 }) {
   const [copiedValue, setCopiedValue] = useState<string | null>(null);
+  // Match NameStatusButtons proximity hover (scale + shadow) on identity links.
+  const identityProximity = usePointerProximity<HTMLAnchorElement>({
+    radius: 145,
+    maxScaleBoost: 0.05,
+    maxShadowOpacity: 0.14,
+  });
+  const identityButtonStyle = {
+    transform: "translateZ(0) scale(var(--prox-scale, 1))",
+    boxShadow: "0 14px 28px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
+  } as const;
 
   async function copyValue(value: string) {
     try {
@@ -169,15 +180,21 @@ export default function ExplorerNameDetail({
                   copied={copiedValue === result.registration.txid}
                 />
               </div>
-              <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-center gap-2">
+              <div
+                className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-center gap-2"
+                onPointerMove={identityProximity.handlePointerMove}
+                onPointerLeave={identityProximity.handlePointerLeave}
+              >
                 <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
                   Identity
                 </span>
                 <a
+                  ref={(node) => identityProximity.register("zcashme", node)}
                   href={zcashMeUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="home-result-link inline-flex w-max items-center gap-1.5 whitespace-nowrap leading-none"
+                  style={identityButtonStyle}
                 >
                   <Image
                     src="/assets/icons/zcashme-favicon-64.png"
@@ -266,9 +283,10 @@ export default function ExplorerNameDetail({
                       className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
                       style={{ borderColor: "var(--leaders-card-border)" }}
                     >
-                      <th className="w-[7.5rem] px-4 py-3 text-center sm:px-6">Action</th>
-                      <th className="w-[7.5rem] px-4 py-3 text-right sm:px-6">Block</th>
-                      <th className="px-4 py-3 sm:px-6">Transaction ID</th>
+                      <th className="w-[7.5rem] py-3 pr-4 text-center sm:pr-6">Action</th>
+                      <th className="w-[7.5rem] py-3 pr-4 text-right sm:pr-6">Block</th>
+                      {/* pr-0 so history copy icons share the same right edge as Address/Txid above */}
+                      <th className="py-3 pr-0 pl-4 sm:pl-6">Transaction ID</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -278,15 +296,15 @@ export default function ExplorerNameDetail({
                         className="border-b last:border-b-0"
                         style={{ borderColor: "var(--leaders-card-border)" }}
                       >
-                        <td className="px-4 py-3 align-top sm:px-6">
+                        <td className="py-3 pr-4 align-top sm:pr-6">
                           <div className="flex justify-center">
                             <ActionBadge action={ev.action} />
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right align-top tabular-nums text-fg-muted text-xs sm:px-6">
+                        <td className="py-3 pr-4 text-right align-top tabular-nums text-fg-muted text-xs sm:pr-6">
                           {ev.height.toLocaleString()}
                         </td>
-                        <td className="px-4 py-3 align-top sm:px-6">
+                        <td className="py-3 pr-0 pl-4 align-top sm:pl-6">
                           <div className="flex items-start gap-2">
                             <span className="min-w-[12rem] flex-1 font-mono text-fg-muted text-xs break-all">
                               {ev.txid}
