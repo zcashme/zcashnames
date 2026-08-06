@@ -252,7 +252,15 @@ export default function SiteSupportMenu({
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-[9997]" style={floatingShellStyle}>
+    <div
+      className="fixed z-[9997]"
+      style={{
+        ...floatingShellStyle,
+        // Pin to the visual viewport edge (not document scrollWidth).
+        right: "max(1.25rem, env(safe-area-inset-right, 0px))",
+        bottom: "max(1.25rem, env(safe-area-inset-bottom, 0px))",
+      }}
+    >
       <div ref={menuRef} className="flex flex-col items-end">
         <div
           id={SUPPORT_MENU_ACTIONS_ID}

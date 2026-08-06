@@ -675,7 +675,12 @@
    ═══════════════════════════ */
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* Prevent accidental page-level horizontal scroll (blank gutter + floating chrome). */
+  overflow-x: clip;
+  max-width: 100%;
+}
 
 .recharts-wrapper,
 .recharts-wrapper * {
@@ -692,6 +697,8 @@ body {
   color: var(--fg);
   background: var(--color-background);
   position: relative;
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 @keyframes roadmap-apply-pill-breathe {

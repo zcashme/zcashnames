@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export type SharedSearchMode = "contains" | "exact";
 export type InlineSearchFieldVariant = "table";
@@ -167,6 +167,8 @@ type InlineSearchFieldProps = {
   onChange: (value: string) => void;
   onSubmit: () => void;
   placeholder: string;
+  /** Shorter placeholder used when the full one cannot fit in the input. */
+  placeholderCompact?: string;
   ariaLabel: string;
   searchMode: SharedSearchMode;
   onSearchModeChange: (value: SharedSearchMode) => void;
@@ -185,6 +187,7 @@ export function InlineSearchField({
   onChange,
   onSubmit,
   placeholder,
+  placeholderCompact,
   ariaLabel,
   searchMode,
   onSearchModeChange,
@@ -198,9 +201,14 @@ export function InlineSearchField({
   clearAriaLabel = "Clear search input",
 }: InlineSearchFieldProps) {
   const hasInput = value.trim().length > 0;
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const placeholderMeasureRef = useRef<HTMLSpanElement | null>(null);
+  const [useCompactPlaceholder, setUseCompactPlaceholder] = useState(false);
+  const resolvedPlaceholder =
+    useCompactPlaceholder && placeholderCompact ? placeholderCompact : placeholder;
   const resolvedClassName =
     variant === "table"
-      ? `relative min-w-[240px] flex-1 ${className ?? ""}`.trim()
+      ? `relative min-w-0 max-w-full flex-1 sm:min-w-[240px] ${className ?? ""}`.trim()
       : className;
   const inputClassName = variant === "table" ? "pr-[8.75rem] text-sm" : "";
   const inputStyle: CSSProperties | undefined =
@@ -227,6 +235,41 @@ export function InlineSearchField({
       : undefined;
   const resolvedBorderlessModeTrigger = variant === "table" || borderlessModeTrigger;
 
+  useLayoutEffect(() => {
+    if (!placeholderCompact) {
+      setUseCompactPlaceholder(false);
+      return;
+    }
+
+    const input = inputRef.current;
+    const measure = placeholderMeasureRef.current;
+    if (!input || !measure) return;
+
+    function recompute() {
+      const el = inputRef.current;
+      const label = placeholderMeasureRef.current;
+      if (!el || !label) return;
+
+      const styles = window.getComputedStyle(el);
+      label.style.font = styles.font;
+      label.style.letterSpacing = styles.letterSpacing;
+      label.style.textTransform = styles.textTransform;
+      label.textContent = placeholder;
+
+      const paddingLeft = Number.parseFloat(styles.paddingLeft) || 0;
+      const paddingRight = Number.parseFloat(styles.paddingRight) || 0;
+      // Small safety margin so the placeholder does not sit flush against the Search control.
+      const available = Math.max(0, el.clientWidth - paddingLeft - paddingRight - 8);
+      const needsCompact = label.offsetWidth > available;
+      setUseCompactPlaceholder((current) => (current === needsCompact ? current : needsCompact));
+    }
+
+    recompute();
+    const observer = new ResizeObserver(() => recompute());
+    observer.observe(input);
+    return () => observer.disconnect();
+  }, [placeholder, placeholderCompact, showClear, submitLabel]);
+
   return (
     <form
       onSubmit={(event) => {
@@ -237,11 +280,21 @@ export function InlineSearchField({
     >
       <label className="block min-w-0 flex-1">
         <span className="relative flex items-center">
+          {/* Zero-size host so placeholder measure text never expands page width. */}
+          {placeholderCompact ? (
+            <span
+              className="pointer-events-none absolute left-0 top-0 h-0 w-0 overflow-hidden"
+              aria-hidden="true"
+            >
+              <span ref={placeholderMeasureRef} className="whitespace-nowrap opacity-0" />
+            </span>
+          ) : null}
           <input
+            ref={inputRef}
             type="text"
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             aria-label={ariaLabel}
             className={`w-full rounded-2xl border py-3 pl-[5.75rem] outline-none transition ${inputClassName ?? ""}`.trim()}
             style={inputStyle}

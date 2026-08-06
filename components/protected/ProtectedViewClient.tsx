@@ -353,7 +353,7 @@ export default function ProtectedViewClient({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6">
       <section
         className="rounded-2xl border px-6 py-8 sm:px-8 sm:py-10"
         style={{
@@ -376,7 +376,7 @@ export default function ProtectedViewClient({
             >
               Search names, check protection status, and review protected name activity.
             </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm lg:text-base">
+            <div className="mt-6 hidden flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm sm:flex lg:text-base">
               <span className="inline-flex items-center gap-2" style={{ color: "var(--fg-body)" }}>
                 <span
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full"
@@ -451,8 +451,8 @@ export default function ProtectedViewClient({
         </div>
       </section>
 
-      <section>
-        <div className="flex flex-wrap items-center gap-2">
+      <section className="min-w-0 max-w-full">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           <InlineSearchField
             value={draftSearch}
             onChange={setDraftSearch}

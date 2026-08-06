@@ -40,7 +40,7 @@ export default async function ProtectedPage({ searchParams }: ProtectedPageProps
   });
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
+    <div className="mx-auto w-full min-w-0 max-w-6xl px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
       <SiteRouteTitle title="Protected Names" href="/protected" />
 
       <ProtectedViewClient initialData={data} />

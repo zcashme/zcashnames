@@ -136,13 +136,14 @@ export default function ExplorerToolbar({
   const hasInput = !!searchQuery.trim();
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
       <InlineSearchField
         value={searchQuery}
         onChange={onSearchChange}
         onSubmit={onSearchSubmit}
         variant="table"
         placeholder="Name, address, or transaction ID..."
+        placeholderCompact="Name, addr, txid..."
         ariaLabel="Search explorer names"
         searchMode={searchMode}
         onSearchModeChange={(value) => onSearchModeChange(value as ExplorerSearchMode)}

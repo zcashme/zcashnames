@@ -95,7 +95,7 @@ export default async function ExplorerPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-4 sm:px-6">
+    <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-20 pt-4 sm:px-6">
       <ExplorerView
         initialListData={initialListData}
         nameQuery={nameQuery}

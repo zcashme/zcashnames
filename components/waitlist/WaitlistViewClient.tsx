@@ -892,7 +892,7 @@ export default function WaitlistViewClient({
                 <p className="mx-auto mt-4 max-w-2xl text-lg leading-8" style={{ color: "var(--fg-body)" }}>
                   Search names, check position, and view reservation status.
                 </p>
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm lg:text-base">
+                <div className="mt-6 hidden flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm sm:flex lg:text-base">
                   <span className="inline-flex items-center gap-2" style={{ color: "var(--fg-body)" }}>
                     <span
                       className="inline-flex h-8 w-8 items-center justify-center rounded-full"
@@ -950,9 +950,9 @@ export default function WaitlistViewClient({
         }
       />
 
-      <div className="space-y-4">
-        <section>
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="min-w-0 max-w-full space-y-4">
+        <section className="min-w-0 max-w-full">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
             <InlineSearchField
               value={draftSearch}
               onChange={setDraftSearch}

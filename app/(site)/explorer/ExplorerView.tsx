@@ -5,7 +5,7 @@
  */
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ExplorerToolbar from "./ExplorerToolbar";
 import ExplorerNameDetail from "./ExplorerNameDetail";
@@ -116,6 +116,11 @@ export default function ExplorerView({
     resolveResult: ResolveName;
     existing: ResumeSnapshot;
   } | null>(null);
+  // Icon-only pills when description + full Block/UIVK chips cannot share one row.
+  const [compactHeaderPills, setCompactHeaderPills] = useState(false);
+  const headerRowRef = useRef<HTMLDivElement | null>(null);
+  const headerDescMeasureRef = useRef<HTMLSpanElement | null>(null);
+  const headerPillsFullMeasureRef = useRef<HTMLDivElement | null>(null);
 
   const selectedName = searchParams.get("name");
   const currentNetwork = parseExplorerNetwork(searchParams.get("env"));
@@ -273,28 +278,107 @@ export default function ExplorerView({
     window.setTimeout(() => setUivkCopied(false), 2000);
   }
 
+  const blockHeightLabel = isPending
+    ? "…"
+    : currentListData.stats.syncedHeight.toLocaleString();
+  const blockPillTitle = `Block ${
+    isPending ? "…" : currentListData.stats.syncedHeight.toLocaleString()
+  } · Refresh`;
+
+  useLayoutEffect(() => {
+    const row = headerRowRef.current;
+    if (!row) return;
+
+    function recompute() {
+      const containerWidth = headerRowRef.current?.clientWidth ?? 0;
+      if (containerWidth <= 0) return;
+      const descWidth = headerDescMeasureRef.current?.offsetWidth ?? 0;
+      const fullPillsWidth = headerPillsFullMeasureRef.current?.offsetWidth ?? 0;
+      const gap = 12; // gap-3
+      const fits = descWidth + gap + fullPillsWidth <= containerWidth;
+      setCompactHeaderPills((current) => {
+        const next = !fits;
+        return current === next ? current : next;
+      });
+    }
+
+    recompute();
+    const observer = new ResizeObserver(() => recompute());
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [blockHeightLabel, currentListData.stats.uivk, isPending]);
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 max-w-full flex-col gap-6">
       <SiteRouteTitle title="Explorer" />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="min-w-[220px] flex-1 text-sm" style={{ color: "var(--fg-muted)" }}>
+      <div
+        ref={headerRowRef}
+        className="relative flex min-w-0 w-full max-w-full flex-nowrap items-center justify-between gap-3 overflow-x-clip"
+      >
+        {/* Zero-size host so measure chips never expand page scrollWidth on mobile. */}
+        <div
+          className="pointer-events-none absolute left-0 top-0 h-0 w-0 overflow-hidden"
+          aria-hidden="true"
+        >
+          <div className="flex w-max items-center gap-3 opacity-0">
+            <span ref={headerDescMeasureRef} className="whitespace-nowrap text-sm">
+              Browse names, activity, and listings.
+            </span>
+            <div ref={headerPillsFullMeasureRef} className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <span
+                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] tabular-nums"
+                style={{ borderColor: "var(--leaders-card-border)" }}
+              >
+                Block {blockHeightLabel}
+                <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
+                  <path d="M13.5 8a5.5 5.5 0 1 1-1.3-3.56" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d="M12.5 2v3h-3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              {currentListData.stats.uivk ? (
+                <span
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em]"
+                  style={{ borderColor: "var(--leaders-card-border)" }}
+                >
+                  <span>UIVK</span>
+                  <KeyIcon />
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <p
+          className="min-w-0 flex-1 truncate text-sm"
+          style={{ color: "var(--fg-muted)" }}
+          title="Browse names, activity, and listings."
+        >
           Browse names, activity, and listings.
         </p>
-        <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+        <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={handleRefresh}
-            className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted tabular-nums transition-colors hover:text-[var(--color-accent-interactive)]"
+            className={
+              compactHeaderPills
+                ? "inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
+                : "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted tabular-nums transition-colors hover:text-[var(--color-accent-interactive)]"
+            }
             style={{ borderColor: "var(--leaders-card-border)" }}
-            title="Refresh"
+            title={blockPillTitle}
+            aria-label={blockPillTitle}
           >
-            Block{" "}
-            {isPending ? (
-              <span className="inline-block h-[0.75em] w-14 animate-pulse rounded-md bg-fg-dim/20 align-middle" />
-            ) : (
-              currentListData.stats.syncedHeight.toLocaleString()
-            )}
+            {!compactHeaderPills ? (
+              <>
+                Block{" "}
+                {isPending ? (
+                  <span className="inline-block h-[0.75em] w-14 animate-pulse rounded-md bg-fg-dim/20 align-middle" />
+                ) : (
+                  currentListData.stats.syncedHeight.toLocaleString()
+                )}
+              </>
+            ) : null}
             <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
               <path
                 d="M13.5 8a5.5 5.5 0 1 1-1.3-3.56"
@@ -315,10 +399,16 @@ export default function ExplorerView({
             <button
               type="button"
               onClick={() => setUivkOpen(true)}
-              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
+              className={
+                compactHeaderPills
+                  ? "inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
+                  : "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
+              }
               style={{ borderColor: "var(--leaders-card-border)" }}
+              title="Unified incoming view key"
+              aria-label="Open UIVK"
             >
-              <span>UIVK</span>
+              {!compactHeaderPills ? <span>UIVK</span> : null}
               <KeyIcon />
             </button>
           ) : null}
@@ -369,28 +459,42 @@ export default function ExplorerView({
 
       {uivkOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
+          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto p-3 sm:items-center sm:p-4"
+          style={{
+            backgroundColor: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(6px)",
+            paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+            paddingTop: "max(0.75rem, env(safe-area-inset-top))",
+          }}
           onClick={(event) => {
             if (event.target === event.currentTarget) setUivkOpen(false);
           }}
         >
           <div
-            className="w-full max-w-md rounded-2xl border px-8 py-7 flex flex-col gap-5"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="explorer-uivk-title"
+            className="my-auto flex w-full min-w-0 max-w-md flex-col gap-4 overflow-y-auto rounded-2xl border px-4 py-5 sm:gap-5 sm:px-8 sm:py-7"
             style={{
               background: "var(--leaders-card-bg-solid, var(--leaders-card-bg))",
               borderColor: "var(--leaders-card-border)",
               boxShadow: "0 24px 64px rgba(0,0,0,0.45)",
+              maxHeight: "min(100dvh - 1.5rem, 40rem)",
             }}
           >
-            <div className="flex items-center justify-between">
-              <h2 className="font-bold tracking-tight" style={{ fontSize: "var(--type-section-subtitle)", color: "var(--fg-heading)" }}>
+            <div className="flex items-start justify-between gap-3">
+              <h2
+                id="explorer-uivk-title"
+                className="min-w-0 flex-1 font-bold tracking-tight text-balance"
+                style={{ fontSize: "var(--type-section-subtitle)", color: "var(--fg-heading)" }}
+              >
                 Unified incoming view key
               </h2>
               <button
                 type="button"
                 onClick={() => setUivkOpen(false)}
-                className="cursor-pointer text-fg-muted transition-colors hover:text-fg-heading"
+                className="shrink-0 cursor-pointer text-fg-muted transition-colors hover:text-fg-heading"
+                aria-label="Close"
               >
                 <svg viewBox="0 0 16 16" fill="none" className="h-5 w-5" aria-hidden="true">
                   <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -398,9 +502,9 @@ export default function ExplorerView({
               </button>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
                     {currentNetwork === "mainnet" ? "Mainnet" : "Testnet"}
                   </div>
@@ -414,7 +518,9 @@ export default function ExplorerView({
                   disabled={!currentListData.stats.uivk}
                 />
               </div>
-              <p className="font-mono text-xs text-fg-muted break-all leading-relaxed">{currentListData.stats.uivk || "Unavailable"}</p>
+              <p className="min-w-0 break-all font-mono text-xs leading-relaxed text-fg-muted">
+                {currentListData.stats.uivk || "Unavailable"}
+              </p>
             </div>
           </div>
         </div>

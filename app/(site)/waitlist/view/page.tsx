@@ -26,7 +26,7 @@ export default async function WaitlistViewPage({ searchParams }: WaitlistViewPag
   });
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
+    <div className="mx-auto w-full min-w-0 max-w-6xl px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
       <SiteRouteTitle title="Waitlist View" href="/waitlist/view" />
 
       <WaitlistViewClient
