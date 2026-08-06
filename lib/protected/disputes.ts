@@ -3,31 +3,41 @@ import "server-only";
 import { db } from "@/lib/db";
 import { getEmailAddressValidationMessage, normalizeEmailAddress } from "@/lib/email-address";
 import {
+  PROTECTED_DISPUTE_OPTION_LIMIT,
   PROTECTED_NAME_CATEGORIES,
-  PROTECTED_SUGGESTION_OPTION_LIMIT,
+  type ProtectedDisputeNameOption,
+  type ProtectedDisputeNameStatus,
+  type ProtectedDisputePayload,
   type ProtectedNameCategory,
   type ProtectedSuggestionContactMethod,
-  type ProtectedSuggestionOption,
-  type ProtectedSuggestionOptionKind,
-  type ProtectedSuggestionPayload,
 } from "@/lib/protected/shared";
 import { validateAddress } from "@/lib/zns/address-validation";
 import { CONTACT_KINDS, type ContactKind } from "@/lib/types";
 
-type ProtectedNameOptionRow = {
+type ProtectedDisputeNameRow = {
   name: string;
   normalized_name: string;
   parent_name: string | null;
   category: ProtectedNameCategory;
   status: string;
+  reason: string;
+  protected_at: string | null;
+  rejected_at: string | null;
+  rejected_reason: string | null;
+  redeemed: boolean | null;
+  created_at: string;
+  updated_at: string | null;
 };
 
-export type ProtectedSuggestionRpcResult = {
-  name: string;
+export type ProtectedDisputeRpcResult = {
+  id: string;
+  protected_name: string;
   normalized_name: string;
-  status: string;
+  name_status_at_submission: ProtectedDisputeNameStatus;
+  review_status: string;
 };
-const PROTECTED_SUGGESTION_NAME_PATTERN = /^[A-Za-z0-9]+$/;
+
+const DISPUTABLE_STATUSES: ProtectedDisputeNameStatus[] = ["protected", "rejected"];
 
 function normalizeContactMethods(value: ProtectedSuggestionContactMethod[]): {
   contactMethods: ProtectedSuggestionContactMethod[];
@@ -118,7 +128,7 @@ function normalizeContactMethods(value: ProtectedSuggestionContactMethod[]): {
   };
 }
 
-function normalizeSuggestionQuery(value: string | null | undefined): string {
+function normalizeDisputeQuery(value: string | null | undefined): string {
   return value?.trim() ?? "";
 }
 
@@ -149,7 +159,7 @@ function isSubsequence(needle: string, haystack: string): boolean {
   return false;
 }
 
-function getSuggestionMatchScore(query: string, candidate: string): number {
+function getDisputeMatchScore(query: string, candidate: string): number {
   if (!query) return 1;
 
   if (candidate === query) {
@@ -165,14 +175,14 @@ function getSuggestionMatchScore(query: string, candidate: string): number {
   }
 
   const prefixLength = sharedPrefixLength(query, candidate);
-  if (prefixLength < 4) {
+  if (prefixLength < 2) {
     return 0;
   }
 
   const queryRemainder = query.slice(prefixLength);
   const candidateRemainder = candidate.slice(prefixLength);
   if (!queryRemainder || !candidateRemainder) {
-    return 0;
+    return 100 + prefixLength * 10;
   }
 
   const [shorterRemainder, longerRemainder] =
@@ -181,17 +191,44 @@ function getSuggestionMatchScore(query: string, candidate: string): number {
       : [candidateRemainder, queryRemainder];
 
   if (!isSubsequence(shorterRemainder, longerRemainder)) {
-    return 0;
+    return prefixLength >= 4 ? 50 + prefixLength * 5 : 0;
   }
 
   return 200 + prefixLength * 10 - Math.abs(queryRemainder.length - candidateRemainder.length);
 }
 
-export function isValidProtectedSuggestionName(value: string): boolean {
-  return PROTECTED_SUGGESTION_NAME_PATTERN.test(value.trim());
+function isDisputableStatus(status: string): status is ProtectedDisputeNameStatus {
+  return DISPUTABLE_STATUSES.includes(status as ProtectedDisputeNameStatus);
 }
 
-export function isValidProtectedSuggestionUrl(value: string): boolean {
+function mapDisputeNameRow(row: ProtectedDisputeNameRow): ProtectedDisputeNameOption | null {
+  if (!isDisputableStatus(row.status)) {
+    return null;
+  }
+
+  // Redeemed names are locked in and cannot be disputed.
+  if (row.redeemed) {
+    return null;
+  }
+
+  return {
+    value: row.name,
+    label: row.name,
+    normalizedName: row.normalized_name,
+    parentName: row.parent_name,
+    category: row.category,
+    status: row.status,
+    reason: row.reason,
+    protectedAt: row.protected_at,
+    rejectedAt: row.rejected_at,
+    rejectedReason: row.rejected_reason,
+    redeemed: false,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function isValidProtectedDisputeUrl(value: string): boolean {
   try {
     const parsed = new URL(value);
     return parsed.protocol === "http:" || parsed.protocol === "https:";
@@ -200,17 +237,16 @@ export function isValidProtectedSuggestionUrl(value: string): boolean {
   }
 }
 
-export function validateProtectedSuggestionPayload(payload: ProtectedSuggestionPayload): {
-  normalizedPayload: ProtectedSuggestionPayload & {
+export function validateProtectedDisputePayload(payload: ProtectedDisputePayload): {
+  normalizedPayload: ProtectedDisputePayload & {
     submittedByEmail: string | null;
     preferredContactKind: ContactKind | null;
     preferredContactValue: string | null;
   };
   error: string | null;
 } {
-  const suggestionType =
-    payload.suggestionType === "variant" ? "variant" : "canonical";
   const name = payload.name.trim();
+  const normalizedName = payload.normalizedName.trim().toLowerCase() || name.toLowerCase();
   const parentName = payload.parentName?.trim() || null;
   const category = payload.category.trim();
   const reason = payload.reason.trim();
@@ -228,8 +264,8 @@ export function validateProtectedSuggestionPayload(payload: ProtectedSuggestionP
   if (!name) {
     return {
       normalizedPayload: {
-        suggestionType,
         name,
+        normalizedName,
         parentName,
         category,
         reason,
@@ -240,53 +276,15 @@ export function validateProtectedSuggestionPayload(payload: ProtectedSuggestionP
         preferredContactKind,
         preferredContactValue,
       },
-      error: "Enter a name to review.",
-    };
-  }
-
-  if (!isValidProtectedSuggestionName(name)) {
-    return {
-      normalizedPayload: {
-        suggestionType,
-        name,
-        parentName,
-        category,
-        reason,
-        evidenceLinks,
-        contactMethods,
-        unifiedAddress,
-        submittedByEmail,
-        preferredContactKind,
-        preferredContactValue,
-      },
-      error: "Use letters and numbers only.",
-    };
-  }
-
-  if (suggestionType === "variant" && !parentName) {
-    return {
-      normalizedPayload: {
-        suggestionType,
-        name,
-        parentName,
-        category,
-        reason,
-        evidenceLinks,
-        contactMethods,
-        unifiedAddress,
-        submittedByEmail,
-        preferredContactKind,
-        preferredContactValue,
-      },
-      error: "The parent name must be submitted before its variants.",
+      error: "Select a non-redeemed protected or rejected name to dispute.",
     };
   }
 
   if (!PROTECTED_NAME_CATEGORIES.includes(category as ProtectedNameCategory)) {
     return {
       normalizedPayload: {
-        suggestionType,
         name,
+        normalizedName,
         parentName,
         category,
         reason,
@@ -304,8 +302,8 @@ export function validateProtectedSuggestionPayload(payload: ProtectedSuggestionP
   if (!reason) {
     return {
       normalizedPayload: {
-        suggestionType,
         name,
+        normalizedName,
         parentName,
         category,
         reason,
@@ -316,15 +314,15 @@ export function validateProtectedSuggestionPayload(payload: ProtectedSuggestionP
         preferredContactKind,
         preferredContactValue,
       },
-      error: "Explain why this name should be protected.",
+      error: "Explain your dispute reason.",
     };
   }
 
   if (contactError) {
     return {
       normalizedPayload: {
-        suggestionType,
         name,
+        normalizedName,
         parentName,
         category,
         reason,
@@ -344,8 +342,8 @@ export function validateProtectedSuggestionPayload(payload: ProtectedSuggestionP
     if (addressValidation.status !== "unified") {
       return {
         normalizedPayload: {
-          suggestionType,
           name,
+          normalizedName,
           parentName,
           category,
           reason,
@@ -362,13 +360,13 @@ export function validateProtectedSuggestionPayload(payload: ProtectedSuggestionP
   }
 
   const invalidEvidenceLink = evidenceLinks.find(
-    (entry) => !isValidProtectedSuggestionUrl(entry),
+    (entry) => !isValidProtectedDisputeUrl(entry),
   );
   if (invalidEvidenceLink) {
     return {
       normalizedPayload: {
-        suggestionType,
         name,
+        normalizedName,
         parentName,
         category,
         reason,
@@ -385,9 +383,9 @@ export function validateProtectedSuggestionPayload(payload: ProtectedSuggestionP
 
   return {
     normalizedPayload: {
-      suggestionType,
       name,
-      parentName: suggestionType === "canonical" ? null : parentName,
+      normalizedName,
+      parentName,
       category,
       reason,
       evidenceLinks,
@@ -401,22 +399,24 @@ export function validateProtectedSuggestionPayload(payload: ProtectedSuggestionP
   };
 }
 
-export async function getProtectedSuggestionOptions(args: {
-  kind: ProtectedSuggestionOptionKind;
+const DISPUTE_NAME_SELECT =
+  "name, normalized_name, parent_name, category, status, reason, protected_at, rejected_at, rejected_reason, redeemed, created_at, updated_at";
+
+export async function getProtectedDisputeOptions(args: {
   query?: string | null;
-}): Promise<ProtectedSuggestionOption[]> {
-  const query = normalizeSuggestionQuery(args.query);
+}): Promise<ProtectedDisputeNameOption[]> {
+  const query = normalizeDisputeQuery(args.query);
 
   let request = db
     .from("zn_protected_names")
-    .select("name, normalized_name, parent_name, category, status")
-    .is("parent_name", null)
-    .neq("status", "rejected");
+    .select(DISPUTE_NAME_SELECT)
+    .in("status", DISPUTABLE_STATUSES)
+    .eq("redeemed", false);
 
   if (!query) {
     request = request
       .order("normalized_name", { ascending: true })
-      .limit(PROTECTED_SUGGESTION_OPTION_LIMIT);
+      .limit(PROTECTED_DISPUTE_OPTION_LIMIT);
   }
 
   const { data, error } = await request;
@@ -425,10 +425,10 @@ export async function getProtectedSuggestionOptions(args: {
   }
 
   const normalizedQuery = query.toLowerCase();
-  const rows = ((data ?? []) as ProtectedNameOptionRow[])
+  const rows = ((data ?? []) as ProtectedDisputeNameRow[])
     .map((row) => ({
       row,
-      score: getSuggestionMatchScore(normalizedQuery, row.normalized_name.toLowerCase()),
+      score: getDisputeMatchScore(normalizedQuery, row.normalized_name.toLowerCase()),
     }))
     .filter((entry) => entry.score > 0)
     .sort((left, right) => {
@@ -438,80 +438,72 @@ export async function getProtectedSuggestionOptions(args: {
 
       return left.row.normalized_name.localeCompare(right.row.normalized_name);
     })
-    .slice(0, PROTECTED_SUGGESTION_OPTION_LIMIT);
+    .slice(0, PROTECTED_DISPUTE_OPTION_LIMIT);
 
-  return rows.map(({ row }) => ({
-    value: row.name,
-    label: row.name,
-    category: row.category,
-  }));
+  return rows
+    .map(({ row }) => mapDisputeNameRow(row))
+    .filter((entry): entry is ProtectedDisputeNameOption => entry !== null);
 }
 
-export async function protectedSuggestionNameExists(name: string): Promise<boolean> {
-  const normalizedName = name.trim().toLowerCase();
-  if (!normalizedName) return false;
-
-  const { data, error } = await db
-    .from("zn_protected_names")
-    .select("name")
-    .eq("normalized_name", normalizedName)
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return Boolean(data);
-}
-
-export async function getCanonicalProtectedNameByName(
+export async function getDisputableProtectedNameByName(
   name: string,
-): Promise<ProtectedSuggestionOption | null> {
+): Promise<ProtectedDisputeNameOption | null> {
   const trimmedName = name.trim();
   if (!trimmedName) return null;
 
-  const { data, error } = await db
+  const byName = await db
     .from("zn_protected_names")
-    .select("name, normalized_name, parent_name, category, status")
+    .select(DISPUTE_NAME_SELECT)
     .eq("name", trimmedName)
-    .is("parent_name", null)
-    .neq("status", "rejected")
+    .in("status", DISPUTABLE_STATUSES)
+    .eq("redeemed", false)
     .limit(1)
     .maybeSingle();
 
-  if (error) {
-    throw new Error(error.message);
+  if (byName.error) {
+    throw new Error(byName.error.message);
   }
 
-  const row = data as ProtectedNameOptionRow | null;
+  if (byName.data) {
+    return mapDisputeNameRow(byName.data as ProtectedDisputeNameRow);
+  }
+
+  const byNormalized = await db
+    .from("zn_protected_names")
+    .select(DISPUTE_NAME_SELECT)
+    .eq("normalized_name", trimmedName.toLowerCase())
+    .in("status", DISPUTABLE_STATUSES)
+    .eq("redeemed", false)
+    .limit(1)
+    .maybeSingle();
+
+  if (byNormalized.error) {
+    throw new Error(byNormalized.error.message);
+  }
+
+  const row = byNormalized.data as ProtectedDisputeNameRow | null;
   if (!row) return null;
 
-  return {
-    value: row.name,
-    label: row.name,
-    category: row.category,
-  };
+  return mapDisputeNameRow(row);
 }
 
-export async function submitProtectedNameSuggestion(
-  payload: ProtectedSuggestionPayload & {
+export async function submitProtectedNameDispute(
+  payload: ProtectedDisputePayload & {
     submittedByEmail: string | null;
     preferredContactKind: ContactKind | null;
     preferredContactValue: string | null;
   },
-): Promise<ProtectedSuggestionRpcResult> {
-  const { data, error } = await db.rpc("submit_protected_name_suggestion", {
+): Promise<ProtectedDisputeRpcResult> {
+  const { data, error } = await db.rpc("submit_protected_name_dispute", {
     submitted_name: payload.name,
-    submitted_parent_name: payload.parentName,
     submitted_category: payload.category,
+    submitted_parent_name: payload.parentName,
     submitted_reason: payload.reason,
     submitted_by_email: payload.submittedByEmail,
     submitted_contact_methods: payload.contactMethods,
     submitted_preferred_contact_kind: payload.preferredContactKind,
     submitted_preferred_contact_value: payload.preferredContactValue,
     submitted_zcash_unified_address: payload.unifiedAddress,
-    // Stored as jsonb array on zn_protected_names.evidence (not a child table).
     submitted_evidence: payload.evidenceLinks,
   });
 
@@ -519,5 +511,5 @@ export async function submitProtectedNameSuggestion(
     throw new Error(error.message);
   }
 
-  return data as ProtectedSuggestionRpcResult;
+  return data as ProtectedDisputeRpcResult;
 }

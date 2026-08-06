@@ -36,4 +36,34 @@ export type ProtectedSuggestionPayload = {
   unifiedAddress: string | null;
 };
 
+export type ProtectedDisputeNameStatus = "protected" | "rejected";
+
+export type ProtectedDisputeNameOption = {
+  value: string;
+  label: string;
+  normalizedName: string;
+  parentName: string | null;
+  category: ProtectedNameCategory;
+  status: ProtectedDisputeNameStatus;
+  reason: string;
+  protectedAt: string | null;
+  rejectedAt: string | null;
+  rejectedReason: string | null;
+  redeemed: boolean;
+  createdAt: string;
+  updatedAt: string | null;
+};
+
+export type ProtectedDisputePayload = {
+  name: string;
+  normalizedName: string;
+  category: string;
+  parentName: string | null;
+  reason: string;
+  evidenceLinks: string[];
+  contactMethods: ProtectedSuggestionContactMethod[];
+  unifiedAddress: string | null;
+};
+
 export const PROTECTED_SUGGESTION_OPTION_LIMIT = 12;
+export const PROTECTED_DISPUTE_OPTION_LIMIT = 12;

@@ -446,6 +446,16 @@ export default function ProtectedViewClient({
                   Suggest a name for protection
                 </Link>
               </span>
+              <span className="mt-3 block text-center text-base">
+                Disagree with a protected or rejected decision?{" "}
+                <Link
+                  href="/protected/dispute"
+                  className="font-normal underline"
+                  style={{ color: "var(--color-accent-interactive)" }}
+                >
+                  Dispute a name
+                </Link>
+              </span>
             </div>
           </div>
         </div>
