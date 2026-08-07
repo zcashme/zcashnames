@@ -332,7 +332,7 @@ export default function NameActionForm({
             label={s.otpVerified ? "Verified" : "Verify code"}
             loading={s.otpLoading}
             disabled={
-              !s.otpCode.trim() ||
+              s.otpCode.trim().length !== 6 ||
               s.otpVerified ||
               s.otpAttempts >= getNetworkConstants(network).OTP_MAX_ATTEMPTS
             }
@@ -496,7 +496,7 @@ export default function NameActionForm({
 
           {needsPrice && (
             <div>
-              <PhaseLabel complete={complete && !needsAddress}>
+              <PhaseLabel complete={complete}>
                 Price (ZEC)
                 {!complete && <RequiredAsterisk />}
               </PhaseLabel>
@@ -519,7 +519,7 @@ export default function NameActionForm({
 
           {needsPayTaddr && (
             <div>
-              <PhaseLabel>
+              <PhaseLabel complete={complete}>
                 Payout address (t-address)
                 {!complete && <RequiredAsterisk />}
               </PhaseLabel>
@@ -561,7 +561,7 @@ export default function NameActionForm({
           <div>
             <PhaseLabel complete={complete}>Verify ownership</PhaseLabel>
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              Send exact amount and memo to the address below to request a verification code.
+              Send exact memo and minimum amount to the address below to receive a passcode.
             </p>
           </div>
           {s.otpMemo && active && (
@@ -580,7 +580,7 @@ export default function NameActionForm({
                 The registered owner will receive a code.
               </p>
               <div>
-                <PhaseLabel>
+                <PhaseLabel complete={complete}>
                   Passcode
                   {!complete && <RequiredAsterisk />}
                 </PhaseLabel>
