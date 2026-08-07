@@ -27,6 +27,8 @@ type ProtectedPageProps = {
 
 export default async function ProtectedPage({ searchParams }: ProtectedPageProps) {
   const params = (await searchParams) ?? {};
+  // getProtectedViewData awaits expireProtectedNames() so past-due unclaimed
+  // protection is rejected before the table is built (also on /api/protected/view).
   const data = await getProtectedViewData({
     page: params.page,
     pageSize: params.pageSize,

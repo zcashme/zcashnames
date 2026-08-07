@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@/lib/db";
+import { expireProtectedNames } from "@/lib/zns/protected-claim";
 
 const PROTECTED_VIEW_SELECT =
   "name, normalized_name, parent_name, category, status, redeemed, protected_at, expires_at, rejected_at, rejected_reason, updated_at, created_at, reason, evidence";
@@ -256,6 +257,14 @@ export async function getProtectedViewData(args?: {
   underReviewOnly?: boolean | string | null;
   rejectedOnly?: boolean | string | null;
 }): Promise<ProtectedViewData> {
+  // Flip past-due unclaimed protection to rejected so this view (and /protected)
+  // reflects reality before we read rows. Fail soft: never block the table.
+  try {
+    await expireProtectedNames();
+  } catch {
+    // expire helper already degrades when column/RPC missing; ignore other errors.
+  }
+
   const page = sanitizePage(args?.page ?? 1);
   const pageSize = sanitizePageSize(args?.pageSize ?? PROTECTED_VIEW_PAGE_SIZE);
   const sortKey = sanitizeSortKey(args?.sortKey);
