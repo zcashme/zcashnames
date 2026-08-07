@@ -11,12 +11,7 @@ import { getResumeToReplace, clearResume } from "@/lib/purchases/resume";
 import { nameActionHref } from "@/lib/purchases/nameActionHref";
 import type { ResumeSnapshot } from "@/lib/purchases/resume";
 import type { Action, ResolveName } from "@/lib/types";
-
-const POPULAR_NAMES = new Set([
-  "adam", "alex", "alice", "anna", "bob", "chris", "david", "emma", "ethan",
-  "jack", "james", "john", "leo", "lucas", "maria", "max", "mike", "noah",
-  "olivia", "satoshi",
-]);
+import { isPopularName } from "@/lib/zns/popular-names";
 
 export default function HomeSearchResults({ network }: { network: "mainnet" | "testnet" }) {
   const router = useRouter();
@@ -50,7 +45,7 @@ export default function HomeSearchResults({ network }: { network: "mainnet" | "t
           {results.map((item) => {
             const props = buildCardProps(item);
             const displayName = `${item.query}.zcash`;
-            const isPopular = POPULAR_NAMES.has(item.query);
+            const isPopular = isPopularName(item.query);
             return (
               <HomeResultCard
                 key={item.query}

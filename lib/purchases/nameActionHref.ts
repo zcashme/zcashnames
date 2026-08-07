@@ -49,8 +49,8 @@ export function actionsForResolve(resolve: ResolveName): Action[] {
 export type ActionDenial = {
   ok: false;
   reason: string;
-  /** Optional inline link rendered after `reason` (e.g. BUY on available → claim). */
-  link?: { href: string; label: string; suffix?: string };
+  /** Optional link rendered on its own line after `reason` (e.g. BUY on available → claim). */
+  link?: { href: string; label: string; prefix?: string; suffix?: string };
 };
 
 export type ActionGateResult = { ok: true } | ActionDenial;
@@ -88,10 +88,12 @@ function denialForAction(
   if (action === "BUY" && (status === "available" || status === "protected")) {
     return {
       ok: false,
-      reason: "You cannot buy a name that is not listed in the marketplace. However, this name can be ",
+      reason: "You cannot buy a name that is not listed in the marketplace.",
       link: {
         href: nameActionHref("CLAIM", resolve.query, network),
         label: "claimed",
+        // Rendered on its own line after reason: "However, this name can be claimed!"
+        prefix: "However, this name can be ",
         suffix: "!",
       },
     };

@@ -8,6 +8,7 @@ import { ACTION_LABELS } from "@/lib/types";
 import type { Action, NameAvailabilityState, Network, ResolveName } from "@/lib/types";
 import { resolveName } from "@/lib/zns/resolve";
 import { normalizeUsername, isValidUsername } from "@/lib/zns/utils";
+import { isPopularName } from "@/lib/zns/popular-names";
 import {
   explorerNameHref,
   isActionAllowed,
@@ -43,6 +44,54 @@ function priceZecFor(result: ResolveName): number | null {
 /** Mirrors NameStatus.statusSupportsPrice without importing the client module. */
 function statusSupportsPrice(status: NameAvailabilityState): boolean {
   return status === "available" || status === "forsale" || status === "protected";
+}
+
+/**
+ * Feature chips for the action-page status row / hero.
+ * Available / for-sale mirror the home search result card; protected names
+ * (zn_protected_names status=protected) also get a Protected chip.
+ */
+function featureChipsFor(
+  availability: NameAvailabilityState,
+  name: string,
+): string[] {
+  const charLabel = `${name.length} characters`;
+  const popular = isPopularName(name);
+  const chips: string[] = [];
+
+  if (availability === "available") {
+    chips.push(charLabel, "No previous owners");
+    if (popular) chips.push("Popular name");
+  } else if (availability === "forsale") {
+    chips.push(charLabel);
+    if (popular) chips.push("Popular name");
+  } else if (availability === "protected") {
+    // Claimable protected names: available-style chips + Protected
+    chips.push(charLabel, "No previous owners");
+    if (popular) chips.push("Popular name");
+    chips.push("Protected");
+  }
+
+  return chips;
+}
+
+function FeatureChips({
+  chips,
+  placement,
+}: {
+  chips: string[];
+  placement: "inline" | "hero";
+}) {
+  if (chips.length === 0) return null;
+  return (
+    <div className={`name-action-chips name-action-chips--${placement}`}>
+      {chips.map((chip) => (
+        <span key={`${placement}-${chip}`} className="home-result-trust-pill">
+          {chip}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 function heroCopy(action: Action): string {
@@ -91,14 +140,15 @@ export default async function NameActionPage({ params, searchParams }: PageProps
   const availability = toAvailabilityState(resolveResult);
   const priceZec = priceZecFor(resolveResult);
   const showPrice = statusSupportsPrice(availability) && priceZec != null;
+  const featureChips = featureChipsFor(availability, name);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
       <SiteRouteTitle title={title} href={`/${actionSlug}/${encodeURIComponent(name)}`} />
 
-      <div className="mx-auto w-full max-w-2xl">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2.5">
+      <div className="name-action-column mx-auto w-full max-w-2xl">
+        <div className="name-action-status-row mb-4">
+          <div className="name-action-status-left flex min-w-0 flex-wrap items-center gap-2.5">
             <NameStatusBadge status={availability} />
             {showPrice ? (
               <p className="m-0 text-[var(--home-result-price-color)] text-[clamp(1.02rem,1.85vw,1.3rem)] font-extrabold tracking-[-0.012em]">
@@ -106,15 +156,7 @@ export default async function NameActionPage({ params, searchParams }: PageProps
               </p>
             ) : null}
           </div>
-          <span
-            className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide"
-            style={{
-              border: "1px solid var(--border-muted)",
-              color: "var(--fg-muted)",
-            }}
-          >
-            {network === "testnet" ? "Testnet" : "Mainnet"}
-          </span>
+          <FeatureChips chips={featureChips} placement="inline" />
         </div>
 
         <section
@@ -126,6 +168,7 @@ export default async function NameActionPage({ params, searchParams }: PageProps
           }}
         >
           <div className="grid gap-4">
+            <FeatureChips chips={featureChips} placement="hero" />
             <h1 className="text-center text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl">
               <span className="action-hero-name">{name}</span>
             </h1>
@@ -175,22 +218,20 @@ export default async function NameActionPage({ params, searchParams }: PageProps
               </h2>
               <p className="mt-2 text-sm" style={{ color: "var(--fg-body)" }}>
                 {gate.reason}
-                {gate.link ? (
-                  <>
-                    <Link
-                      href={gate.link.href}
-                      className="font-semibold underline underline-offset-2"
-                      style={{ color: "var(--fg-heading)" }}
-                    >
-                      {gate.link.label}
-                    </Link>
-                    {gate.link.suffix ?? ""}
-                  </>
-                ) : null}
               </p>
-              <p className="mt-1 text-sm" style={{ color: "var(--fg-muted)" }}>
-                Current status: <strong>{resolveResult.status}</strong>
-              </p>
+              {gate.link ? (
+                <p className="mt-2 text-sm" style={{ color: "var(--fg-body)" }}>
+                  {gate.link.prefix ?? ""}
+                  <Link
+                    href={gate.link.href}
+                    className="font-semibold underline underline-offset-2"
+                    style={{ color: "var(--fg-heading)" }}
+                  >
+                    {gate.link.label}
+                  </Link>
+                  {gate.link.suffix ?? ""}
+                </p>
+              ) : null}
               <Link
                 href={backHref}
                 className="mt-6 inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold"

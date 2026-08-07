@@ -1420,6 +1420,75 @@ body {
   }
 }
 
+/* Action page: status badge + feature chips.
+   Wide: chips sit opposite the status badge on one row.
+   Narrow container: chips move above the hero name (centered). */
+.name-action-column {
+  container-type: inline-size;
+  container-name: name-action;
+}
+
+.name-action-status-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.name-action-status-left {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.name-action-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.name-action-chips--inline {
+  flex: 0 1 auto;
+  justify-content: flex-end;
+}
+
+.name-action-chips--hero {
+  display: none;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* Prefer container width (max-w-2xl column) so chips drop when the row is tight */
+@container name-action (max-width: 560px) {
+  .name-action-status-row {
+    justify-content: flex-start;
+  }
+
+  .name-action-chips--inline {
+    display: none;
+  }
+
+  .name-action-chips--hero {
+    display: flex;
+  }
+}
+
+/* Fallback when container queries are unavailable */
+@media (max-width: 640px) {
+  @supports not (container-type: inline-size) {
+    .name-action-chips--inline {
+      display: none;
+    }
+
+    .name-action-chips--hero {
+      display: flex;
+    }
+  }
+}
+
 
 /* ═══════════════════════════
    Per-card theme variables
