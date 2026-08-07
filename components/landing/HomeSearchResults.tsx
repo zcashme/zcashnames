@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSearchState } from "@/components/hooks/useSearchState";
 import { buildCardProps } from "@/lib/zns/utils";
 import HomeResultCard from "./HomeResultCard";
 import SearchForm from "@/components/search/SearchForm";
-import Zip321Modal from "@/components/purchases/Zip321Modal";
 import ResumeReplacementDialog from "@/components/purchases/ResumeReplacementDialog";
-import { getResumeToReplace } from "@/lib/purchases/resume";
+import { getResumeToReplace, clearResume } from "@/lib/purchases/resume";
+import { nameActionHref } from "@/lib/purchases/nameActionHref";
 import type { ResumeSnapshot } from "@/lib/purchases/resume";
 import type { Action, ResolveName } from "@/lib/types";
 
@@ -18,8 +19,8 @@ const POPULAR_NAMES = new Set([
 ]);
 
 export default function HomeSearchResults({ network }: { network: "mainnet" | "testnet" }) {
-  const { input, results, searching, searchError, setInput, handleSearch, refreshResult, removeResult } = useSearchState();
-  const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
+  const router = useRouter();
+  const { input, results, searching, searchError, setInput, handleSearch, removeResult } = useSearchState();
   const [pendingReplacement, setPendingReplacement] = useState<{
     action: Action;
     resolveResult: ResolveName;
@@ -28,13 +29,17 @@ export default function HomeSearchResults({ network }: { network: "mainnet" | "t
 
   const mode = network;
 
+  function goToAction(action: Action, resolveResult: ResolveName) {
+    router.push(nameActionHref(action, resolveResult.query, network));
+  }
+
   function handleAction(action: Action, resolveResult: ResolveName) {
     const existing = getResumeToReplace({ action, name: resolveResult.query, network });
     if (existing) {
       setPendingReplacement({ action, resolveResult, existing });
       return;
     }
-    setModalState({ action, resolveResult });
+    goToAction(action, resolveResult);
   }
 
   return (
@@ -63,22 +68,13 @@ export default function HomeSearchResults({ network }: { network: "mainnet" | "t
       {searchError && (
         <p className="home-search-error rounded-xl border px-4 py-3 text-sm font-semibold">{searchError}</p>
       )}
-      {modalState && (
-        <Zip321Modal
-          action={modalState.action}
-          name={modalState.resolveResult.query}
-          network={network}
-          resolveResult={modalState.resolveResult}
-          onClose={() => setModalState(null)}
-          onSuccess={() => refreshResult(modalState.resolveResult.query)}
-        />
-      )}
       {pendingReplacement && (
         <ResumeReplacementDialog
           existing={pendingReplacement.existing}
           onCancel={() => setPendingReplacement(null)}
           onContinue={() => {
-            setModalState({ action: pendingReplacement.action, resolveResult: pendingReplacement.resolveResult });
+            clearResume();
+            goToAction(pendingReplacement.action, pendingReplacement.resolveResult);
             setPendingReplacement(null);
           }}
         />

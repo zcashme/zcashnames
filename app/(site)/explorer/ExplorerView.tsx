@@ -10,13 +10,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ExplorerToolbar from "./ExplorerToolbar";
 import ExplorerNameDetail from "./ExplorerNameDetail";
 import ExplorerListPane from "./ExplorerListPane";
-import Zip321Modal from "@/components/purchases/Zip321Modal";
 import ResumeReplacementDialog from "@/components/purchases/ResumeReplacementDialog";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import CopyIconButton from "@/components/CopyIconButton";
 import SearchResultsSummary from "@/components/table/SearchResultsSummary";
-import { getResumeToReplace } from "@/lib/purchases/resume";
+import { getResumeToReplace, clearResume } from "@/lib/purchases/resume";
+import { nameActionHref } from "@/lib/purchases/nameActionHref";
 import type { ResumeSnapshot } from "@/lib/purchases/resume";
 import type { ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
@@ -110,7 +110,6 @@ export default function ExplorerView({
   const [uivkCopied, setUivkCopied] = useState(false);
   const [listRefreshNonce, setListRefreshNonce] = useState(0);
   const [currentListData, setCurrentListData] = useState(initialListData);
-  const [modalState, setModalState] = useState<{ action: Action; resolveResult: ResolveName } | null>(null);
   const [pendingReplacement, setPendingReplacement] = useState<{
     action: Action;
     resolveResult: ResolveName;
@@ -237,6 +236,10 @@ export default function ExplorerView({
     window.history.pushState(null, "", buildUrl({ name: null, search: query, searchMode: "contains", page: 1 }));
   }
 
+  function goToAction(action: Action, resolveResult: ResolveName) {
+    router.push(nameActionHref(action, resolveResult.query, currentNetwork));
+  }
+
   function handleDetailAction(action: Action) {
     if (!nameDataReady || !nameResult) return;
     const existing = getResumeToReplace({ action, name: nameResult.query, network: currentNetwork });
@@ -244,7 +247,7 @@ export default function ExplorerView({
       setPendingReplacement({ action, resolveResult: nameResult, existing });
       return;
     }
-    setModalState({ action, resolveResult: nameResult });
+    goToAction(action, nameResult);
   }
 
   function clearNameDetail() {
@@ -526,26 +529,13 @@ export default function ExplorerView({
         </div>
       ) : null}
 
-      {selectedName && modalState ? (
-        <Zip321Modal
-          action={modalState.action}
-          name={modalState.resolveResult.query}
-          network={currentNetwork}
-          resolveResult={modalState.resolveResult}
-          onClose={() => setModalState(null)}
-          onSuccess={() => router.refresh()}
-        />
-      ) : null}
-
       {pendingReplacement ? (
         <ResumeReplacementDialog
           existing={pendingReplacement.existing}
           onCancel={() => setPendingReplacement(null)}
           onContinue={() => {
-            setModalState({
-              action: pendingReplacement.action,
-              resolveResult: pendingReplacement.resolveResult,
-            });
+            clearResume();
+            goToAction(pendingReplacement.action, pendingReplacement.resolveResult);
             setPendingReplacement(null);
           }}
         />

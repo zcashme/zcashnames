@@ -1,26 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { usePurchaseResume } from "@/components/hooks/usePurchaseResume";
 import ResumeBanner from "@/components/purchases/ResumeBanner";
-import Zip321Modal from "@/components/purchases/Zip321Modal";
-import { resolveName } from "@/lib/zns/resolve";
+import { nameActionHref } from "@/lib/purchases/nameActionHref";
 import { PURCHASE_MODAL_VISIBILITY_EVENT } from "@/lib/purchases/resume";
-import type { Action, ResolveName } from "@/lib/types";
-
-type ModalState = {
-  action: Action;
-  network: "mainnet" | "testnet";
-  resolveResult: ResolveName;
-} | null;
 
 type VisibilityEvent = CustomEvent<{ open?: boolean }>;
 
 export default function PurchaseResumeShell() {
   const router = useRouter();
+  const pathname = usePathname();
   const { snapshot, visible, dismiss } = usePurchaseResume();
-  const [modalState, setModalState] = useState<ModalState>(null);
   const [externalModalOpen, setExternalModalOpen] = useState(false);
 
   useEffect(() => {
@@ -33,32 +25,29 @@ export default function PurchaseResumeShell() {
     return () => window.removeEventListener(PURCHASE_MODAL_VISIBILITY_EVENT, handleVisibility);
   }, []);
 
-  async function handleResume() {
+  function handleResume() {
     if (!snapshot) return;
-    const fresh = await resolveName(snapshot.name, snapshot.network);
-    setModalState({ action: snapshot.action, network: snapshot.network, resolveResult: fresh });
+    // Prefer the form-page path; Zip321Modal remains available as a dual path elsewhere.
+    router.push(nameActionHref(snapshot.action, snapshot.name, snapshot.network));
   }
 
-  function handleSuccess() {
-    router.refresh();
-  }
+  // Hide the banner while the user is already on the matching form page.
+  const onFormPage = (() => {
+    if (!snapshot || !pathname) return false;
+    const parts = pathname.toLowerCase().split("/").filter(Boolean);
+    if (parts.length < 2) return false;
+    return (
+      parts[0] === snapshot.action.toLowerCase() &&
+      decodeURIComponent(parts[1]) === snapshot.name.toLowerCase()
+    );
+  })();
 
   return (
     <>
-      {modalState && (
-        <Zip321Modal
-          action={modalState.action}
-          name={modalState.resolveResult.query}
-          network={modalState.network}
-          resolveResult={modalState.resolveResult}
-          onClose={() => setModalState(null)}
-          onSuccess={handleSuccess}
-        />
-      )}
       {visible && snapshot && (
         <ResumeBanner
           snapshot={snapshot}
-          hiddenByFullModal={externalModalOpen || !!modalState}
+          hiddenByFullModal={externalModalOpen || onFormPage}
           onResume={handleResume}
           onDismiss={dismiss}
         />

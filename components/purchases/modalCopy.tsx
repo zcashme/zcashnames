@@ -40,8 +40,24 @@ export function AddressBadge({ address }: { address: string | undefined }) {
   return <InlineBadge>{shortAddress(address)}</InlineBadge>;
 }
 
-export function SentenceLines({ children }: { children: React.ReactNode }) {
-  return <span className="inline-flex flex-col items-start gap-1 text-left">{children}</span>;
+export function SentenceLines({
+  children,
+  align = "start",
+}: {
+  children: React.ReactNode;
+  align?: "start" | "center";
+}) {
+  return (
+    <span
+      className={
+        align === "center"
+          ? "inline-flex flex-col items-center gap-1 text-center"
+          : "inline-flex flex-col items-start gap-1 text-left"
+      }
+    >
+      {children}
+    </span>
+  );
 }
 
 export function phaseHeader(action: Action, phase: Phase): string {
@@ -117,37 +133,41 @@ export function minedMessage(action: Action, name: string, address?: string): Re
   switch (action) {
     case "CLAIM":
       return (
-        <SentenceLines>
+        <SentenceLines align="center">
           <span>Claim confirmed on-chain!</span>
           <span><NameBadge name={name} /> now resolves to <AddressBadge address={address} />.</span>
         </SentenceLines>
       );
     case "BUY":
       return (
-        <SentenceLines>
+        <SentenceLines align="center">
           <span>Purchase is confirmed on-chain!</span>
           <span><NameBadge name={name} /> now resolves to <AddressBadge address={address} />.</span>
         </SentenceLines>
       );
     case "UPDATE":
       return (
-        <SentenceLines>
+        <SentenceLines align="center">
           <span>Address is updated on-chain!</span>
           <span><NameBadge name={name} /> now resolves to <AddressBadge address={address} />.</span>
         </SentenceLines>
       );
     case "LIST":
-      return <><NameBadge name={name} /> is now listed for sale.</>;
+      return (
+        <SentenceLines align="center">
+          <span><NameBadge name={name} /> is now listed for sale.</span>
+        </SentenceLines>
+      );
     case "DELIST":
       return (
-        <SentenceLines>
+        <SentenceLines align="center">
           <span><NameBadge name={name} /> has been delisted.</span>
           <span>It is no longer for sale.</span>
         </SentenceLines>
       );
     case "RELEASE":
       return (
-        <SentenceLines>
+        <SentenceLines align="center">
           <span><NameBadge name={name} /> has been released.</span>
           <span>It can now be claimed by anyone.</span>
         </SentenceLines>

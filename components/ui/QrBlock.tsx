@@ -121,8 +121,8 @@ export function QrBlock({
         <div className="flex w-full flex-col gap-4">
           <div className="flex flex-col items-center gap-4">
             <div className="flex flex-col items-center gap-3">
-              <div className="flex w-full justify-center">
-                <div className="grid grid-cols-[auto_2.5rem] items-stretch gap-4">
+              <div className="relative flex w-full justify-center">
+                <div className="relative">
                   <a
                     href={uri}
                     className="block rounded-[24px] bg-white p-3 transition-transform duration-150 ease-out active:scale-95"
@@ -144,7 +144,7 @@ export function QrBlock({
                       />
                     </div>
                   </a>
-                  <div className="flex h-full min-h-full flex-col justify-between">
+                  <div className="absolute left-full top-0 bottom-0 ml-3 flex flex-col justify-between py-1">
                     <button
                       type="button"
                       onClick={() => setExpanded(true)}
@@ -203,39 +203,52 @@ export function QrBlock({
   return (
     <>
       <div className="flex w-full flex-col items-center gap-4">
-        <div className="grid w-full grid-cols-[2.25rem_auto_2.25rem] items-start justify-center gap-2">
-          <span aria-hidden="true" />
-          <a
-            href={uri}
-            className="block rounded-xl bg-white p-3 transition-transform duration-150 ease-out active:scale-95"
-            style={{ WebkitTapHighlightColor: "transparent" }}
-            aria-label="Open in wallet"
-            title="Open in wallet"
-          >
-            <div className="block leading-none">
-              <QRCodeSVG value={uri} size={size} fgColor="#000000" bgColor="#ffffff" marginSize={4} />
-              <QRCodeCanvas
-                ref={canvasRef}
-                value={uri}
-                size={768}
-                fgColor="#000000"
-                bgColor="#ffffff"
-                marginSize={4}
-                className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
-                aria-hidden="true"
-              />
+        <div className="relative flex w-full justify-center">
+          <div className="relative">
+            <a
+              href={uri}
+              className="block rounded-xl bg-white p-3 transition-transform duration-150 ease-out active:scale-95"
+              style={{ WebkitTapHighlightColor: "transparent" }}
+              aria-label="Open in wallet"
+              title="Open in wallet"
+            >
+              <div className="block leading-none">
+                <QRCodeSVG value={uri} size={size} fgColor="#000000" bgColor="#ffffff" marginSize={4} />
+                <QRCodeCanvas
+                  ref={canvasRef}
+                  value={uri}
+                  size={768}
+                  fgColor="#000000"
+                  bgColor="#ffffff"
+                  marginSize={4}
+                  className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
+                  aria-hidden="true"
+                />
+              </div>
+            </a>
+            <div className="absolute left-full top-0 bottom-0 ml-3 flex flex-col justify-between py-1">
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                aria-label="Expand QR"
+                title="Expand QR"
+              >
+                <ExpandIcon />
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePng}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                aria-label="Save QR"
+                title="Save QR"
+              >
+                <DownloadIcon />
+              </button>
             </div>
-          </a>
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="mt-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-            style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
-            aria-label="Expand QR"
-            title="Expand QR"
-          >
-            <ExpandIcon />
-          </button>
+          </div>
         </div>
 
         <button
@@ -248,7 +261,7 @@ export function QrBlock({
         </button>
 
         <div
-          className="grid w-full transition-[grid-template-rows,opacity] duration-300 ease-out"
+          className="grid w-full max-w-md transition-[grid-template-rows,opacity] duration-300 ease-out"
           style={{ gridTemplateRows: showHelp ? "1fr" : "0fr", opacity: showHelp ? 1 : 0 }}
         >
           <div className="min-h-0 overflow-hidden">
@@ -277,9 +290,9 @@ export function QrBlock({
                   >
                     Save QR
                   </button>
-                  <p className="m-0">Save the QR, then upload it to your wallet's QR reader.</p>
+                  <p className="m-0">Download a PNG for your wallet&rsquo;s QR reader.</p>
                 </div>
-                <p className="m-0">Manual entry: copy the address, memo, and amount into your wallet.</p>
+                <p className="m-0 text-center">Or, manually copy the address, memo, and amount below.</p>
                 {qrError && <p className="m-0" style={{ color: "var(--accent-red, #e05252)" }}>{qrError}</p>}
               </div>
             </div>
@@ -287,10 +300,12 @@ export function QrBlock({
         </div>
 
         {showUri && (
-          <CopyRow label="Full URI" value={uri} copied={uriCopied} onCopy={() => copyUri(uri)} />
+          <div className="w-full max-w-md">
+            <CopyRow label="Full URI" value={uri} copied={uriCopied} onCopy={() => copyUri(uri)} />
+          </div>
         )}
 
-        <div className="flex w-full flex-col gap-2">
+        <div className="flex w-full max-w-md flex-col gap-2">
           <CopyRow label="Address" value={address} copied={addrCopied} onCopy={() => copyAddr(address)} />
           {hasAmount && (
             <CopyRow label="Amount" value={`${amount} ZEC`} copied={amtCopied} onCopy={() => copyAmt(amount)} />

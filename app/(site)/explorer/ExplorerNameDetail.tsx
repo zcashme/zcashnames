@@ -3,8 +3,8 @@
  * searches for a specific name in the explorer. Displays the resolved status
  * (available / registered / listed / protected), ownership details (address,
  * block, txid), a link to ZcashMe, listing info (payout, pending buyer), and
- * an event history table. Accepts an onAction callback that opens Zip321Modal
- * for buy/claim flows.
+ * an event history table. Accepts an onAction callback that navigates to the
+ * name-action form page (or opens Zip321Modal on legacy modal paths).
  */
 "use client";
 
