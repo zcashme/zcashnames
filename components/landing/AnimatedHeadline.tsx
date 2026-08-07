@@ -122,7 +122,6 @@ export default function AnimatedHeadline({ triggerRef, collapsed = false, childr
   const activitySpan = (
     <span
       className={`hero-activity-redact hero-activity-text${sweeping ? " is-sweeping" : ""}`}
-      style={{ color: "var(--hero-headline-accent)" }}
       onMouseEnter={handleActivityHover}
     >
       addresses.
@@ -135,7 +134,7 @@ export default function AnimatedHeadline({ triggerRef, collapsed = false, childr
       className={`hero-identity-check-wrap${checkVisible ? " is-drawing" : ""}`}
       onMouseEnter={handleIdentityHover}
     >
-      <span className="hero-identity-text" style={{ color: "var(--hero-headline-accent)" }}>
+      <span className="hero-identity-text">
         names
       </span>
       <svg className="hero-checkmark-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
