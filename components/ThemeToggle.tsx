@@ -2,8 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
+import {
+  getThemeDirection,
+  isThemeTransitioning,
+  runThemeTransition,
+  type ThemeDirection,
+  type ThemeName,
+} from "@/lib/theme-transition";
 
-type Theme = "dark" | "light" | "monochrome";
+type Theme = ThemeName;
 const TRIPLE_TAP_WINDOW_MS = 650;
 
 const icons: Record<Theme, React.ReactNode> = {
@@ -33,23 +40,82 @@ const icons: Record<Theme, React.ReactNode> = {
   ),
 };
 
+function nextLightDark(theme: Theme): Theme {
+  return theme === "light" ? "dark" : "light";
+}
+
 // Single-icon theme switcher powered by next-themes, with a hidden monochrome easter egg.
+// Light↔dark: directional 3D flip + full-viewport color sweep (View Transitions API).
 // Before hydration (mounted=false), a hidden placeholder renders to prevent layout shift.
 export default function ThemeToggle() {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const tapTimesRef = useRef<number[]>([]);
+  // Live-DOM dual-face flip only when View Transitions are unavailable.
+  const [fallbackFront, setFallbackFront] = useState<Theme | null>(null);
+  const [fallbackBack, setFallbackBack] = useState<Theme | null>(null);
+  const [flipDir, setFlipDir] = useState<ThemeDirection | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const resolvedActive = resolvedTheme ?? theme;
-  const activeTheme: Theme = resolvedActive && ["dark", "light", "monochrome"].includes(resolvedActive as Theme)
-    ? (resolvedActive as Theme)
-    : "light";
+  const activeTheme: Theme =
+    resolvedActive && ["dark", "light", "monochrome"].includes(resolvedActive as Theme)
+      ? (resolvedActive as Theme)
+      : "light";
+
+  const usingFallbackFlip = flipDir !== null && fallbackFront !== null && fallbackBack !== null;
+  const displayTheme = usingFallbackFlip ? fallbackFront! : activeTheme;
+
+  async function applyTheme(next: Theme, from: Theme) {
+    if (busy || isThemeTransitioning()) return;
+
+    const direction = getThemeDirection(from, next);
+
+    // Monochrome (and other non-directional) paths: instant.
+    if (!direction) {
+      document.documentElement.setAttribute("data-theme", next);
+      setTheme(next);
+      setFlipDir(null);
+      setFallbackFront(null);
+      setFallbackBack(null);
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      await runThemeTransition({
+        nextTheme: next,
+        direction,
+        setTheme,
+        onFallbackFlipStart: (dir) => {
+          setFallbackFront(from);
+          setFallbackBack(next);
+          setFlipDir(null);
+          requestAnimationFrame(() => setFlipDir(dir));
+        },
+        onFallbackFlipEnd: () => {
+          setFallbackFront(null);
+          setFallbackBack(null);
+          setFlipDir(null);
+        },
+      });
+
+      setFallbackFront(null);
+      setFallbackBack(null);
+      setFlipDir(null);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function handleToggle() {
+    if (busy || isThemeTransitioning()) return;
+
     const now = Date.now();
     const recentTaps = tapTimesRef.current.filter((time) => now - time <= TRIPLE_TAP_WINDOW_MS);
     recentTaps.push(now);
@@ -57,23 +123,23 @@ export default function ThemeToggle() {
 
     if (recentTaps.length >= 3) {
       tapTimesRef.current = [];
-      setTheme("monochrome");
+      void applyTheme("monochrome", activeTheme);
       return;
     }
 
     if (activeTheme === "monochrome") {
-      setTheme("light");
+      void applyTheme("light", activeTheme);
       return;
     }
 
-    setTheme(activeTheme === "light" ? "dark" : "light");
+    void applyTheme(nextLightDark(activeTheme), activeTheme);
   }
 
   if (!mounted) {
     return (
       <button
         type="button"
-        className="relative flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold tracking-tight leading-none"
+        className="theme-toggle-btn relative flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold tracking-tight leading-none"
         style={{ background: "var(--color-raised)", visibility: "hidden" }}
         aria-hidden="true"
         tabIndex={-1}
@@ -89,13 +155,30 @@ export default function ThemeToggle() {
     <button
       type="button"
       aria-label={`${activeTheme} theme`}
+      aria-busy={busy || undefined}
+      disabled={busy}
       onClick={handleToggle}
-      className="relative flex h-8 w-8 items-center justify-center rounded-full text-fg-heading transition-colors duration-200 cursor-pointer hover:text-[var(--color-accent-interactive)]"
+      className="theme-toggle-btn relative flex h-8 w-8 items-center justify-center rounded-full text-fg-heading transition-colors duration-200 cursor-pointer hover:text-[var(--color-accent-interactive)] disabled:cursor-wait"
       style={{ background: "var(--color-raised)" }}
     >
-      <span className="relative z-10 inline-flex items-center justify-center">
-        {icons[activeTheme]}
-      </span>
+      {usingFallbackFlip ? (
+        <span
+          className="theme-toggle-flip relative z-10"
+          data-flip={flipDir ?? undefined}
+          aria-hidden="true"
+        >
+          <span className="theme-toggle-face theme-toggle-face--front">
+            {icons[fallbackFront!]}
+          </span>
+          <span className="theme-toggle-face theme-toggle-face--back">
+            {icons[fallbackBack!]}
+          </span>
+        </span>
+      ) : (
+        <span className="relative z-10 inline-flex items-center justify-center" aria-hidden="true">
+          {icons[displayTheme]}
+        </span>
+      )}
     </button>
   );
 }

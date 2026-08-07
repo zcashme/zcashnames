@@ -5,6 +5,10 @@
    ═══════════════════════════════════════════════ */
 
 :root {
+  /* Theme toggle ↔ viewport sweep (shared motion) */
+  --theme-transition-duration: 500ms;
+  --theme-transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+
   /* Monochrome palette (dot-matrix olive) */
   --mono-0: #0f380f;
   --mono-1: #306230;
@@ -4286,6 +4290,88 @@ body.app-shell-standalone {
   line-height: 1.02;
   letter-spacing: -0.04em;
   font-weight: 800;
+}
+
+/* ═══════════════════════════════════════════════
+   Theme transition — View Transitions API
+   Root: directional clip-path color sweep
+   Toggle: 3D rotateY flip (named group)
+   ═══════════════════════════════════════════════ */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+::view-transition-group(theme-toggle) {
+  animation: none;
+}
+
+::view-transition-old(theme-toggle),
+::view-transition-new(theme-toggle) {
+  animation: none;
+  mix-blend-mode: normal;
+  backface-visibility: hidden;
+  height: 100%;
+  width: 100%;
+}
+
+/* Live 3D flip when View Transitions are unavailable */
+.theme-toggle-btn {
+  perspective: 420px;
+  view-transition-name: theme-toggle;
+}
+
+.theme-toggle-flip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform var(--theme-transition-duration) var(--theme-transition-easing);
+}
+
+.theme-toggle-flip[data-flip="ltr"] {
+  transform: rotateY(180deg);
+}
+
+.theme-toggle-flip[data-flip="rtl"] {
+  transform: rotateY(-180deg);
+}
+
+.theme-toggle-face {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.theme-toggle-face--back {
+  transform: rotateY(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  .theme-toggle-flip {
+    transition: none;
+  }
 }
 
 .blog-shell-description {
