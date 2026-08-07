@@ -1320,6 +1320,74 @@ body {
   -webkit-text-fill-color: currentColor;
 }
 
+/* Action-page hero name — same accent treatment as landing “names” /
+   “addresses”, plus a subtle looping shimmer for light and dark themes. */
+.action-hero-name {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  background-image: linear-gradient(
+    100deg,
+    #e0a61f 0%,
+    #f4b728 28%,
+    #ffe9a8 48%,
+    #f4b728 62%,
+    #d49212 100%
+  );
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: action-hero-name-shimmer 5.5s ease-in-out infinite;
+}
+
+[data-theme="light"] .action-hero-name {
+  /* Blend of landing names (cyan-blue) and addresses (blue-violet) accents */
+  background-image: linear-gradient(
+    100deg,
+    #2f8fe5 0%,
+    #29c7d3 30%,
+    #8f66ff 52%,
+    #29c7d3 72%,
+    #2f8fe5 100%
+  );
+  background-size: 220% 100%;
+}
+
+[data-theme="monochrome"] .action-hero-name {
+  background-image: linear-gradient(
+    100deg,
+    var(--mono-3) 0%,
+    color-mix(in srgb, var(--mono-3) 70%, white 30%) 45%,
+    var(--mono-3) 55%,
+    color-mix(in srgb, var(--mono-3) 85%, black 15%) 100%
+  );
+  background-size: 220% 100%;
+}
+
+@keyframes action-hero-name-shimmer {
+  0%,
+  12% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  88%,
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-hero-name {
+    animation: none;
+    background-position: 40% 50%;
+  }
+}
+
 
 /* ═══════════════════════════
    Per-card theme variables

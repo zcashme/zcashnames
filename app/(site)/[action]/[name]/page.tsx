@@ -126,11 +126,8 @@ export default async function NameActionPage({ params, searchParams }: PageProps
           }}
         >
           <div className="grid gap-4">
-            <h1
-              className="text-center text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
-              style={{ color: "var(--fg-heading)" }}
-            >
-              {name}
+            <h1 className="text-center text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl">
+              <span className="action-hero-name">{name}</span>
             </h1>
             <p
               className="mx-auto max-w-3xl text-center text-base leading-8 sm:text-lg"
