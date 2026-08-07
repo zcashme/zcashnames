@@ -16,9 +16,9 @@ import { getNamePricing } from "@/lib/network-stats";
 // explorer and search — every name lookup in the app flows through here.
 //
 // resolveName() is the central dispatch: it normalises the input, queries
-// the ZNS indexer, checks zn_protected_names (status=protected, not redeemed),
-// computes the claim cost, and returns a typed ResolveName union the UI can
-// switch on.
+// the ZNS indexer, checks zn_protected_names (status=protected, not redeemed,
+// not past expires_at), computes the claim cost, and returns a typed
+// ResolveName union the UI can switch on.
 //
 // The other exports (getCurrentRegistrations, getListings, getEvents,
 // getHomeStats) power the explorer page — they fetch paginated / filtered

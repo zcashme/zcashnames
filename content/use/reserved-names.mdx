@@ -7,11 +7,14 @@ Some names are set aside at launch so that brands, projects, legally protected t
 A name is protected for claim when it exists in the protected-names list with:
 
 - `status = protected`, and
-- `redeemed = false`
+- `redeemed = false`, and
+- `expires_at` is null **or** still in the future
 
 Category (person, organization, brand, technology, community, abuse, other) is used for operator review and display; it does not change whether an unlock code is required.
 
 Once the rightful party claims a protected name, `redeemed` is set to true and the unlock gate lifts. The name then behaves like any other registration.
+
+If operators set an `expires_at` on a protected row, protection ends after that time: the name is treated as no longer gated, and a background job (or first lookup) flips `status` to `rejected` with reason “Protection period expired.” Leave `expires_at` null for permanent protection until claim or manual review.
 
 ## How unlock codes work
 

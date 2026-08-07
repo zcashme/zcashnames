@@ -6,13 +6,14 @@ For the end-user perspective see [Protected Names (Use ZNS)](/docs/use/reserved-
 
 ## Storage
 
-Protected names live in a Supabase table (`zn_protected_names`) queried by the web app's server actions. The claim gate uses:
+Protected names live in a Supabase table (`zn_protected_names`) queried by the web app's server actions. Rows may include an optional `expires_at`; when that time has passed and the name is still unredeemed, protection ends (`status` becomes `rejected`). The claim gate uses:
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `normalized_name` | text | Lowercased normalized name used for lookups |
 | `status` | text | Only `protected` rows gate claims |
 | `redeemed` | boolean | True once the name has been claimed by its rightful owner |
+| `expires_at` | timestamptz nullable | When set, unclaimed protection ends after this time (`status` → `rejected`). `NULL` = no auto-expiry |
 | `category` | text | Taxonomy (person, organization, brand, technology, community, abuse, other) — not used for claim gating |
 
 The table is outside the indexer's scope. Running your own indexer does not give you access to the protected list - it's a policy-layer table specific to the `zcashnames.com` deployment. Third-party signing services can implement their own protection policy (or skip it entirely).
@@ -33,7 +34,7 @@ Properties:
 ## Claim flow
 
 1. User types a protected name in the web UI.
-2. Server action calls `getProtectedClaimGate(name)` and finds a row with `status = protected` and `redeemed = false`.
+2. Server action calls `getProtectedClaimGate(name)` and finds a row with `status = protected`, `redeemed = false`, and `expires_at` null or still in the future.
 3. UI prompts for the unlock code (status shown as **Protected**).
 4. User submits code. Server calls `verifyUnlockCode(name, code)`.
 5. If the code is valid, the server proceeds with the normal `buildSignedClaimMemo` flow: resolves (expects null), builds the canonical `CLAIM:{name}:{address}` pre-image, signs with the admin key, returns the memo to the client.

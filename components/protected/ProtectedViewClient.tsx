@@ -43,6 +43,8 @@ const SORT_OPTIONS: Array<{
   { key: "redeemed-asc", label: "redeemed (false first)", sortKey: "redeemed", sortDirection: "asc" },
   { key: "protected_at-desc", label: "protected_at (newest first)", sortKey: "protected_at", sortDirection: "desc" },
   { key: "protected_at-asc", label: "protected_at (oldest first)", sortKey: "protected_at", sortDirection: "asc" },
+  { key: "expires_at-desc", label: "expires_at (newest first)", sortKey: "expires_at", sortDirection: "desc" },
+  { key: "expires_at-asc", label: "expires_at (oldest first)", sortKey: "expires_at", sortDirection: "asc" },
   { key: "updated_at-desc", label: "updated_at (newest first)", sortKey: "updated_at", sortDirection: "desc" },
   { key: "updated_at-asc", label: "updated_at (oldest first)", sortKey: "updated_at", sortDirection: "asc" },
   { key: "created_at-desc", label: "created_at (newest first)", sortKey: "created_at", sortDirection: "desc" },

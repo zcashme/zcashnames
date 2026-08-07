@@ -3,7 +3,13 @@ import "server-only";
 import { db } from "@/lib/db";
 
 const PROTECTED_VIEW_SELECT =
+  "name, normalized_name, parent_name, category, status, redeemed, protected_at, expires_at, rejected_at, rejected_reason, updated_at, created_at, reason, evidence";
+
+const PROTECTED_VIEW_SELECT_WITHOUT_EXPIRES =
   "name, normalized_name, parent_name, category, status, redeemed, protected_at, rejected_at, rejected_reason, updated_at, created_at, reason, evidence";
+
+const PROTECTED_VIEW_SELECT_MINIMAL =
+  "name, normalized_name, parent_name, category, status, redeemed, protected_at, rejected_at, rejected_reason, updated_at, created_at, reason";
 
 export const PROTECTED_VIEW_PAGE_SIZE = 25;
 
@@ -17,6 +23,7 @@ export type ProtectedViewSortKey =
   | "status"
   | "redeemed"
   | "protected_at"
+  | "expires_at"
   | "updated_at"
   | "created_at";
 
@@ -48,6 +55,7 @@ export type ProtectedViewRow = {
   status: string;
   redeemed: boolean;
   protected_at: string | null;
+  expires_at: string | null;
   rejected_at: string | null;
   rejected_reason: string | null;
   updated_at: string | null;
@@ -57,8 +65,9 @@ export type ProtectedViewRow = {
   disputes: ProtectedViewDispute[];
 };
 
-type ProtectedNameDbRow = Omit<ProtectedViewRow, "evidence" | "disputes"> & {
+type ProtectedNameDbRow = Omit<ProtectedViewRow, "evidence" | "disputes" | "expires_at"> & {
   evidence?: unknown;
+  expires_at?: string | null;
 };
 
 type ProtectedDisputeDbRow = {
@@ -103,6 +112,7 @@ function sanitizeSortKey(value: string | null | undefined): ProtectedViewSortKey
     case "status":
     case "redeemed":
     case "protected_at":
+    case "expires_at":
     case "updated_at":
     case "created_at":
       return value;
@@ -329,23 +339,33 @@ export async function getProtectedViewData(args?: {
   let pageError = primaryResult.error;
   let pageCount = primaryResult.count;
 
-  // If evidence column is not migrated yet, retry without it.
-  if (pageError?.message?.includes("evidence")) {
+  // Graceful fallback when newer columns are not migrated yet.
+  const needsFallback =
+    pageError?.message?.includes("expires_at")
+    || pageError?.message?.includes("evidence");
+  if (needsFallback) {
+    const selectColumns = pageError?.message?.includes("evidence")
+      ? PROTECTED_VIEW_SELECT_MINIMAL
+      : PROTECTED_VIEW_SELECT_WITHOUT_EXPIRES;
+    // expires_at sort requires the column; fall back to protected_at.
+    const fallbackSortKey =
+      sortKey === "expires_at" && pageError?.message?.includes("expires_at")
+        ? "protected_at"
+        : sortKey;
+
     let fallbackQuery = db
       .from("zn_protected_names")
-      .select(
-        "name, normalized_name, parent_name, category, status, redeemed, protected_at, rejected_at, rejected_reason, updated_at, created_at, reason",
-        { count: "exact" },
-      );
+      .select(selectColumns, { count: "exact" });
     fallbackQuery = applySearch(fallbackQuery, searchQuery, searchMode);
     fallbackQuery = applyViewFilters(fallbackQuery, {
       redeemedOnly,
       underReviewOnly,
       rejectedOnly,
     });
-    fallbackQuery = applyPrimaryOrder(fallbackQuery, sortKey, sortDirection).order("name", {
-      ascending: true,
-    });
+    fallbackQuery = applyPrimaryOrder(fallbackQuery, fallbackSortKey, sortDirection).order(
+      "name",
+      { ascending: true },
+    );
     const fallback = await fallbackQuery.range(from, to);
     pageData = (fallback.data ?? null) as ProtectedNameDbRow[] | null;
     pageError = fallback.error;
@@ -367,6 +387,7 @@ export async function getProtectedViewData(args?: {
   const disputeMap = await loadDisputesByProtectedNames(rawRows.map((row) => row.name));
   const rows: ProtectedViewRow[] = rawRows.map((row) => ({
     ...row,
+    expires_at: row.expires_at ?? null,
     evidence: normalizeEvidenceUrls(row.evidence),
     disputes: disputeMap.get(row.name) ?? [],
   }));

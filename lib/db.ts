@@ -10,7 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 //
 // Tables in use:
 //   zn_waitlist          â€” waitlist signups, referral tracking
-//   zn_protected_names   — protected names (status=protected gates claims; evidence jsonb)
+//   zn_protected_names   — protected names (status=protected gates claims; optional expires_at; evidence jsonb)
 //   zn_protected_names_disputes — public disputes against protected/rejected names
 //   beta_testers         â€” closed-beta tester accounts (v1)
 //   beta_testers_v2      â€” open-beta applications (v2)

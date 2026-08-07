@@ -80,7 +80,7 @@ A single-page glossary for Zcash Names and ZNS. When the docs use a term that ha
 
 **Listing price** is the ZEC the seller chose when calling LIST. Free-form integers in zatoshis. Buyers pay the exact listing price; overpayment is not refunded.
 
-**Protected name** is a name flagged in the operator's protected-names policy (`zn_protected_names` with `status = protected`). Requires an unlock code from the maintainers to claim. See [Protected Names](/docs/use/reserved-names).
+**Protected name** is a name flagged in the operator's protected-names policy (`zn_protected_names` with `status = protected`, not redeemed, and not past optional `expires_at`). Requires an unlock code from the maintainers to claim. See [Protected Names](/docs/use/reserved-names).
 
 **Unlock code** is the deterministic HMAC fingerprint the signing service issues to redeem a protected name.
 

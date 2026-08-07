@@ -341,6 +341,9 @@ export default function ProtectedNameDetailsModal({
                 </FieldBlock>
               </div>
               <FieldBlock label="Protected">{formatTimestamp(row.protected_at)}</FieldBlock>
+              <FieldBlock label="Expires">
+                {row.expires_at ? formatTimestamp(row.expires_at) : "Never"}
+              </FieldBlock>
               <FieldBlock label="Redeemed">
                 {row.redeemed ? (
                   <Link
