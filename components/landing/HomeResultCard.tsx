@@ -91,7 +91,7 @@ export default function HomeResultCard({
       <div className="relative z-[1] flex items-start justify-between gap-2.5 max-[700px]:flex-wrap">
         <div className="min-w-0 flex items-center gap-2.5 flex-wrap max-[700px]:w-full max-[700px]:gap-2">
           <p className="m-0 max-w-[min(50vw,360px)] overflow-hidden text-ellipsis whitespace-nowrap text-[var(--home-result-name-color)] text-[clamp(1.2rem,2.4vw,1.55rem)] font-black tracking-[-0.016em] max-[700px]:max-w-full">
-            {displayName}
+            {plainName}
           </p>
 
           <NameStatusBadge status={availabilityState} />

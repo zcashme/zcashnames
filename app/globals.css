@@ -1609,6 +1609,8 @@ body {
   flex: 1;
   min-width: 0;
   height: 100%;
+  /* Clip animated placeholder suffix to the field bounds */
+  overflow: hidden;
 }
 
 .searchform-input-overlay {
@@ -1637,6 +1639,68 @@ body {
 
 .searchform-input-overlay-suffix {
   color: var(--sf-placeholder-color);
+}
+
+/* Animated .zcash / .zec placeholder suffix (empty input only).
+   Clipping is handled by .searchform-input-stack (overflow: hidden)
+   so suffixes can travel the full field height during transitions. */
+.searchform-suffix-viewport {
+  position: relative;
+  display: inline-grid;
+  align-items: center;
+  color: var(--sf-placeholder-color);
+}
+
+.searchform-suffix-sizer {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.searchform-suffix-layer {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+  color: var(--sf-placeholder-color);
+  will-change: transform;
+}
+
+.searchform-suffix-layer.is-rest {
+  transform: translateY(0);
+}
+
+/* Current suffix always exits downward; next always enters from above */
+@keyframes searchform-suffix-exit {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(var(--sf-h));
+  }
+}
+
+@keyframes searchform-suffix-enter {
+  from {
+    transform: translateY(calc(var(--sf-h) * -1));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.searchform-suffix-layer.is-exit {
+  animation: searchform-suffix-exit 500ms ease-in-out forwards;
+}
+
+.searchform-suffix-layer.is-enter {
+  animation: searchform-suffix-enter 500ms ease-in-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .searchform-suffix-layer.is-exit,
+  .searchform-suffix-layer.is-enter {
+    animation: none;
+  }
 }
 
 .searchform-input-locked {
