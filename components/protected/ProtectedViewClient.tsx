@@ -61,6 +61,7 @@ function buildProtectedViewCacheKey(args: {
   redeemedOnly: boolean;
   underReviewOnly: boolean;
   rejectedOnly: boolean;
+  disputedOnly: boolean;
   ensOnly: boolean;
   zmOnly: boolean;
 }) {
@@ -74,6 +75,7 @@ function buildProtectedViewCacheKey(args: {
     redeemedOnly: args.redeemedOnly,
     underReviewOnly: args.underReviewOnly,
     rejectedOnly: args.rejectedOnly,
+    disputedOnly: args.disputedOnly,
     ensOnly: args.ensOnly,
     zmOnly: args.zmOnly,
   });
@@ -89,6 +91,7 @@ function buildProtectedViewUrl(args: {
   redeemedOnly: boolean;
   underReviewOnly: boolean;
   rejectedOnly: boolean;
+  disputedOnly: boolean;
   ensOnly: boolean;
   zmOnly: boolean;
 }) {
@@ -101,6 +104,7 @@ function buildProtectedViewUrl(args: {
     redeemedOnly: String(args.redeemedOnly),
     underReviewOnly: String(args.underReviewOnly),
     rejectedOnly: String(args.rejectedOnly),
+    disputedOnly: String(args.disputedOnly),
     ensOnly: String(args.ensOnly),
     zmOnly: String(args.zmOnly),
   });
@@ -280,6 +284,7 @@ export default function ProtectedViewClient({
   const [redeemedOnly, setRedeemedOnly] = useState(initialData.redeemedOnly);
   const [underReviewOnly, setUnderReviewOnly] = useState(initialData.underReviewOnly);
   const [rejectedOnly, setRejectedOnly] = useState(initialData.rejectedOnly);
+  const [disputedOnly, setDisputedOnly] = useState(initialData.disputedOnly);
   const [ensOnly, setEnsOnly] = useState(initialData.ensOnly);
   const [zmOnly, setZmOnly] = useState(initialData.zmOnly);
   const [detailsRow, setDetailsRow] = useState<ProtectedViewRow | null>(null);
@@ -302,6 +307,7 @@ export default function ProtectedViewClient({
     redeemedOnly: stableInitialData.redeemedOnly,
     underReviewOnly: stableInitialData.underReviewOnly,
     rejectedOnly: stableInitialData.rejectedOnly,
+    disputedOnly: stableInitialData.disputedOnly,
     ensOnly: stableInitialData.ensOnly,
     zmOnly: stableInitialData.zmOnly,
   });
@@ -315,6 +321,7 @@ export default function ProtectedViewClient({
     redeemedOnly,
     underReviewOnly,
     rejectedOnly,
+    disputedOnly,
     ensOnly,
     zmOnly,
   });
@@ -335,6 +342,7 @@ export default function ProtectedViewClient({
           redeemedOnly,
           underReviewOnly,
           rejectedOnly,
+          disputedOnly,
           ensOnly,
           zmOnly,
         }),
@@ -358,6 +366,7 @@ export default function ProtectedViewClient({
     !redeemedOnly &&
     !underReviewOnly &&
     !rejectedOnly &&
+    !disputedOnly &&
     !ensOnly &&
     !zmOnly &&
     appliedSearch.trim() === "";
@@ -366,6 +375,7 @@ export default function ProtectedViewClient({
     setRedeemedOnly(false);
     setUnderReviewOnly(false);
     setRejectedOnly(false);
+    setDisputedOnly(false);
     setEnsOnly(false);
     setZmOnly(false);
   }
@@ -565,6 +575,16 @@ export default function ProtectedViewClient({
               setPage(1);
               clearTabFilters();
               setRejectedOnly(true);
+            },
+          },
+          {
+            key: "disputed",
+            label: `Disputed (${data.disputedCount})`,
+            active: disputedOnly,
+            onClick: () => {
+              setPage(1);
+              clearTabFilters();
+              setDisputedOnly(true);
             },
           },
           {

@@ -92,6 +92,7 @@ type ProtectedViewFilterFlags = {
   redeemedOnly: boolean;
   underReviewOnly: boolean;
   rejectedOnly: boolean;
+  disputedOnly: boolean;
   ensOnly: boolean;
   zmOnly: boolean;
 };
@@ -115,6 +116,7 @@ export type ProtectedViewData = {
   redeemedCount: number;
   underReviewCount: number;
   rejectedCount: number;
+  disputedCount: number;
   ensCount: number;
   zmCount: number;
   heroAllCount: number;
@@ -131,6 +133,7 @@ export type ProtectedViewData = {
   redeemedOnly: boolean;
   underReviewOnly: boolean;
   rejectedOnly: boolean;
+  disputedOnly: boolean;
   ensOnly: boolean;
   zmOnly: boolean;
 };
@@ -184,6 +187,38 @@ function normalizeEvidenceUrls(value: unknown): string[] {
     .filter(Boolean);
 }
 
+function isMissingDisputesTableError(error: { message?: string; code?: string } | null | undefined) {
+  if (!error) return false;
+  return (
+    !!error.message?.includes("zn_protected_names_disputes")
+    || !!error.message?.includes("does not exist")
+    || error.code === "42P01"
+  );
+}
+
+/**
+ * Distinct protected names that have at least one dispute row.
+ * Soft-fails to [] when the disputes table is missing.
+ */
+async function loadDisputedProtectedNames(): Promise<string[]> {
+  const { data, error } = await db
+    .from("zn_protected_names_disputes")
+    .select("protected_name");
+
+  if (error) {
+    if (isMissingDisputesTableError(error)) {
+      return [];
+    }
+    throw new Error(error.message);
+  }
+
+  const names = new Set<string>();
+  for (const row of (data ?? []) as Array<{ protected_name: string | null }>) {
+    if (row.protected_name) names.add(row.protected_name);
+  }
+  return Array.from(names);
+}
+
 async function loadDisputesByProtectedNames(
   names: string[],
 ): Promise<Map<string, ProtectedViewDispute[]>> {
@@ -200,11 +235,7 @@ async function loadDisputesByProtectedNames(
 
   if (error) {
     // Disputes table may not exist yet in some environments; fail soft.
-    if (
-      error.message.includes("zn_protected_names_disputes")
-      || error.message.includes("does not exist")
-      || error.code === "42P01"
-    ) {
+    if (isMissingDisputesTableError(error)) {
       return map;
     }
     throw new Error(error.message);
@@ -320,7 +351,11 @@ function applyFamilyFilter(query: any, familyRoots: string[] | null) {
   return query.or(`name.in.(${list}),parent_name.in.(${list})`);
 }
 
-function applyViewFilters(query: any, args: ProtectedViewFilterFlags) {
+function applyViewFilters(
+  query: any,
+  args: ProtectedViewFilterFlags,
+  disputedNames: string[] = [],
+) {
   if (args.redeemedOnly) {
     return query.eq("redeemed", true);
   }
@@ -333,6 +368,13 @@ function applyViewFilters(query: any, args: ProtectedViewFilterFlags) {
     return query.eq("status", "rejected");
   }
 
+  if (args.disputedOnly) {
+    if (disputedNames.length === 0) {
+      return query.eq("name", "");
+    }
+    return query.in("name", disputedNames);
+  }
+
   if (args.ensOnly) {
     return query.eq("ens_priority_claim", true);
   }
@@ -343,6 +385,15 @@ function applyViewFilters(query: any, args: ProtectedViewFilterFlags) {
 
   return query;
 }
+
+const EMPTY_TAB_FILTERS: ProtectedViewFilterFlags = {
+  redeemedOnly: false,
+  underReviewOnly: false,
+  rejectedOnly: false,
+  disputedOnly: false,
+  ensOnly: false,
+  zmOnly: false,
+};
 
 function isMissingColumnError(error: { message?: string } | null | undefined, column: string) {
   return !!error?.message?.includes(column);
@@ -373,6 +424,7 @@ export async function getProtectedViewData(args?: {
   redeemedOnly?: boolean | string | null;
   underReviewOnly?: boolean | string | null;
   rejectedOnly?: boolean | string | null;
+  disputedOnly?: boolean | string | null;
   ensOnly?: boolean | string | null;
   zmOnly?: boolean | string | null;
 }): Promise<ProtectedViewData> {
@@ -394,30 +446,38 @@ export async function getProtectedViewData(args?: {
   const underReviewOnly = redeemedOnly ? false : sanitizeBooleanFlag(args?.underReviewOnly);
   const rejectedOnly =
     redeemedOnly || underReviewOnly ? false : sanitizeBooleanFlag(args?.rejectedOnly);
-  const ensOnly =
+  const disputedOnly =
     redeemedOnly || underReviewOnly || rejectedOnly
+      ? false
+      : sanitizeBooleanFlag(args?.disputedOnly);
+  const ensOnly =
+    redeemedOnly || underReviewOnly || rejectedOnly || disputedOnly
       ? false
       : sanitizeBooleanFlag(args?.ensOnly);
   const zmOnly =
-    redeemedOnly || underReviewOnly || rejectedOnly || ensOnly
+    redeemedOnly || underReviewOnly || rejectedOnly || disputedOnly || ensOnly
       ? false
       : sanitizeBooleanFlag(args?.zmOnly);
   const filterFlags: ProtectedViewFilterFlags = {
     redeemedOnly,
     underReviewOnly,
     rejectedOnly,
+    disputedOnly,
     ensOnly,
     zmOnly,
   };
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  // Expand search hits to full parent↔variant families before filtering/paging.
-  const familyRoots = await resolveSearchFamilyRoots(searchQuery, searchMode);
+  // Expand search hits to full parent↔variant families; resolve disputed names for the tab.
+  const [familyRoots, disputedNames] = await Promise.all([
+    resolveSearchFamilyRoots(searchQuery, searchMode),
+    loadDisputedProtectedNames(),
+  ]);
 
   let query = db.from("zn_protected_names").select(PROTECTED_VIEW_SELECT, { count: "exact" });
   query = applyFamilyFilter(query, familyRoots);
-  query = applyViewFilters(query, filterFlags);
+  query = applyViewFilters(query, filterFlags, disputedNames);
   query = applyPrimaryOrder(query, sortKey, sortDirection).order("name", { ascending: true });
 
   const allCountQuery = applyFamilyFilter(
@@ -429,65 +489,48 @@ export async function getProtectedViewData(args?: {
       db.from("zn_protected_names").select("name", { count: "exact", head: true }),
       familyRoots,
     ),
-    {
-      redeemedOnly: true,
-      underReviewOnly: false,
-      rejectedOnly: false,
-      ensOnly: false,
-      zmOnly: false,
-    },
+    { ...EMPTY_TAB_FILTERS, redeemedOnly: true },
+    disputedNames,
   );
   const underReviewCountQuery = applyViewFilters(
     applyFamilyFilter(
       db.from("zn_protected_names").select("name", { count: "exact", head: true }),
       familyRoots,
     ),
-    {
-      redeemedOnly: false,
-      underReviewOnly: true,
-      rejectedOnly: false,
-      ensOnly: false,
-      zmOnly: false,
-    },
+    { ...EMPTY_TAB_FILTERS, underReviewOnly: true },
+    disputedNames,
   );
   const rejectedCountQuery = applyViewFilters(
     applyFamilyFilter(
       db.from("zn_protected_names").select("name", { count: "exact", head: true }),
       familyRoots,
     ),
-    {
-      redeemedOnly: false,
-      underReviewOnly: false,
-      rejectedOnly: true,
-      ensOnly: false,
-      zmOnly: false,
-    },
+    { ...EMPTY_TAB_FILTERS, rejectedOnly: true },
+    disputedNames,
+  );
+  const disputedCountQuery = applyViewFilters(
+    applyFamilyFilter(
+      db.from("zn_protected_names").select("name", { count: "exact", head: true }),
+      familyRoots,
+    ),
+    { ...EMPTY_TAB_FILTERS, disputedOnly: true },
+    disputedNames,
   );
   const ensCountQuery = applyViewFilters(
     applyFamilyFilter(
       db.from("zn_protected_names").select("name", { count: "exact", head: true }),
       familyRoots,
     ),
-    {
-      redeemedOnly: false,
-      underReviewOnly: false,
-      rejectedOnly: false,
-      ensOnly: true,
-      zmOnly: false,
-    },
+    { ...EMPTY_TAB_FILTERS, ensOnly: true },
+    disputedNames,
   );
   const zmCountQuery = applyViewFilters(
     applyFamilyFilter(
       db.from("zn_protected_names").select("name", { count: "exact", head: true }),
       familyRoots,
     ),
-    {
-      redeemedOnly: false,
-      underReviewOnly: false,
-      rejectedOnly: false,
-      ensOnly: false,
-      zmOnly: true,
-    },
+    { ...EMPTY_TAB_FILTERS, zmOnly: true },
+    disputedNames,
   );
   const heroAllCountQuery = db
     .from("zn_protected_names")
@@ -507,6 +550,7 @@ export async function getProtectedViewData(args?: {
     { count: redeemedCount, error: redeemedCountError },
     { count: underReviewCount, error: underReviewCountError },
     { count: rejectedCount, error: rejectedCountError },
+    { count: disputedCount, error: disputedCountError },
     ensCountResult,
     zmCountResult,
     { count: heroAllCount, error: heroAllCountError },
@@ -518,6 +562,7 @@ export async function getProtectedViewData(args?: {
     redeemedCountQuery,
     underReviewCountQuery,
     rejectedCountQuery,
+    disputedCountQuery,
     ensCountQuery,
     zmCountQuery,
     heroAllCountQuery,
@@ -574,7 +619,7 @@ export async function getProtectedViewData(args?: {
       .from("zn_protected_names")
       .select(selectColumns, { count: "exact" });
     fallbackQuery = applyFamilyFilter(fallbackQuery, familyRoots);
-    fallbackQuery = applyViewFilters(fallbackQuery, fallbackFilters);
+    fallbackQuery = applyViewFilters(fallbackQuery, fallbackFilters, disputedNames);
     fallbackQuery = applyPrimaryOrder(fallbackQuery, fallbackSortKey, sortDirection).order(
       "name",
       { ascending: true },
@@ -592,6 +637,7 @@ export async function getProtectedViewData(args?: {
   if (redeemedCountError) throw new Error(redeemedCountError.message);
   if (underReviewCountError) throw new Error(underReviewCountError.message);
   if (rejectedCountError) throw new Error(rejectedCountError.message);
+  if (disputedCountError) throw new Error(disputedCountError.message);
   if (heroAllCountError) throw new Error(heroAllCountError.message);
   if (heroUnderReviewCountError) throw new Error(heroUnderReviewCountError.message);
   if (heroRejectedCountError) throw new Error(heroRejectedCountError.message);
@@ -642,6 +688,7 @@ export async function getProtectedViewData(args?: {
     redeemedCount: redeemedCount ?? 0,
     underReviewCount: underReviewCount ?? 0,
     rejectedCount: rejectedCount ?? 0,
+    disputedCount: disputedCount ?? 0,
     ensCount,
     zmCount,
     heroAllCount: heroAllCount ?? 0,
@@ -658,6 +705,7 @@ export async function getProtectedViewData(args?: {
     redeemedOnly,
     underReviewOnly,
     rejectedOnly,
+    disputedOnly,
     ensOnly: priorityColumnsAvailable ? ensOnly : false,
     zmOnly: priorityColumnsAvailable ? zmOnly : false,
   };

@@ -17,6 +17,7 @@ export async function GET(request: Request) {
       redeemedOnly: url.searchParams.get("redeemedOnly"),
       underReviewOnly: url.searchParams.get("underReviewOnly"),
       rejectedOnly: url.searchParams.get("rejectedOnly"),
+      disputedOnly: url.searchParams.get("disputedOnly"),
       ensOnly: url.searchParams.get("ensOnly"),
       zmOnly: url.searchParams.get("zmOnly"),
     });

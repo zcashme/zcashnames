@@ -352,21 +352,19 @@ export default function ProtectedNameDetailsModal({
                 borderBottom: "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
               }}
             >
-              <div className="relative flex items-center">
+              <div className="flex items-center justify-between gap-3">
                 <h2
                   id="protected-name-details-title"
-                  className="w-full px-20 text-center text-xl font-bold leading-none"
+                  className="min-w-0 flex-1 text-left text-xl font-bold leading-none"
                   style={{ color: "var(--fg-heading)" }}
                 >
                   {row.normalized_name}
                 </h2>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center">
-                  <span className="pointer-events-auto">
-                    <StatusBadge
-                      label={getNameStatusLabel(row.status)}
-                      style={getNameStatusStyle(row.status)}
-                    />
-                  </span>
+                <div className="shrink-0">
+                  <StatusBadge
+                    label={getNameStatusLabel(row.status)}
+                    style={getNameStatusStyle(row.status)}
+                  />
                 </div>
               </div>
             </div>
