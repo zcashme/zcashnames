@@ -88,6 +88,16 @@ const nextConfig: NextConfig = {
         destination: "/waitlist?token=:token",
         permanent: false,
       },
+      {
+        source: "/docs/protocol/reserved-names",
+        destination: "/docs/protocol/protected-names",
+        permanent: true,
+      },
+      {
+        source: "/docs/use/reserved-names",
+        destination: "/docs/use/protected-names",
+        permanent: true,
+      },
     ];
   },
   async headers() {

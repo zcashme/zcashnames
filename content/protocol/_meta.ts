@@ -9,7 +9,7 @@ const meta: MetaRecord = {
   'address-types': 'Address Types',
   pricing: 'Pricing',
   'otp-protocol': 'OTP Protocol (ZVS)',
-  'reserved-names': 'Protected Names',
+  'protected-names': 'Protected Names',
 }
 
 export default meta

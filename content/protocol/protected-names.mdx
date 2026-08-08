@@ -1,0 +1,104 @@
+# Protected Names
+
+Protected names are a **policy layer** on top of the protocol. The indexer has no concept of "protected" - to it, a name is either in `registrations` or it isn't. Protection is enforced by the signing service: the admin key will not produce a `CLAIM` signature for a protected name unless the requester presents a valid **unlock code**.
+
+This is distinct from waitlist **reservation** (queue / early-access holds). The claim gate uses the operator table `zn_protected_names`.
+
+For the end-user perspective see [Protected Names (Use ZNS)](/docs/use/protected-names). The public operator list is at [`/protected`](/protected).
+
+## Storage
+
+Protected names live in a Supabase table (`zn_protected_names`) queried by the web app's server actions and APIs. The table is outside the indexer's scope. Running your own indexer does not give you access to the protected list - it is a policy-layer table specific to the `zcashnames.com` deployment. Third-party signing services can implement their own protection policy (or skip it entirely).
+
+### Claim-relevant columns
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `name` | text | Display / primary key form of the name |
+| `normalized_name` | text | Lowercased normalized name used for lookups |
+| `status` | text | Lifecycle status (see below). Only `protected` rows gate claims |
+| `redeemed` | boolean | True once the name has been claimed by its rightful owner |
+| `expires_at` | timestamptz nullable | When set, unclaimed protection ends after this time (`status` → `rejected`). `NULL` = no auto-expiry |
+| `category` | text | Taxonomy (person, organization, brand, technology, community, abuse, other) — not used for claim gating |
+
+### Parent / variant
+
+| Column | Description |
+|--------|-------------|
+| `parent_name` | `NULL` for a **parent** (canonical / primary). For a **variant**, the parent row's `name`. Variants should only be added after the parent exists. |
+
+### Operator / product flags
+
+| Column | Description |
+|--------|-------------|
+| `ens_priority_claim` | Boolean flag for ENS priority-claim rows (filters / UI; not a claim-gate input) |
+| `zm_priority_claim` | Boolean flag for Zcash.me priority-claim rows (filters / UI; not a claim-gate input) |
+| `reason`, `evidence` | Operator-facing justification and evidence URLs |
+| `rejected_at`, `rejected_reason` | Set when a row is rejected (including auto-expiry) |
+
+### Status lifecycle
+
+| Status | Role |
+|--------|------|
+| `under_review` | Suggested or pending operator decision; **does not** gate claims |
+| `protected` | Actively held; **can** gate claims when unredeemed and not past `expires_at` |
+| `rejected` | Not held for claim; includes expired unclaimed protection |
+
+**Claim gate:**
+
+```
+gate ⇔ status = protected
+     ∧ redeemed = false
+     ∧ (expires_at IS NULL ∨ expires_at > now)
+```
+
+When `expires_at` is past and the row is still unredeemed, protection ends: a batch job (or first gate lookup) flips `status` to `rejected` with reason “Protection period expired.”
+
+### Disputes
+
+Disputes are stored in `zn_protected_names_disputes` (multiple rows per protected name allowed). Each dispute has its own `review_status` (`under_review`, `accepted`, `dismissed`) independent of the name's `status`. Filing or reviewing a dispute **does not by itself** change the claim gate; operators may change the name row after dispute review.
+
+Public suggestion and dispute flows write through security-definer RPCs; they are application surfaces on top of this storage model.
+
+## Unlock codes
+
+An unlock code is a deterministic HMAC fingerprint that the signing service can regenerate for any protected name. It is distributed out-of-band (Discord, email) to the rightful owner.
+
+Properties:
+
+- **Deterministic.** Same secret + same name = same code forever (until the secret is rotated).
+- **One per name.** There is no per-user code - the secret is shared across the operator's infrastructure.
+- **12 hex chars, formatted `XXXX-XXXX-XXXX`.** Provides ~48 bits of entropy per code given the secret is unknown - enough to prevent online guessing, not enough to resist a secret leak.
+- **Not a capability.** The unlock code is a verifier input; it does not by itself authorize anything on-chain. The on-chain CLAIM still requires the admin Ed25519 signature.
+
+## Claim flow
+
+1. User types a protected name in the web UI.
+2. Server action calls `getProtectedClaimGate(name)` and finds a row with `status = protected`, `redeemed = false`, and `expires_at` null or still in the future.
+3. UI prompts for the unlock code (status shown as **Protected**).
+4. User submits code. Server calls `verifyUnlockCode(name, code)`.
+5. If the code is valid, the server proceeds with the normal `buildSignedClaimMemo` flow: resolves (expects null), builds the canonical `CLAIM:{name}:{address}` pre-image, signs with the admin key, returns the memo to the client.
+6. Client shows the ZIP-321 URI. User sends the tx. Indexer processes the block normally - it has no idea this name was protected.
+7. After the claim is mined, the server marks `redeemed = true` on matching protected rows so subsequent claim attempts are not gated on the unlock code.
+
+## Category and priority flags
+
+Category and ENS / Zcash.me priority flags are informational for operators and the public list UI. **Claim gating depends only on `status = protected`, `redeemed = false`, and optional `expires_at`.** Once redeemed, the row no longer requires an unlock code.
+
+## Lifecycle (application)
+
+Typical paths through the policy layer:
+
+1. **Suggest** → row created (often `under_review`) via public suggestion RPC.  
+2. **Review** → operators set `protected` or `rejected`.  
+3. **Protect** → unlock codes issued out-of-band; name may appear on `/protected`.  
+4. **Claim** → unlock verified → signed CLAIM → `redeemed = true`.  
+5. **Expire** → past `expires_at` while unredeemed → `rejected`.  
+6. **Dispute** → optional reevaluation record on `zn_protected_names_disputes` without automatically changing the gate.
+
+## Security properties and weaknesses
+
+- **Policy, not protocol.** Anyone running their own signing service can implement a different protection policy - or none. The indexer will accept any validly-signed CLAIM.
+- **Admin-key trust.** This scheme only works because the admin key is the sole source of CLAIM signatures. If the signing key leaks, protected names are no longer gated.
+- **Secret-rotation burden.** Rotating `ZNS_UNLOCK_SECRET` invalidates every previously issued unlock code. Do this only in concert with re-issuing codes to holders.
+- **Single point of failure.** The signing service's refusal is the entire enforcement mechanism. There is no on-chain way to distinguish a protected name from any other name after it's been claimed.

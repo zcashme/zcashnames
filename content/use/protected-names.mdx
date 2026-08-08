@@ -1,0 +1,85 @@
+# Protected Names
+
+Some names are set aside so brands, projects, legally sensitive terms, and community handles cannot be sniped at launch. These names are stored as **protected** rows. When a name is actively gated, the product shows **Protected** status and claiming requires an **unlock code**.
+
+This is separate from waitlist **reserved** names (queue / early-access holds). Protected names are a claim-gate policy on `zn_protected_names`.
+
+Browse the public list at [Protected Names](/protected).
+
+## What is protected?
+
+A name is gated for claim when it exists in the protected-names list with:
+
+- `status = protected`, and
+- `redeemed = false`, and
+- `expires_at` is null **or** still in the future
+
+Category (person, organization, brand, technology, community, abuse, other) is used for operator review and display; it does not change whether an unlock code is required.
+
+Once the rightful party claims a protected name, `redeemed` is set to true and the unlock gate lifts. The name then behaves like any other registration.
+
+If operators set an `expires_at` on a protected row, protection ends after that time: the name is no longer gated, and a background job (or first lookup) flips `status` to `rejected` with reason “Protection period expired.” Leave `expires_at` null for permanent protection until claim or manual review.
+
+### Statuses you may see
+
+| Status | Meaning |
+|--------|---------|
+| **Under review** | Suggested or submitted; not yet approved for protection |
+| **Protected** | Actively held; unlock code required to claim (if not redeemed and not expired) |
+| **Rejected** | Not protected for claim (includes expired unclaimed protection) |
+| **Redeemed** | Claimed on-chain; shown with a checkmark on the list, no unlock gate |
+
+Some rows are also flagged as **ENS** or **Zcash.me** priority claims. Those flags are informational for operators and filters on `/protected`; they do not replace the unlock-code gate.
+
+## Parents and variants
+
+Protected names can form a small family:
+
+- A **parent** (canonical / primary) has no parent of its own.
+- A **variant** points at its parent (for example a support or phishing lookalike of a brand parent).
+
+Suggest the parent first when the parent is not already in the list; then add variants under it. On `/protected`, searching for a parent or a variant surfaces the whole family.
+
+## Checking the public list
+
+Open [Protected Names](/protected) to:
+
+- Search by name (contains or exact)
+- Filter by status, category, priority, or disputes
+- Open any row for reason, evidence, disputes, and expiry details
+
+## How unlock codes work
+
+An unlock code is a fixed 12-character fingerprint in the form `XXXX-XXXX-XXXX`. You don't choose it; the maintainers issue it to you. Brand owners get a code after verifying control of the brand; community handles get a code after coordinating with the maintainer.
+
+If you think a protected name should be released to you, contact the maintainers via [Discord](https://discord.gg/z2H23QgAGf) or by opening an issue on the [directory repo](https://github.com/zcashme/directory).
+
+For the HMAC derivation and the database shape, see [Protected Names (protocol)](/docs/protocol/protected-names).
+
+## Claiming a protected name
+
+1. Search for the name. It will show as **Protected**.
+2. Enter the unlock code you were given (`XXXX-XXXX-XXXX`).
+3. Enter your Zcash unified address.
+4. Complete the normal claim flow - send the ZIP-321 transaction with the claim-cost amount.
+
+The web app verifies the unlock code server-side before issuing the signed `CLAIM` memo. The unlock code is not part of the on-chain memo - it is strictly a gate on the web UI's signing service.
+
+## Suggesting a name
+
+If a name is missing from the list, use [Suggest a protected name](/protected/suggest):
+
+1. Enter the name (letters and numbers only).
+2. Choose **Parent name** (canonical) or **Variant** (requires an existing parent).
+3. Pick a category, explain why it should be protected, and attach evidence URLs.
+4. Provide contact details for review.
+
+New suggestions typically enter **Under review** until operators approve or reject them.
+
+## Disputing a name
+
+If you believe a protected or rejected name should be reevaluated, use [Dispute a name](/protected/dispute) when the name is eligible (non-redeemed protected or rejected rows). Disputes are reviewed separately from the name's current status; filing a dispute does not by itself unlock the claim gate.
+
+## What if I claim a protected name directly via the memo protocol?
+
+You would need the admin's signature over the `CLAIM:{name}:{address}` pre-image, which is what the unlock code gates access to. Without the signature the indexer will reject the memo. Protected status is therefore a policy layered on top of the protocol, enforced by the entity that holds the admin key.
