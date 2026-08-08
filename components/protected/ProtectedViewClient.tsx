@@ -61,6 +61,8 @@ function buildProtectedViewCacheKey(args: {
   redeemedOnly: boolean;
   underReviewOnly: boolean;
   rejectedOnly: boolean;
+  ensOnly: boolean;
+  zmOnly: boolean;
 }) {
   return JSON.stringify({
     page: args.page,
@@ -72,6 +74,8 @@ function buildProtectedViewCacheKey(args: {
     redeemedOnly: args.redeemedOnly,
     underReviewOnly: args.underReviewOnly,
     rejectedOnly: args.rejectedOnly,
+    ensOnly: args.ensOnly,
+    zmOnly: args.zmOnly,
   });
 }
 
@@ -85,6 +89,8 @@ function buildProtectedViewUrl(args: {
   redeemedOnly: boolean;
   underReviewOnly: boolean;
   rejectedOnly: boolean;
+  ensOnly: boolean;
+  zmOnly: boolean;
 }) {
   const searchParams = new URLSearchParams({
     page: String(args.page),
@@ -95,6 +101,8 @@ function buildProtectedViewUrl(args: {
     redeemedOnly: String(args.redeemedOnly),
     underReviewOnly: String(args.underReviewOnly),
     rejectedOnly: String(args.rejectedOnly),
+    ensOnly: String(args.ensOnly),
+    zmOnly: String(args.zmOnly),
   });
 
   if (args.searchQuery.trim()) {
@@ -235,6 +243,24 @@ function PlusIcon() {
   );
 }
 
+function RedeemedCheckIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3.5 w-3.5 shrink-0"
+      aria-hidden="true"
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
 export default function ProtectedViewClient({
   initialData,
 }: {
@@ -254,6 +280,8 @@ export default function ProtectedViewClient({
   const [redeemedOnly, setRedeemedOnly] = useState(initialData.redeemedOnly);
   const [underReviewOnly, setUnderReviewOnly] = useState(initialData.underReviewOnly);
   const [rejectedOnly, setRejectedOnly] = useState(initialData.rejectedOnly);
+  const [ensOnly, setEnsOnly] = useState(initialData.ensOnly);
+  const [zmOnly, setZmOnly] = useState(initialData.zmOnly);
   const [detailsRow, setDetailsRow] = useState<ProtectedViewRow | null>(null);
   const router = useRouter();
   const initialDataRef = useRef(initialData);
@@ -274,6 +302,8 @@ export default function ProtectedViewClient({
     redeemedOnly: stableInitialData.redeemedOnly,
     underReviewOnly: stableInitialData.underReviewOnly,
     rejectedOnly: stableInitialData.rejectedOnly,
+    ensOnly: stableInitialData.ensOnly,
+    zmOnly: stableInitialData.zmOnly,
   });
   const queryKey = buildProtectedViewCacheKey({
     page,
@@ -285,6 +315,8 @@ export default function ProtectedViewClient({
     redeemedOnly,
     underReviewOnly,
     rejectedOnly,
+    ensOnly,
+    zmOnly,
   });
   const { data, isRefreshing, loadError } = useCachedRemoteTableData({
     initialCacheKey,
@@ -303,6 +335,8 @@ export default function ProtectedViewClient({
           redeemedOnly,
           underReviewOnly,
           rejectedOnly,
+          ensOnly,
+          zmOnly,
         }),
         { cache: "no-store" },
       );
@@ -324,7 +358,17 @@ export default function ProtectedViewClient({
     !redeemedOnly &&
     !underReviewOnly &&
     !rejectedOnly &&
+    !ensOnly &&
+    !zmOnly &&
     appliedSearch.trim() === "";
+
+  function clearTabFilters() {
+    setRedeemedOnly(false);
+    setUnderReviewOnly(false);
+    setRejectedOnly(false);
+    setEnsOnly(false);
+    setZmOnly(false);
+  }
 
   function applySearch() {
     setPage(1);
@@ -490,9 +534,7 @@ export default function ProtectedViewClient({
               setAppliedSearch("");
               setSearchMode("contains");
               setPage(1);
-              setRedeemedOnly(false);
-              setUnderReviewOnly(false);
-              setRejectedOnly(false);
+              clearTabFilters();
             },
           },
           {
@@ -501,9 +543,8 @@ export default function ProtectedViewClient({
             active: redeemedOnly,
             onClick: () => {
               setPage(1);
+              clearTabFilters();
               setRedeemedOnly(true);
-              setUnderReviewOnly(false);
-              setRejectedOnly(false);
             },
           },
           {
@@ -512,9 +553,8 @@ export default function ProtectedViewClient({
             active: underReviewOnly,
             onClick: () => {
               setPage(1);
+              clearTabFilters();
               setUnderReviewOnly(true);
-              setRedeemedOnly(false);
-              setRejectedOnly(false);
             },
           },
           {
@@ -523,9 +563,28 @@ export default function ProtectedViewClient({
             active: rejectedOnly,
             onClick: () => {
               setPage(1);
+              clearTabFilters();
               setRejectedOnly(true);
-              setUnderReviewOnly(false);
-              setRedeemedOnly(false);
+            },
+          },
+          {
+            key: "ens",
+            label: `ENS (${data.ensCount})`,
+            active: ensOnly,
+            onClick: () => {
+              setPage(1);
+              clearTabFilters();
+              setEnsOnly(true);
+            },
+          },
+          {
+            key: "zcash-me",
+            label: `Zcash.me (${data.zmCount})`,
+            active: zmOnly,
+            onClick: () => {
+              setPage(1);
+              clearTabFilters();
+              setZmOnly(true);
             },
           },
         ]}
@@ -574,7 +633,7 @@ export default function ProtectedViewClient({
             >
               <thead>
                 <tr>
-                  {["name", "category", "status", "redeemed", "details"].map(
+                  {["name", "category", "status", "details"].map(
                     (column, index) => (
                       <th
                         key={column}
@@ -583,7 +642,7 @@ export default function ProtectedViewClient({
                           background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
                           borderBottom: "1px solid var(--faq-border)",
                           borderRight:
-                            index === 4
+                            index === 3
                               ? "none"
                               : "1px solid color-mix(in srgb, var(--faq-border) 78%, transparent)",
                           color: "var(--fg-muted)",
@@ -600,7 +659,7 @@ export default function ProtectedViewClient({
                 {loadError ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={4}
                       className="px-6 py-4 text-sm"
                       style={{ color: "var(--accent-red, #e05252)" }}
                     >
@@ -612,7 +671,7 @@ export default function ProtectedViewClient({
                 {data.rows.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={4}
                       className="px-6 py-10 text-center text-sm"
                       style={{ color: "var(--fg-muted)" }}
                     >
@@ -634,11 +693,21 @@ export default function ProtectedViewClient({
                         }}
                       >
                         <span
-                          className="block"
+                          className="inline-flex items-center gap-1.5"
                           style={{ color: "var(--fg-body)" }}
                           title={row.normalized_name}
                         >
-                          {row.normalized_name}
+                          <span>{row.normalized_name}</span>
+                          {row.redeemed ? (
+                            <span
+                              className="inline-flex"
+                              title="Redeemed"
+                              aria-label="Redeemed"
+                              style={{ color: "var(--accent-green, #27b36a)" }}
+                            >
+                              <RedeemedCheckIcon />
+                            </span>
+                          ) : null}
                         </span>
                         {row.parent_name ? (
                           <span
@@ -678,18 +747,6 @@ export default function ProtectedViewClient({
                         >
                           {getStatusLabel(row.status)}
                         </span>
-                      </td>
-                      <td
-                        className="px-5 py-4 text-sm sm:px-6"
-                        style={{
-                          borderBottom:
-                            "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
-                          borderRight:
-                            "1px solid color-mix(in srgb, var(--faq-border) 78%, transparent)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {String(row.redeemed)}
                       </td>
                       <td
                         className="px-5 py-4 text-sm sm:px-6"

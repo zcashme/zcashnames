@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -26,6 +27,47 @@ function EllipsisIcon({ className }: { className?: string }) {
       <circle cx="19" cy="12" r="1.8" />
     </svg>
   );
+}
+
+/** Classic Ethereum diamond mark for ENS priority-claim names. */
+function EthereumIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className ?? "h-7 w-7"}
+      aria-hidden="true"
+    >
+      <path d="M11.944 1.75 5.75 12.03l6.194 3.66 6.194-3.66L11.944 1.75z" opacity="0.7" />
+      <path d="M11.944 17.35 5.75 13.69 11.944 22.25l6.194-8.56-6.194 3.66z" />
+      <path d="M11.944 15.69 5.75 12.03l6.194-2.74 6.194 2.74-6.194 3.66z" opacity="0.85" />
+    </svg>
+  );
+}
+
+function ZcashMeIcon() {
+  // Circle badge is h-16 w-16 (64px); fill nearly the full disc with a thin margin.
+  return (
+    <Image
+      src="/assets/icons/zcashme-favicon-64.png"
+      alt=""
+      width={56}
+      height={56}
+      className="h-14 w-14 object-contain"
+      aria-hidden="true"
+    />
+  );
+}
+
+function DetailsHeaderIcon({ row }: { row: ProtectedViewRow }) {
+  if (row.ens_priority_claim) {
+    return <EthereumIcon />;
+  }
+  if (row.zm_priority_claim) {
+    return <ZcashMeIcon />;
+  }
+  return <EllipsisIcon />;
 }
 
 function renderDetailValue(value: string | null | undefined) {
@@ -288,7 +330,7 @@ export default function ProtectedNameDetailsModal({
           }}
           aria-hidden="true"
         >
-          <EllipsisIcon />
+          <DetailsHeaderIcon row={row} />
         </span>
 
         {/* Inner shell clips the scrollbar to the rounded corners */}
@@ -330,7 +372,15 @@ export default function ProtectedNameDetailsModal({
             </div>
 
             <dl className="grid grid-cols-2 gap-4">
-              <FieldBlock label="Parent name">{renderDetailValue(row.parent_name)}</FieldBlock>
+              {row.parent_name ? (
+                <FieldBlock label="Parent name">{renderDetailValue(row.parent_name)}</FieldBlock>
+              ) : (
+                <FieldBlock label="Variant name(s)">
+                  {(row.variant_names ?? []).length > 0
+                    ? row.variant_names.join(", ")
+                    : "—"}
+                </FieldBlock>
+              )}
               <FieldBlock label="Category">{renderDetailValue(row.category)}</FieldBlock>
               <div className="col-span-2">
                 <FieldBlock label="Reason">{renderDetailValue(row.reason)}</FieldBlock>

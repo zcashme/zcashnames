@@ -4,6 +4,9 @@ import { db } from "@/lib/db";
 import { expireProtectedNames } from "@/lib/zns/protected-claim";
 
 const PROTECTED_VIEW_SELECT =
+  "name, normalized_name, parent_name, category, status, redeemed, ens_priority_claim, zm_priority_claim, protected_at, expires_at, rejected_at, rejected_reason, updated_at, created_at, reason, evidence";
+
+const PROTECTED_VIEW_SELECT_WITHOUT_PRIORITY =
   "name, normalized_name, parent_name, category, status, redeemed, protected_at, expires_at, rejected_at, rejected_reason, updated_at, created_at, reason, evidence";
 
 const PROTECTED_VIEW_SELECT_WITHOUT_EXPIRES =
@@ -52,9 +55,13 @@ export type ProtectedViewRow = {
   name: string;
   normalized_name: string;
   parent_name: string | null;
+  /** Normalized names of variants when this row is a parent/canonical. Empty for variants. */
+  variant_names: string[];
   category: string;
   status: string;
   redeemed: boolean;
+  ens_priority_claim: boolean;
+  zm_priority_claim: boolean;
   protected_at: string | null;
   expires_at: string | null;
   rejected_at: string | null;
@@ -66,9 +73,27 @@ export type ProtectedViewRow = {
   disputes: ProtectedViewDispute[];
 };
 
-type ProtectedNameDbRow = Omit<ProtectedViewRow, "evidence" | "disputes" | "expires_at"> & {
+type ProtectedNameDbRow = Omit<
+  ProtectedViewRow,
+  | "evidence"
+  | "disputes"
+  | "expires_at"
+  | "variant_names"
+  | "ens_priority_claim"
+  | "zm_priority_claim"
+> & {
   evidence?: unknown;
   expires_at?: string | null;
+  ens_priority_claim?: boolean | null;
+  zm_priority_claim?: boolean | null;
+};
+
+type ProtectedViewFilterFlags = {
+  redeemedOnly: boolean;
+  underReviewOnly: boolean;
+  rejectedOnly: boolean;
+  ensOnly: boolean;
+  zmOnly: boolean;
 };
 
 type ProtectedDisputeDbRow = {
@@ -90,6 +115,8 @@ export type ProtectedViewData = {
   redeemedCount: number;
   underReviewCount: number;
   rejectedCount: number;
+  ensCount: number;
+  zmCount: number;
   heroAllCount: number;
   heroUnderReviewCount: number;
   heroRejectedCount: number;
@@ -104,6 +131,8 @@ export type ProtectedViewData = {
   redeemedOnly: boolean;
   underReviewOnly: boolean;
   rejectedOnly: boolean;
+  ensOnly: boolean;
+  zmOnly: boolean;
 };
 
 function sanitizeSortKey(value: string | null | undefined): ProtectedViewSortKey {
@@ -202,6 +231,36 @@ async function loadDisputesByProtectedNames(
   return map;
 }
 
+/**
+ * Load normalized variant names keyed by parent `name`.
+ * Used so parent detail views can list their variants.
+ */
+async function loadVariantNamesByParentNames(
+  parentNames: string[],
+): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (parentNames.length === 0) return map;
+
+  const { data, error } = await db
+    .from("zn_protected_names")
+    .select("parent_name, normalized_name")
+    .in("parent_name", parentNames)
+    .order("normalized_name", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  for (const row of (data ?? []) as Array<{ parent_name: string | null; normalized_name: string }>) {
+    if (!row.parent_name) continue;
+    const existing = map.get(row.parent_name) ?? [];
+    existing.push(row.normalized_name);
+    map.set(row.parent_name, existing);
+  }
+
+  return map;
+}
+
 function applySearch(query: any, searchQuery: string, searchMode: ProtectedViewSearchMode) {
   if (!searchQuery) return query;
 
@@ -212,10 +271,56 @@ function applySearch(query: any, searchQuery: string, searchMode: ProtectedViewS
   return query.like("normalized_name", `%${searchQuery}%`);
 }
 
-function applyViewFilters(
-  query: any,
-  args: { redeemedOnly: boolean; underReviewOnly: boolean; rejectedOnly: boolean },
-) {
+/**
+ * When a search hits a variant, include its parent (and sibling variants).
+ * When a search hits a parent, include its variants.
+ * Returns family root names to match via name / parent_name, or null when no search.
+ */
+async function resolveSearchFamilyRoots(
+  searchQuery: string,
+  searchMode: ProtectedViewSearchMode,
+): Promise<string[] | null> {
+  if (!searchQuery) return null;
+
+  let seedQuery = db.from("zn_protected_names").select("name, parent_name");
+  seedQuery = applySearch(seedQuery, searchQuery, searchMode);
+  const { data, error } = await seedQuery;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const roots = new Set<string>();
+  for (const row of (data ?? []) as Array<{ name: string; parent_name: string | null }>) {
+    if (row.parent_name) {
+      roots.add(row.parent_name);
+    } else if (row.name) {
+      roots.add(row.name);
+    }
+  }
+
+  return Array.from(roots);
+}
+
+/**
+ * Restrict results to entire parent/variant families for the given roots.
+ * Empty roots means the original search matched nothing → force empty result.
+ */
+function applyFamilyFilter(query: any, familyRoots: string[] | null) {
+  if (familyRoots === null) return query;
+
+  if (familyRoots.length === 0) {
+    // No seed matches: keep empty without changing schema assumptions.
+    return query.eq("name", "");
+  }
+
+  // Names are letters/numbers only in this product, so quoting is unnecessary.
+  // Match parents (name in roots) and all variants (parent_name in roots).
+  const list = familyRoots.join(",");
+  return query.or(`name.in.(${list}),parent_name.in.(${list})`);
+}
+
+function applyViewFilters(query: any, args: ProtectedViewFilterFlags) {
   if (args.redeemedOnly) {
     return query.eq("redeemed", true);
   }
@@ -228,7 +333,19 @@ function applyViewFilters(
     return query.eq("status", "rejected");
   }
 
+  if (args.ensOnly) {
+    return query.eq("ens_priority_claim", true);
+  }
+
+  if (args.zmOnly) {
+    return query.eq("zm_priority_claim", true);
+  }
+
   return query;
+}
+
+function isMissingColumnError(error: { message?: string } | null | undefined, column: string) {
+  return !!error?.message?.includes(column);
 }
 
 function applyPrimaryOrder(
@@ -256,6 +373,8 @@ export async function getProtectedViewData(args?: {
   redeemedOnly?: boolean | string | null;
   underReviewOnly?: boolean | string | null;
   rejectedOnly?: boolean | string | null;
+  ensOnly?: boolean | string | null;
+  zmOnly?: boolean | string | null;
 }): Promise<ProtectedViewData> {
   // Flip past-due unclaimed protection to rejected so this view (and /protected)
   // reflects reality before we read rows. Fail soft: never block the table.
@@ -275,42 +394,100 @@ export async function getProtectedViewData(args?: {
   const underReviewOnly = redeemedOnly ? false : sanitizeBooleanFlag(args?.underReviewOnly);
   const rejectedOnly =
     redeemedOnly || underReviewOnly ? false : sanitizeBooleanFlag(args?.rejectedOnly);
+  const ensOnly =
+    redeemedOnly || underReviewOnly || rejectedOnly
+      ? false
+      : sanitizeBooleanFlag(args?.ensOnly);
+  const zmOnly =
+    redeemedOnly || underReviewOnly || rejectedOnly || ensOnly
+      ? false
+      : sanitizeBooleanFlag(args?.zmOnly);
+  const filterFlags: ProtectedViewFilterFlags = {
+    redeemedOnly,
+    underReviewOnly,
+    rejectedOnly,
+    ensOnly,
+    zmOnly,
+  };
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
+  // Expand search hits to full parent↔variant families before filtering/paging.
+  const familyRoots = await resolveSearchFamilyRoots(searchQuery, searchMode);
+
   let query = db.from("zn_protected_names").select(PROTECTED_VIEW_SELECT, { count: "exact" });
-  query = applySearch(query, searchQuery, searchMode);
-  query = applyViewFilters(query, { redeemedOnly, underReviewOnly, rejectedOnly });
+  query = applyFamilyFilter(query, familyRoots);
+  query = applyViewFilters(query, filterFlags);
   query = applyPrimaryOrder(query, sortKey, sortDirection).order("name", { ascending: true });
 
-  const allCountQuery = applySearch(
+  const allCountQuery = applyFamilyFilter(
     db.from("zn_protected_names").select("name", { count: "exact", head: true }),
-    searchQuery,
-    searchMode,
+    familyRoots,
   );
   const redeemedCountQuery = applyViewFilters(
-    applySearch(
+    applyFamilyFilter(
       db.from("zn_protected_names").select("name", { count: "exact", head: true }),
-      searchQuery,
-      searchMode,
+      familyRoots,
     ),
-    { redeemedOnly: true, underReviewOnly: false, rejectedOnly: false },
+    {
+      redeemedOnly: true,
+      underReviewOnly: false,
+      rejectedOnly: false,
+      ensOnly: false,
+      zmOnly: false,
+    },
   );
   const underReviewCountQuery = applyViewFilters(
-    applySearch(
+    applyFamilyFilter(
       db.from("zn_protected_names").select("name", { count: "exact", head: true }),
-      searchQuery,
-      searchMode,
+      familyRoots,
     ),
-    { redeemedOnly: false, underReviewOnly: true, rejectedOnly: false },
+    {
+      redeemedOnly: false,
+      underReviewOnly: true,
+      rejectedOnly: false,
+      ensOnly: false,
+      zmOnly: false,
+    },
   );
   const rejectedCountQuery = applyViewFilters(
-    applySearch(
+    applyFamilyFilter(
       db.from("zn_protected_names").select("name", { count: "exact", head: true }),
-      searchQuery,
-      searchMode,
+      familyRoots,
     ),
-    { redeemedOnly: false, underReviewOnly: false, rejectedOnly: true },
+    {
+      redeemedOnly: false,
+      underReviewOnly: false,
+      rejectedOnly: true,
+      ensOnly: false,
+      zmOnly: false,
+    },
+  );
+  const ensCountQuery = applyViewFilters(
+    applyFamilyFilter(
+      db.from("zn_protected_names").select("name", { count: "exact", head: true }),
+      familyRoots,
+    ),
+    {
+      redeemedOnly: false,
+      underReviewOnly: false,
+      rejectedOnly: false,
+      ensOnly: true,
+      zmOnly: false,
+    },
+  );
+  const zmCountQuery = applyViewFilters(
+    applyFamilyFilter(
+      db.from("zn_protected_names").select("name", { count: "exact", head: true }),
+      familyRoots,
+    ),
+    {
+      redeemedOnly: false,
+      underReviewOnly: false,
+      rejectedOnly: false,
+      ensOnly: false,
+      zmOnly: true,
+    },
   );
   const heroAllCountQuery = db
     .from("zn_protected_names")
@@ -330,6 +507,8 @@ export async function getProtectedViewData(args?: {
     { count: redeemedCount, error: redeemedCountError },
     { count: underReviewCount, error: underReviewCountError },
     { count: rejectedCount, error: rejectedCountError },
+    ensCountResult,
+    zmCountResult,
     { count: heroAllCount, error: heroAllCountError },
     { count: heroUnderReviewCount, error: heroUnderReviewCountError },
     { count: heroRejectedCount, error: heroRejectedCountError },
@@ -339,6 +518,8 @@ export async function getProtectedViewData(args?: {
     redeemedCountQuery,
     underReviewCountQuery,
     rejectedCountQuery,
+    ensCountQuery,
+    zmCountQuery,
     heroAllCountQuery,
     heroUnderReviewCountQuery,
     heroRejectedCountQuery,
@@ -347,30 +528,53 @@ export async function getProtectedViewData(args?: {
   let pageData = primaryResult.data as ProtectedNameDbRow[] | null;
   let pageError = primaryResult.error;
   let pageCount = primaryResult.count;
+  let priorityColumnsAvailable = true;
 
   // Graceful fallback when newer columns are not migrated yet.
+  const missingPriorityColumns =
+    isMissingColumnError(pageError, "ens_priority_claim")
+    || isMissingColumnError(pageError, "zm_priority_claim");
   const needsFallback =
-    pageError?.message?.includes("expires_at")
-    || pageError?.message?.includes("evidence");
+    missingPriorityColumns
+    || isMissingColumnError(pageError, "expires_at")
+    || isMissingColumnError(pageError, "evidence");
+
   if (needsFallback) {
-    const selectColumns = pageError?.message?.includes("evidence")
-      ? PROTECTED_VIEW_SELECT_MINIMAL
-      : PROTECTED_VIEW_SELECT_WITHOUT_EXPIRES;
+    if (missingPriorityColumns) {
+      priorityColumnsAvailable = false;
+    }
+
+    let selectColumns = PROTECTED_VIEW_SELECT;
+    if (isMissingColumnError(pageError, "evidence")) {
+      selectColumns = PROTECTED_VIEW_SELECT_MINIMAL;
+      priorityColumnsAvailable = false;
+    } else if (isMissingColumnError(pageError, "expires_at")) {
+      selectColumns = PROTECTED_VIEW_SELECT_WITHOUT_EXPIRES;
+      priorityColumnsAvailable = false;
+    } else if (missingPriorityColumns) {
+      selectColumns = PROTECTED_VIEW_SELECT_WITHOUT_PRIORITY;
+    }
+
     // expires_at sort requires the column; fall back to protected_at.
     const fallbackSortKey =
-      sortKey === "expires_at" && pageError?.message?.includes("expires_at")
+      sortKey === "expires_at" && isMissingColumnError(pageError, "expires_at")
         ? "protected_at"
         : sortKey;
+
+    // If priority columns are missing, drop ENS/ZM-only filters so the table still loads.
+    const fallbackFilters: ProtectedViewFilterFlags = priorityColumnsAvailable
+      ? filterFlags
+      : {
+          ...filterFlags,
+          ensOnly: false,
+          zmOnly: false,
+        };
 
     let fallbackQuery = db
       .from("zn_protected_names")
       .select(selectColumns, { count: "exact" });
-    fallbackQuery = applySearch(fallbackQuery, searchQuery, searchMode);
-    fallbackQuery = applyViewFilters(fallbackQuery, {
-      redeemedOnly,
-      underReviewOnly,
-      rejectedOnly,
-    });
+    fallbackQuery = applyFamilyFilter(fallbackQuery, familyRoots);
+    fallbackQuery = applyViewFilters(fallbackQuery, fallbackFilters);
     fallbackQuery = applyPrimaryOrder(fallbackQuery, fallbackSortKey, sortDirection).order(
       "name",
       { ascending: true },
@@ -392,12 +596,43 @@ export async function getProtectedViewData(args?: {
   if (heroUnderReviewCountError) throw new Error(heroUnderReviewCountError.message);
   if (heroRejectedCountError) throw new Error(heroRejectedCountError.message);
 
+  // Soft-fail ENS/ZM counts when columns are not migrated yet.
+  let ensCount = ensCountResult.count ?? 0;
+  let zmCount = zmCountResult.count ?? 0;
+  if (
+    isMissingColumnError(ensCountResult.error, "ens_priority_claim")
+    || isMissingColumnError(ensCountResult.error, "zm_priority_claim")
+  ) {
+    ensCount = 0;
+    priorityColumnsAvailable = false;
+  } else if (ensCountResult.error) {
+    throw new Error(ensCountResult.error.message);
+  }
+  if (
+    isMissingColumnError(zmCountResult.error, "ens_priority_claim")
+    || isMissingColumnError(zmCountResult.error, "zm_priority_claim")
+  ) {
+    zmCount = 0;
+    priorityColumnsAvailable = false;
+  } else if (zmCountResult.error) {
+    throw new Error(zmCountResult.error.message);
+  }
+
   const rawRows = pageData ?? [];
-  const disputeMap = await loadDisputesByProtectedNames(rawRows.map((row) => row.name));
+  const parentNamesOnPage = rawRows
+    .filter((row) => !row.parent_name)
+    .map((row) => row.name);
+  const [disputeMap, variantMap] = await Promise.all([
+    loadDisputesByProtectedNames(rawRows.map((row) => row.name)),
+    loadVariantNamesByParentNames(parentNamesOnPage),
+  ]);
   const rows: ProtectedViewRow[] = rawRows.map((row) => ({
     ...row,
     expires_at: row.expires_at ?? null,
+    ens_priority_claim: priorityColumnsAvailable ? !!row.ens_priority_claim : false,
+    zm_priority_claim: priorityColumnsAvailable ? !!row.zm_priority_claim : false,
     evidence: normalizeEvidenceUrls(row.evidence),
+    variant_names: row.parent_name ? [] : (variantMap.get(row.name) ?? []),
     disputes: disputeMap.get(row.name) ?? [],
   }));
 
@@ -407,6 +642,8 @@ export async function getProtectedViewData(args?: {
     redeemedCount: redeemedCount ?? 0,
     underReviewCount: underReviewCount ?? 0,
     rejectedCount: rejectedCount ?? 0,
+    ensCount,
+    zmCount,
     heroAllCount: heroAllCount ?? 0,
     heroUnderReviewCount: heroUnderReviewCount ?? 0,
     heroRejectedCount: heroRejectedCount ?? 0,
@@ -421,5 +658,7 @@ export async function getProtectedViewData(args?: {
     redeemedOnly,
     underReviewOnly,
     rejectedOnly,
+    ensOnly: priorityColumnsAvailable ? ensOnly : false,
+    zmOnly: priorityColumnsAvailable ? zmOnly : false,
   };
 }
