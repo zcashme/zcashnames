@@ -249,7 +249,7 @@ function UnderReviewIcon() {
   );
 }
 
-function RejectedIcon() {
+function GavelIcon() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -262,8 +262,11 @@ function RejectedIcon() {
       className="h-4 w-4"
       aria-hidden="true"
     >
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
+      <path d="m14.5 12.5-8 8a2.119 2.119 0 1 1-3-3l8-8" />
+      <path d="m16 16 6-6" />
+      <path d="m8 8 6-6" />
+      <path d="m9 7 8 8" />
+      <path d="m21 11-8-8" />
     </svg>
   );
 }
@@ -521,13 +524,13 @@ export default function ProtectedViewClient({
                     color: "var(--color-accent-interactive)",
                   }}
                 >
-                  <RejectedIcon />
+                  <GavelIcon />
                 </span>
                 <span>
                   <strong style={{ color: "var(--fg-heading)" }}>
-                    {data.heroRejectedCount.toLocaleString()}
+                    {(data.heroDisputedCount ?? 0).toLocaleString()}
                   </strong>{" "}
-                  rejected
+                  disputed
                 </span>
               </span>
             </div>

@@ -129,7 +129,7 @@ export type ProtectedViewData = {
   zmCount: number;
   heroAllCount: number;
   heroUnderReviewCount: number;
-  heroRejectedCount: number;
+  heroDisputedCount: number;
   totalCount: number;
   page: number;
   pageSize: number;
@@ -595,10 +595,6 @@ export async function getProtectedViewData(args?: {
     .from("zn_protected_names")
     .select("name", { count: "exact", head: true })
     .eq("status", "under_review");
-  const heroRejectedCountQuery = db
-    .from("zn_protected_names")
-    .select("name", { count: "exact", head: true })
-    .eq("status", "rejected");
 
   const [
     primaryResult,
@@ -612,7 +608,6 @@ export async function getProtectedViewData(args?: {
     categoryCountResults,
     { count: heroAllCount, error: heroAllCountError },
     { count: heroUnderReviewCount, error: heroUnderReviewCountError },
-    { count: heroRejectedCount, error: heroRejectedCountError },
   ] = await Promise.all([
     query.range(from, to),
     allCountQuery,
@@ -625,7 +620,6 @@ export async function getProtectedViewData(args?: {
     Promise.all(categoryCountQueries),
     heroAllCountQuery,
     heroUnderReviewCountQuery,
-    heroRejectedCountQuery,
   ]);
 
   let pageData = primaryResult.data as ProtectedNameDbRow[] | null;
@@ -698,7 +692,6 @@ export async function getProtectedViewData(args?: {
   if (disputedCountError) throw new Error(disputedCountError.message);
   if (heroAllCountError) throw new Error(heroAllCountError.message);
   if (heroUnderReviewCountError) throw new Error(heroUnderReviewCountError.message);
-  if (heroRejectedCountError) throw new Error(heroRejectedCountError.message);
 
   // Soft-fail ENS/ZM counts when columns are not migrated yet.
   let ensCount = ensCountResult.count ?? 0;
@@ -765,7 +758,8 @@ export async function getProtectedViewData(args?: {
     zmCount,
     heroAllCount: heroAllCount ?? 0,
     heroUnderReviewCount: heroUnderReviewCount ?? 0,
-    heroRejectedCount: heroRejectedCount ?? 0,
+    // Global count of distinct names with at least one dispute (unscoped by search).
+    heroDisputedCount: disputedNames.length,
     totalCount: pageCount ?? 0,
     page,
     pageSize,

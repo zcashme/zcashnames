@@ -564,6 +564,10 @@ export default function ExplorerListPane({
             <>
               <TableSortMenu
                 value={`${sortKey}:${sortDirection}`}
+                defaultValue={(() => {
+                  const defaultSort = normalizeExplorerSort(tab, null, null);
+                  return `${defaultSort.sortKey}:${defaultSort.sortDirection}`;
+                })()}
                 options={getExplorerSortOptions(tab).map((option) => ({
                   key: `${option.sortKey}:${option.sortDirection}`,
                   label: option.label,

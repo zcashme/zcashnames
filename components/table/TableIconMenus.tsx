@@ -14,6 +14,8 @@ type TableIconButtonProps = {
   icon: ReactNode;
   onClick: () => void;
   triggerBackground?: string;
+  /** When true, icon uses the interactive accent (matches hover). */
+  accent?: boolean;
 };
 
 type TableIconMenuProps<T extends string | number> = {
@@ -28,6 +30,8 @@ type TableIconMenuProps<T extends string | number> = {
   activeBackground?: string;
   menuWidthPx: number;
   selectedSuffix?: ReactNode;
+  /** Highlight the circular trigger (e.g. non-default sort). */
+  accent?: boolean;
 };
 
 type TableRowsMenuProps = {
@@ -55,6 +59,11 @@ type TableSortMenuProps<T extends string> = {
   activeBackground?: string;
   selectedSuffix?: ReactNode;
   menuWidthPx?: number;
+  /**
+   * Default sort option key. When `value` differs, the circular border uses the
+   * icon hover accent. Defaults to the first option.
+   */
+  defaultValue?: T;
 };
 
 function SortIcon() {
@@ -101,20 +110,27 @@ function RowsIcon() {
   );
 }
 
+const ACCENT_INTERACTIVE = "var(--color-accent-interactive)";
+
 export function TableIconButton({
   ariaLabel,
   borderColor,
   icon,
   onClick,
   triggerBackground = "color-mix(in srgb, var(--color-bg-elevated, transparent) 78%, transparent)",
+  accent = false,
 }: TableIconButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[color:var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)]"
+      className={
+        accent
+          ? "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--color-accent-interactive)] transition-colors hover:text-[var(--color-accent-interactive)]"
+          : "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[color:var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)]"
+      }
       style={{
-        border: `1px solid ${borderColor}`,
+        border: `1px solid ${accent ? ACCENT_INTERACTIVE : borderColor}`,
         background: triggerBackground,
       }}
       aria-label={ariaLabel}
@@ -136,6 +152,7 @@ function TableIconMenu<T extends string | number>({
   activeBackground = "color-mix(in srgb, var(--color-accent-interactive) 14%, transparent)",
   menuWidthPx,
   selectedSuffix,
+  accent = false,
 }: TableIconMenuProps<T>) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -162,6 +179,7 @@ function TableIconMenu<T extends string | number>({
           icon={icon}
           onClick={() => setOpen((current) => !current)}
           triggerBackground={triggerBackground}
+          accent={accent}
         />
       </div>
 
@@ -248,7 +266,11 @@ export function TableSortMenu<T extends string>({
   activeBackground,
   selectedSuffix,
   menuWidthPx = 256,
+  defaultValue,
 }: TableSortMenuProps<T>) {
+  const resolvedDefault = defaultValue ?? options[0]?.key;
+  const isNonDefaultSort = resolvedDefault != null && value !== resolvedDefault;
+
   return (
     <TableIconMenu
       ariaLabel="Sort rows"
@@ -262,6 +284,7 @@ export function TableSortMenu<T extends string>({
       activeBackground={activeBackground}
       menuWidthPx={menuWidthPx}
       selectedSuffix={selectedSuffix}
+      accent={isNonDefaultSort}
     />
   );
 }
