@@ -1,6 +1,7 @@
-import { Button, Hr, Img, Link, Section, Text } from "@react-email/components";
+import { Hr, Img, Link, Section, Text } from "@react-email/components";
+import { EmailCtaButton } from "./EmailCtaButton";
 import { createZcashNamesHeaderMark, EmailLayout } from "./EmailLayout";
-import { content, paragraph, ctaButton, divider } from "@/lib/email/styles";
+import { content, paragraph, divider } from "@/lib/email/styles";
 import { parseInlineLinks } from "@/lib/campaigns/content";
 
 interface BetaInviteEmailProps {
@@ -68,9 +69,7 @@ export default function BetaInviteEmail({
       </Section>
 
       <Section style={{ textAlign: "center" as const, padding: "8px 40px 20px" }}>
-        <Button href={joinUrl} style={ctaButton}>
-          Join Beta
-        </Button>
+        <EmailCtaButton href={joinUrl}>Join Beta</EmailCtaButton>
         <Text
           style={{
             margin: "12px 0 0",

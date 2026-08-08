@@ -1,6 +1,7 @@
-import { Button, Section, Text } from "@react-email/components";
+import { Link, Section, Text } from "@react-email/components";
+import { EmailCtaButton } from "./EmailCtaButton";
 import { EmailLayout } from "./EmailLayout";
-import { content, ctaButton, paragraph } from "@/lib/email/styles";
+import { content, paragraph } from "@/lib/email/styles";
 
 export type WaitlistReservationConfirmedOtherName = {
   name: string;
@@ -46,6 +47,12 @@ const signoffStyle = {
   margin: "0",
 };
 
+const inlineLinkStyle = {
+  color: "#F4B728",
+  textDecoration: "underline" as const,
+  fontWeight: 600,
+};
+
 export default function WaitlistReservationConfirmedEmail({
   name,
   dashboardUrl,
@@ -84,37 +91,29 @@ export default function WaitlistReservationConfirmedEmail({
       ) : null}
 
       <Section style={{ textAlign: "center" as const, padding: "0 40px 12px" }}>
-        <Button href={reservationUrl} style={ctaButton}>
-          View reservation page
-        </Button>
+        <EmailCtaButton href={reservationUrl}>View reservation page</EmailCtaButton>
       </Section>
 
       <Section style={{ textAlign: "left" as const, padding: "0 40px 4px" }}>
         <Text style={noteStyle}>
           <strong>Please note:</strong> Early Access does not guarantee that{" "}
           <strong>{name}</strong> will remain available. Your position in line determines
-          when you can try to purchase it.
+          when you can try to purchase it.{" "}
+          <Link href={queueUrl} style={inlineLinkStyle}>
+            View queue
+          </Link>
         </Text>
       </Section>
 
-      <Section style={{ textAlign: "center" as const, padding: "0 40px 12px" }}>
-        <Button href={queueUrl} style={ctaButton}>
-          View queue
-        </Button>
-      </Section>
-
-      <Section style={{ textAlign: "left" as const, padding: "0 40px 4px" }}>
+      <Section style={{ textAlign: "left" as const, padding: "0 40px 20px" }}>
         <Text style={noteStyle}>
           Improve your position and earn ZEC by referring others who join the waitlist
           and purchase a name during Early Access. Referral rewards are subject to
-          eligibility and program terms.
+          eligibility and program terms.{" "}
+          <Link href={dashboardUrl} style={inlineLinkStyle}>
+            View referral dashboard
+          </Link>
         </Text>
-      </Section>
-
-      <Section style={{ textAlign: "center" as const, padding: "0 40px 20px" }}>
-        <Button href={dashboardUrl} style={ctaButton}>
-          View referral dashboard
-        </Button>
       </Section>
 
       <Section style={{ textAlign: "left" as const, padding: "0 40px 32px" }}>

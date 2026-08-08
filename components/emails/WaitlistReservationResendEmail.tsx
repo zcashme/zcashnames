@@ -1,6 +1,7 @@
-import { Button, Link, Section, Text } from "@react-email/components";
+import { Link, Section, Text } from "@react-email/components";
+import { EmailCtaButton } from "./EmailCtaButton";
 import { EmailLayout } from "./EmailLayout";
-import { content, ctaButton, paragraph } from "@/lib/email/styles";
+import { content, paragraph } from "@/lib/email/styles";
 
 export type WaitlistReservationEmailStatus = "reserved" | "pending" | "protected";
 
@@ -120,9 +121,7 @@ export default function WaitlistReservationResendEmail(props: WaitlistReservatio
       </Section>
 
       <Section style={{ textAlign: "center" as const, padding: "0 40px 8px" }}>
-        <Button href={confirmUrl} style={ctaButton}>
-          Get started
-        </Button>
+        <EmailCtaButton href={confirmUrl}>Get started</EmailCtaButton>
         <Text
           style={{
             margin: "12px 0 0",

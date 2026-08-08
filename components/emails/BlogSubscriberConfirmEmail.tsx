@@ -1,6 +1,7 @@
-import { Button, Section, Text } from "@react-email/components";
+import { Section, Text } from "@react-email/components";
+import { EmailCtaButton } from "./EmailCtaButton";
 import { createZcashNamesHeaderMark, EmailLayout } from "./EmailLayout";
-import { content, paragraph, ctaButton } from "@/lib/email/styles";
+import { content, paragraph } from "@/lib/email/styles";
 
 export default function BlogSubscriberConfirmEmail({
   seriesTitle,
@@ -19,9 +20,7 @@ export default function BlogSubscriberConfirmEmail({
       </Section>
 
       <Section style={{ textAlign: "center" as const, padding: "0 40px 8px" }}>
-        <Button href={confirmUrl} style={ctaButton}>
-          Confirm subscription
-        </Button>
+        <EmailCtaButton href={confirmUrl}>Confirm subscription</EmailCtaButton>
         <Text
           style={{
             margin: "12px 0 0",

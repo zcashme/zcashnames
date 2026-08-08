@@ -416,6 +416,8 @@ function roundZecAmount(value: number): number {
 }
 
 const MAX_PENDING_RESERVATION_AMOUNT = 999.9999;
+/** Optional support / donation step above the env reserve fee. */
+const PENDING_RESERVATION_AMOUNT_STEP = 0.005;
 
 function clampPendingZecAmount(value: number): number {
   return Math.min(MAX_PENDING_RESERVATION_AMOUNT, Math.max(0, value));
@@ -423,6 +425,20 @@ function clampPendingZecAmount(value: number): number {
 
 function roundPendingZecAmount(value: number): number {
   return Math.round(clampPendingZecAmount(value) * 10_000) / 10_000;
+}
+
+/**
+ * Smallest 0.005-aligned amount strictly above the env base fee.
+ * e.g. base 0.001 → 0.005, base 0.005 → 0.010, base 0.007 → 0.010.
+ */
+function firstSupportStepAboveBase(baseAmount: number): number {
+  const base = roundPendingZecAmount(baseAmount);
+  const step = PENDING_RESERVATION_AMOUNT_STEP;
+  let candidate = roundPendingZecAmount(Math.ceil(base / step) * step);
+  if (candidate <= base) {
+    candidate = roundPendingZecAmount(candidate + step);
+  }
+  return candidate;
 }
 
 function formatPendingZecAmount(value: number): string {
@@ -2487,7 +2503,7 @@ function ReservationStatusPane({
         }}
       >
         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
-          Current reservation status
+          Reservation status
         </p>
         {card.reserved ? (
           <div className="mt-3">
@@ -2620,7 +2636,9 @@ function ProtectedHowAccessWorks({
           How access works
         </h3>
         <ol className="relative mt-4 space-y-3">
-          {steps.map((step, index) => (
+          {steps.map((step, index) => {
+            const isComplete = index === 0 && firstStepComplete;
+            return (
             <li
               key={step.title}
               className="relative grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-3 px-4 py-2"
@@ -2629,60 +2647,37 @@ function ProtectedHowAccessWorks({
                 className="relative z-[1] inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
                 style={{
                   background:
-                    index === 0 && firstStepComplete
-                      ? "color-mix(in srgb, var(--accent-red, #d95b5b) 16%, transparent)"
-                      : "color-mix(in srgb, var(--accent-red, #d95b5b) 16%, transparent)",
-                  color:
-                    index === 0 && firstStepComplete
-                      ? "var(--accent-red, #d95b5b)"
-                      : "var(--accent-red, #d95b5b)",
+                    "color-mix(in srgb, var(--accent-red, #d95b5b) 16%, transparent)",
+                  color: "var(--accent-red, #d95b5b)",
                 }}
               >
-                {index === 0 && firstStepComplete ? <CheckIcon className="h-4 w-4" /> : index + 1}
+                {isComplete ? <CheckIcon className="h-4 w-4" /> : index + 1}
               </span>
-              <span>
-                <span className="block text-sm font-semibold leading-6" style={{ color: "var(--fg-heading)" }}>
-                  {index === 0 && firstStepComplete ? (
-                    <span className="relative inline-block">
-                      <span>{step.title}</span>
-                      <span
-                        aria-hidden="true"
-                        className="absolute left-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full"
-                        style={{
-                          width: "100%",
-                          background: "currentColor",
-                          transformOrigin: "left center",
-                          transition: "transform 650ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-                          transform: "scaleX(1)",
-                        }}
-                      />
-                    </span>
-                  ) : (
-                    step.title
-                  )}
+              <span className={isComplete ? "opacity-70" : undefined}>
+                <span
+                  className="block text-sm font-semibold leading-6"
+                  style={{
+                    color: "var(--fg-heading)",
+                    // line-through handles multi-line titles correctly; avoid a
+                    // single absolute bar that only cuts through mid-block.
+                    textDecoration: isComplete ? "line-through" : undefined,
+                    textDecorationThickness: isComplete ? "1.5px" : undefined,
+                  }}
+                >
+                  {step.title}
                 </span>
-                <span className="mt-1 block text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-                  {index === 0 && firstStepComplete ? (
-                    <span className="relative inline-block">
-                      <span>{step.body}</span>
-                      <span
-                        aria-hidden="true"
-                        className="absolute left-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full"
-                        style={{
-                          width: "100%",
-                          background: "currentColor",
-                          transformOrigin: "left center",
-                          transition: "transform 650ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-                          transform: "scaleX(1)",
-                        }}
-                      />
-                    </span>
-                  ) : (
-                    step.body
-                  )}
+                <span
+                  className="mt-1 block text-sm leading-6"
+                  style={{
+                    color: "var(--fg-body)",
+                    // Completed step: strike the title only. Body stays readable
+                    // without a misplaced mid-line across wrapped text.
+                  }}
+                >
+                  {step.body}
                 </span>
               </span>
-              {index === 0 && firstStepComplete ? (
+              {isComplete ? (
                 <span
                   aria-hidden="true"
                   className="absolute left-8 top-10 h-8 w-px -translate-x-1/2"
@@ -2693,7 +2688,8 @@ function ProtectedHowAccessWorks({
                 />
               ) : null}
             </li>
-          ))}
+            );
+          })}
         </ol>
       </div>
 
@@ -3430,7 +3426,7 @@ function VerifyPaymentCard({
   const reservedDate = formatReservedDate(card.reservedAt);
   const selectedAmountText = formatPendingZecAmount(selectedAmount);
   const isSupporting = selectedAmount > baseAmountValue;
-  const firstSupportAmount = roundPendingZecAmount(Math.max(0.005, baseAmountValue));
+  const firstSupportAmount = firstSupportStepAboveBase(baseAmountValue);
   const deletePending = card.deleteRequestStatus === "pending";
   const compactCardClassName = card.collapsed
     ? "max-w-full rounded-[32px] border shadow-[0_28px_80px_rgba(22,35,66,0.10)]"
@@ -3513,7 +3509,12 @@ function VerifyPaymentCard({
 
   function increaseAmount() {
     setSelectedAmount((current) => {
-      const nextAmount = current <= baseAmountValue ? firstSupportAmount : current + 0.005;
+      // From base (or anything below the first 0.005 rung), jump to that rung.
+      // Further presses add 0.005.
+      const nextAmount =
+        current < firstSupportAmount
+          ? firstSupportAmount
+          : current + PENDING_RESERVATION_AMOUNT_STEP;
       const normalizedAmount = roundPendingZecAmount(nextAmount);
       setDraftAmount(formatPendingZecAmount(normalizedAmount));
       return normalizedAmount;
@@ -3542,8 +3543,11 @@ function VerifyPaymentCard({
 
   function decreaseAmount() {
     setSelectedAmount((current) => {
+      // Step down by 0.005 on the support ladder; after the last rung, land on env base.
       const nextAmount =
-        current <= firstSupportAmount ? baseAmountValue : Math.max(firstSupportAmount, current - 0.005);
+        current <= firstSupportAmount
+          ? baseAmountValue
+          : Math.max(firstSupportAmount, current - PENDING_RESERVATION_AMOUNT_STEP);
       const normalizedAmount = roundPendingZecAmount(nextAmount);
       setDraftAmount(formatPendingZecAmount(normalizedAmount));
       return normalizedAmount;
@@ -4152,7 +4156,7 @@ export default function WaitlistVerifyClient({
     : `${typeof window !== "undefined" ? window.location.origin : "https://www.zcashnames.com"}/waitlist`;
   const celebrationXHref = buildXShareHref(
     buildShareMessageWithLink(
-      "I just reserved my name for Zcash Names Early Access. Join the waitlist with my referral link to improve my position and earn ZEC. If you want a name for your shielded address, reserve yours too.",
+      `I just reserved ${celebrationName} for Zcash Names Early Access. Join the waitlist with my referral link if you want a name for your shielded address, too.`,
       celebrationShareUrl,
     ),
   );

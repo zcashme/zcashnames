@@ -3,9 +3,10 @@
  * string (set by the admin sending the follow-up) to personalize the message,
  * with a Cal.com booking link for scheduling a call.
  */
-import { Button, Section, Text } from "@react-email/components";
+import { Section, Text } from "@react-email/components";
+import { EmailCtaButton } from "./EmailCtaButton";
 import { EmailLayout } from "./EmailLayout";
-import { content, paragraph, ctaButton } from "@/lib/email/styles";
+import { content, paragraph } from "@/lib/email/styles";
 
 interface FollowUpEmailProps {
   name: string;
@@ -34,9 +35,7 @@ export default function FollowUpEmail({
       </Section>
 
       <Section style={{ textAlign: "center" as const, padding: "0 40px 32px" }}>
-        <Button href="https://cal.com/zcash" style={ctaButton}>
-          Book a time to chat
-        </Button>
+        <EmailCtaButton href="https://cal.com/zcash">Book a time to chat</EmailCtaButton>
       </Section>
     </EmailLayout>
   );

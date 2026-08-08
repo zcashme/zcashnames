@@ -3,9 +3,10 @@
  * Rendered server-side during waitlist registration to verify ownership of the
  * provided email address before the user is fully queued.
  */
-import { Button, Section, Text } from "@react-email/components";
+import { Section, Text } from "@react-email/components";
+import { EmailCtaButton } from "./EmailCtaButton";
 import { EmailLayout } from "./EmailLayout";
-import { content, paragraph, ctaButton } from "@/lib/email/styles";
+import { content, paragraph } from "@/lib/email/styles";
 
 interface ConfirmEmailProps {
   name: string;
@@ -24,9 +25,7 @@ export default function ConfirmEmail({ name, confirmUrl }: ConfirmEmailProps) {
       </Section>
 
       <Section style={{ textAlign: "center" as const, padding: "0 40px 8px" }}>
-        <Button href={confirmUrl} style={ctaButton}>
-          Confirm your email
-        </Button>
+        <EmailCtaButton href={confirmUrl}>Confirm your email</EmailCtaButton>
         <Text
           style={{
             margin: "12px 0 0",

@@ -1,6 +1,7 @@
-import { Button, Section, Text } from "@react-email/components";
+import { Section, Text } from "@react-email/components";
+import { EmailCtaButton } from "./EmailCtaButton";
 import { EmailLayout } from "./EmailLayout";
-import { content, ctaButton, paragraph } from "@/lib/email/styles";
+import { content, paragraph } from "@/lib/email/styles";
 import type { WaitlistRowDeleteRequestRowStatus } from "@/lib/campaigns/waitlist-row-delete";
 
 function statusWarning(status: WaitlistRowDeleteRequestRowStatus, name: string): string {
@@ -47,9 +48,7 @@ export default function WaitlistDeleteConfirmEmail({
       </Section>
 
       <Section style={{ textAlign: "center" as const, padding: "0 40px 8px" }}>
-        <Button href={confirmUrl} style={ctaButton}>
-          Confirm removal
-        </Button>
+        <EmailCtaButton href={confirmUrl}>Confirm removal</EmailCtaButton>
         <Text
           style={{
             margin: "12px 0 0",

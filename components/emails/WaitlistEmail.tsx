@@ -4,9 +4,10 @@
  * leaderboard and personal dashboard. This is the primary onboarding email sent
  * after email confirmation completes.
  */
-import { Button, Hr, Link, Section, Text } from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
+import { EmailCtaButton } from "./EmailCtaButton";
 import { EmailLayout } from "./EmailLayout";
-import { content, paragraph, ctaButton, divider } from "@/lib/email/styles";
+import { content, paragraph, divider } from "@/lib/email/styles";
 
 interface WaitlistEmailProps {
   name: string;
@@ -36,9 +37,7 @@ export default function WaitlistEmail({ name, referralUrl, referralCode, accessP
       </Section>
 
       <Section style={{ textAlign: "center" as const, padding: "0 40px 8px" }}>
-        <Button href={shareUrl} style={ctaButton}>
-          Share your link on X
-        </Button>
+        <EmailCtaButton href={shareUrl}>Share your link on X</EmailCtaButton>
         <Text style={{ margin: "12px 0 0", fontSize: 12, color: "#a1a1aa", wordBreak: "break-all" as const }}>{referralUrl}</Text>
       </Section>
 
