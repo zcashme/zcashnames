@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL } from "@/lib/waitlist/early-access";
 
 type FAQItem = {
   question: string;
@@ -29,8 +30,7 @@ const groups: FAQGroup[] = [
       },
       {
         question: "When does Early Access begin?",
-        answer:
-          "Early Access is currently scheduled to begin on August 15, 2026. Reservations close when that period begins, and access codes will be sent in queue order to participants who completed reservation.",
+        answer: `Early Access is currently scheduled to begin on ${WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL}. Reservations close when that period begins, and access codes will be sent in queue order to participants who completed reservation.`,
       },
     ],
   },

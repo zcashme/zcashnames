@@ -3,10 +3,17 @@ import "server-only";
 import { NETWORKS } from "zcashname-sdk";
 import { db } from "@/lib/db";
 import { fetchAllSupabaseRows } from "@/lib/supabase/fetch-all";
+import {
+  WAITLIST_VIEW_EARLY_ACCESS_LABEL,
+  WAITLIST_VIEW_EARLY_ACCESS_START_AT,
+} from "@/lib/waitlist/early-access";
 import { syncWaitlistReservationFieldsFromReserves } from "@/lib/waitlist/reserves";
 
-export const WAITLIST_VIEW_EARLY_ACCESS_START_AT = "2026-08-15T16:00:00.000Z";
-export const WAITLIST_VIEW_EARLY_ACCESS_LABEL = "August 15, 2026 at 12:00 PM Eastern";
+export {
+  WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
+  WAITLIST_VIEW_EARLY_ACCESS_LABEL,
+  WAITLIST_VIEW_EARLY_ACCESS_START_AT,
+} from "@/lib/waitlist/early-access";
 export const WAITLIST_VIEW_ADMIN_WALLET_UIVK = NETWORKS.mainnet.uivk;
 export const WAITLIST_VIEW_REFERRALS_PER_SPOT = 3;
 export const WAITLIST_VIEW_INDIRECT_REFERRALS_PER_SPOT = 9;

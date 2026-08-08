@@ -49,15 +49,15 @@ End: 2026-07-20
 
 # Early Access  `TBA`
 Waitlisted users can claim names in ordered waves, with referral activity helping users move up the line.
-Start: 2026-07-31
-End: 2026-08-14
+Start: 2026-09-15
+End: 2026-09-29
 - Users receive access codes, referral impact, and claim windows.
 - Infrastructure is stress tested for uptime and performance under higher load.
 - A community lead is in place to support users and escalate pre-launch issues.
 
 # Open Registration  `TBA`
 Anyone can register and control names. 
-Start: 2026-08-15
+Start: 2026-09-30
 End: 3000-12-31
 - Marketplace, resolution, and integrations behave reliably under public launch conditions.
 - Systems are hardened against failures, reorgs, abuse, and traffic spikes.

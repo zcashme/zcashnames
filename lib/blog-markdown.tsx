@@ -4,8 +4,29 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import {
+  WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
+  WAITLIST_VIEW_EARLY_ACCESS_LABEL,
+} from "@/lib/waitlist/early-access";
 
 const BLOGS_CONTENT_ROOT = path.join(process.cwd(), "content", "blogs");
+
+/** Tokens blog markdown can use so dates stay tied to shared schedule constants. */
+const BLOG_MARKDOWN_TOKENS: Record<string, string> = {
+  EARLY_ACCESS_LABEL: WAITLIST_VIEW_EARLY_ACCESS_LABEL,
+  EARLY_ACCESS_DATE_LABEL: WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
+};
+
+function expandBlogMarkdownTokens(markdown: string): string {
+  // Drop accidental MDX import lines — blogs are rendered as plain Markdown, not MDX.
+  const withoutImports = markdown.replace(/^import\s+.+;?\s*$/gm, "");
+
+  return withoutImports.replace(/\{\{\s*([A-Z0-9_]+)\s*\}\}/g, (match, key: string) => {
+    return Object.prototype.hasOwnProperty.call(BLOG_MARKDOWN_TOKENS, key)
+      ? BLOG_MARKDOWN_TOKENS[key]
+      : match;
+  });
+}
 
 export type BlogHeading = {
   id: string;
@@ -89,7 +110,7 @@ export async function loadBlogMarkdown(parts: string[], fallbackTitle: string): 
   description?: string;
   toc: BlogHeading[];
 }> {
-  const markdown = await readBlogFile(parts);
+  const markdown = expandBlogMarkdownTokens(await readBlogFile(parts));
   return {
     markdown,
     title: titleFromMarkdown(markdown, fallbackTitle),
