@@ -3,7 +3,8 @@ import "server-only";
 import { db } from "@/lib/db";
 import {
   buildWaitlistConfirmResponseTrackingUrl,
-  getWaitlistVerifyReserveFeeZec,
+  getWaitlistReserveFeeZec,
+  getWaitlistReservePaymentAddress,
 } from "@/lib/campaigns/waitlist-confirm-response";
 import { getProtectedNameInfoByName } from "@/lib/campaigns/waitlist-protected-access";
 import {
@@ -21,11 +22,14 @@ import { getWaitlistReservationResendCampaignId } from "@/lib/waitlist/reservati
 
 const WAITLIST_RESERVES_PAGE_SIZE = 1000;
 
-type WaitlistReserveRow = {
-  amount: string | number | null;
-  created_at: string | null;
-  memo_full: string | null;
+type WaitlistReserveTransactionRow = {
+  amount_zats: string | number | null;
+  detected_at: string | null;
+  memo: string | null;
   txid: string | null;
+  is_outgoing: boolean | null;
+  status: string | null;
+  recipient_address: string | null;
 };
 
 type ReservedWaitlistEmailRow = {
@@ -54,12 +58,16 @@ function parseZecToZats(value: string): number | null {
   return whole * 100_000_000 + Number(paddedFraction);
 }
 
-function amountToZats(value: string | number | null): number | null {
+/** Coerce bigint/number/string zatoshi amounts from Supabase. */
+function coerceAmountZats(value: string | number | null | undefined): number | null {
   if (typeof value === "number") {
-    return Number.isFinite(value) ? Math.round(value * 100_000_000) : null;
+    return Number.isFinite(value) && value >= 0 ? Math.trunc(value) : null;
   }
   if (typeof value === "string") {
-    return parseZecToZats(value);
+    const trimmed = value.trim();
+    if (!/^\d+$/.test(trimmed)) return null;
+    const parsed = Number(trimmed);
+    return Number.isSafeInteger(parsed) ? parsed : null;
   }
   return null;
 }
@@ -95,15 +103,33 @@ export function parseWaitlistReserveMemo(fullMemo: string | null | undefined): P
   };
 }
 
-async function fetchAllWaitlistReserveRows(): Promise<WaitlistReserveRow[]> {
-  return fetchAllSupabaseRows<WaitlistReserveRow>({
+/**
+ * Incoming reserve payments detected by the viewer wallet.
+ * Source of truth for "I Sent It!" / Refresh Status matching is the memo column
+ * (ZNS:RESERVE|uuid::...|name::... format).
+ */
+async function fetchAllWaitlistReserveTransactions(): Promise<WaitlistReserveTransactionRow[]> {
+  const paymentAddress = getWaitlistReservePaymentAddress()?.trim() || null;
+
+  return fetchAllSupabaseRows<WaitlistReserveTransactionRow>({
     pageSize: WAITLIST_RESERVES_PAGE_SIZE,
-    fetchPage: async (from, to) =>
-      await db
-        .from("zn_waitlist_reserves")
-        .select("amount, created_at, memo_full, txid")
-        .order("created_at", { ascending: true })
-        .range(from, to),
+    fetchPage: async (from, to) => {
+      let query = db
+        .from("zn_waitlist_reserves_transactions")
+        .select(
+          "amount_zats, detected_at, memo, txid, is_outgoing, status, recipient_address",
+        )
+        .eq("is_outgoing", false)
+        .in("status", ["mempool", "confirmed"])
+        .order("detected_at", { ascending: true })
+        .range(from, to);
+
+      if (paymentAddress) {
+        query = query.eq("recipient_address", paymentAddress);
+      }
+
+      return await query;
+    },
   });
 }
 
@@ -190,14 +216,14 @@ function summarizeOtherNames(
 export async function syncWaitlistReservationFieldsFromReserves(): Promise<{
   matchedCount: number;
 }> {
-  const minimumAmount = getWaitlistVerifyReserveFeeZec();
+  const minimumAmount = getWaitlistReserveFeeZec();
   const minimumZats = minimumAmount ? parseZecToZats(minimumAmount) : null;
   if (!minimumAmount || minimumZats == null) {
-    throw new Error("WAITLIST_VERIFY_RESERVE_FEE_ZEC is missing or invalid.");
+    throw new Error("WAITLIST_RESERVE_FEE_ZEC is missing or invalid.");
   }
 
   const [reserveRows, existingReservedIds] = await Promise.all([
-    fetchAllWaitlistReserveRows(),
+    fetchAllWaitlistReserveTransactions(),
     fetchExistingReservedWaitlistIds(),
   ]);
   const firstValidReservationByUuid = new Map<
@@ -206,15 +232,15 @@ export async function syncWaitlistReservationFieldsFromReserves(): Promise<{
   >();
 
   for (const row of reserveRows) {
-    const parsed = parseWaitlistReserveMemo(row.memo_full);
-    if (!parsed?.uuid || !row.created_at) continue;
+    const parsed = parseWaitlistReserveMemo(row.memo);
+    if (!parsed?.uuid || !row.detected_at) continue;
 
-    const amountZats = amountToZats(row.amount);
+    const amountZats = coerceAmountZats(row.amount_zats);
     if (amountZats == null || amountZats < minimumZats) continue;
     if (firstValidReservationByUuid.has(parsed.uuid)) continue;
 
     firstValidReservationByUuid.set(parsed.uuid, {
-      createdAt: row.created_at,
+      createdAt: row.detected_at,
       txid: row.txid?.trim() || null,
     });
   }

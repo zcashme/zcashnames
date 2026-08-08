@@ -109,16 +109,28 @@ function parsePositiveZecAmount(rawValue: string | undefined): string | null {
   return value;
 }
 
-export function getWaitlistVerifyPaymentAddress(): string | null {
+export function getWaitlistReservePaymentAddress(): string | null {
   const value =
-    process.env.WAITLIST_ADMIN_WALLET?.trim()
+    process.env.WAITLIST_RESERVE_PAYMENT_ADDRESS?.trim()
+    ?? process.env.WAITLIST_ADMIN_WALLET?.trim()
+    // Temporary fallbacks while envs migrate off the old names.
     ?? process.env.WAITLIST_VERIFY_PAYMENT_ADDRESS?.trim();
   return value ? value : null;
 }
 
-export function getWaitlistVerifyReserveFeeZec(): string | null {
-  return parsePositiveZecAmount(process.env.WAITLIST_VERIFY_RESERVE_FEE_ZEC);
+/** @deprecated Use getWaitlistReservePaymentAddress */
+export const getWaitlistVerifyPaymentAddress = getWaitlistReservePaymentAddress;
+
+export function getWaitlistReserveFeeZec(): string | null {
+  return parsePositiveZecAmount(
+    process.env.WAITLIST_RESERVE_FEE_ZEC
+      // Temporary fallback while envs migrate off the old name.
+      ?? process.env.WAITLIST_VERIFY_RESERVE_FEE_ZEC,
+  );
 }
+
+/** @deprecated Use getWaitlistReserveFeeZec */
+export const getWaitlistVerifyReserveFeeZec = getWaitlistReserveFeeZec;
 
 export function buildWaitlistConfirmResponseToken(args: {
   normalizedEmail: string;

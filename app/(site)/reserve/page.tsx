@@ -6,8 +6,8 @@ import WaitlistVerifyClient, { HeroHowReservationsWork } from "@/components/veri
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import WaitlistReservationResendForm from "@/components/verify/WaitlistReservationResendForm";
 import {
-  getWaitlistVerifyPaymentAddress,
-  getWaitlistVerifyReserveFeeZec,
+  getWaitlistReservePaymentAddress,
+  getWaitlistReserveFeeZec,
   parseWaitlistVerifyToken,
 } from "@/lib/campaigns/waitlist-confirm-response";
 import {
@@ -193,8 +193,8 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
     );
   }
 
-  const paymentAddress = getWaitlistVerifyPaymentAddress();
-  const baseAmountZec = getWaitlistVerifyReserveFeeZec();
+  const paymentAddress = getWaitlistReservePaymentAddress();
+  const baseAmountZec = getWaitlistReserveFeeZec();
   if (!paymentAddress || !baseAmountZec) {
     console.error("[waitlist-reserve-page] missing payment config", {
       normalizedEmail: parsed.normalizedEmail,
