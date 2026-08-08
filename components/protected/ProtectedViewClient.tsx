@@ -134,12 +134,13 @@ function buildProtectedViewUrl(args: {
 }
 
 /**
- * Time remaining until expiry:
- * - ≥ 1 day:  "DDd HHh"   (e.g. 12d 5h)
- * - ≥ 1 hour: "HHh MMm"   (e.g. 8h 42m)
- * - < 1 hour: "MMm SSs"   (e.g. 15m 3s)
- * - no date:  "Never"
- * - past:     "Expired"
+ * Time remaining until expiry (largest band first):
+ * - ≥ 7 days:           "DDd"       (e.g. 12d)
+ * - ≥ 1 day and < 7d:   "DDd HHh"   (e.g. 3d 5h)
+ * - ≥ 1 hour and < 1d:  "HHh MMm"   (e.g. 8h 42m)
+ * - < 1 hour:           "MMm SSs"   (e.g. 15m 3s)
+ * - no date:            "Never"
+ * - past:               "Expired"
  */
 function formatExpiresRemaining(
   expiresAt: string | null | undefined,
@@ -158,6 +159,9 @@ function formatExpiresRemaining(
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
+  if (days >= 7) {
+    return `${days}d`;
+  }
   if (days >= 1) {
     return `${days}d ${hours}h`;
   }
