@@ -23,6 +23,7 @@ type ProtectedPageProps = {
     underReviewOnly?: string;
     rejectedOnly?: string;
     disputedOnly?: string;
+    categoryOnly?: string;
     ensOnly?: string;
     zmOnly?: string;
   }>;
@@ -43,6 +44,7 @@ export default async function ProtectedPage({ searchParams }: ProtectedPageProps
     underReviewOnly: params.underReviewOnly ?? null,
     rejectedOnly: params.rejectedOnly ?? null,
     disputedOnly: params.disputedOnly ?? null,
+    categoryOnly: params.categoryOnly ?? null,
     ensOnly: params.ensOnly ?? null,
     zmOnly: params.zmOnly ?? null,
   });

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PaginationControls from "@/components/PaginationControls";
 import ProtectedNameDetailsModal from "@/components/protected/ProtectedNameDetailsModal";
 import { InlineSearchField } from "@/components/search/InlineSearchField";
@@ -22,8 +22,19 @@ import type {
   ProtectedViewSortDirection,
   ProtectedViewSortKey,
 } from "@/lib/protected/view";
+import {
+  PROTECTED_NAME_CATEGORIES,
+  type ProtectedNameCategory,
+} from "@/lib/protected/shared";
 
 const PROTECTED_VIEW_CACHE_LIMIT = 25;
+
+function formatCategoryLabel(category: string) {
+  return category
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const SORT_OPTIONS: Array<{
   key: string;
@@ -62,6 +73,7 @@ function buildProtectedViewCacheKey(args: {
   underReviewOnly: boolean;
   rejectedOnly: boolean;
   disputedOnly: boolean;
+  categoryOnly: string | null;
   ensOnly: boolean;
   zmOnly: boolean;
 }) {
@@ -76,6 +88,7 @@ function buildProtectedViewCacheKey(args: {
     underReviewOnly: args.underReviewOnly,
     rejectedOnly: args.rejectedOnly,
     disputedOnly: args.disputedOnly,
+    categoryOnly: args.categoryOnly,
     ensOnly: args.ensOnly,
     zmOnly: args.zmOnly,
   });
@@ -92,6 +105,7 @@ function buildProtectedViewUrl(args: {
   underReviewOnly: boolean;
   rejectedOnly: boolean;
   disputedOnly: boolean;
+  categoryOnly: string | null;
   ensOnly: boolean;
   zmOnly: boolean;
 }) {
@@ -112,24 +126,45 @@ function buildProtectedViewUrl(args: {
   if (args.searchQuery.trim()) {
     searchParams.set("search", args.searchQuery.trim());
   }
+  if (args.categoryOnly) {
+    searchParams.set("categoryOnly", args.categoryOnly);
+  }
 
   return `/api/protected/view?${searchParams.toString()}`;
 }
 
-function EllipsisIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="h-4 w-4"
-      aria-hidden="true"
-    >
-      <circle cx="5" cy="12" r="1.8" />
-      <circle cx="12" cy="12" r="1.8" />
-      <circle cx="19" cy="12" r="1.8" />
-    </svg>
-  );
+/**
+ * Time remaining until expiry:
+ * - ≥ 1 day:  "DDd HHh"   (e.g. 12d 5h)
+ * - ≥ 1 hour: "HHh MMm"   (e.g. 8h 42m)
+ * - < 1 hour: "MMm SSs"   (e.g. 15m 3s)
+ * - no date:  "Never"
+ * - past:     "Expired"
+ */
+function formatExpiresRemaining(
+  expiresAt: string | null | undefined,
+  nowMs: number,
+): string {
+  if (!expiresAt) return "Never";
+  const targetMs = new Date(expiresAt).getTime();
+  if (!Number.isFinite(targetMs)) return "—";
+
+  const remainingMs = targetMs - nowMs;
+  if (remainingMs <= 0) return "Expired";
+
+  const totalSeconds = Math.floor(remainingMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days >= 1) {
+    return `${days}d ${hours}h`;
+  }
+  if (hours >= 1) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m ${seconds}s`;
 }
 
 function getStatusLabel(status: string) {
@@ -285,13 +320,25 @@ export default function ProtectedViewClient({
   const [underReviewOnly, setUnderReviewOnly] = useState(initialData.underReviewOnly);
   const [rejectedOnly, setRejectedOnly] = useState(initialData.rejectedOnly);
   const [disputedOnly, setDisputedOnly] = useState(initialData.disputedOnly);
+  const [categoryOnly, setCategoryOnly] = useState<string | null>(
+    initialData.categoryOnly ?? null,
+  );
   const [ensOnly, setEnsOnly] = useState(initialData.ensOnly);
   const [zmOnly, setZmOnly] = useState(initialData.zmOnly);
   const [detailsRow, setDetailsRow] = useState<ProtectedViewRow | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const router = useRouter();
   const initialDataRef = useRef(initialData);
   const tableShellRef = useRef<HTMLDivElement | null>(null);
   const stableInitialData = initialDataRef.current;
+
+  // Tick so the expires column stays accurate (seconds when under 1 hour).
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, []);
   const effectiveSearchMode: ProtectedViewSearchMode = appliedSearch.trim()
     ? searchMode
     : "contains";
@@ -308,6 +355,7 @@ export default function ProtectedViewClient({
     underReviewOnly: stableInitialData.underReviewOnly,
     rejectedOnly: stableInitialData.rejectedOnly,
     disputedOnly: stableInitialData.disputedOnly,
+    categoryOnly: stableInitialData.categoryOnly ?? null,
     ensOnly: stableInitialData.ensOnly,
     zmOnly: stableInitialData.zmOnly,
   });
@@ -322,6 +370,7 @@ export default function ProtectedViewClient({
     underReviewOnly,
     rejectedOnly,
     disputedOnly,
+    categoryOnly,
     ensOnly,
     zmOnly,
   });
@@ -343,6 +392,7 @@ export default function ProtectedViewClient({
           underReviewOnly,
           rejectedOnly,
           disputedOnly,
+          categoryOnly,
           ensOnly,
           zmOnly,
         }),
@@ -367,6 +417,7 @@ export default function ProtectedViewClient({
     !underReviewOnly &&
     !rejectedOnly &&
     !disputedOnly &&
+    !categoryOnly &&
     !ensOnly &&
     !zmOnly &&
     appliedSearch.trim() === "";
@@ -376,6 +427,7 @@ export default function ProtectedViewClient({
     setUnderReviewOnly(false);
     setRejectedOnly(false);
     setDisputedOnly(false);
+    setCategoryOnly(null);
     setEnsOnly(false);
     setZmOnly(false);
   }
@@ -420,7 +472,7 @@ export default function ProtectedViewClient({
               className="mx-auto mt-4 max-w-2xl text-lg leading-8"
               style={{ color: "var(--fg-body)" }}
             >
-              Search names, check protection status, and review protected name activity.
+              Search names, check protection status, and review details.
             </p>
             <div className="mt-6 hidden flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm sm:flex lg:text-base">
               <span className="inline-flex items-center gap-2" style={{ color: "var(--fg-body)" }}>
@@ -548,64 +600,93 @@ export default function ProtectedViewClient({
             },
           },
           {
-            key: "redeemed",
-            label: `Redeemed (${data.redeemedCount})`,
-            active: redeemedOnly,
-            onClick: () => {
-              setPage(1);
-              clearTabFilters();
-              setRedeemedOnly(true);
-            },
+            key: "status",
+            label: "Status",
+            active: redeemedOnly || underReviewOnly || rejectedOnly || disputedOnly,
+            children: [
+              {
+                key: "redeemed",
+                label: `Redeemed (${data.redeemedCount})`,
+                active: redeemedOnly,
+                onClick: () => {
+                  setPage(1);
+                  clearTabFilters();
+                  setRedeemedOnly(true);
+                },
+              },
+              {
+                key: "under-review",
+                label: `Under Review (${data.underReviewCount})`,
+                active: underReviewOnly,
+                onClick: () => {
+                  setPage(1);
+                  clearTabFilters();
+                  setUnderReviewOnly(true);
+                },
+              },
+              {
+                key: "rejected",
+                label: `Rejected (${data.rejectedCount})`,
+                active: rejectedOnly,
+                onClick: () => {
+                  setPage(1);
+                  clearTabFilters();
+                  setRejectedOnly(true);
+                },
+              },
+              {
+                key: "disputed",
+                label: `Disputed (${data.disputedCount})`,
+                active: disputedOnly,
+                onClick: () => {
+                  setPage(1);
+                  clearTabFilters();
+                  setDisputedOnly(true);
+                },
+              },
+            ],
           },
           {
-            key: "under-review",
-            label: `Under Review (${data.underReviewCount})`,
-            active: underReviewOnly,
-            onClick: () => {
-              setPage(1);
-              clearTabFilters();
-              setUnderReviewOnly(true);
-            },
+            key: "category",
+            label: "Category",
+            active: !!categoryOnly,
+            children: PROTECTED_NAME_CATEGORIES.map((category: ProtectedNameCategory) => ({
+              key: `category-${category}`,
+              label: `${formatCategoryLabel(category)} (${data.categoryCounts?.[category] ?? 0})`,
+              active: categoryOnly === category,
+              onClick: () => {
+                setPage(1);
+                clearTabFilters();
+                setCategoryOnly(category);
+              },
+            })),
           },
           {
-            key: "rejected",
-            label: `Rejected (${data.rejectedCount})`,
-            active: rejectedOnly,
-            onClick: () => {
-              setPage(1);
-              clearTabFilters();
-              setRejectedOnly(true);
-            },
-          },
-          {
-            key: "disputed",
-            label: `Disputed (${data.disputedCount})`,
-            active: disputedOnly,
-            onClick: () => {
-              setPage(1);
-              clearTabFilters();
-              setDisputedOnly(true);
-            },
-          },
-          {
-            key: "ens",
-            label: `ENS (${data.ensCount})`,
-            active: ensOnly,
-            onClick: () => {
-              setPage(1);
-              clearTabFilters();
-              setEnsOnly(true);
-            },
-          },
-          {
-            key: "zcash-me",
-            label: `Zcash.me (${data.zmCount})`,
-            active: zmOnly,
-            onClick: () => {
-              setPage(1);
-              clearTabFilters();
-              setZmOnly(true);
-            },
+            key: "priority",
+            label: "Priority",
+            active: ensOnly || zmOnly,
+            children: [
+              {
+                key: "ens",
+                label: `ENS (${data.ensCount})`,
+                active: ensOnly,
+                onClick: () => {
+                  setPage(1);
+                  clearTabFilters();
+                  setEnsOnly(true);
+                },
+              },
+              {
+                key: "zcash-me",
+                label: `Zcash.me (${data.zmCount})`,
+                active: zmOnly,
+                onClick: () => {
+                  setPage(1);
+                  clearTabFilters();
+                  setZmOnly(true);
+                },
+              },
+            ],
           },
         ]}
         endContent={
@@ -653,7 +734,7 @@ export default function ProtectedViewClient({
             >
               <thead>
                 <tr>
-                  {["name", "category", "status", "details"].map(
+                  {["name", "category", "status", "expires"].map(
                     (column, index) => (
                       <th
                         key={column}
@@ -701,8 +782,23 @@ export default function ProtectedViewClient({
                     </td>
                   </tr>
                 ) : (
-                  data.rows.map((row: ProtectedViewRow) => (
-                    <tr key={row.name}>
+                  data.rows.map((row: ProtectedViewRow) => {
+                    const expiresLabel = formatExpiresRemaining(row.expires_at, nowMs);
+                    return (
+                    <tr
+                      key={row.name}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Details for ${row.normalized_name}`}
+                      onClick={() => setDetailsRow(row)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setDetailsRow(row);
+                        }
+                      }}
+                      className="cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--fg-heading)_5%,transparent)]"
+                    >
                       <td
                         className="px-5 py-4 text-sm sm:px-6"
                         style={{
@@ -769,26 +865,27 @@ export default function ProtectedViewClient({
                         </span>
                       </td>
                       <td
-                        className="px-5 py-4 text-sm sm:px-6"
+                        className="px-5 py-4 text-sm sm:px-6 tabular-nums"
                         style={{
                           borderBottom:
                             "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
                           whiteSpace: "nowrap",
+                          color:
+                            expiresLabel === "Expired"
+                              ? "var(--accent-red, #e05252)"
+                              : "var(--fg-body)",
                         }}
+                        title={
+                          row.expires_at
+                            ? new Date(row.expires_at).toLocaleString()
+                            : "Never expires"
+                        }
                       >
-                        <div className="flex justify-center">
-                          <button
-                            type="button"
-                            aria-label={`Details for ${row.normalized_name}`}
-                            onClick={() => setDetailsRow(row)}
-                            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[color:var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)]"
-                          >
-                            <EllipsisIcon />
-                          </button>
-                        </div>
+                        {expiresLabel}
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

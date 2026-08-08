@@ -1,6 +1,10 @@
 import "server-only";
 
 import { db } from "@/lib/db";
+import {
+  PROTECTED_NAME_CATEGORIES,
+  type ProtectedNameCategory,
+} from "@/lib/protected/shared";
 import { expireProtectedNames } from "@/lib/zns/protected-claim";
 
 const PROTECTED_VIEW_SELECT =
@@ -93,6 +97,8 @@ type ProtectedViewFilterFlags = {
   underReviewOnly: boolean;
   rejectedOnly: boolean;
   disputedOnly: boolean;
+  /** When set, filter to this protected-name category. */
+  categoryOnly: string | null;
   ensOnly: boolean;
   zmOnly: boolean;
 };
@@ -117,6 +123,8 @@ export type ProtectedViewData = {
   underReviewCount: number;
   rejectedCount: number;
   disputedCount: number;
+  /** Counts keyed by protected-name category (all known categories present). */
+  categoryCounts: Record<ProtectedNameCategory, number>;
   ensCount: number;
   zmCount: number;
   heroAllCount: number;
@@ -134,6 +142,7 @@ export type ProtectedViewData = {
   underReviewOnly: boolean;
   rejectedOnly: boolean;
   disputedOnly: boolean;
+  categoryOnly: string | null;
   ensOnly: boolean;
   zmOnly: boolean;
 };
@@ -375,6 +384,10 @@ function applyViewFilters(
     return query.in("name", disputedNames);
   }
 
+  if (args.categoryOnly) {
+    return query.eq("category", args.categoryOnly);
+  }
+
   if (args.ensOnly) {
     return query.eq("ens_priority_claim", true);
   }
@@ -391,9 +404,31 @@ const EMPTY_TAB_FILTERS: ProtectedViewFilterFlags = {
   underReviewOnly: false,
   rejectedOnly: false,
   disputedOnly: false,
+  categoryOnly: null,
   ensOnly: false,
   zmOnly: false,
 };
+
+function emptyCategoryCounts(): Record<ProtectedNameCategory, number> {
+  return {
+    person: 0,
+    organization: 0,
+    brand: 0,
+    technology: 0,
+    community: 0,
+    abuse: 0,
+    other: 0,
+  };
+}
+
+function sanitizeCategoryOnly(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  if (!PROTECTED_NAME_CATEGORIES.includes(normalized as ProtectedNameCategory)) {
+    return null;
+  }
+  return normalized;
+}
 
 function isMissingColumnError(error: { message?: string } | null | undefined, column: string) {
   return !!error?.message?.includes(column);
@@ -425,6 +460,7 @@ export async function getProtectedViewData(args?: {
   underReviewOnly?: boolean | string | null;
   rejectedOnly?: boolean | string | null;
   disputedOnly?: boolean | string | null;
+  categoryOnly?: string | null;
   ensOnly?: boolean | string | null;
   zmOnly?: boolean | string | null;
 }): Promise<ProtectedViewData> {
@@ -450,12 +486,21 @@ export async function getProtectedViewData(args?: {
     redeemedOnly || underReviewOnly || rejectedOnly
       ? false
       : sanitizeBooleanFlag(args?.disputedOnly);
-  const ensOnly =
+  const categoryOnly =
     redeemedOnly || underReviewOnly || rejectedOnly || disputedOnly
+      ? null
+      : sanitizeCategoryOnly(args?.categoryOnly);
+  const ensOnly =
+    redeemedOnly || underReviewOnly || rejectedOnly || disputedOnly || !!categoryOnly
       ? false
       : sanitizeBooleanFlag(args?.ensOnly);
   const zmOnly =
-    redeemedOnly || underReviewOnly || rejectedOnly || disputedOnly || ensOnly
+    redeemedOnly
+    || underReviewOnly
+    || rejectedOnly
+    || disputedOnly
+    || !!categoryOnly
+    || ensOnly
       ? false
       : sanitizeBooleanFlag(args?.zmOnly);
   const filterFlags: ProtectedViewFilterFlags = {
@@ -463,6 +508,7 @@ export async function getProtectedViewData(args?: {
     underReviewOnly,
     rejectedOnly,
     disputedOnly,
+    categoryOnly,
     ensOnly,
     zmOnly,
   };
@@ -532,6 +578,16 @@ export async function getProtectedViewData(args?: {
     { ...EMPTY_TAB_FILTERS, zmOnly: true },
     disputedNames,
   );
+  const categoryCountQueries = PROTECTED_NAME_CATEGORIES.map((category) =>
+    applyViewFilters(
+      applyFamilyFilter(
+        db.from("zn_protected_names").select("name", { count: "exact", head: true }),
+        familyRoots,
+      ),
+      { ...EMPTY_TAB_FILTERS, categoryOnly: category },
+      disputedNames,
+    ),
+  );
   const heroAllCountQuery = db
     .from("zn_protected_names")
     .select("name", { count: "exact", head: true });
@@ -553,6 +609,7 @@ export async function getProtectedViewData(args?: {
     { count: disputedCount, error: disputedCountError },
     ensCountResult,
     zmCountResult,
+    categoryCountResults,
     { count: heroAllCount, error: heroAllCountError },
     { count: heroUnderReviewCount, error: heroUnderReviewCountError },
     { count: heroRejectedCount, error: heroRejectedCountError },
@@ -565,6 +622,7 @@ export async function getProtectedViewData(args?: {
     disputedCountQuery,
     ensCountQuery,
     zmCountQuery,
+    Promise.all(categoryCountQueries),
     heroAllCountQuery,
     heroUnderReviewCountQuery,
     heroRejectedCountQuery,
@@ -664,6 +722,19 @@ export async function getProtectedViewData(args?: {
     throw new Error(zmCountResult.error.message);
   }
 
+  const categoryCounts = emptyCategoryCounts();
+  for (let index = 0; index < PROTECTED_NAME_CATEGORIES.length; index += 1) {
+    const category = PROTECTED_NAME_CATEGORIES[index];
+    const result = categoryCountResults[index] as {
+      count: number | null;
+      error: { message?: string } | null;
+    };
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+    categoryCounts[category] = result.count ?? 0;
+  }
+
   const rawRows = pageData ?? [];
   const parentNamesOnPage = rawRows
     .filter((row) => !row.parent_name)
@@ -689,6 +760,7 @@ export async function getProtectedViewData(args?: {
     underReviewCount: underReviewCount ?? 0,
     rejectedCount: rejectedCount ?? 0,
     disputedCount: disputedCount ?? 0,
+    categoryCounts,
     ensCount,
     zmCount,
     heroAllCount: heroAllCount ?? 0,
@@ -706,6 +778,7 @@ export async function getProtectedViewData(args?: {
     underReviewOnly,
     rejectedOnly,
     disputedOnly,
+    categoryOnly,
     ensOnly: priorityColumnsAvailable ? ensOnly : false,
     zmOnly: priorityColumnsAvailable ? zmOnly : false,
   };
