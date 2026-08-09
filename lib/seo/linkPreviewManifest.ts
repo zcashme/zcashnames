@@ -8,7 +8,11 @@ export type LinkPreviewGroup =
   | "sharekit"
   | "roadmap"
   | "beta"
-  | "careers";
+  | "careers"
+  | "marketing"
+  | "product"
+  | "content"
+  | "docs";
 
 export type LinkPreviewManifestItem = {
   id: string;
@@ -56,7 +60,7 @@ export const LINK_PREVIEW_MANIFEST: LinkPreviewManifestItem[] = [
   },
   {
     id: "leaders",
-    label: "Leaders",
+    label: "Leaderboard",
     kind: "static",
     group: "leaders",
     url: "https://www.zcashnames.com/leaders",
@@ -70,7 +74,7 @@ export const LINK_PREVIEW_MANIFEST: LinkPreviewManifestItem[] = [
   },
   {
     id: "leaders-terms",
-    label: "Terms",
+    label: "Referral Terms",
     kind: "static",
     group: "leaders",
     url: "https://www.zcashnames.com/leaders/terms",
@@ -98,7 +102,7 @@ export const LINK_PREVIEW_MANIFEST: LinkPreviewManifestItem[] = [
   },
   {
     id: "sharekit",
-    label: "ShareKit",
+    label: "Share Kit",
     kind: "static",
     group: "sharekit",
     url: "https://www.zcashnames.com/sharekit",
@@ -178,6 +182,176 @@ export const LINK_PREVIEW_MANIFEST: LinkPreviewManifestItem[] = [
     source: {
       productionRoute: "/careers/[slug]",
       ogSlug: "careers",
+    },
+  },
+  {
+    id: "faq",
+    label: "FAQ",
+    kind: "static",
+    group: "marketing",
+    url: "https://www.zcashnames.com/faq",
+    image: "/og/faq.png",
+    title: "FAQ | Zcash Names",
+    description: "Frequently asked questions about Zcash Names waitlist reservations and Early Access.",
+    source: {
+      productionRoute: "/faq",
+      ogSlug: "faq",
+    },
+  },
+  {
+    id: "community",
+    label: "Community",
+    kind: "static",
+    group: "marketing",
+    url: "https://www.zcashnames.com/community",
+    image: "/og/community.png",
+    title: "Community | Zcash Names",
+    description:
+      "Join the Zcash Names community, beta test releases, become an ambassador, and find partner resources.",
+    source: {
+      productionRoute: "/community",
+      ogSlug: "community",
+    },
+  },
+  {
+    id: "brandkit",
+    label: "Brand Kit",
+    kind: "static",
+    group: "marketing",
+    url: "https://www.zcashnames.com/brandkit",
+    image: "/og/brandkit.png",
+    title: "Brand Kit | Zcash Names",
+    description: "Download Zcash Names logo, banner, and brand lockup assets.",
+    source: {
+      productionRoute: "/brandkit",
+      ogSlug: "brandkit",
+    },
+  },
+  {
+    id: "namepost",
+    label: "Create Post",
+    kind: "static",
+    group: "marketing",
+    url: "https://www.zcashnames.com/namepost",
+    image: "/og/namepost.png",
+    title: "Address Me By My Name | Zcash Names",
+    description: "Create a square Address Me By My Name image with custom artwork and text color.",
+    source: {
+      productionRoute: "/namepost",
+      ogSlug: "namepost",
+    },
+  },
+  {
+    id: "indexers",
+    label: "Indexers",
+    kind: "static",
+    group: "product",
+    url: "https://www.zcashnames.com/indexers",
+    image: "/og/indexers.png",
+    title: "Indexers | Zcash Names",
+    description: "Community-run ZNS indexers for resolving .zcash names.",
+    source: {
+      productionRoute: "/indexers",
+      ogSlug: "indexers",
+    },
+  },
+  {
+    id: "protected",
+    label: "Protected Names",
+    kind: "static",
+    group: "product",
+    url: "https://www.zcashnames.com/protected",
+    image: "/og/protected.png",
+    title: "Protected Names | Zcash Names",
+    description: "Public protected names view for Zcash Names.",
+    source: {
+      productionRoute: "/protected",
+      ogSlug: "protected",
+    },
+  },
+  {
+    id: "protected-suggest",
+    label: "Suggest Protected Names",
+    kind: "static",
+    group: "product",
+    url: "https://www.zcashnames.com/protected/suggest",
+    image: "/og/protected-suggest.png",
+    title: "Suggest Protected Names | Zcash Names",
+    description: "Submit a public protected-name suggestion for Zcash Names review.",
+    source: {
+      productionRoute: "/protected/suggest",
+      ogSlug: "protected-suggest",
+    },
+  },
+  {
+    id: "protected-dispute",
+    label: "Dispute Protected Names",
+    kind: "static",
+    group: "product",
+    url: "https://www.zcashnames.com/protected/dispute",
+    image: "/og/protected-dispute.png",
+    title: "Dispute Protected Names | Zcash Names",
+    description:
+      "Dispute a protected or rejected name so Zcash Names can reevaluate it with new information.",
+    source: {
+      productionRoute: "/protected/dispute",
+      ogSlug: "protected-dispute",
+    },
+  },
+  {
+    id: "waitlist-view",
+    label: "Waitlist",
+    kind: "static",
+    group: "product",
+    url: "https://www.zcashnames.com/waitlist/view",
+    image: "/og/waitlist-view.png",
+    title: "Waitlist View | Zcash Names",
+    description: "Public waitlist view for verified Zcash Names queue positions.",
+    source: {
+      productionRoute: "/waitlist/view",
+      ogSlug: "waitlist-view",
+    },
+  },
+  {
+    id: "collections",
+    label: "Collections",
+    kind: "static",
+    group: "product",
+    url: "https://www.zcashnames.com/collections",
+    image: "/og/collections.png",
+    title: "Collections | Zcash Names",
+    description: "Track the names you own and the names you're watching — no account required.",
+    source: {
+      productionRoute: "/collections",
+      ogSlug: "collections",
+    },
+  },
+  {
+    id: "blogs",
+    label: "Blog",
+    kind: "static",
+    group: "content",
+    url: "https://www.zcashnames.com/blogs",
+    image: "/og/blogs.png",
+    title: "Blogs | Zcash Names",
+    description: "Updates, launch notes, and builder stories from Zcash Names.",
+    source: {
+      productionRoute: "/blogs",
+      ogSlug: "blogs",
+    },
+  },
+  {
+    id: "docs",
+    label: "Docs",
+    kind: "static",
+    group: "docs",
+    url: "https://www.zcashnames.com/docs",
+    image: "/og/docs.png",
+    title: "Docs | Zcash Names",
+    description: "Documentation for the Zcash Name Service",
+    source: {
+      productionRoute: "/docs",
+      ogSlug: "docs",
     },
   },
 ];
