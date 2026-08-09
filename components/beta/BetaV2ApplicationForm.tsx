@@ -2,11 +2,14 @@
  * Beta v2 application form. Collects display name, why, focus areas, planned
  * wallet, experience, referral source, and one or more contact methods.
  * Assembles fields into FormData and calls submitBetaV2Application server action on submit.
- * Uses useTransition for optimistic pending state during submission.
+ * Opens captcha on submit; network submission runs only after a valid solution.
  */
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
+import CaptchaChallengeModal, {
+  type CaptchaSolution,
+} from "@/components/captcha/CaptchaChallengeModal";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { submitBetaV2Application } from "@/lib/beta-v2/actions";
 import {
@@ -134,7 +137,9 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
   const [bestContactUid, setBestContactUid] = useState("c0");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
 
   const canAddMore = contacts.length < CONTACT_KINDS.length;
 
@@ -243,10 +248,10 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
     setWallets((prev) => prev.map((row) => (row.uid === uid ? { ...row, otherName } : row)));
   }
 
-  /** Validates, assembles FormData, and calls submitBetaV2Application server action. */
-  async function handleSubmit(e: React.FormEvent) {
+  /** Validates and assembles FormData, then opens captcha before server submit. */
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (pending) return;
+    if (pending || captchaOpen) return;
 
     const filled = contacts.filter((row) => row.value.trim().length > 0);
     if (filled.length === 0) {
@@ -283,60 +288,96 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
     if (focusSdk) focus.push("sdk");
 
     setError("");
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.set("display_name", displayName);
-      formData.set("why", why);
-      formData.set("focus_areas", focus.join(","));
-      formData.set(
-        "planned_wallets_detail",
-        JSON.stringify(
-          orderedWallets.map((wallet) => {
-            const variant = wallet.choice !== "other" && wallet.choice !== "not_sure"
-              ? getWalletVariant(wallet.choice)
-              : null;
+    const formData = new FormData();
+    formData.set("display_name", displayName);
+    formData.set("why", why);
+    formData.set("focus_areas", focus.join(","));
+    formData.set(
+      "planned_wallets_detail",
+      JSON.stringify(
+        orderedWallets.map((wallet) => {
+          const variant = wallet.choice !== "other" && wallet.choice !== "not_sure"
+            ? getWalletVariant(wallet.choice)
+            : null;
 
-            return {
-              device: wallet.device,
-              subcategory: wallet.device === "not_sure" ? null : wallet.subcategory,
-              choice: wallet.choice,
-              variant_id: variant?.variantId ?? null,
-              wallet_id: variant?.walletId ?? null,
-              brand_slug: variant?.brandSlug ?? null,
-              other_name: wallet.choice === "other" ? wallet.otherName.trim() : "",
-            };
-          }),
-        ),
-      );
-      const primaryWallet = orderedWallets[0];
-      formData.set("planned_wallet_choice", primaryWallet.choice);
-      if (brandSlug) {
-        formData.set("entry_brand_slug", brandSlug);
-      }
-      if (primaryWallet.choice === "other") {
-        formData.set("other_wallet_device", primaryWallet.device);
-        formData.set("other_wallet_name", primaryWallet.otherName.trim());
-      }
-      formData.set("experience", experience);
-      formData.set("referral_source", referralSource);
-      formData.set("best_contact_kind", best.kind);
+          return {
+            device: wallet.device,
+            subcategory: wallet.device === "not_sure" ? null : wallet.subcategory,
+            choice: wallet.choice,
+            variant_id: variant?.variantId ?? null,
+            wallet_id: variant?.walletId ?? null,
+            brand_slug: variant?.brandSlug ?? null,
+            other_name: wallet.choice === "other" ? wallet.otherName.trim() : "",
+          };
+        }),
+      ),
+    );
+    const primaryWallet = orderedWallets[0];
+    formData.set("planned_wallet_choice", primaryWallet.choice);
+    if (brandSlug) {
+      formData.set("entry_brand_slug", brandSlug);
+    }
+    if (primaryWallet.choice === "other") {
+      formData.set("other_wallet_device", primaryWallet.device);
+      formData.set("other_wallet_name", primaryWallet.otherName.trim());
+    }
+    formData.set("experience", experience);
+    formData.set("referral_source", referralSource);
+    formData.set("best_contact_kind", best.kind);
 
-      for (const kind of CONTACT_KINDS) {
-        const row = filled.find((contact) => contact.kind === kind);
-        formData.set(`contact_${kind}`, row?.value.trim() ?? "");
-      }
+    for (const kind of CONTACT_KINDS) {
+      const row = filled.find((contact) => contact.kind === kind);
+      formData.set(`contact_${kind}`, row?.value.trim() ?? "");
+    }
 
-      try {
-        const result = await submitBetaV2Application(formData);
-        if (!result.ok) {
-          setError(result.error);
-          return;
+    setPendingFormData(formData);
+    setCaptchaOpen(true);
+  }
+
+  function closeCaptchaModal() {
+    if (pending) return;
+    setCaptchaOpen(false);
+    setPendingFormData(null);
+  }
+
+  async function completeSubmitAfterCaptcha(solution: CaptchaSolution) {
+    if (!pendingFormData || pending) return;
+
+    setPending(true);
+    setError("");
+
+    try {
+      pendingFormData.set("captcha_token", solution.captcha_token);
+      pendingFormData.set("captcha_answer", solution.captcha_answer);
+
+      const result = await submitBetaV2Application(pendingFormData);
+      if (!result.ok) {
+        const captchaFailed =
+          result.code === "captcha_failed" || result.error.toLowerCase().includes("human check");
+        if (captchaFailed) {
+          throw new Error(result.error);
         }
-        setSuccess(true);
-      } catch {
-        setError("Something went wrong. Try again.");
+        setError(result.error);
+        setCaptchaOpen(false);
+        setPendingFormData(null);
+        return;
       }
-    });
+
+      setCaptchaOpen(false);
+      setPendingFormData(null);
+      setSuccess(true);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Something went wrong. Try again.";
+      if (message.toLowerCase().includes("human check")) {
+        throw error instanceof Error ? error : new Error(message);
+      }
+      setError(message);
+      setCaptchaOpen(false);
+      setPendingFormData(null);
+    } finally {
+      setPending(false);
+    }
   }
 
   if (success) {
@@ -373,6 +414,16 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
   }
 
   return (
+    <>
+      <CaptchaChallengeModal
+        isOpen={captchaOpen}
+        title="Confirm you're human"
+        description="Complete this quick check to submit your beta application."
+        confirmLabel="Submit application"
+        submitting={pending}
+        onCancel={closeCaptchaModal}
+        onConfirm={completeSubmitAfterCaptcha}
+      />
     <form
       onSubmit={handleSubmit}
       className="rounded-2xl p-6 md:p-8 flex flex-col gap-5"
@@ -805,11 +856,17 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || captchaOpen}
         className="w-full rounded-full py-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         style={primaryBtnStyle}
       >
-        {pending ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit application"}
+        {pending ? (
+          <AnimatedLoadingLabel label="Submitting" active />
+        ) : captchaOpen ? (
+          "Complete check…"
+        ) : (
+          "Submit application"
+        )}
       </button>
 
       <p className="text-xs text-center" style={{ color: "var(--fg-muted)", lineHeight: 1.6 }}>
@@ -818,5 +875,6 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
         We will never ask you for your wallet passphrase.
       </p>
     </form>
+    </>
   );
 }

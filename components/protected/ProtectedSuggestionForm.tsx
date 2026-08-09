@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import CaptchaChallengeModal, {
+  type CaptchaSolution,
+} from "@/components/captcha/CaptchaChallengeModal";
 import ProtectedSuggestionSuccessModal from "@/components/protected/ProtectedSuggestionSuccessModal";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { getEmailAddressValidationMessage } from "@/lib/email-address";
@@ -587,6 +590,8 @@ export default function ProtectedSuggestionForm({
   const [contactError, setContactError] = useState<string | null>(null);
   const [unifiedAddressError, setUnifiedAddressError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState<ProtectedSuggestionPayload | null>(null);
   const [submittedName, setSubmittedName] = useState<string | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [canonicalOptionsRefreshKey, setCanonicalOptionsRefreshKey] = useState(0);
@@ -1109,46 +1114,86 @@ export default function ProtectedSuggestionForm({
       unifiedAddress: unifiedAddress.trim() || null,
     };
 
+    // Open captcha modal first; network submit runs only after a valid solution.
+    setErrorMessage(null);
+    setPendingPayload(payload);
+    setCaptchaOpen(true);
+  }
+
+  function closeCaptchaModal() {
+    if (isSubmitting) return;
+    setCaptchaOpen(false);
+    setPendingPayload(null);
+  }
+
+  async function completeSubmitAfterCaptcha(solution: CaptchaSolution) {
+    if (!pendingPayload || isSubmitting) return;
+
     setIsSubmitting(true);
+    setErrorMessage(null);
 
     try {
       const response = await fetch("/api/protected/suggestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...pendingPayload,
+          captcha_token: solution.captcha_token,
+          captcha_answer: solution.captcha_answer,
+        }),
       });
 
       const result = (await response.json()) as {
         ok?: boolean;
         error?: string;
+        code?: string;
       };
 
       if (!response.ok || !result.ok) {
         const message = result.error || "Failed to submit suggestion.";
+        const captchaFailed =
+          result.code === "captcha_failed" || message.toLowerCase().includes("human check");
+
+        if (captchaFailed) {
+          // Keep modal open; CaptchaChallengeModal shows the error and refreshes.
+          throw new Error(message);
+        }
+
         if (message.includes("already")) {
           setNameError(NAME_ALREADY_SUGGESTED_MESSAGE);
           setNameStatusMessage(NAME_ALREADY_SUGGESTED_MESSAGE);
           setNameStatusTone("error");
           setNameShakeTick((current) => current + 1);
-          throw new Error(message);
-        }
-        if (message.includes("Unified Address")) {
+        } else if (message.includes("Unified Address")) {
           setUnifiedAddressError(message);
           setUnifiedAddressShakeTick((current) => current + 1);
-          throw new Error(message);
+        } else {
+          setErrorMessage(message);
         }
-        throw new Error(message);
+
+        setCaptchaOpen(false);
+        setPendingPayload(null);
+        return;
       }
 
-      setSubmittedName(payload.name);
+      setSubmittedName(pendingPayload.name);
       setCanonicalOptionsRefreshKey((current) => current + 1);
+      setCaptchaOpen(false);
+      setPendingPayload(null);
       setSuccessModalOpen(true);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to submit suggestion.";
-      if (!message.includes("already") && !message.includes("Unified Address")) {
-        setErrorMessage(message);
+
+      // Captcha failures must propagate so the modal can refresh the challenge.
+      if (message.toLowerCase().includes("human check")) {
+        throw error;
       }
+
+      // Network / unexpected errors: surface on the form and close the modal.
+      setErrorMessage(message);
+      setCaptchaOpen(false);
+      setPendingPayload(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -1156,6 +1201,15 @@ export default function ProtectedSuggestionForm({
 
   return (
     <>
+      <CaptchaChallengeModal
+        isOpen={captchaOpen}
+        title="Confirm you're human"
+        description="Complete this quick check to submit your protected name suggestion."
+        confirmLabel="Submit suggestion"
+        submitting={isSubmitting}
+        onCancel={closeCaptchaModal}
+        onConfirm={completeSubmitAfterCaptcha}
+      />
       <ProtectedSuggestionSuccessModal
         isOpen={successModalOpen && !!submittedName}
         name={submittedName ?? ""}
@@ -1624,7 +1678,7 @@ export default function ProtectedSuggestionForm({
               <button
                 type="button"
                 onClick={() => void handleSubmit()}
-                disabled={isSubmitting || isCheckingName}
+                disabled={isSubmitting || isCheckingName || captchaOpen}
                 className="inline-flex h-[46px] items-center justify-center whitespace-nowrap rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
                 style={{
                   background: "var(--home-result-primary-bg)",
@@ -1634,6 +1688,8 @@ export default function ProtectedSuggestionForm({
               >
                 {isSubmitting ? (
                   <AnimatedLoadingLabel label="Submitting" active />
+                ) : captchaOpen ? (
+                  "Complete check…"
                 ) : (
                   "Submit for review"
                 )}

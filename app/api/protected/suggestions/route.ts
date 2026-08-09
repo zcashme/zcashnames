@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import {
+  CAPTCHA_ERROR_MESSAGE,
+  CAPTCHA_FAILED_CODE,
+  verifyRequestCaptcha,
+} from "@/lib/captcha/http";
+import {
   getCanonicalProtectedNameByName,
   protectedSuggestionNameExists,
   submitProtectedNameSuggestion,
@@ -22,6 +27,8 @@ type ProtectedSuggestionRequestBody = {
   evidenceLinks?: unknown;
   contactMethods?: unknown;
   unifiedAddress?: unknown;
+  captcha_token?: unknown;
+  captcha_answer?: unknown;
 };
 
 function normalizeRequestBody(
@@ -55,6 +62,13 @@ export async function POST(request: Request) {
     body = (await request.json()) as ProtectedSuggestionRequestBody;
   } catch {
     body = null;
+  }
+
+  if (!verifyRequestCaptcha(body)) {
+    return NextResponse.json(
+      { ok: false, error: CAPTCHA_ERROR_MESSAGE, code: CAPTCHA_FAILED_CODE, requestId },
+      { status: 400 },
+    );
   }
 
   const payload = normalizeRequestBody(body);

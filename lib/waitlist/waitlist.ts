@@ -33,6 +33,11 @@ import {
 import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
 import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
 import {
+  CAPTCHA_ERROR_MESSAGE,
+  CAPTCHA_FAILED_CODE,
+  verifyRequestCaptcha,
+} from "@/lib/captcha/http";
+import {
   createWaitlistCaptcha,
   verifyWaitlistCaptcha,
   type WaitlistCaptchaChallenge,
@@ -199,6 +204,8 @@ export interface SurveyPayload {
   want_early_trial: boolean | null;
   may_contact: boolean | null;
   comments: string | null;
+  captcha_token: string;
+  captcha_answer: string;
 }
 
 type WaitlistRow = {
@@ -531,7 +538,20 @@ export async function submitWaitlist(
 
 export async function submitSurvey(
   payload: SurveyPayload,
-): Promise<{ error: string | null; shouldContact: boolean }> {
+): Promise<{ error: string | null; shouldContact: boolean; code?: string }> {
+  if (
+    !verifyRequestCaptcha({
+      captcha_token: payload.captcha_token,
+      captcha_answer: payload.captcha_answer,
+    })
+  ) {
+    return {
+      error: CAPTCHA_ERROR_MESSAGE,
+      shouldContact: false,
+      code: CAPTCHA_FAILED_CODE,
+    };
+  }
+
   const { use_cases, other_use_case, want_early_trial, may_contact, comments } = payload;
   const resolved = await resolveReferralIdentity(payload.referral_code);
   if (!resolved) {

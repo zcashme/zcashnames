@@ -2,13 +2,18 @@
 
 import { createHash, randomBytes } from "crypto";
 import { headers } from "next/headers";
+import {
+  CAPTCHA_ERROR_MESSAGE,
+  CAPTCHA_FAILED_CODE,
+  verifyRequestCaptcha,
+} from "@/lib/captcha/http";
 import { db } from "@/lib/db";
 import { sendCareerApplicationNotice } from "@/lib/email/career-application";
 import { getOpenCareerJobBySlug } from "@/lib/careers";
 
 export type CareerApplicationResult =
   | { ok: true }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: string };
 
 const MAX_NAME = 120;
 const MAX_EMAIL = 200;
@@ -53,6 +58,19 @@ export async function submitCareerApplication(
   jobSlug: string,
   formData: FormData,
 ): Promise<CareerApplicationResult> {
+  if (
+    !verifyRequestCaptcha({
+      captcha_token: formData.get("captcha_token"),
+      captcha_answer: formData.get("captcha_answer"),
+    })
+  ) {
+    return {
+      ok: false,
+      error: CAPTCHA_ERROR_MESSAGE,
+      code: CAPTCHA_FAILED_CODE,
+    };
+  }
+
   const job = await getOpenCareerJobBySlug(jobSlug);
   if (!job) return { ok: false, error: "This job is no longer accepting applications." };
   if (job.applicationMode !== "native") {

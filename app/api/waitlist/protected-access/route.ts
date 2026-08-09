@@ -11,6 +11,11 @@ import {
   type WaitlistProtectedAccessRelationship,
   type WaitlistProtectedContactMethod,
 } from "@/lib/campaigns/waitlist-protected-access";
+import {
+  CAPTCHA_ERROR_MESSAGE,
+  CAPTCHA_FAILED_CODE,
+  verifyRequestCaptcha,
+} from "@/lib/captcha/http";
 import { sendProtectedNameAccessRequestNotice } from "@/lib/email/protected-name-access";
 import { CONTACT_KINDS, type ContactKind } from "@/lib/types";
 
@@ -24,6 +29,8 @@ type ProtectedAccessPayload = {
   relationship?: unknown;
   supportingLink?: unknown;
   additionalContext?: unknown;
+  captcha_token?: unknown;
+  captcha_answer?: unknown;
 };
 
 const ALLOWED_RELATIONSHIPS: WaitlistProtectedAccessRelationship[] = [
@@ -133,6 +140,13 @@ export async function POST(request: Request) {
     payload = (await request.json()) as ProtectedAccessPayload;
   } catch {
     payload = null;
+  }
+
+  if (!verifyRequestCaptcha(payload)) {
+    return NextResponse.json(
+      { ok: false, error: CAPTCHA_ERROR_MESSAGE, code: CAPTCHA_FAILED_CODE, requestId },
+      { status: 400 },
+    );
   }
 
   const token = typeof payload?.token === "string" ? payload.token.trim() : "";

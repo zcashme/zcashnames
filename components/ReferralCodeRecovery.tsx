@@ -2,6 +2,9 @@
 
 import { useState, type FormEvent } from "react";
 import { useTheme } from "next-themes";
+import CaptchaChallengeModal, {
+  type CaptchaSolution,
+} from "@/components/captcha/CaptchaChallengeModal";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import type { ShareKitRecoveryPublicStatus } from "@/lib/sharekit-recovery";
 import { recoverShareKitReferralByEmail } from "@/app/(site)/sharekit/actions";
@@ -23,6 +26,7 @@ export default function ReferralCodeRecovery({
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [recovering, setRecovering] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
   const [status, setStatus] = useState<ShareKitRecoveryPublicStatus | null>(null);
   const [message, setMessage] = useState("");
   const { resolvedTheme } = useTheme();
@@ -41,18 +45,73 @@ export default function ReferralCodeRecovery({
     ? "min-w-0 rounded-lg border border-border-muted px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
     : "min-w-0 rounded-lg border bg-transparent px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted";
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!emailIsValid) return;
+    if (!emailIsValid || recovering || captchaOpen) return;
+    setStatus(null);
+    setMessage("");
+    setCaptchaOpen(true);
+  }
+
+  function closeCaptchaModal() {
+    if (recovering) return;
+    setCaptchaOpen(false);
+  }
+
+  async function completeSubmitAfterCaptcha(solution: CaptchaSolution) {
+    if (!emailIsValid || recovering) return;
+
     setRecovering(true);
-    const result = await recoverShareKitReferralByEmail(input);
-    setRecovering(false);
-    setStatus(result.status);
-    setMessage(result.message);
+    setStatus(null);
+    setMessage("");
+
+    try {
+      const result = await recoverShareKitReferralByEmail({
+        email: input,
+        captcha_token: solution.captcha_token,
+        captcha_answer: solution.captcha_answer,
+      });
+
+      const captchaFailed =
+        ("code" in result && result.code === "captcha_failed") ||
+        result.message.toLowerCase().includes("human check");
+
+      if (captchaFailed) {
+        throw new Error(result.message);
+      }
+
+      setStatus(result.status);
+      setMessage(result.message);
+      setCaptchaOpen(false);
+    } catch (error) {
+      const nextMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not process referral recovery right now. Please try again.";
+
+      if (nextMessage.toLowerCase().includes("human check")) {
+        throw error instanceof Error ? error : new Error(nextMessage);
+      }
+
+      setStatus("error");
+      setMessage(nextMessage);
+      setCaptchaOpen(false);
+    } finally {
+      setRecovering(false);
+    }
   }
 
   return (
     <div className={className}>
+      <CaptchaChallengeModal
+        isOpen={captchaOpen}
+        title="Confirm you're human"
+        description="Complete this quick check to recover your referral codes."
+        confirmLabel="Recover codes"
+        submitting={recovering}
+        onCancel={closeCaptchaModal}
+        onConfirm={completeSubmitAfterCaptcha}
+      />
       <button
         type="button"
         onClick={() => {
@@ -99,11 +158,17 @@ export default function ReferralCodeRecovery({
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
-              disabled={!emailIsValid || recovering}
+              disabled={!emailIsValid || recovering || captchaOpen}
               className={buttonClassNameBase}
               style={isSharekit ? undefined : { borderColor: "var(--leaders-card-border)" }}
             >
-              {recovering ? <AnimatedLoadingLabel label="Checking" active /> : "Recover codes"}
+              {recovering ? (
+                <AnimatedLoadingLabel label="Checking" active />
+              ) : captchaOpen ? (
+                "Complete check…"
+              ) : (
+                "Recover codes"
+              )}
             </button>
           </div>
           {message ? (

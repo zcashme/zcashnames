@@ -6,6 +6,11 @@
 // Returns typed result (ok/error) consumed by the form component.
 import { createHash } from "crypto";
 import { headers } from "next/headers";
+import {
+  CAPTCHA_ERROR_MESSAGE,
+  CAPTCHA_FAILED_CODE,
+  verifyRequestCaptcha,
+} from "@/lib/captcha/http";
 import { db } from "@/lib/db";
 import { CONTACT_KINDS, type ContactKind } from "@/lib/types";
 
@@ -14,7 +19,7 @@ const MAX_CONTACT = 200;
 
 export type IndexerLaunchAlertResult =
   | { ok: true }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: string };
 
 function isValidEmail(v: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -37,6 +42,19 @@ async function readClientMeta(): Promise<{ ip: string | null; userAgent: string 
 export async function submitIndexerLaunchAlert(
   formData: FormData,
 ): Promise<IndexerLaunchAlertResult> {
+  if (
+    !verifyRequestCaptcha({
+      captcha_token: formData.get("captcha_token"),
+      captcha_answer: formData.get("captcha_answer"),
+    })
+  ) {
+    return {
+      ok: false,
+      error: CAPTCHA_ERROR_MESSAGE,
+      code: CAPTCHA_FAILED_CODE,
+    };
+  }
+
   const displayName = String(formData.get("display_name") ?? "").trim();
   const newsletter = String(formData.get("newsletter") ?? "") === "true";
 

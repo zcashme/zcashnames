@@ -6,6 +6,11 @@
 
 import { createHash, randomBytes } from "crypto";
 import { headers } from "next/headers";
+import {
+  CAPTCHA_ERROR_MESSAGE,
+  CAPTCHA_FAILED_CODE,
+  verifyRequestCaptcha,
+} from "@/lib/captcha/http";
 import { db } from "@/lib/db";
 import { CONTACT_KINDS, type ContactKind } from "@/lib/types";
 import { sendBetaV2ApplicationNotice } from "@/lib/email/beta-application-v2";
@@ -34,7 +39,7 @@ import {
 
 export type BetaV2ApplicationResult =
   | { ok: true }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: string };
 
 const APP_MAX_NAME = 60;
 const APP_MIN_WHY = 20;
@@ -249,6 +254,19 @@ function parseWalletDetails(formData: FormData): { details: WalletDetail[] } | {
 export async function submitBetaV2Application(
   formData: FormData,
 ): Promise<BetaV2ApplicationResult> {
+  if (
+    !verifyRequestCaptcha({
+      captcha_token: formData.get("captcha_token"),
+      captcha_answer: formData.get("captcha_answer"),
+    })
+  ) {
+    return {
+      ok: false,
+      error: CAPTCHA_ERROR_MESSAGE,
+      code: CAPTCHA_FAILED_CODE,
+    };
+  }
+
   const displayName = String(formData.get("display_name") ?? "").trim();
   const rawEntryBrandSlug = String(formData.get("entry_brand_slug") ?? "").trim();
   const why = String(formData.get("why") ?? "").trim();

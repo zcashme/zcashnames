@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import CaptchaChallengeModal, {
+  type CaptchaSolution,
+} from "@/components/captcha/CaptchaChallengeModal";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { submitSurvey } from "@/lib/waitlist/waitlist";
 
@@ -35,6 +38,8 @@ export default function SurveyForm({
   const [showQuestions, setShowQuestions] = useState(false);
   const [questions, setQuestions] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   function toggleUseCase(label: string) {
     setUseCases((prev) =>
@@ -42,20 +47,58 @@ export default function SurveyForm({
     );
   }
 
-  async function handleSubmit() {
+  function handleSubmit() {
+    if (submitting || captchaOpen) return;
+    setErrorMessage(null);
+    setCaptchaOpen(true);
+  }
+
+  function closeCaptchaModal() {
     if (submitting) return;
+    setCaptchaOpen(false);
+  }
+
+  async function completeSubmitAfterCaptcha(solution: CaptchaSolution) {
+    if (submitting) return;
+
     setSubmitting(true);
-    const { error, shouldContact } = await submitSurvey({
-      referral_code: referralCode,
-      use_cases: useCases.length > 0 ? useCases : null,
-      other_use_case: otherUseCase || null,
-      want_early_trial: wantEarlyTrial === "yes" ? true : wantEarlyTrial === "no" ? false : null,
-      may_contact: mayContact === "yes" ? true : mayContact === "no" ? false : null,
-      comments: questions || null,
-    });
-    setSubmitting(false);
-    if (!error) {
+    setErrorMessage(null);
+
+    try {
+      const { error, shouldContact, code } = await submitSurvey({
+        referral_code: referralCode,
+        use_cases: useCases.length > 0 ? useCases : null,
+        other_use_case: otherUseCase || null,
+        want_early_trial: wantEarlyTrial === "yes" ? true : wantEarlyTrial === "no" ? false : null,
+        may_contact: mayContact === "yes" ? true : mayContact === "no" ? false : null,
+        comments: questions || null,
+        captcha_token: solution.captcha_token,
+        captcha_answer: solution.captcha_answer,
+      });
+
+      if (error) {
+        const captchaFailed =
+          code === "captcha_failed" || error.toLowerCase().includes("human check");
+        if (captchaFailed) {
+          throw new Error(error);
+        }
+        setErrorMessage(error);
+        setCaptchaOpen(false);
+        return;
+      }
+
+      setCaptchaOpen(false);
       onComplete(shouldContact);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Something went wrong. Please try again.";
+      if (message.toLowerCase().includes("human check")) {
+        throw error instanceof Error ? error : new Error(message);
+      }
+      setErrorMessage(message);
+      setCaptchaOpen(false);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -78,6 +121,15 @@ export default function SurveyForm({
 
   return (
     <div className="p-8 flex flex-col gap-4 text-left">
+      <CaptchaChallengeModal
+        isOpen={captchaOpen}
+        title="Confirm you're human"
+        description="Complete this quick check to submit the survey."
+        confirmLabel="Submit survey"
+        submitting={submitting}
+        onCancel={closeCaptchaModal}
+        onConfirm={completeSubmitAfterCaptcha}
+      />
       <h2 className="text-xl font-bold text-center" style={{ color: "var(--fg-heading)" }}>Quick survey</h2>
       <p className="text-sm text-center" style={{ color: "var(--fg-body)" }}>Help us build a better product.</p>
 
@@ -168,20 +220,32 @@ export default function SurveyForm({
         </div>
       </div>
 
+      {errorMessage ? (
+        <p className="text-center text-sm" style={{ color: "var(--accent-red, #e05252)" }}>
+          {errorMessage}
+        </p>
+      ) : null}
+
       <div className="flex gap-3 justify-center pt-2">
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || captchaOpen}
           className="px-8 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
           style={{
             background: "var(--home-result-primary-bg)",
             color: "var(--home-result-primary-fg)",
             boxShadow: "var(--home-result-primary-shadow)",
-            opacity: submitting ? 0.5 : 1,
+            opacity: submitting || captchaOpen ? 0.5 : 1,
           }}
         >
-          {submitting ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit"}
+          {submitting ? (
+            <AnimatedLoadingLabel label="Submitting" active />
+          ) : captchaOpen ? (
+            "Complete check…"
+          ) : (
+            "Submit"
+          )}
         </button>
         <button
           type="button"

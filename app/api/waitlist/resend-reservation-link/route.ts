@@ -3,6 +3,11 @@ import { buildWaitlistConfirmResponseTrackingUrl } from "@/lib/campaigns/waitlis
 import { getProtectedNameInfoByName } from "@/lib/campaigns/waitlist-protected-access";
 import { findWaitlistRowsByNormalizedEmail } from "@/lib/campaigns/waitlist-verify";
 import {
+  CAPTCHA_ERROR_MESSAGE,
+  CAPTCHA_FAILED_CODE,
+  verifyRequestCaptcha,
+} from "@/lib/captcha/http";
+import {
   buildWaitlistShareKitUrl,
   sendWaitlistReservationEmail,
   sendWaitlistReservationResendEmail,
@@ -44,11 +49,32 @@ export async function POST(request: Request) {
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
 
-  let payload: { email?: unknown } | null = null;
+  let payload: {
+    email?: unknown;
+    captcha_token?: unknown;
+    captcha_answer?: unknown;
+  } | null = null;
   try {
-    payload = (await request.json()) as { email?: unknown };
+    payload = (await request.json()) as {
+      email?: unknown;
+      captcha_token?: unknown;
+      captcha_answer?: unknown;
+    };
   } catch {
     payload = null;
+  }
+
+  if (!verifyRequestCaptcha(payload)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        status: "error",
+        code: CAPTCHA_FAILED_CODE,
+        message: CAPTCHA_ERROR_MESSAGE,
+        requestId,
+      },
+      { status: 400 },
+    );
   }
 
   const rawEmail = typeof payload?.email === "string" ? payload.email : "";

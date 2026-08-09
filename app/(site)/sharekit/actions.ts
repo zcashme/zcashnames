@@ -2,6 +2,11 @@
 
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
+import {
+  CAPTCHA_ERROR_MESSAGE,
+  CAPTCHA_FAILED_CODE,
+  verifyRequestCaptcha,
+} from "@/lib/captcha/http";
 import { sendWaitlistReferralRecoveryEmail } from "@/lib/email/waitlist";
 import { extractReferralCode } from "@/lib/referral-code";
 import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
@@ -137,9 +142,27 @@ export async function lookupShareKitReferral(
   }
 }
 
-export async function recoverShareKitReferralByEmail(input: string): Promise<ShareKitRecoveryResult> {
+export async function recoverShareKitReferralByEmail(input: {
+  email: string;
+  captcha_token: string;
+  captcha_answer: string;
+}): Promise<ShareKitRecoveryResult & { code?: string }> {
   const startedAt = Date.now();
-  const email = normalizeShareKitRecoveryEmail(input);
+
+  if (
+    !verifyRequestCaptcha({
+      captcha_token: input.captcha_token,
+      captcha_answer: input.captcha_answer,
+    })
+  ) {
+    return {
+      status: "error",
+      message: CAPTCHA_ERROR_MESSAGE,
+      code: CAPTCHA_FAILED_CODE,
+    };
+  }
+
+  const email = normalizeShareKitRecoveryEmail(input.email);
   if (!isValidShareKitRecoveryEmail(email)) {
     return {
       status: "invalid_email",

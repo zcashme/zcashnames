@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import CaptchaChallengeModal, {
+  type CaptchaSolution,
+} from "@/components/captcha/CaptchaChallengeModal";
 import SectionHeaderPill from "@/components/landing/SectionHeaderPill";
 import {
   submitBlogSubscription,
@@ -20,6 +23,7 @@ export default function LandingNewsletterSignup({
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<SubmitBlogSubscriptionResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
 
   useEffect(() => {
     function focusFromHash() {
@@ -41,20 +45,56 @@ export default function LandingNewsletterSignup({
     return () => window.removeEventListener("hashchange", focusFromHash);
   }, []);
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting || captchaOpen) return;
+    setStatus(null);
+    setCaptchaOpen(true);
+  }
+
+  function closeCaptchaModal() {
+    if (submitting) return;
+    setCaptchaOpen(false);
+  }
+
+  async function completeSubmitAfterCaptcha(solution: CaptchaSolution) {
     if (submitting) return;
 
     setSubmitting(true);
     setStatus(null);
 
-    const result = await submitBlogSubscription({
-      email,
-      series: ["general"],
-    });
+    try {
+      const result = await submitBlogSubscription({
+        email,
+        series: ["general"],
+        captcha_token: solution.captcha_token,
+        captcha_answer: solution.captcha_answer,
+      });
 
-    setStatus(result);
-    setSubmitting(false);
+      if (result.status === "error") {
+        const captchaFailed =
+          result.code === "captcha_failed" || result.error.toLowerCase().includes("human check");
+        if (captchaFailed) {
+          throw new Error(result.error);
+        }
+        setStatus(result);
+        setCaptchaOpen(false);
+        return;
+      }
+
+      setStatus(result);
+      setCaptchaOpen(false);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Something went wrong. Please try again.";
+      if (message.toLowerCase().includes("human check")) {
+        throw error instanceof Error ? error : new Error(message);
+      }
+      setStatus({ status: "error", error: message });
+      setCaptchaOpen(false);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const message =
@@ -70,6 +110,15 @@ export default function LandingNewsletterSignup({
 
   return (
     <section id="newsletter" className="mx-auto w-full max-w-3xl px-4 pb-6 sm:px-6">
+      <CaptchaChallengeModal
+        isOpen={captchaOpen}
+        title="Confirm you're human"
+        description="Complete this quick check to join the newsletter."
+        confirmLabel={buttonLabel}
+        submitting={submitting}
+        onCancel={closeCaptchaModal}
+        onConfirm={completeSubmitAfterCaptcha}
+      />
       <div className="mb-5 flex justify-center">
         <SectionHeaderPill title="Newsletter" />
       </div>
@@ -101,17 +150,17 @@ export default function LandingNewsletterSignup({
             />
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || captchaOpen}
               className="rounded-[18px] px-5 py-3 text-sm font-semibold transition-opacity"
               style={{
                 background: "var(--home-result-primary-bg)",
                 color: "var(--home-result-primary-fg)",
                 boxShadow: "var(--home-result-primary-shadow)",
-                opacity: submitting ? 0.7 : 1,
+                opacity: submitting || captchaOpen ? 0.7 : 1,
                 cursor: submitting ? "progress" : "pointer",
               }}
             >
-              {submitting ? "Sending..." : buttonLabel}
+              {submitting ? "Sending..." : captchaOpen ? "Complete check…" : buttonLabel}
             </button>
           </div>
 

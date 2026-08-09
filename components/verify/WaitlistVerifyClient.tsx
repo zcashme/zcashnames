@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import CaptchaChallengeModal, {
+  type CaptchaSolution,
+} from "@/components/captcha/CaptchaChallengeModal";
 import {
   ActionDropdown,
   EmailIcon,
@@ -604,7 +607,7 @@ function getCardDeleteWarning(card: VerifyCard): string {
     return `This will remove ${name} and any active protected-name access request tied to this waitlist entry.`;
   }
 
-  return "Removing ${name} will discard its position for Early Access.";
+  return `Removing ${name} will discard its position for Early Access.`;
 }
 
 function VerifyCardActionMenu({
@@ -2777,6 +2780,15 @@ function ProtectedAccessRequestPanel({
   const [additionalContext, setAdditionalContext] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
+  const [pendingAccessBody, setPendingAccessBody] = useState<{
+    token: string;
+    rowId: string;
+    contactMethods: Array<{ kind: ContactKind; value: string; preferred: boolean }>;
+    relationship: ProtectedRequestRelationship;
+    supportingLink: string;
+    additionalContext: string;
+  } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showSubmittedDetails, setShowSubmittedDetails] = useState(false);
 
@@ -2865,8 +2877,8 @@ function ProtectedAccessRequestPanel({
     );
   }
 
-  async function submitRequest() {
-    if (isSubmitting) return;
+  function submitRequest() {
+    if (isSubmitting || captchaOpen) return;
 
     const normalizedContacts = contacts
       .map((contact) => ({
@@ -2889,23 +2901,41 @@ function ProtectedAccessRequestPanel({
     }
 
     setErrorMessage("");
+    setPendingAccessBody({
+      token: verifyToken,
+      rowId: card.id,
+      contactMethods: normalizedContacts.map((contact) => ({
+        kind: contact.kind,
+        value: contact.value,
+        preferred: contact.uid === preferred.uid,
+      })),
+      relationship,
+      supportingLink,
+      additionalContext,
+    });
+    setCaptchaOpen(true);
+  }
+
+  function closeCaptchaModal() {
+    if (isSubmitting) return;
+    setCaptchaOpen(false);
+    setPendingAccessBody(null);
+  }
+
+  async function completeSubmitAfterCaptcha(solution: CaptchaSolution) {
+    if (!pendingAccessBody || isSubmitting) return;
+
     setIsSubmitting(true);
+    setErrorMessage("");
 
     try {
       const response = await fetch("/api/waitlist/protected-access", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          token: verifyToken,
-          rowId: card.id,
-          contactMethods: normalizedContacts.map((contact) => ({
-            kind: contact.kind,
-            value: contact.value,
-            preferred: contact.uid === preferred.uid,
-          })),
-          relationship,
-          supportingLink,
-          additionalContext,
+          ...pendingAccessBody,
+          captcha_token: solution.captcha_token,
+          captcha_answer: solution.captcha_answer,
         }),
       });
 
@@ -2927,14 +2957,25 @@ function ProtectedAccessRequestPanel({
               deniedAt: string | null;
             };
           }
-        | { ok: false; error?: string };
+        | { ok: false; error?: string; code?: string };
 
       if (!response.ok || !payload.ok) {
-        throw new Error(
+        const message =
           "error" in payload && payload.error
             ? payload.error
-            : "Access request could not be submitted.",
-        );
+            : "Access request could not be submitted.";
+        const captchaFailed =
+          ("code" in payload && payload.code === "captcha_failed") ||
+          message.toLowerCase().includes("human check");
+
+        if (captchaFailed) {
+          throw new Error(message);
+        }
+
+        setErrorMessage(message);
+        setCaptchaOpen(false);
+        setPendingAccessBody(null);
+        return;
       }
 
       onProtectedRequestUpdate(card.id, {
@@ -2952,10 +2993,19 @@ function ProtectedAccessRequestPanel({
         protectedRequestDeniedAt: payload.request.deniedAt,
       });
       setIsEditing(false);
+      setCaptchaOpen(false);
+      setPendingAccessBody(null);
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Access request could not be submitted.",
-      );
+      const message =
+        error instanceof Error ? error.message : "Access request could not be submitted.";
+
+      if (message.toLowerCase().includes("human check")) {
+        throw error;
+      }
+
+      setErrorMessage(message);
+      setCaptchaOpen(false);
+      setPendingAccessBody(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -3134,6 +3184,16 @@ function ProtectedAccessRequestPanel({
   }
 
   return (
+    <>
+      <CaptchaChallengeModal
+        isOpen={captchaOpen}
+        title="Confirm you're human"
+        description="Complete this quick check to submit your protected name access request."
+        confirmLabel="Submit request"
+        submitting={isSubmitting}
+        onCancel={closeCaptchaModal}
+        onConfirm={completeSubmitAfterCaptcha}
+      />
     <div
       className="rounded-[24px] border px-4 py-4 text-left sm:px-5"
       style={{
@@ -3349,8 +3409,8 @@ function ProtectedAccessRequestPanel({
           </button>
           <button
             type="button"
-            onClick={() => void submitRequest()}
-            disabled={isSubmitting}
+            onClick={() => submitRequest()}
+            disabled={isSubmitting || captchaOpen}
             className="inline-flex h-[46px] w-full items-center justify-center rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
             style={{
               background: "var(--home-result-primary-bg)",
@@ -3358,14 +3418,20 @@ function ProtectedAccessRequestPanel({
               boxShadow: "var(--home-result-primary-shadow)",
             }}
           >
-            {isSubmitting ? <AnimatedLoadingLabel label="Submitting" active /> : "Update request"}
+            {isSubmitting ? (
+              <AnimatedLoadingLabel label="Submitting" active />
+            ) : captchaOpen ? (
+              "Complete check…"
+            ) : (
+              "Update request"
+            )}
           </button>
         </div>
       ) : (
         <button
           type="button"
-          onClick={() => void submitRequest()}
-          disabled={isSubmitting}
+          onClick={() => submitRequest()}
+          disabled={isSubmitting || captchaOpen}
           className="mt-6 inline-flex h-[46px] w-full items-center justify-center rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
           style={{
             background: "var(--home-result-primary-bg)",
@@ -3373,11 +3439,18 @@ function ProtectedAccessRequestPanel({
             boxShadow: "var(--home-result-primary-shadow)",
           }}
         >
-          {isSubmitting ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit access request"}
+          {isSubmitting ? (
+            <AnimatedLoadingLabel label="Submitting" active />
+          ) : captchaOpen ? (
+            "Complete check…"
+          ) : (
+            "Submit access request"
+          )}
         </button>
       )}
 
     </div>
+    </>
   );
 }
 
@@ -3981,6 +4054,7 @@ export default function WaitlistVerifyClient({
   const [deleteCard, setDeleteCard] = useState<VerifyCard | null>(null);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
   const [isDeleteRequestSubmitting, setIsDeleteRequestSubmitting] = useState(false);
+  const [deleteCaptchaOpen, setDeleteCaptchaOpen] = useState(false);
   const [removedName, setRemovedName] = useState<string | null>(null);
   const [celebrationCard, setCelebrationCard] = useState<VerifyCard | null>(null);
   const [activeSummary, setActiveSummary] = useState<{
@@ -4104,8 +4178,19 @@ export default function WaitlistVerifyClient({
     }
   }
 
-  async function handleCreateDeleteRequest() {
-    if (!deleteCard) return;
+  function openDeleteCaptcha() {
+    if (!deleteCard || isDeleteRequestSubmitting || deleteCaptchaOpen) return;
+    setDeleteErrorMessage(null);
+    setDeleteCaptchaOpen(true);
+  }
+
+  function closeDeleteCaptcha() {
+    if (isDeleteRequestSubmitting) return;
+    setDeleteCaptchaOpen(false);
+  }
+
+  async function handleCreateDeleteRequest(solution: CaptchaSolution) {
+    if (!deleteCard || isDeleteRequestSubmitting) return;
     setIsDeleteRequestSubmitting(true);
     setDeleteErrorMessage(null);
 
@@ -4116,12 +4201,15 @@ export default function WaitlistVerifyClient({
         body: JSON.stringify({
           token: verifyToken,
           rowId: deleteCard.id,
+          captcha_token: solution.captcha_token,
+          captcha_answer: solution.captcha_answer,
         }),
       });
 
       const payload = (await response.json()) as {
         ok?: boolean;
         error?: string;
+        code?: string;
         deleteRequest?: {
           id: string;
           status: DeleteRequestStatus;
@@ -4131,7 +4219,15 @@ export default function WaitlistVerifyClient({
       };
 
       if (!response.ok || !payload.ok || !payload.deleteRequest) {
-        throw new Error(payload.error || "Could not create the delete request.");
+        const message = payload.error || "Could not create the delete request.";
+        const captchaFailed =
+          payload.code === "captcha_failed" || message.toLowerCase().includes("human check");
+        if (captchaFailed) {
+          throw new Error(message);
+        }
+        setDeleteErrorMessage(message);
+        setDeleteCaptchaOpen(false);
+        return;
       }
 
       updateCardPreference(deleteCard.id, {
@@ -4140,11 +4236,16 @@ export default function WaitlistVerifyClient({
         deleteRequestRequestedAt: payload.deleteRequest.requestedAt,
         deleteRequestExpiresAt: payload.deleteRequest.expiresAt,
       });
+      setDeleteCaptchaOpen(false);
       setDeleteCard(null);
     } catch (error) {
-      setDeleteErrorMessage(
-        error instanceof Error ? error.message : "Could not create the delete request.",
-      );
+      const message =
+        error instanceof Error ? error.message : "Could not create the delete request.";
+      if (message.toLowerCase().includes("human check")) {
+        throw error;
+      }
+      setDeleteErrorMessage(message);
+      setDeleteCaptchaOpen(false);
     } finally {
       setIsDeleteRequestSubmitting(false);
     }
@@ -4351,14 +4452,23 @@ export default function WaitlistVerifyClient({
           isSubmitting={isDeleteRequestSubmitting}
           errorMessage={deleteErrorMessage}
           onClose={() => {
-            if (!isDeleteRequestSubmitting) {
+            if (!isDeleteRequestSubmitting && !deleteCaptchaOpen) {
               setDeleteCard(null);
               setDeleteErrorMessage(null);
             }
           }}
-          onConfirm={() => void handleCreateDeleteRequest()}
+          onConfirm={openDeleteCaptcha}
         />
       ) : null}
+      <CaptchaChallengeModal
+        isOpen={deleteCaptchaOpen && !!deleteCard}
+        title="Confirm you're human"
+        description="Complete this quick check before we email a delete confirmation link."
+        confirmLabel="Send confirmation email"
+        submitting={isDeleteRequestSubmitting}
+        onCancel={closeDeleteCaptcha}
+        onConfirm={handleCreateDeleteRequest}
+      />
       {removedName ? (
         <DeleteSuccessModal name={removedName} onClose={clearDeleteSuccess} />
       ) : null}

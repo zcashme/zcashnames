@@ -1,6 +1,11 @@
 "use server";
 
 import { headers } from "next/headers";
+import {
+  CAPTCHA_ERROR_MESSAGE,
+  CAPTCHA_FAILED_CODE,
+  verifyRequestCaptcha,
+} from "@/lib/captcha/http";
 import { db } from "@/lib/db";
 import { isBlogSubscriptionSlug, type BlogSubscriptionSlug } from "@/lib/blog-series";
 import { buildBlogSubscriberConfirmToken, isBlogSubscriberConfirmSignatureValid, isBlogSubscriberConfirmTokenExpired, parseBlogSubscriberConfirmToken } from "@/lib/blog-subscribers/confirm-token";
@@ -20,7 +25,7 @@ export type SubmitBlogSubscriptionResult =
   | { status: "submitted"; message: string }
   | { status: "resent"; message: string }
   | { status: "already"; message: string }
-  | { status: "error"; error: string };
+  | { status: "error"; error: string; code?: string };
 
 export type ConfirmBlogSubscriptionResult =
   | { status: "success"; series: BlogSubscriptionSlug; email: string }
@@ -91,7 +96,22 @@ async function sendConfirmationEmail(row: EmailSubscriberRow): Promise<boolean> 
 export async function submitBlogSubscription(input: {
   email: string;
   series: string[];
+  captcha_token: string;
+  captcha_answer: string;
 }): Promise<SubmitBlogSubscriptionResult> {
+  if (
+    !verifyRequestCaptcha({
+      captcha_token: input.captcha_token,
+      captcha_answer: input.captcha_answer,
+    })
+  ) {
+    return {
+      status: "error",
+      error: CAPTCHA_ERROR_MESSAGE,
+      code: CAPTCHA_FAILED_CODE,
+    };
+  }
+
   const email = normalizeEmail(input.email);
   const rawSeriesValues = input.series.map((value) => value.trim().toLowerCase());
   const uniqueSeriesValues = Array.from(new Set(rawSeriesValues));

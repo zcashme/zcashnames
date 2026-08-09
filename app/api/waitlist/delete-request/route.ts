@@ -14,6 +14,11 @@ import {
   normalizeWaitlistName,
 } from "@/lib/campaigns/waitlist-verify";
 import { getProtectedNameInfoByName } from "@/lib/campaigns/waitlist-protected-access";
+import {
+  CAPTCHA_ERROR_MESSAGE,
+  CAPTCHA_FAILED_CODE,
+  verifyRequestCaptcha,
+} from "@/lib/captcha/http";
 import { sendWaitlistDeleteConfirmEmail } from "@/lib/email/waitlist";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +42,8 @@ export async function POST(request: Request) {
     | {
         token?: unknown;
         rowId?: unknown;
+        captcha_token?: unknown;
+        captcha_answer?: unknown;
       }
     | null = null;
 
@@ -44,9 +51,18 @@ export async function POST(request: Request) {
     payload = (await request.json()) as {
       token?: unknown;
       rowId?: unknown;
+      captcha_token?: unknown;
+      captcha_answer?: unknown;
     };
   } catch {
     payload = null;
+  }
+
+  if (!verifyRequestCaptcha(payload)) {
+    return NextResponse.json(
+      { ok: false, error: CAPTCHA_ERROR_MESSAGE, code: CAPTCHA_FAILED_CODE, requestId },
+      { status: 400 },
+    );
   }
 
   const token = typeof payload?.token === "string" ? payload.token.trim() : "";

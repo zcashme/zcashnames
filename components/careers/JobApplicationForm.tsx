@@ -1,7 +1,10 @@
 "use client";
 
 import type { CSSProperties, FormEvent } from "react";
-import { useState, useTransition } from "react";
+import { useState } from "react";
+import CaptchaChallengeModal, {
+  type CaptchaSolution,
+} from "@/components/captcha/CaptchaChallengeModal";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import type { CareerJob } from "@/lib/careers";
 import { submitCareerApplication } from "@/lib/careers/actions";
@@ -33,18 +36,32 @@ export default function JobApplicationForm({ job }: { job: CareerJob }) {
   );
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
 
   function setAnswer(id: string, value: string) {
     setScreening((current) => ({ ...current, [id]: value }));
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending || captchaOpen) return;
+    setError("");
+    setCaptchaOpen(true);
+  }
+
+  function closeCaptchaModal() {
+    if (pending) return;
+    setCaptchaOpen(false);
+  }
+
+  async function completeSubmitAfterCaptcha(solution: CaptchaSolution) {
     if (pending) return;
 
+    setPending(true);
     setError("");
-    startTransition(async () => {
+
+    try {
       const formData = new FormData();
       formData.set("name", name);
       formData.set("email", email);
@@ -53,6 +70,8 @@ export default function JobApplicationForm({ job }: { job: CareerJob }) {
       formData.set("portfolio_url", portfolioUrl);
       formData.set("resume_url", resumeUrl);
       formData.set("cover_note", coverNote);
+      formData.set("captcha_token", solution.captcha_token);
+      formData.set("captcha_answer", solution.captcha_answer);
 
       for (const question of job.screeningQuestions) {
         formData.set(`screening_${question.id}`, screening[question.id] ?? "");
@@ -60,11 +79,33 @@ export default function JobApplicationForm({ job }: { job: CareerJob }) {
 
       const result = await submitCareerApplication(job.slug, formData);
       if (!result.ok) {
+        const captchaFailed =
+          result.code === "captcha_failed" || result.error.toLowerCase().includes("human check");
+        if (captchaFailed) {
+          throw new Error(result.error);
+        }
         setError(result.error);
+        setCaptchaOpen(false);
         return;
       }
+
+      setCaptchaOpen(false);
       setSuccess(true);
-    });
+    } catch (submitError) {
+      const message =
+        submitError instanceof Error
+          ? submitError.message
+          : "Something went wrong. Please try again.";
+
+      if (message.toLowerCase().includes("human check")) {
+        throw submitError instanceof Error ? submitError : new Error(message);
+      }
+
+      setError(message);
+      setCaptchaOpen(false);
+    } finally {
+      setPending(false);
+    }
   }
 
   if (success) {
@@ -88,151 +129,168 @@ export default function JobApplicationForm({ job }: { job: CareerJob }) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-[26px] border p-6 md:p-8"
-      style={{
-        background: "var(--feature-card-bg)",
-        borderColor: "color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-      }}
-    >
-      <div className="grid gap-5 md:grid-cols-2">
-        <div>
-          <label style={labelStyle}>Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            maxLength={120}
-            required
-            className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
-            style={inputStyle}
-          />
-        </div>
-
-        <div>
-          <label style={labelStyle}>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            maxLength={200}
-            required
-            className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
-            style={inputStyle}
-          />
-        </div>
-
-        <div>
-          <label style={labelStyle}>Phone</label>
-          <input
-            type="text"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            maxLength={50}
-            className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
-            style={inputStyle}
-          />
-        </div>
-
-        <div>
-          <label style={labelStyle}>LinkedIn URL</label>
-          <input
-            type="url"
-            value={linkedinUrl}
-            onChange={(event) => setLinkedinUrl(event.target.value)}
-            maxLength={400}
-            placeholder="https://"
-            className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
-            style={inputStyle}
-          />
-        </div>
-
-        <div>
-          <label style={labelStyle}>Portfolio or GitHub URL</label>
-          <input
-            type="url"
-            value={portfolioUrl}
-            onChange={(event) => setPortfolioUrl(event.target.value)}
-            maxLength={400}
-            placeholder="https://"
-            className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
-            style={inputStyle}
-          />
-        </div>
-
-        <div>
-          <label style={labelStyle}>Resume URL</label>
-          <input
-            type="url"
-            value={resumeUrl}
-            onChange={(event) => setResumeUrl(event.target.value)}
-            maxLength={400}
-            placeholder="https://"
-            className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
-            style={inputStyle}
-          />
-        </div>
-      </div>
-
-      <div className="mt-5">
-        <label style={labelStyle}>Why are you a fit for this role?</label>
-        <textarea
-          value={coverNote}
-          onChange={(event) => setCoverNote(event.target.value)}
-          rows={6}
-          maxLength={4000}
-          required
-          className="w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-y"
-          style={inputStyle}
-        />
-      </div>
-
-      {job.screeningQuestions.length > 0 && (
-        <div className="mt-6 flex flex-col gap-5">
-          {job.screeningQuestions.map((question) => (
-            <div key={question.id}>
-              <label style={labelStyle}>
-                {question.prompt}
-                {question.required ? " *" : ""}
-              </label>
-              <textarea
-                value={screening[question.id] ?? ""}
-                onChange={(event) => setAnswer(question.id, event.target.value)}
-                rows={4}
-                maxLength={question.maxLength ?? 2000}
-                required={question.required}
-                placeholder={question.placeholder}
-                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-y"
-                style={inputStyle}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {error && (
-        <p className="mt-5 text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
-          {error}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-6 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+    <>
+      <CaptchaChallengeModal
+        isOpen={captchaOpen}
+        title="Confirm you're human"
+        description="Complete this quick check to submit your job application."
+        confirmLabel="Submit application"
+        submitting={pending}
+        onCancel={closeCaptchaModal}
+        onConfirm={completeSubmitAfterCaptcha}
+      />
+      <form
+        onSubmit={handleSubmit}
+        className="rounded-[26px] border p-6 md:p-8"
         style={{
-          background: "var(--home-result-primary-bg)",
-          color: "var(--home-result-primary-fg)",
-          boxShadow: "var(--home-result-primary-shadow)",
+          background: "var(--feature-card-bg)",
+          borderColor: "color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
         }}
       >
-        {pending ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit application"}
-      </button>
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <label style={labelStyle}>Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              maxLength={120}
+              required
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+              style={inputStyle}
+            />
+          </div>
 
-      <p className="mt-4 text-center text-xs leading-6" style={{ color: "var(--fg-muted)" }}>
-        Applications are reviewed on a rolling basis. If there&apos;s a fit, we&apos;ll be in touch.
-      </p>
-    </form>
+          <div>
+            <label style={labelStyle}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              maxLength={200}
+              required
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Phone</label>
+            <input
+              type="text"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              maxLength={50}
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>LinkedIn URL</label>
+            <input
+              type="url"
+              value={linkedinUrl}
+              onChange={(event) => setLinkedinUrl(event.target.value)}
+              maxLength={400}
+              placeholder="https://"
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Portfolio or GitHub URL</label>
+            <input
+              type="url"
+              value={portfolioUrl}
+              onChange={(event) => setPortfolioUrl(event.target.value)}
+              maxLength={400}
+              placeholder="https://"
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Resume URL</label>
+            <input
+              type="url"
+              value={resumeUrl}
+              onChange={(event) => setResumeUrl(event.target.value)}
+              maxLength={400}
+              placeholder="https://"
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <label style={labelStyle}>Why are you a fit for this role?</label>
+          <textarea
+            value={coverNote}
+            onChange={(event) => setCoverNote(event.target.value)}
+            rows={6}
+            maxLength={4000}
+            required
+            className="w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-y"
+            style={inputStyle}
+          />
+        </div>
+
+        {job.screeningQuestions.length > 0 && (
+          <div className="mt-6 flex flex-col gap-5">
+            {job.screeningQuestions.map((question) => (
+              <div key={question.id}>
+                <label style={labelStyle}>
+                  {question.prompt}
+                  {question.required ? " *" : ""}
+                </label>
+                <textarea
+                  value={screening[question.id] ?? ""}
+                  onChange={(event) => setAnswer(question.id, event.target.value)}
+                  rows={4}
+                  maxLength={question.maxLength ?? 2000}
+                  required={question.required}
+                  placeholder={question.placeholder}
+                  className="w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-y"
+                  style={inputStyle}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {error && (
+          <p className="mt-5 text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
+            {error}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={pending || captchaOpen}
+          className="mt-6 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+          style={{
+            background: "var(--home-result-primary-bg)",
+            color: "var(--home-result-primary-fg)",
+            boxShadow: "var(--home-result-primary-shadow)",
+          }}
+        >
+          {pending ? (
+            <AnimatedLoadingLabel label="Submitting" active />
+          ) : captchaOpen ? (
+            "Complete check…"
+          ) : (
+            "Submit application"
+          )}
+        </button>
+
+        <p className="mt-4 text-center text-xs leading-6" style={{ color: "var(--fg-muted)" }}>
+          Applications are reviewed on a rolling basis. If there&apos;s a fit, we&apos;ll be in touch.
+        </p>
+      </form>
+    </>
   );
 }

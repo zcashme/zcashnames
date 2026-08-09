@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
+import CaptchaChallengeModal, {
+  type CaptchaSolution,
+} from "@/components/captcha/CaptchaChallengeModal";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { submitIndexerLaunchAlert } from "@/lib/indexer-launch-alert/actions";
 import {
@@ -76,7 +79,9 @@ export default function IndexerLaunchAlertForm() {
   const [bestContactUid, setBestContactUid] = useState("c0");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
 
   const canAddMore = contacts.length < CONTACT_KINDS.length;
 
@@ -119,9 +124,9 @@ export default function IndexerLaunchAlertForm() {
     });
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (pending) return;
+    if (pending || captchaOpen) return;
 
     const filled = contacts.filter((row) => row.value.trim().length > 0);
     if (filled.length === 0) {
@@ -132,28 +137,64 @@ export default function IndexerLaunchAlertForm() {
     const best = filled.find((row) => row.uid === bestContactUid) ?? filled[0];
 
     setError("");
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.set("display_name", displayName);
-      formData.set("best_contact_kind", best.kind);
-      formData.set("newsletter", String(newsletter));
+    const formData = new FormData();
+    formData.set("display_name", displayName);
+    formData.set("best_contact_kind", best.kind);
+    formData.set("newsletter", String(newsletter));
 
-      for (const kind of CONTACT_KINDS) {
-        const row = filled.find((contact) => contact.kind === kind);
-        formData.set(`contact_${kind}`, row?.value.trim() ?? "");
-      }
+    for (const kind of CONTACT_KINDS) {
+      const row = filled.find((contact) => contact.kind === kind);
+      formData.set(`contact_${kind}`, row?.value.trim() ?? "");
+    }
 
-      try {
-        const result = await submitIndexerLaunchAlert(formData);
-        if (!result.ok) {
-          setError(result.error);
-          return;
+    setPendingFormData(formData);
+    setCaptchaOpen(true);
+  }
+
+  function closeCaptchaModal() {
+    if (pending) return;
+    setCaptchaOpen(false);
+    setPendingFormData(null);
+  }
+
+  async function completeSubmitAfterCaptcha(solution: CaptchaSolution) {
+    if (!pendingFormData || pending) return;
+
+    setPending(true);
+    setError("");
+
+    try {
+      pendingFormData.set("captcha_token", solution.captcha_token);
+      pendingFormData.set("captcha_answer", solution.captcha_answer);
+
+      const result = await submitIndexerLaunchAlert(pendingFormData);
+      if (!result.ok) {
+        const captchaFailed =
+          result.code === "captcha_failed" || result.error.toLowerCase().includes("human check");
+        if (captchaFailed) {
+          throw new Error(result.error);
         }
-        setSuccess(true);
-      } catch {
-        setError("Something went wrong. Try again.");
+        setError(result.error);
+        setCaptchaOpen(false);
+        setPendingFormData(null);
+        return;
       }
-    });
+
+      setCaptchaOpen(false);
+      setPendingFormData(null);
+      setSuccess(true);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Something went wrong. Try again.";
+      if (message.toLowerCase().includes("human check")) {
+        throw error instanceof Error ? error : new Error(message);
+      }
+      setError(message);
+      setCaptchaOpen(false);
+      setPendingFormData(null);
+    } finally {
+      setPending(false);
+    }
   }
 
   if (success) {
@@ -199,6 +240,16 @@ export default function IndexerLaunchAlertForm() {
   }
 
   return (
+    <>
+      <CaptchaChallengeModal
+        isOpen={captchaOpen}
+        title="Confirm you're human"
+        description="Complete this quick check to join the launch alert list."
+        confirmLabel="Notify me when it launches"
+        submitting={pending}
+        onCancel={closeCaptchaModal}
+        onConfirm={completeSubmitAfterCaptcha}
+      />
     <form
       onSubmit={handleSubmit}
       className="rounded-2xl border p-6 md:p-8"
@@ -367,11 +418,17 @@ export default function IndexerLaunchAlertForm() {
 
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || captchaOpen}
           className="w-full cursor-pointer rounded-full py-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
           style={primaryBtnStyle}
         >
-          {pending ? <AnimatedLoadingLabel label="Submitting" active /> : "Notify me when it launches"}
+          {pending ? (
+            <AnimatedLoadingLabel label="Submitting" active />
+          ) : captchaOpen ? (
+            "Complete check…"
+          ) : (
+            "Notify me when it launches"
+          )}
         </button>
 
         <p className="text-xs text-center" style={{ color: "var(--fg-muted)", lineHeight: 1.6 }}>
@@ -380,5 +437,6 @@ export default function IndexerLaunchAlertForm() {
         </p>
       </div>
     </form>
+    </>
   );
 }
