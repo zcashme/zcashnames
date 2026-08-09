@@ -31,7 +31,10 @@ export default function Header() {
                 priority
                 className="transition-transform duration-200 group-hover:rotate-90"
               />
-              <span className="hidden font-normal tracking-normal sm:inline" style={{ fontFamily: "var(--font-brand)" }}>
+              <span
+                className="site-brand-wordmark hidden font-normal tracking-normal sm:inline"
+                style={{ fontFamily: "var(--font-brand)" }}
+              >
                 Zcash Names
               </span>
             </Link>

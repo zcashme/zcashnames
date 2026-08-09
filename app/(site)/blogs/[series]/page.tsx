@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import BlogPageShell from "@/components/blogs/BlogPageShell";
-import BlogRecentPostsSidebar from "@/components/blogs/BlogRecentPostsSidebar";
+import { BlogIndexLayout } from "@/components/blogs/BlogPageShell";
+import BlogPostList from "@/components/blogs/BlogPostList";
 import BlogSubscribeCallout from "@/components/blogs/BlogSubscribeCallout";
-import { BLOG_SERIES, getBlogGithubHref, isBlogSeriesSlug } from "@/lib/blog-series";
-import { getBlogSeries } from "@/lib/blog-series";
-import { listRecentBlogPosts } from "@/lib/blogs";
-import { blogMarkdownMetadata, loadBlogMarkdown, renderBlogMarkdown } from "@/lib/blog-markdown";
+import {
+  BLOG_SERIES,
+  getBlogSeries,
+  isBlogSeriesSlug,
+} from "@/lib/blog-series";
+import { listBlogPosts } from "@/lib/blogs";
+import { blogMarkdownMetadata } from "@/lib/blog-markdown";
 
 export function generateStaticParams() {
   return BLOG_SERIES.map((series) => ({ series }));
@@ -19,8 +22,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { series } = await params;
   if (!isBlogSeriesSlug(series)) return {};
-  const blog = await loadBlogMarkdown([series, "index.mdx"], series);
-  return blogMarkdownMetadata(blog.title, blog.description, { path: `/blogs/${series}` });
+  const seriesMeta = getBlogSeries(series);
+  return blogMarkdownMetadata(seriesMeta.title, seriesMeta.description, {
+    path: `/blogs/${series}`,
+  });
 }
 
 export default async function BlogSeriesPage({
@@ -30,26 +35,25 @@ export default async function BlogSeriesPage({
 }) {
   const { series } = await params;
   if (!isBlogSeriesSlug(series)) notFound();
-  const blog = await loadBlogMarkdown([series, "index.mdx"], series);
-  const recentPosts = await listRecentBlogPosts(series);
+
   const seriesMeta = getBlogSeries(series);
+  const posts = await listBlogPosts(series);
 
   return (
-    <BlogPageShell
-      title={blog.title}
-      description={blog.description}
+    <BlogIndexLayout
+      title={seriesMeta.title}
+      description={seriesMeta.description}
       series={series}
-      toc={blog.toc}
-      githubHref={getBlogGithubHref(series)}
-      sidebar={<BlogRecentPostsSidebar posts={recentPosts} seriesTitle={seriesMeta.title} />}
-      showTitle={true}
     >
-      {renderBlogMarkdown(blog.markdown)}
+      <BlogPostList
+        posts={posts}
+        showSeries={false}
+        emptyLabel={`No posts in ${seriesMeta.label} yet.`}
+      />
       <BlogSubscribeCallout
         defaultSeries={series}
-        title={`Subscribe to ${seriesMeta.title}`}
-        body={`Get new posts from ${seriesMeta.title} by email.`}
+        body={`Get new ${seriesMeta.label.toLowerCase()} posts by email.`}
       />
-    </BlogPageShell>
+    </BlogIndexLayout>
   );
 }

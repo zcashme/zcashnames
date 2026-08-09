@@ -221,6 +221,48 @@ export function renderBlogMarkdown(markdown: string) {
           const text = textFromChildren(children);
           return <h6 id={headingId(text)}>{children}</h6>;
         },
+        ul({ className, children, ...props }) {
+          const isTaskList =
+            typeof className === "string" && className.includes("contains-task-list");
+          return (
+            <ul
+              className={[className, isTaskList ? "blog-task-list" : null].filter(Boolean).join(" ") || undefined}
+              {...props}
+            >
+              {children}
+            </ul>
+          );
+        },
+        ol({ children, ...props }) {
+          return <ol {...props}>{children}</ol>;
+        },
+        li({ className, children, ...props }) {
+          const isTaskItem =
+            typeof className === "string" && className.includes("task-list-item");
+          return (
+            <li
+              className={[className, isTaskItem ? "blog-task-item" : null].filter(Boolean).join(" ") || undefined}
+              {...props}
+            >
+              {children}
+            </li>
+          );
+        },
+        input({ type, checked, disabled, ...props }) {
+          if (type === "checkbox") {
+            return (
+              <input
+                type="checkbox"
+                className="blog-task-checkbox"
+                checked={Boolean(checked)}
+                disabled={disabled ?? true}
+                readOnly
+                {...props}
+              />
+            );
+          }
+          return <input type={type} checked={checked} disabled={disabled} {...props} />;
+        },
       }}
     >
       {markdown}

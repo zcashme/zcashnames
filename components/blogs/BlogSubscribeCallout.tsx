@@ -1,23 +1,20 @@
 import BlogSubscribeForm from "@/components/blogs/BlogSubscribeForm";
-import { getBlogSubscriptionOption, type BlogSubscriptionSlug } from "@/lib/blog-series";
+import type { BlogSubscriptionSlug } from "@/lib/blog-series";
 
 export default function BlogSubscribeCallout({
   defaultSeries,
-  title,
-  body,
+  body: _body,
+  title: _title,
 }: {
   defaultSeries: BlogSubscriptionSlug;
-  title: string;
-  body: string;
+  /** @deprecated Body is generated from selected series. */
+  body?: string;
+  /** @deprecated Unused — no title/eyebrow in subscribe area. */
+  title?: string;
 }) {
-  const subscription = getBlogSubscriptionOption(defaultSeries);
-
   return (
-    <div className="blog-unpublished-card blog-subscribe-callout">
-      <p className="blog-unpublished-kicker">{subscription.title}</p>
-      <h2 className="blog-unpublished-title">{title}</h2>
-      <p className="blog-unpublished-body">{body}</p>
+    <section className="blog-subscribe-callout" aria-label="Subscribe">
       <BlogSubscribeForm defaultSeries={defaultSeries} />
-    </div>
+    </section>
   );
 }

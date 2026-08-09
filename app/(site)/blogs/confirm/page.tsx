@@ -2,6 +2,7 @@ import Link from "next/link";
 import { confirmBlogSubscription } from "@/lib/blog-subscribers/subscribers";
 import { getBlogSubscriptionOption } from "@/lib/blog-series";
 import { buildUnsubscribeToken } from "@/lib/email/unsubscribe-token";
+import BlogRouteChrome from "@/components/blogs/BlogRouteChrome";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 
 export default async function BlogConfirmPage({
@@ -24,24 +25,24 @@ export default async function BlogConfirmPage({
         )}`;
 
   return (
-    <div className="blog-confirm-shell">
-      <SiteRouteTitle title="Confirm" />
+    <main className="blog-confirm-shell">
+      <BlogRouteChrome />
+      <SiteRouteTitle title="Blogs" href="/blogs" />
       <div className="blog-confirm-card">
-        <p className="blog-unpublished-kicker">Email confirmation</p>
-        <h1 className="blog-unpublished-title">
+        <h1 className="blog-shell-title">
           {result.status === "success" && "Subscription confirmed"}
           {result.status === "already" && "Already confirmed"}
           {result.status === "invalid" && "Invalid link"}
         </h1>
-        <p className="blog-unpublished-body">
+        <p className="blog-shell-description">
           {result.status === "success" && `You're now subscribed to ${series?.title}.`}
           {result.status === "already" && `This email is already subscribed to ${series?.title}.`}
           {result.status === "invalid" && "This confirmation link is invalid or expired."}
         </p>
-        <Link href={preferencesHref} className="blog-subscribe-button">
-          Email Preferences
+        <Link href={preferencesHref} className="blog-subscribe-button blog-confirm-button">
+          Email preferences
         </Link>
       </div>
-    </div>
+    </main>
   );
 }

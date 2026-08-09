@@ -1,35 +1,31 @@
 import type { Metadata } from "next";
-import BlogPageShell from "@/components/blogs/BlogPageShell";
-import BlogRecentPostsSidebar from "@/components/blogs/BlogRecentPostsSidebar";
+import { BlogIndexLayout } from "@/components/blogs/BlogPageShell";
+import BlogPostList from "@/components/blogs/BlogPostList";
 import BlogSubscribeCallout from "@/components/blogs/BlogSubscribeCallout";
-import { getBlogGithubHref } from "@/lib/blog-series";
-import { listRecentBlogPostsAcrossAllSeries } from "@/lib/blogs";
-import { blogMarkdownMetadata, loadBlogMarkdown, renderBlogMarkdown } from "@/lib/blog-markdown";
+import { listAllBlogPosts } from "@/lib/blogs";
+import { blogMarkdownMetadata } from "@/lib/blog-markdown";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const blog = await loadBlogMarkdown(["index.mdx"], "Blogs");
-  return blogMarkdownMetadata(blog.title, blog.description, { path: "/blogs" });
+  return blogMarkdownMetadata(
+    "Blogs",
+    "Updates, launch notes, and builder stories from Zcash Names.",
+    { path: "/blogs" },
+  );
 }
 
 export default async function BlogsIndexPage() {
-  const blog = await loadBlogMarkdown(["index.mdx"], "Blogs");
-  const recentPosts = await listRecentBlogPostsAcrossAllSeries();
+  const posts = await listAllBlogPosts();
 
   return (
-    <BlogPageShell
-      title={blog.title}
-      description={blog.description}
-      toc={blog.toc}
-      githubHref={getBlogGithubHref()}
-      sidebar={<BlogRecentPostsSidebar posts={recentPosts} seriesTitle="All blogs" />}
-      showTitle={true}
+    <BlogIndexLayout
+      title="Blogs"
+      description="Product notes, launch context, and builder stories — written in the open."
     >
-      {renderBlogMarkdown(blog.markdown)}
+      <BlogPostList posts={posts} showSeries />
       <BlogSubscribeCallout
         defaultSeries="general"
-        title="Subscribe for general updates"
-        body="Get general Zcash Names product notes, launch updates, builder stories, and community news in your inbox."
+        body="Occasional notes on product, launch, and community. No spam."
       />
-    </BlogPageShell>
+    </BlogIndexLayout>
   );
 }

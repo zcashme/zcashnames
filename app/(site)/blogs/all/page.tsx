@@ -1,25 +1,31 @@
 import type { Metadata } from "next";
-import BlogPageShell from "@/components/blogs/BlogPageShell";
-import { getBlogGithubHref } from "@/lib/blog-series";
-import { blogMarkdownMetadata, loadBlogMarkdown, renderBlogMarkdown } from "@/lib/blog-markdown";
+import { BlogIndexLayout } from "@/components/blogs/BlogPageShell";
+import BlogPostList from "@/components/blogs/BlogPostList";
+import BlogSubscribeCallout from "@/components/blogs/BlogSubscribeCallout";
+import { listAllBlogPosts } from "@/lib/blogs";
+import { blogMarkdownMetadata } from "@/lib/blog-markdown";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const blog = await loadBlogMarkdown(["index.mdx"], "Blogs");
-  return blogMarkdownMetadata(blog.title, blog.description, { path: "/blogs/all" });
+  return blogMarkdownMetadata(
+    "All posts",
+    "Every Zcash Names blog post in one list.",
+    { path: "/blogs/all" },
+  );
 }
 
 export default async function BlogsAllPage() {
-  const blog = await loadBlogMarkdown(["index.mdx"], "Blogs");
+  const posts = await listAllBlogPosts();
 
   return (
-    <BlogPageShell
-      title={blog.title}
-      description={blog.description}
-      toc={blog.toc}
-      githubHref={getBlogGithubHref()}
-      showTitle={true}
+    <BlogIndexLayout
+      title="All posts"
+      description="Every published post across Updates, Launch, and Builders."
     >
-      {renderBlogMarkdown(blog.markdown)}
-    </BlogPageShell>
+      <BlogPostList posts={posts} showSeries />
+      <BlogSubscribeCallout
+        defaultSeries="general"
+        body="Occasional notes on product, launch, and community. No spam."
+      />
+    </BlogIndexLayout>
   );
 }

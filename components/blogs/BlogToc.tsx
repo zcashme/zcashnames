@@ -8,10 +8,15 @@ type Section = {
   depth?: number;
 };
 
-export default function BlogToc({ sections }: { sections: Section[] }) {
+export default function BlogToc({
+  sections,
+  variant = "desktop",
+}: {
+  sections: Section[];
+  variant?: "desktop" | "mobile";
+}) {
   const [activeId, setActiveId] = useState<string>(sections[0]?.id ?? "");
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileCollapsed, setMobileCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(true);
 
   useEffect(() => {
     const headings = sections
@@ -33,15 +38,6 @@ export default function BlogToc({ sections }: { sections: Section[] }) {
     return () => observer.disconnect();
   }, [sections]);
 
-  useEffect(() => {
-    function collapseOnScroll() {
-      if (window.scrollY > 48) setMobileCollapsed(true);
-    }
-
-    window.addEventListener("scroll", collapseOnScroll, { passive: true });
-    return () => window.removeEventListener("scroll", collapseOnScroll);
-  }, []);
-
   function handleClick(event: React.MouseEvent<HTMLAnchorElement>, id: string) {
     event.preventDefault();
     const element = document.getElementById(id);
@@ -49,67 +45,39 @@ export default function BlogToc({ sections }: { sections: Section[] }) {
     element.scrollIntoView({ behavior: "smooth", block: "start" });
     history.replaceState(null, "", `#${id}`);
     setActiveId(id);
-    setMobileCollapsed(true);
-  }
-
-  function renderList() {
-    return (
-      <ul className="blog-toc-list">
-        {sections.map((section) => {
-          const active = section.id === activeId;
-          return (
-            <li key={section.id}>
-              <a
-                href={`#${section.id}`}
-                onClick={(event) => handleClick(event, section.id)}
-                className="blog-toc-link"
-                data-active={active}
-                data-depth={String(section.depth ?? 2)}
-              >
-                {section.label}
-              </a>
-            </li>
-          );
-        })}
-      </ul>
-    );
   }
 
   if (sections.length === 0) return null;
 
-  return (
-    <>
-      <nav aria-label="On this page" className="hidden md:block">
-        <button
-          type="button"
-          onClick={() => setCollapsed((value) => !value)}
-          className="blog-toc-toggle"
-          aria-expanded={!collapsed}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-3.5 w-3.5 transition-transform"
-            style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
-            aria-hidden="true"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-          <span>On this page</span>
-        </button>
-        {!collapsed && renderList()}
-      </nav>
+  const list = (
+    <ul className="blog-toc-list">
+      {sections.map((section) => {
+        const active = section.id === activeId;
+        return (
+          <li key={section.id}>
+            <a
+              href={`#${section.id}`}
+              onClick={(event) => handleClick(event, section.id)}
+              className="blog-toc-link"
+              data-active={active}
+              data-depth={String(section.depth ?? 2)}
+            >
+              {section.label}
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  );
 
-      <nav aria-label="On this page" className="blog-mobile-panel md:hidden">
+  if (variant === "mobile") {
+    return (
+      <nav aria-label="On this page" className="blog-toc-mobile">
         <button
           type="button"
-          onClick={() => setMobileCollapsed((value) => !value)}
+          onClick={() => setMobileOpen((value) => !value)}
           className="blog-toc-toggle"
-          aria-expanded={!mobileCollapsed}
+          aria-expanded={mobileOpen}
         >
           <svg
             viewBox="0 0 24 24"
@@ -119,17 +87,22 @@ export default function BlogToc({ sections }: { sections: Section[] }) {
             strokeLinecap="round"
             strokeLinejoin="round"
             className="h-3.5 w-3.5 transition-transform"
-            style={{ transform: mobileCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
+            style={{ transform: mobileOpen ? "rotate(0deg)" : "rotate(-90deg)" }}
             aria-hidden="true"
           >
             <polyline points="6 9 12 15 18 9" />
           </svg>
           <span>On this page</span>
         </button>
-        <div className="blog-mobile-panel-body" data-open={String(!mobileCollapsed)}>
-          <div className="blog-mobile-panel-inner">{renderList()}</div>
-        </div>
+        {mobileOpen ? list : null}
       </nav>
-    </>
+    );
+  }
+
+  return (
+    <nav aria-label="On this page" className="blog-toc-desktop">
+      <p className="blog-toc-heading">On this page</p>
+      {list}
+    </nav>
   );
 }

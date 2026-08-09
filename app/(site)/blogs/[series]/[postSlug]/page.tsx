@@ -1,11 +1,24 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import BlogPageShell from "@/components/blogs/BlogPageShell";
-import BlogRecentPostsSidebar from "@/components/blogs/BlogRecentPostsSidebar";
-import UnpublishedPostFallback from "@/components/blogs/UnpublishedPostFallback";
-import { BLOG_SERIES, getBlogGithubHref, getBlogSeries, isBlogSeriesSlug } from "@/lib/blog-series";
-import { blogPostExists, listBlogPostSlugs, listRecentBlogPosts } from "@/lib/blogs";
+import { BlogArticleLayout } from "@/components/blogs/BlogPageShell";
+import BlogRelatedPosts from "@/components/blogs/BlogRelatedPosts";
+import BlogSubscribeCallout from "@/components/blogs/BlogSubscribeCallout";
+import ShareDropdown from "@/components/ShareDropdown";
+import {
+  BLOG_SERIES,
+  getBlogGithubHref,
+  getBlogSeries,
+  isBlogSeriesSlug,
+} from "@/lib/blog-series";
+import {
+  blogPostExists,
+  getBlogPostMeta,
+  listBlogPostSlugs,
+  listBlogPosts,
+} from "@/lib/blogs";
 import { blogMarkdownMetadata, loadBlogMarkdown, renderBlogMarkdown } from "@/lib/blog-markdown";
+import { BRAND } from "@/lib/zns/brand";
 
 export async function generateStaticParams() {
   const params = await Promise.all(
@@ -45,37 +58,76 @@ export default async function BlogPostPage({
   const { series, postSlug } = await params;
   if (!isBlogSeriesSlug(series)) notFound();
 
+  const seriesMeta = getBlogSeries(series);
+  const relatedPosts = await listBlogPosts(series, 5);
   const published = await blogPostExists(series, postSlug);
 
   if (!published) {
-    const recentPosts = await listRecentBlogPosts(series);
     return (
-      <BlogPageShell
+      <BlogArticleLayout
         title="This isn't published yet"
-        description="Subscribe for updates when this series publishes a new post."
+        description={`${postSlug} is not published in ${seriesMeta.title} yet.`}
         series={series}
-        toc={[]}
         githubHref={getBlogGithubHref(series)}
-        sidebar={<BlogRecentPostsSidebar posts={recentPosts} seriesTitle={getBlogSeries(series).title} />}
-        showTitle={true}
+        toc={[]}
+        endMatter={
+          <BlogSubscribeCallout
+            defaultSeries={series}
+            body="We'll email you when a new post in this series goes live."
+          />
+        }
       >
-        <UnpublishedPostFallback series={series} postSlug={postSlug} />
-      </BlogPageShell>
+        <p>
+          There is no published entry for this path yet. You can subscribe below, or browse{" "}
+          <Link href={seriesMeta.href}>{seriesMeta.label}</Link> for live posts.
+        </p>
+      </BlogArticleLayout>
     );
   }
 
   const blog = await loadBlogMarkdown([series, `${postSlug}.mdx`], postSlug);
+  const meta = await getBlogPostMeta(series, postSlug);
+  const postHref = `/blogs/${series}/${postSlug}`;
+  const shareUrl = `${BRAND.url.replace(/\/$/, "")}${postHref}`;
+  const shareMessage = `Read about "${blog.title}" in the ${seriesMeta.title} blog on Zcash Names ${shareUrl}`;
+  const xShareMessage = `Read about "${blog.title}" in the ${seriesMeta.title} blog on @ZcashNames ${shareUrl}`;
 
   return (
-    <BlogPageShell
+    <BlogArticleLayout
       title={blog.title}
       description={blog.description}
       series={series}
-      toc={blog.toc}
+      publishedLabel={meta?.publishedLabel}
       githubHref={getBlogGithubHref(series, postSlug)}
-      showTitle={true}
+      toc={blog.toc}
+      afterArticle={
+        <div className="blog-article-share">
+          <ShareDropdown
+            label="Share"
+            message={shareMessage}
+            xMessage={xShareMessage}
+            shareUrl={shareUrl}
+            emailSubject={blog.title}
+            menuAlign="left"
+            buttonClassName="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-border-muted bg-transparent px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+          />
+        </div>
+      }
+      endMatter={
+        <>
+          <BlogRelatedPosts
+            posts={relatedPosts}
+            title={`More in ${seriesMeta.title}`}
+            excludeHref={postHref}
+          />
+          <BlogSubscribeCallout
+            defaultSeries={series}
+            body={`Get new posts from ${seriesMeta.title} by email.`}
+          />
+        </>
+      }
     >
       {renderBlogMarkdown(blog.markdown)}
-    </BlogPageShell>
+    </BlogArticleLayout>
   );
 }
