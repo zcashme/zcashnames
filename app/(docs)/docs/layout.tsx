@@ -8,6 +8,28 @@ export const metadata = {
   title: "ZcashNames Docs",
   description: "Documentation for the Zcash Name Service",
   icons: { icon: "/landing/z5.png" },
+  alternates: {
+    canonical: "https://www.zcashnames.com/docs",
+  },
+  openGraph: {
+    title: "Docs | Zcash Names",
+    description: "Documentation for the Zcash Name Service",
+    url: "https://www.zcashnames.com/docs",
+    images: [
+      {
+        url: "/og/docs.png",
+        width: 1200,
+        height: 630,
+        alt: "Zcash Names docs preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Docs | Zcash Names",
+    description: "Documentation for the Zcash Name Service",
+    images: ["/og/docs.png"],
+  },
 };
 
 const navbar = (

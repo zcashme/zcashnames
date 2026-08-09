@@ -8,7 +8,10 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = typeof rawSlug === "string" ? rawSlug.trim() : "";
+  if (!slug) notFound();
+
   const job = await getOpenCareerJobBySlug(slug);
 
   if (!job) notFound();

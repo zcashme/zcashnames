@@ -20,7 +20,7 @@ export async function generateMetadata({
   const { series } = await params;
   if (!isBlogSeriesSlug(series)) return {};
   const blog = await loadBlogMarkdown([series, "index.mdx"], series);
-  return blogMarkdownMetadata(blog.title, blog.description);
+  return blogMarkdownMetadata(blog.title, blog.description, { path: `/blogs/${series}` });
 }
 
 export default async function BlogSeriesPage({

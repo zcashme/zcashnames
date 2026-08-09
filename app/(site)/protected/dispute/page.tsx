@@ -9,6 +9,27 @@ export const metadata: Metadata = {
   description:
     "Dispute a protected or rejected name so Zcash Names can reevaluate it with new information.",
   alternates: { canonical: "https://www.zcashnames.com/protected/dispute" },
+  openGraph: {
+    title: "Dispute Protected Names | Zcash Names",
+    description:
+      "Dispute a protected or rejected name so Zcash Names can reevaluate it with new information.",
+    url: "https://www.zcashnames.com/protected/dispute",
+    images: [
+      {
+        url: "/og/protected-dispute.png",
+        width: 1200,
+        height: 630,
+        alt: "Dispute a protected Zcash Name preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dispute Protected Names | Zcash Names",
+    description:
+      "Dispute a protected or rejected name so Zcash Names can reevaluate it with new information.",
+    images: ["/og/protected-dispute.png"],
+  },
 };
 
 export const dynamic = "force-dynamic";

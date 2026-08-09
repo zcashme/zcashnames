@@ -5,7 +5,7 @@ import { blogMarkdownMetadata, loadBlogMarkdown, renderBlogMarkdown } from "@/li
 
 export async function generateMetadata(): Promise<Metadata> {
   const blog = await loadBlogMarkdown(["index.mdx"], "Blogs");
-  return blogMarkdownMetadata(blog.title, blog.description);
+  return blogMarkdownMetadata(blog.title, blog.description, { path: "/blogs/all" });
 }
 
 export default async function BlogsAllPage() {

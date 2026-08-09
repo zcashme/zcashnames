@@ -9,6 +9,28 @@ import SiteRouteTitle from "@/components/SiteRouteTitle";
 export const metadata = {
   title: "Indexers - Zcash Names",
   description: "Community-run ZNS indexers for resolving .zcash names.",
+  alternates: {
+    canonical: "https://www.zcashnames.com/indexers",
+  },
+  openGraph: {
+    title: "Indexers | Zcash Names",
+    description: "Community-run ZNS indexers for resolving .zcash names.",
+    url: "https://www.zcashnames.com/indexers",
+    images: [
+      {
+        url: "/og/indexers.png",
+        width: 1200,
+        height: 630,
+        alt: "Zcash Names indexers preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Indexers | Zcash Names",
+    description: "Community-run ZNS indexers for resolving .zcash names.",
+    images: ["/og/indexers.png"],
+  },
 };
 
 export default async function IndexersPage() {

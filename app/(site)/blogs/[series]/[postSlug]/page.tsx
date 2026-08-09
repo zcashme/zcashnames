@@ -32,7 +32,9 @@ export async function generateMetadata({
     };
   }
   const blog = await loadBlogMarkdown([series, `${postSlug}.mdx`], postSlug);
-  return blogMarkdownMetadata(blog.title, blog.description);
+  return blogMarkdownMetadata(blog.title, blog.description, {
+    path: `/blogs/${series}/${postSlug}`,
+  });
 }
 
 export default async function BlogPostPage({

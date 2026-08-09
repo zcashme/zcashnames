@@ -7,6 +7,25 @@ export const metadata: Metadata = {
   title: "Protected Names - Zcash Names",
   description: "Public protected names view for Zcash Names.",
   alternates: { canonical: "https://www.zcashnames.com/protected" },
+  openGraph: {
+    title: "Protected Names | Zcash Names",
+    description: "Public protected names view for Zcash Names.",
+    url: "https://www.zcashnames.com/protected",
+    images: [
+      {
+        url: "/og/protected.png",
+        width: 1200,
+        height: 630,
+        alt: "Zcash Names protected names preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Protected Names | Zcash Names",
+    description: "Public protected names view for Zcash Names.",
+    images: ["/og/protected.png"],
+  },
 };
 
 export const dynamic = "force-dynamic";

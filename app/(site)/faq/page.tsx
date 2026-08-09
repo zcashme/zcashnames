@@ -7,6 +7,28 @@ import { WAITLIST_VIEW_EARLY_ACCESS_START_AT } from "@/lib/waitlist/view";
 export const metadata: Metadata = {
   title: "FAQ - Zcash Names",
   description: "Frequently asked questions about Zcash Names waitlist reservations and Early Access.",
+  alternates: {
+    canonical: "https://www.zcashnames.com/faq",
+  },
+  openGraph: {
+    title: "FAQ | Zcash Names",
+    description: "Frequently asked questions about Zcash Names waitlist reservations and Early Access.",
+    url: "https://www.zcashnames.com/faq",
+    images: [
+      {
+        url: "/og/faq.png",
+        width: 1200,
+        height: 630,
+        alt: "Zcash Names FAQ preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FAQ | Zcash Names",
+    description: "Frequently asked questions about Zcash Names waitlist reservations and Early Access.",
+    images: ["/og/faq.png"],
+  },
 };
 
 export default function FaqPage() {

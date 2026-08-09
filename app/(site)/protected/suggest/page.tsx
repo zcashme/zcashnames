@@ -8,6 +8,25 @@ export const metadata: Metadata = {
   title: "Protect a Name - Zcash Names",
   description: "Submit a public protected-name suggestion for Zcash Names review.",
   alternates: { canonical: "https://www.zcashnames.com/protected/suggest" },
+  openGraph: {
+    title: "Suggest Protected Names | Zcash Names",
+    description: "Submit a public protected-name suggestion for Zcash Names review.",
+    url: "https://www.zcashnames.com/protected/suggest",
+    images: [
+      {
+        url: "/og/protected-suggest.png",
+        width: 1200,
+        height: 630,
+        alt: "Suggest a protected Zcash Name preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Suggest Protected Names | Zcash Names",
+    description: "Submit a public protected-name suggestion for Zcash Names review.",
+    images: ["/og/protected-suggest.png"],
+  },
 };
 
 export const dynamic = "force-dynamic";

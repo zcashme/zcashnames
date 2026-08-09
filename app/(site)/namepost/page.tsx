@@ -8,8 +8,28 @@ import AddressMeComposer from "./AddressMeComposer";
 export const metadata: Metadata = {
   title: "Address Me By My Name | Zcash Names",
   description: "Create a square Address Me By My Name image with custom artwork and text color.",
-  openGraph: { title: "Address Me By My Name" },
-  twitter: { title: "Address Me By My Name" },
+  alternates: {
+    canonical: "https://www.zcashnames.com/namepost",
+  },
+  openGraph: {
+    title: "Address Me By My Name | Zcash Names",
+    description: "Create a square Address Me By My Name image with custom artwork and text color.",
+    url: "https://www.zcashnames.com/namepost",
+    images: [
+      {
+        url: "/og/namepost.png",
+        width: 1200,
+        height: 630,
+        alt: "Zcash Names create post preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Address Me By My Name | Zcash Names",
+    description: "Create a square Address Me By My Name image with custom artwork and text color.",
+    images: ["/og/namepost.png"],
+  },
 };
 
 export default function AddressMeByMyNamePage() {

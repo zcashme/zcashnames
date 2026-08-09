@@ -12,6 +12,28 @@ import SiteRouteTitle from "@/components/SiteRouteTitle";
 export const metadata: Metadata = {
   title: "Brand Kit | Zcash Names",
   description: "Download Zcash Names logo, banner, and brand lockup assets.",
+  alternates: {
+    canonical: "https://www.zcashnames.com/brandkit",
+  },
+  openGraph: {
+    title: "Brand Kit | Zcash Names",
+    description: "Download Zcash Names logo, banner, and brand lockup assets.",
+    url: "https://www.zcashnames.com/brandkit",
+    images: [
+      {
+        url: "/og/brandkit.png",
+        width: 1200,
+        height: 630,
+        alt: "Zcash Names brand kit preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Brand Kit | Zcash Names",
+    description: "Download Zcash Names logo, banner, and brand lockup assets.",
+    images: ["/og/brandkit.png"],
+  },
 };
 
 type Asset = {

@@ -11,21 +11,40 @@ import {
 
 const BLOGS_CONTENT_ROOT = path.join(process.cwd(), "content", "blogs");
 
-/** Tokens blog markdown can use so dates stay tied to shared schedule constants. */
+/**
+ * Tokens blog markdown can use so dates stay tied to shared schedule constants.
+ * Supports both:
+ * - `{{EARLY_ACCESS_LABEL}}` (mustache-style; not valid alone under Nextra MDX)
+ * - `{WAITLIST_VIEW_EARLY_ACCESS_LABEL}` (MDX expression after import — dual-rendered posts)
+ */
 const BLOG_MARKDOWN_TOKENS: Record<string, string> = {
   EARLY_ACCESS_LABEL: WAITLIST_VIEW_EARLY_ACCESS_LABEL,
   EARLY_ACCESS_DATE_LABEL: WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
+  WAITLIST_VIEW_EARLY_ACCESS_LABEL,
+  WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
 };
 
 function expandBlogMarkdownTokens(markdown: string): string {
-  // Drop accidental MDX import lines — blogs are rendered as plain Markdown, not MDX.
+  // Drop MDX import lines — site blogs are rendered as plain Markdown, not MDX.
   const withoutImports = markdown.replace(/^import\s+.+;?\s*$/gm, "");
 
-  return withoutImports.replace(/\{\{\s*([A-Z0-9_]+)\s*\}\}/g, (match, key: string) => {
-    return Object.prototype.hasOwnProperty.call(BLOG_MARKDOWN_TOKENS, key)
-      ? BLOG_MARKDOWN_TOKENS[key]
-      : match;
-  });
+  // `{{TOKEN}}` mustache form
+  const withMustache = withoutImports.replace(
+    /\{\{\s*([A-Z0-9_]+)\s*\}\}/g,
+    (match, key: string) =>
+      Object.prototype.hasOwnProperty.call(BLOG_MARKDOWN_TOKENS, key)
+        ? BLOG_MARKDOWN_TOKENS[key]
+        : match,
+  );
+
+  // `{CONST}` form used when the same file is dual-rendered via Nextra MDX
+  return withMustache.replace(
+    /\{([A-Z][A-Z0-9_]*)\}/g,
+    (match, key: string) =>
+      Object.prototype.hasOwnProperty.call(BLOG_MARKDOWN_TOKENS, key)
+        ? BLOG_MARKDOWN_TOKENS[key]
+        : match,
+  );
 }
 
 export type BlogHeading = {
@@ -119,10 +138,41 @@ export async function loadBlogMarkdown(parts: string[], fallbackTitle: string): 
   };
 }
 
-export function blogMarkdownMetadata(title: string, description?: string): Metadata {
+export function blogMarkdownMetadata(
+  title: string,
+  description?: string,
+  options?: { path?: string },
+): Metadata {
+  const canonicalPath = options?.path ?? "/blogs";
+  const canonicalUrl = `https://www.zcashnames.com${canonicalPath.startsWith("/") ? canonicalPath : `/${canonicalPath}`}`;
+  const pageTitle = `${title} | Zcash Names`;
+  const pageDescription = description ?? "Updates, launch notes, and builder stories from Zcash Names.";
+
   return {
-    title: `${title} | Zcash Names`,
-    description,
+    title: pageTitle,
+    description: pageDescription,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title: pageTitle,
+      description: pageDescription,
+      url: canonicalUrl,
+      images: [
+        {
+          url: "/og/blogs.png",
+          width: 1200,
+          height: 630,
+          alt: "Zcash Names blog preview",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: pageTitle,
+      description: pageDescription,
+      images: ["/og/blogs.png"],
+    },
   };
 }
 

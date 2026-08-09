@@ -7,6 +7,25 @@ export const metadata: Metadata = {
   title: "Waitlist View - Zcash Names",
   description: "Public waitlist view for verified Zcash Names queue positions.",
   alternates: { canonical: "https://www.zcashnames.com/waitlist/view" },
+  openGraph: {
+    title: "Waitlist View | Zcash Names",
+    description: "Public waitlist view for verified Zcash Names queue positions.",
+    url: "https://www.zcashnames.com/waitlist/view",
+    images: [
+      {
+        url: "/og/waitlist-view.png",
+        width: 1200,
+        height: 630,
+        alt: "Zcash Names waitlist view preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Waitlist View | Zcash Names",
+    description: "Public waitlist view for verified Zcash Names queue positions.",
+    images: ["/og/waitlist-view.png"],
+  },
 };
 
 export const dynamic = "force-dynamic";
