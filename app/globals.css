@@ -4452,10 +4452,6 @@ body.app-shell-standalone {
 }
 
 .blog-post-list-item {
-  border-top: 1px solid var(--border-muted);
-}
-
-.blog-post-list-item:last-child {
   border-bottom: 1px solid var(--border-muted);
 }
 

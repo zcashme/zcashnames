@@ -8,6 +8,9 @@ import HowItWorks from "@/components/landing/HowItWorks";
 import FAQ from "@/components/landing/FAQ";
 import PartnerReel from "@/components/landing/PartnerReel";
 import LandingNewsletterSignup from "@/components/landing/LandingNewsletterSignup";
+import LandingRecentBlogs, {
+  type LandingBlogPostCard,
+} from "@/components/landing/LandingRecentBlogs";
 import type { NetworkStats as Stats } from "@/lib/network-stats";
 
 const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
@@ -44,6 +47,7 @@ type Props = {
   subtitle?: React.ReactNode;
   collapsed?: boolean;
   actionLinkPosition?: "aboveStats" | "belowStats";
+  recentBlogPosts?: LandingBlogPostCard[];
 };
 
 export default function HomePage({
@@ -53,6 +57,7 @@ export default function HomePage({
   subtitle,
   collapsed = false,
   actionLinkPosition = "aboveStats",
+  recentBlogPosts = [],
 }: Props) {
   const phonePanelRef = useRef<HTMLDivElement>(null);
 
@@ -116,6 +121,7 @@ export default function HomePage({
       <PartnerReel />
       <HowItWorks />
       <FAQ />
+      <LandingRecentBlogs posts={recentBlogPosts} />
       <LandingNewsletterSignup />
 
       <div className="flex justify-center pb-10">

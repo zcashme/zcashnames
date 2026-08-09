@@ -34,11 +34,6 @@ const communitySectionLinks: MenuLink[] = COMMUNITY_SECTIONS
   }));
 
 const socialLinks = sectionCardMenuLinks("social");
-const blogLinks = sectionCardMenuLinks("blogs").map((item) => ({
-  ...item,
-  displayPath: "Coming soon",
-  disabled: true,
-}));
 
 const MAIN_MENU_LINKS: MenuLink[] = [
   {
@@ -48,7 +43,7 @@ const MAIN_MENU_LINKS: MenuLink[] = [
     featured: true,
     children: [{ label: "Refund", href: "/beta/refund" }],
   },
-  { label: "Blogs", href: communitySectionHref("blogs"), displayPath: "/blogs", comingSoon: true, children: blogLinks },
+  { label: "Blogs", href: "/blogs", displayPath: "/blogs" },
   { label: "Brand Kit", href: "/brandkit" },
   { label: "Careers", href: "/careers", displayPath: "/careers", featured: true },
   {

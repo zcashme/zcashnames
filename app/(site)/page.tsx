@@ -5,6 +5,7 @@ import {
   BETA_STAGE_COOKIE_NAME,
   readCurrentBetaAccessSession,
 } from "@/lib/beta/gate";
+import { listAllBlogPosts } from "@/lib/blogs";
 import { getChainStats } from "@/lib/network-stats";
 import NetworkPageClient from "./NetworkPageClient";
 
@@ -31,10 +32,20 @@ export default async function HomePage() {
   const stageCookie = store.get(BETA_STAGE_COOKIE_NAME)?.value;
   const parsed = stageCookie ? parseStageCookieValue(stageCookie) : null;
   const network = parsed?.stage ?? "mainnet";
-  const [stats, session] = await Promise.all([
+  const [stats, session, recentPosts] = await Promise.all([
     getChainStats(network),
     readCurrentBetaAccessSession(),
+    listAllBlogPosts(4),
   ]);
+
+  const recentBlogPosts = recentPosts.map((post) => ({
+    slug: post.slug,
+    title: post.title,
+    href: post.href,
+    seriesLabel: post.seriesLabel,
+    publishedLabel: post.publishedLabel,
+    excerpt: post.excerpt,
+  }));
 
   const feedbackEnabled =
     (session?.kind === "tester" && session.tester.cohort === "v2") ||
@@ -45,6 +56,7 @@ export default async function HomePage() {
       network={network}
       stats={stats}
       feedbackEnabled={feedbackEnabled}
+      recentBlogPosts={recentBlogPosts}
     />
   );
 }

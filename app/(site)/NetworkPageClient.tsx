@@ -4,6 +4,7 @@ import FeedbackModal from "@/components/closedbeta/FeedbackModal";
 import HomePage from "@/components/landing/HomePage";
 import LandingActionLink from "@/components/landing/LandingActionLink";
 import HomeSearchResults from "@/components/landing/HomeSearchResults";
+import type { LandingBlogPostCard } from "@/components/landing/LandingRecentBlogs";
 import type { ChainStats } from "@/lib/network-stats";
 
 function ExplorerLink({ network }: { network: "mainnet" | "testnet" }) {
@@ -29,9 +30,15 @@ type Props = {
   network: "mainnet" | "testnet";
   stats: ChainStats;
   feedbackEnabled: boolean;
+  recentBlogPosts?: LandingBlogPostCard[];
 };
 
-export default function NetworkPageClient({ network, stats, feedbackEnabled }: Props) {
+export default function NetworkPageClient({
+  network,
+  stats,
+  feedbackEnabled,
+  recentBlogPosts = [],
+}: Props) {
   return (
     <>
       <HomePage
@@ -40,6 +47,7 @@ export default function NetworkPageClient({ network, stats, feedbackEnabled }: P
         actionLinkPosition="belowStats"
         stats={stats}
         subtitle="Powered by Zcash. Claim your name"
+        recentBlogPosts={recentBlogPosts}
       />
       {feedbackEnabled ? <FeedbackModal network={network} /> : null}
     </>
