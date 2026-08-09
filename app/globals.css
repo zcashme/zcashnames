@@ -5011,7 +5011,7 @@ body.app-shell-standalone {
   border: 1px solid var(--faq-border, var(--border-muted));
   /* Match /explorer InlineSearchField: Tailwind rounded-2xl */
   border-radius: 1rem;
-  background: var(--color-bg-elevated, var(--color-surface, transparent));
+  background: transparent;
   color: var(--fg-body);
   padding: 0.75rem 7.25rem 0.75rem 1rem;
   font: inherit;
@@ -5108,6 +5108,7 @@ body.app-shell-standalone {
 .blog-subscribe-checkboxes {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.55rem 1rem;
 }
 
