@@ -1,0 +1,122 @@
+# How Protected Names Work
+
+When a namespace opens, short brand names, project handles, and lookalike strings become magnets for sniping. Protected names are how Zcash Names holds those labels for the people who should control them—without baking special cases into the on-chain protocol.
+
+This post is the plain-language tour: what “Protected” means when you search, how unlock codes fit the claim flow, how the public list works, and what is (and is not) reserved on the waitlist.
+
+## The problem they solve
+
+Without a gate, anyone who can pay the claim cost can register any unregistered name the moment the system allows claims. That is fine for most labels. It is a poor fit for:
+
+- **Brands and organizations** that need time to verify control
+- **Projects and community handles** people already associate with a real entity
+- **Sensitive or abuse-prone strings** that should not be free-for-all at launch
+- **Lookalikes** that only exist to phishing or confuse users
+
+Protected names are set aside so those cases get a deliberate path—not a race.
+
+## Protected is not the same as reserved
+
+Two common confusions:
+
+| Idea | What it is | What it is not |
+|------|------------|----------------|
+| **Waitlist reservation** | A queue / Early Access hold for a name you want to claim later | Ownership, or a permanent block on everyone else forever |
+| **Protected name** | An operator **claim gate**: the name shows as Protected and needs an **unlock code** before the signing service will issue a CLAIM | A different on-chain name type the indexer understands |
+
+Reservations are about **who gets early claim order**. Protection is about **whether the claim path is unlocked at all** for that string. A name can be protected regardless of waitlist status; the two policies do different jobs.
+
+## What you see in the product
+
+Search a name on the site. If it is actively gated, status is **Protected**.
+
+A name is gated when the operator list has a matching row with:
+
+- Status **protected**
+- Not yet **redeemed** (nobody has successfully claimed it under this policy)
+- No expiry, or an expiry still in the future
+
+Other statuses you may see on the [public protected list](/protected):
+
+| Status | Meaning |
+|--------|---------|
+| **Under review** | Suggested or pending operator decision; does **not** block ordinary claiming by itself |
+| **Protected** | Held; unlock code required to claim (if unredeemed and not expired) |
+| **Rejected** | Not held for claim (includes protection that expired while unclaimed) |
+| **Redeemed** | Claimed on-chain under the policy; shown as claimed on the list, unlock gate lifts |
+
+Category labels (person, organization, brand, technology, community, abuse, other) and flags such as ENS or Zcash.me priority are for operators and filters. **They do not replace the unlock-code gate.** Gating only cares about protected + unredeemed + not past expiry.
+
+## Parents and variants
+
+Some protected rows form a small family:
+
+- A **parent** is the canonical name (no parent of its own)
+- A **variant** points at that parent—support handles, common misspellings, or phishing lookalikes
+
+When you [suggest a name](/protected/suggest), prefer the parent first if it is missing; then attach variants under it. Searching the public list for either side surfaces the family so related labels stay visible together.
+
+## Unlock codes
+
+An unlock code is a fixed 12-character fingerprint in the form `XXXX-XXXX-XXXX`. You do not invent it; maintainers issue it after verifying that you are the right party (brand control, community coordination, and similar processes).
+
+Important properties:
+
+- **One code per name** (for a given operator secret), not one code per user account
+- **Out-of-band delivery**—Discord, email, or coordinated review—not something you generate in the wallet
+- **A gate on signing, not a magic on-chain token**—the memo still needs a normal admin-signed CLAIM; the code only decides whether the web signing service will produce that signature
+
+If you believe a protected name should be released to you, contact maintainers via [Discord](https://discord.gg/z2H23QgAGf) or the [directory repo](https://github.com/zcashme/directory).
+
+## How claiming works end to end
+
+1. Search for the name. It shows **Protected**.
+2. Enter the unlock code you were issued.
+3. Enter your Zcash unified address.
+4. Complete the normal claim flow: pay the claim cost with the ZIP-321 transaction the app prepares.
+
+Behind the scenes:
+
+1. The app confirms the name is still gated.
+2. It verifies the unlock code server-side.
+3. Only then does it build and sign the usual `CLAIM:{name}:{address}` memo.
+4. You broadcast the transaction. The **indexer** treats it like any other valid claim—it does not know or care that the name was on a protected list.
+5. After a successful claim, the protected row is marked **redeemed**, so the unlock gate no longer applies to that name.
+
+The unlock code never goes on-chain. Protection is a **policy layer** on the operator’s signing service. Anyone running their own signer can choose a different policy—or none. The chain only sees a correctly signed claim and a payment.
+
+## Suggesting and disputing
+
+**Missing a name that should be held?** Use [Suggest a protected name](/protected/suggest): enter the string, choose parent or variant, pick a category, explain why, and attach evidence. New suggestions usually land as **Under review** until operators protect or reject them.
+
+**Think a protected or rejected row is wrong?** Use [Dispute a name](/protected/dispute) when the name is eligible. Disputes are reviewed on their own track. Filing a dispute does **not** by itself unlock claiming; operators may change the name row after review.
+
+Browse, search, and filter everything public on [Protected Names](/protected).
+
+## Optional expiry
+
+Operators can set an `expires_at` on a protected row. If that time passes and nobody has redeemed the name:
+
+- Protection ends
+- The row moves to **rejected** with an expiry reason
+- The name is no longer gated for ordinary claim
+
+Leave expiry empty for protection that lasts until claim or manual review.
+
+## What this is not
+
+- **Not a second registry.** After claim, the name is a normal registration.
+- **Not waitlist Early Access.** Codes for protected names are unlock codes for the claim gate, not queue-order Early Access codes.
+- **Not enforced by the indexer alone.** Without the admin signature, the claim fails; the unlock code is how the official product decides whether to sign.
+- **Not a guarantee of legal ownership off-chain.** It is an operator policy to reduce launch sniping and give verified parties a fair path in.
+
+## Where to go next
+
+- [Protected Names](/protected) — public list, search, and filters  
+- [Suggest a protected name](/protected/suggest) — propose a parent or variant  
+- [Dispute a name](/protected/dispute) — request reevaluation  
+- [Docs: Protected Names](/docs/use/protected-names) — full product reference  
+- [Docs: Protected Names (protocol)](/docs/protocol/protected-names) — storage, HMAC unlock codes, and claim flow for builders  
+- [Early Access](/blogs/launch/early-access) — how waitlist reservations and claim waves work  
+
+Protected names keep high-stakes labels out of pure first-come sniping while keeping the on-chain story simple: pay the claim cost, present a valid signed CLAIM, and the name resolves like any other.
