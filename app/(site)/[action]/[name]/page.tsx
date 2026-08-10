@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import NameActionForm from "@/components/purchases/NameActionForm";
-import NameForSaleShareButton from "@/components/purchases/NameForSaleShareButton";
+import NameActionFormShell from "@/components/purchases/NameActionFormShell";
 import { NameStatusBadge } from "@/components/NameStatus";
 import { ACTION_LABELS } from "@/lib/types";
 import type { Action, NameAvailabilityState, Network, ResolveName } from "@/lib/types";
@@ -76,42 +75,6 @@ function featureChipsFor(
   return chips;
 }
 
-function FeatureChips({
-  chips,
-  placement,
-  name,
-  network,
-  availability,
-}: {
-  chips: string[];
-  placement: "inline" | "hero";
-  name: string;
-  network: Network;
-  availability: NameAvailabilityState;
-}) {
-  const showForSaleShare = availability === "forsale";
-  if (chips.length === 0 && !showForSaleShare) return null;
-
-  return (
-    <div className={`name-action-chips name-action-chips--${placement}`}>
-      {showForSaleShare ? (
-        <NameForSaleShareButton
-          name={name}
-          network={network}
-          variant="trust-pill"
-          menuAlign={placement === "hero" ? "left" : "right"}
-          menuDirection={placement === "hero" ? "down" : "down"}
-        />
-      ) : null}
-      {chips.map((chip) => (
-        <span key={`${placement}-${chip}`} className="home-result-trust-pill">
-          {chip}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function heroCopy(action: Action): string {
   switch (action) {
     case "CLAIM":
@@ -165,127 +128,93 @@ export default async function NameActionPage({ params, searchParams }: PageProps
       <SiteRouteTitle title={title} href={`/${actionSlug}/${encodeURIComponent(name)}`} />
 
       <div className="name-action-column mx-auto w-full max-w-2xl">
-        <div className="name-action-status-row mb-4">
-          <div className="name-action-status-left flex min-w-0 flex-wrap items-center gap-2.5">
-            {availability !== "unavailable" ? (
-              <NameStatusBadge status={availability} />
-            ) : null}
-            {showPrice ? (
-              <p className="m-0 text-[var(--home-result-price-color)] text-[clamp(1.02rem,1.85vw,1.3rem)] font-extrabold tracking-[-0.012em]">
-                {priceZec} ZEC
-              </p>
-            ) : null}
-          </div>
-          <FeatureChips
-            chips={featureChips}
-            placement="inline"
-            name={name}
-            network={network}
-            availability={availability}
-          />
-        </div>
-
-        <section
-          className="w-full rounded-t-2xl border border-b-0 px-6 py-8 sm:px-8 sm:py-10"
-          style={{
-            borderColor: "var(--faq-border)",
-            background:
-              "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
-          }}
-        >
-          <div className="grid gap-4">
-            <FeatureChips
-              chips={featureChips}
-              placement="hero"
-              name={name}
-              network={network}
-              availability={availability}
-            />
-            <h1 className="text-center text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl">
-              <a
-                href={backHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="action-hero-name action-hero-name--link"
-                title={`View ${name} on Explorer`}
-              >
-                {name}
-              </a>
-            </h1>
-            <p
-              className="mx-auto max-w-3xl text-center text-base leading-8 sm:text-lg"
-              style={{ color: "var(--fg-body)" }}
-            >
-              {heroCopy(action)}
-            </p>
-          </div>
-        </section>
-
-        <div className="relative">
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute left-0 top-[-1rem] z-10 block h-8 w-px"
-            style={{ background: "var(--faq-border)" }}
-          />
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute right-0 top-[-1rem] z-10 block h-8 w-px"
-            style={{ background: "var(--faq-border)" }}
-          />
-          {gate.ok ? (
-            <NameActionForm
-              action={action}
-              name={name}
-              network={network}
-              resolveResult={resolveResult}
-              returnHref={backHref}
-            />
-          ) : (
-            <div
-              className="w-full rounded-2xl border px-5 py-8 sm:px-6 sm:py-10 text-center"
-              style={{
-                borderColor: "var(--faq-border)",
-                background:
-                  "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 76%, transparent), color-mix(in srgb, var(--faq-border) 10%, transparent))",
-                boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
-              }}
-            >
-              <h2
-                className="text-lg font-bold"
-                style={{ color: "var(--fg-heading)" }}
-              >
-                Action unavailable
-              </h2>
-              <p className="mt-2 text-sm" style={{ color: "var(--fg-body)" }}>
-                {gate.reason}
-              </p>
-              {gate.link ? (
-                <p className="mt-2 text-sm" style={{ color: "var(--fg-body)" }}>
-                  {gate.link.prefix ?? ""}
-                  <Link
-                    href={gate.link.href}
-                    className="font-semibold underline underline-offset-2"
-                    style={{ color: "var(--fg-heading)" }}
-                  >
-                    {gate.link.label}
-                  </Link>
-                  {gate.link.suffix ?? ""}
+        <NameActionFormShell
+          action={action}
+          name={name}
+          network={network}
+          resolveResult={resolveResult}
+          returnHref={backHref}
+          featureChips={featureChips}
+          availability={availability}
+          formAllowed={gate.ok}
+          statusLeft={
+            <>
+              {availability !== "unavailable" ? (
+                <NameStatusBadge status={availability} />
+              ) : null}
+              {showPrice ? (
+                <p className="m-0 text-[var(--home-result-price-color)] text-[clamp(1.02rem,1.85vw,1.3rem)] font-extrabold tracking-[-0.012em]">
+                  {priceZec} ZEC
                 </p>
               ) : null}
-              <Link
-                href={backHref}
-                className="mt-6 inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold"
+            </>
+          }
+          heroBody={
+            <>
+              <h1 className="text-center text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl">
+                <a
+                  href={backHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="action-hero-name action-hero-name--link"
+                  title={`View ${name} on Explorer`}
+                >
+                  {name}
+                </a>
+              </h1>
+              <p
+                className="mx-auto max-w-3xl text-center text-base leading-8 sm:text-lg"
+                style={{ color: "var(--fg-body)" }}
+              >
+                {heroCopy(action)}
+              </p>
+            </>
+          }
+          denial={
+            !gate.ok ? (
+              <div
+                className="w-full rounded-2xl border px-5 py-8 sm:px-6 sm:py-10 text-center"
                 style={{
-                  background: "var(--home-result-primary-bg)",
-                  color: "var(--home-result-primary-fg)",
-                  boxShadow: "var(--home-result-primary-shadow)",
+                  borderColor: "var(--faq-border)",
+                  background:
+                    "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 76%, transparent), color-mix(in srgb, var(--faq-border) 10%, transparent))",
+                  boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
                 }}
               >
-                View on Explorer
-              </Link>
-            </div>
-          )}
-        </div>
+                <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
+                  Action unavailable
+                </h2>
+                <p className="mt-2 text-sm" style={{ color: "var(--fg-body)" }}>
+                  {gate.reason}
+                </p>
+                {gate.link ? (
+                  <p className="mt-2 text-sm" style={{ color: "var(--fg-body)" }}>
+                    {gate.link.prefix ?? ""}
+                    <Link
+                      href={gate.link.href}
+                      className="font-semibold underline underline-offset-2"
+                      style={{ color: "var(--fg-heading)" }}
+                    >
+                      {gate.link.label}
+                    </Link>
+                    {gate.link.suffix ?? ""}
+                  </p>
+                ) : null}
+                <Link
+                  href={backHref}
+                  className="mt-6 inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold"
+                  style={{
+                    background: "var(--home-result-primary-bg)",
+                    color: "var(--home-result-primary-fg)",
+                    boxShadow: "var(--home-result-primary-shadow)",
+                  }}
+                >
+                  View on Explorer
+                </Link>
+              </div>
+            ) : null
+          }
+        />
       </div>
     </div>
   );

@@ -570,7 +570,9 @@ export default function Zip321Modal({
                       value={s.otpCode}
                       disabled={s.otpVerified}
                       error={!!s.otpError}
-                      success={s.otpVerified}
+                      success={
+                        s.otpCode.length === 6 && !s.otpError && s.otpVerified
+                      }
                       autoFocus={!s.otpVerified}
                       className="w-full"
                       onChange={(digits) =>
@@ -786,12 +788,13 @@ export default function Zip321Modal({
                   {modalDescription(action, "scanning", name, s)}
                 </p>
                 <div
-                  className="purchase-scan-status-loading flex w-full flex-col items-center justify-center gap-3 rounded-xl p-5 text-center"
+                  className="flex w-full flex-col items-center justify-center gap-3 rounded-xl p-5 text-center"
                   style={{
+                    background: "var(--color-raised)",
                     border: `1.5px solid ${s.scanState === "in_mempool" || s.scanState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
                   }}
                 >
-                  <p className="relative z-[1] w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
+                  <p className="w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
                     {scanningStatusMessage(action, s.scanState)}
                   </p>
                 </div>
@@ -889,12 +892,13 @@ export default function Zip321Modal({
                   {modalDescription(action, "settling", name, s)}
                 </p>
                 <div
-                  className="purchase-scan-status-loading flex w-full flex-col items-center gap-3 rounded-xl p-5 text-center"
+                  className="flex w-full flex-col items-center gap-3 rounded-xl p-5 text-center"
                   style={{
+                    background: "var(--color-raised)",
                     border: `1.5px solid ${s.settleState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
                   }}
                 >
-                  <p className="relative z-[1] w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
+                  <p className="w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
                     {settlingStatusMessage(action, s.settleState)}
                   </p>
                 </div>

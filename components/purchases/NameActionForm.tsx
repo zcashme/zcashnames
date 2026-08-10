@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { usePurchaseFlow } from "@/components/hooks/usePurchaseFlow";
@@ -78,6 +78,8 @@ type NameActionFormProps = {
   network: Network;
   resolveResult: ResolveName;
   returnHref?: string;
+  /** Fired when the form enters/leaves the success confirmation state. */
+  onSuccessChange?: (success: boolean) => void;
 };
 
 function fieldStyle(hasError: boolean): CSSProperties {
@@ -272,6 +274,7 @@ export default function NameActionForm({
   network,
   resolveResult,
   returnHref,
+  onSuccessChange,
 }: NameActionFormProps) {
   const router = useRouter();
   const [otpBackOpen, setOtpBackOpen] = useState(false);
@@ -306,6 +309,10 @@ export default function NameActionForm({
     (phase === "scanning" && s.scanState === "mined" && action !== "BUY") ||
     (phase === "settling" && s.settleState === "mined");
 
+  useEffect(() => {
+    onSuccessChange?.(isSuccess);
+  }, [isSuccess, onSuccessChange]);
+
   const pendingBuy =
     action === "BUY" && resolveResult.status === "listed"
       ? resolveResult.pendingBuy
@@ -336,8 +343,9 @@ export default function NameActionForm({
         emailSubject={successShare.emailSubject}
         menuAlign="left"
         menuDirection="up"
-        rootClassName="relative inline-flex w-fit flex-col items-center"
-        buttonClassName="box-border inline-flex h-9 min-h-9 items-center justify-center gap-2 rounded-[13px] border border-border-muted bg-transparent px-4 text-sm font-semibold leading-none text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+        rootClassName="relative inline-flex w-fit flex-col items-start"
+        // Match footer step buttons: h-9, opacity hover (same as View on Explorer / Continue)
+        buttonClassName="box-border inline-flex h-9 min-h-9 items-center justify-center gap-2 rounded-[13px] border border-border-muted bg-transparent px-4 text-sm font-semibold leading-none text-fg-body transition-opacity hover:opacity-85"
       />
     );
   }
@@ -608,7 +616,7 @@ export default function NameActionForm({
           {isOwnerAction && (
             <p className="text-sm" style={{ color: "var(--fg-body)" }}>
               Changes to this name are authorized by{" "}
-              <strong style={{ color: "var(--fg-heading)" }}>passcodes</strong>.
+              <strong style={{ color: "var(--fg-heading)" }}>sending the owner passcodes</strong>.
             </p>
           )}
 
@@ -623,45 +631,57 @@ export default function NameActionForm({
 
     if (p === "otp") {
       return (
-        <div className={`space-y-4 ${muted ? "opacity-70" : ""}`}>
-          <div>
-            <PhaseLabel complete={complete}>Verify ownership</PhaseLabel>
-            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              Send exact memo and minimum amount to the address below to receive a passcode.
-            </p>
-          </div>
-          {s.otpMemo && active ? (
-            <div className={`flex flex-col ${s.otpSent ? "gap-6" : ""}`}>
-              <div className="flex justify-center">
-                <QrBlock
-                  address={getNetworkConstants(network).OTP_SIGNIN_ADDR}
-                  amount={getNetworkConstants(network).OTP_AMOUNT}
-                  memo={s.otpMemo}
-                  size={180}
-                />
-              </div>
-              {s.otpSent ? (
-                <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
-                  The owner of <NameBadge name={name} /> will receive a passcode in their wallet.
-                </p>
+        <div
+          className={`transition-opacity duration-300 ease-out ${muted ? "opacity-70" : "opacity-100"}`}
+        >
+          <PhaseLabel complete={complete}>Verify ownership</PhaseLabel>
+
+          {/* Payment QR + send instructions collapse when leaving this step (like Send Payment). */}
+          <div
+            className="grid transition-[grid-template-rows,opacity] duration-500 ease-in-out"
+            style={{
+              gridTemplateRows: active ? "1fr" : "0fr",
+              opacity: active ? 1 : 0,
+            }}
+            aria-hidden={!active}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+                Send exact memo and minimum amount to the address below to receive a passcode.
+              </p>
+              {s.otpMemo ? (
+                <div className="flex justify-center pt-4">
+                  <QrBlock
+                    address={getNetworkConstants(network).OTP_SIGNIN_ADDR}
+                    amount={getNetworkConstants(network).OTP_AMOUNT}
+                    memo={s.otpMemo}
+                    size={180}
+                  />
+                </div>
               ) : null}
             </div>
-          ) : null}
-          {s.otpSent && !active ? (
-            <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
-              The owner of <NameBadge name={name} /> will receive a passcode in their wallet.
-            </p>
-          ) : null}
-          {s.otpSent && (
-            <div className="flex w-full flex-col items-center gap-3">
+          </div>
+
+          {/* Persist after passcode is requested: summary + boxes (green after verify). */}
+          {s.otpSent ? (
+            <div
+              className={`flex w-full flex-col items-center gap-3 ${active ? "mt-6" : "mt-2"}`}
+            >
+              <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
+                The owner of <NameBadge name={name} /> will receive a passcode in their wallet.
+              </p>
               <PasscodeBoxes
                 id="name-action-passcode"
                 value={s.otpCode}
                 disabled={muted || s.otpVerified}
                 error={active && !!s.otpError}
-                success={active && s.otpVerified}
+                success={
+                  s.otpCode.length === 6 &&
+                  !s.otpError &&
+                  (s.otpVerified || complete)
+                }
                 autoFocus={active && !s.otpVerified}
-                className="w-full max-w-sm"
+                className="w-full"
                 onChange={(digits) =>
                   set({
                     otpCode: digits,
@@ -689,30 +709,42 @@ export default function NameActionForm({
                 </p>
               ) : null}
             </div>
-          )}
+          ) : null}
         </div>
       );
     }
 
     if (p === "confirm") {
       return (
-        <div className={`space-y-4 ${muted ? "opacity-70" : ""}`}>
-          <div>
-            <PhaseLabel complete={complete}>{phaseHeader(action, "confirm")}</PhaseLabel>
-            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              {modalDescription(action, "confirm", name, s)}
-            </p>
-          </div>
-          {s.uri && s.paymentAddress && active && (
-            <div className="flex justify-center">
-              <QrBlock
-                address={s.paymentAddress}
-                amount={s.amountZec}
-                memo={s.memo}
-                size={200}
-              />
+        <div
+          className={`transition-opacity duration-300 ease-out ${muted ? "opacity-70" : "opacity-100"}`}
+        >
+          <PhaseLabel complete={complete}>{phaseHeader(action, "confirm")}</PhaseLabel>
+          <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+            {modalDescription(action, "confirm", name, s)}
+          </p>
+          {s.uri && s.paymentAddress ? (
+            <div
+              className="grid transition-[grid-template-rows,opacity] duration-500 ease-in-out"
+              style={{
+                gridTemplateRows: active ? "1fr" : "0fr",
+                opacity: active ? 1 : 0,
+              }}
+              aria-hidden={!active}
+            >
+              {/* Nested under copy so collapsed height leaves no leftover space-y gap. */}
+              <div className="min-h-0 overflow-hidden">
+                <div className="flex justify-center pt-4">
+                  <QrBlock
+                    address={s.paymentAddress}
+                    amount={s.amountZec}
+                    memo={s.memo}
+                    size={200}
+                  />
+                </div>
+              </div>
             </div>
-          )}
+          ) : null}
         </div>
       );
     }
@@ -728,7 +760,6 @@ export default function NameActionForm({
               <div className="flex w-full flex-col items-center text-center text-sm" style={{ color: "var(--fg-body)" }}>
                 {minedMessage(action, name, s.address)}
               </div>
-              {successShareButton()}
             </div>
           </div>
         );
@@ -740,12 +771,13 @@ export default function NameActionForm({
             {modalDescription(action, "scanning", name, s)}
           </p>
           <div
-            className={`purchase-scan-status-loading flex w-full flex-col items-center justify-center rounded-xl p-5 text-center`}
+            className="flex w-full flex-col items-center justify-center rounded-xl p-5 text-center"
             style={{
+              background: "var(--color-raised)",
               border: `1.5px solid ${s.scanState === "in_mempool" || s.scanState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
             }}
           >
-            <p className="relative z-[1] w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
+            <p className="w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
               {scanningStatusMessage(action, s.scanState)}
             </p>
           </div>
@@ -805,7 +837,6 @@ export default function NameActionForm({
               <div className="flex w-full flex-col items-center text-center text-sm" style={{ color: "var(--fg-body)" }}>
                 {minedMessage("BUY", name, s.address)}
               </div>
-              {successShareButton()}
             </div>
           </div>
         );
@@ -817,12 +848,13 @@ export default function NameActionForm({
             {modalDescription(action, "settling", name, s)}
           </p>
           <div
-            className="purchase-scan-status-loading flex w-full flex-col items-center justify-center rounded-xl p-5 text-center"
+            className="flex w-full flex-col items-center justify-center rounded-xl p-5 text-center"
             style={{
+              background: "var(--color-raised)",
               border: `1.5px solid ${s.settleState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
             }}
           >
-            <p className="relative z-[1] w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
+            <p className="w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
               {settlingStatusMessage(action, s.settleState)}
             </p>
           </div>
@@ -882,7 +914,9 @@ export default function NameActionForm({
             color: "var(--fg-muted)",
           }}
         >
-          <div className="flex min-w-0 justify-start">{isSuccess ? null : footerBack()}</div>
+          <div className="flex min-w-0 justify-start">
+            {isSuccess ? successShareButton() : footerBack()}
+          </div>
           <div className="justify-self-center whitespace-nowrap text-center">
             Step {Math.min(s.step + 1, phases.length)} of {phases.length}
           </div>

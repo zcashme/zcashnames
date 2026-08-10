@@ -143,7 +143,7 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
         : null;
   const clearWarning = isConfirm
     ? "Removes this prepared request. Sent payments cannot be undone."
-    : "Payment processing, if any, cannot be cancelled. Tap to confirm.";
+    : "Payment processing, if any, cannot be cancelled. Ignore?";
   const clearWarningLines = clearWarning.split(". ").map((line, index, lines) =>
     index < lines.length - 1 && !line.endsWith(".") ? `${line}.` : line
   );

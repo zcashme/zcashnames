@@ -6,6 +6,10 @@ export function buildTelegramShareHref(message: string): string {
   return `https://t.me/share/url?url=${encodeURIComponent(message)}`;
 }
 
+export function buildWhatsAppShareHref(message: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(message)}`;
+}
+
 export function buildEmailShareHref(subject: string, message: string): string {
   return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
 }

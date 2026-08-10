@@ -380,17 +380,18 @@ export function usePurchaseFlow({
       otpAdvanceTimerRef.current = window.setTimeout(() => {
         otpAdvanceTimerRef.current = null;
         otpVerifyInFlightRef.current = false;
+        // Keep otpVerified true so green passcode borders persist on completed OTP steps.
+        // Back-nav past OTP still clears it via PHASE_OWNS.
         if (confirmIdx >= 0) {
           set({
             ...paymentPatch,
-            // Clear flash state so a later back-nav to OTP can re-verify.
-            otpVerified: false,
+            otpVerified: true,
             step: confirmIdx,
           });
         } else {
           advance({
             ...paymentPatch,
-            otpVerified: false,
+            otpVerified: true,
           });
         }
       }, 650);

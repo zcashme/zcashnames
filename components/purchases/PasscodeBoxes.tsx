@@ -76,11 +76,12 @@ export default function PasscodeBoxes({
           if (!disabled) inputRef.current?.focus();
         }}
       >
-        <div className="grid grid-cols-6 gap-2 sm:gap-2.5" aria-hidden="true">
+        <div className="flex justify-center gap-1.5 sm:gap-2" aria-hidden="true">
           {digits.map((digit, idx) => (
             <div
               key={`passcode-slot-${idx}`}
-              className="flex h-11 items-center justify-center rounded-2xl font-mono text-base font-semibold leading-none transition-colors sm:h-12 sm:text-lg"
+              // Taller than wide (rectangular), not square/wide.
+              className="flex h-12 w-8 shrink-0 items-center justify-center rounded-xl font-mono text-base font-semibold leading-none transition-colors sm:h-12 sm:w-9 sm:text-lg"
               style={slotStyle(idx)}
             >
               {digit}

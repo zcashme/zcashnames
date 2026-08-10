@@ -25,6 +25,29 @@ export function useAnimatedEllipsis(active: boolean, intervalMs = DEFAULT_INTERV
   return active ? getAnimatedEllipsis(nowMs, intervalMs) : "";
 }
 
+/** Trailing animated dots (., .., ..., empty) — use in place of a final period. */
+export function AnimatedEllipsis({
+  active = true,
+  intervalMs = DEFAULT_INTERVAL_MS,
+  emptyWidthCh = 3,
+}: {
+  active?: boolean;
+  intervalMs?: number;
+  emptyWidthCh?: number;
+}) {
+  const dots = useAnimatedEllipsis(active, intervalMs);
+  if (!active) return null;
+  return (
+    <span
+      className="inline-block text-left"
+      style={{ width: `${emptyWidthCh}ch` }}
+      aria-hidden="true"
+    >
+      {dots}
+    </span>
+  );
+}
+
 export default function AnimatedLoadingLabel({
   label,
   active,
@@ -36,20 +59,12 @@ export default function AnimatedLoadingLabel({
   intervalMs?: number;
   emptyWidthCh?: number;
 }) {
-  const dots = useAnimatedEllipsis(active, intervalMs);
-
   if (!active) return <>{label}</>;
 
   return (
     <>
       {label}
-      <span
-        className="inline-block text-left"
-        style={{ width: `${emptyWidthCh}ch` }}
-        aria-hidden="true"
-      >
-        {dots}
-      </span>
+      <AnimatedEllipsis active intervalMs={intervalMs} emptyWidthCh={emptyWidthCh} />
     </>
   );
 }

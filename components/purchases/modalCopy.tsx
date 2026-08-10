@@ -3,11 +3,16 @@
 import type React from "react";
 import { ACTION_LABELS, ACTION_NOUNS } from "@/lib/types";
 import type { Action, Phase, ScanState } from "@/lib/types";
+import AnimatedLoadingLabel, {
+  AnimatedEllipsis,
+} from "@/components/ui/AnimatedLoadingLabel";
 
 export type PurchaseCopyState = {
   address?: string;
   price?: string;
   priceInput?: string;
+  /** Payment URI amount (ZEC string). Empty/zero means memo-only confirm copy. */
+  amountZec?: string;
   settleState?: ScanState;
 };
 
@@ -99,8 +104,10 @@ export function scanningStatusMessage(action: Action, scanState: ScanState): Rea
       return (
         <SentenceLines align="center">
           <span>
-            Your {action === "BUY" ? "intent to purchase" : ACTION_NOUNS[action]} hasn&rsquo;t been
-            detected yet.
+            <AnimatedLoadingLabel
+              label={`Your ${action === "BUY" ? "intent to purchase" : ACTION_NOUNS[action]} hasn\u2019t been detected yet`}
+              active
+            />
           </span>
         </SentenceLines>
       );
@@ -213,7 +220,13 @@ export function modalDescription(
   }
   if (phase === "confirm") {
     if (action === "BUY") return <>You&rsquo;ll pay the seller the listing price next.</>;
-    return <>Send exact amount and memo to address below to complete transaction.</>;
+    // URI may be memo-only (zero/empty amount) or include a minimum commission amount.
+    const amountRequired = !!state.amountZec && Number(state.amountZec) > 0;
+    return amountRequired ? (
+      <>Send exact memo and minimum amount to address below to complete transaction.</>
+    ) : (
+      <>Send exact memo to address below to complete transaction.</>
+    );
   }
   if (phase === "fund") {
     return <>Send <strong>{options?.listingPriceZec ?? 0} ZEC</strong> to <NameBadge name={name} />&rsquo;s transparent address.</>;
@@ -224,9 +237,19 @@ export function modalDescription(
   }
   if (state.address && state.settleState === "mined") return minedMessage("BUY", name, state.address);
   if (action === "BUY") {
-    return <>Checking the mempool and resolver for your intent to purchase <NameBadge name={name} />.</>;
+    return (
+      <>
+        Checking the mempool and resolver for your intent to purchase <NameBadge name={name} />
+        <AnimatedEllipsis active />
+      </>
+    );
   }
-  return <>Checking the mempool and resolver to {ACTION_NOUNS[action]} <NameBadge name={name} />.</>;
+  return (
+    <>
+      Checking the mempool and resolver to {ACTION_NOUNS[action]} <NameBadge name={name} />
+      <AnimatedEllipsis active />
+    </>
+  );
 }
 
 export function progressFillForPhase(
