@@ -138,26 +138,6 @@ function SearchIcon() {
   );
 }
 
-function InfoIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-3.5 w-3.5"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 10v6" />
-      <path d="M12 7h.01" />
-    </svg>
-  );
-}
-
 function HeaderInfoModal({
   title,
   body,
@@ -803,6 +783,42 @@ export default function WaitlistViewClient({
 
   const faqItems: WaitlistFaqItem[] = [
     {
+      question: "How do I read the waitlist table?",
+      answer: (
+        <div className="space-y-3">
+          <p>
+            Each row is one waitlisted name. Read the columns left to right:
+          </p>
+          <ul className="list-disc space-y-1.5 pl-5">
+            <li>
+              <strong>#</strong> — verified join order (original line number).
+            </li>
+            <li>
+              <strong>Adj#</strong> — referral-adjusted line number (better ranks move closer to the front).
+            </li>
+            <li>
+              <strong>Name</strong> — the waitlisted name and its referral code.
+            </li>
+            <li>
+              <strong>Rank</strong> — place among everyone waitlisting the same name (or N/A until reserved).
+            </li>
+            <li>
+              <strong>Status</strong> —{" "}
+              <strong>Protected</strong> names are held back; <strong>Reserved</strong> names have completed payment;{" "}
+              <strong>Pending</strong> names are waiting on reservation; <strong>Available</strong> names have no current
+              conflict or hold.
+            </li>
+            <li>
+              <strong>Refs</strong> — reserved referral totals (direct and/or indirect when both apply).
+            </li>
+          </ul>
+          <p>
+            Tap any column header for a short explanation of that column.
+          </p>
+        </div>
+      ),
+    },
+    {
       question: "Why are reservations required after email confirmation?",
       answer: (
         <p>
@@ -826,13 +842,14 @@ export default function WaitlistViewClient({
       ),
     },
     {
-      question: "What does â€œadjusted by referrals who also completed reservationsâ€ mean?",
+      question: "What does “adjusted by referrals who also completed reservations” mean?",
       answer: (
         <p>
-          Only referrals who also finish their own reservations count toward your queue position. The <strong>Pos.</strong>{" "}
-          column is shown for reserved names only. Within the reserved queue, every {referralsPerSpot} direct reserved
-          referrals moves your position up 1 spot, and every 9 indirect reserved referrals moves it up 1 additional
-          spot. Referrals who joined by email but did not complete a reservation do not improve your queue position.
+          Only referrals who also finish their own reservations count toward your queue position. The{" "}
+          <strong>Adj#</strong> column shows the referral-adjusted line number. Within the reserved queue, every{" "}
+          {referralsPerSpot} direct reserved referrals moves your position up 1 spot, and every 9 indirect reserved
+          referrals moves it up 1 additional spot. Referrals who joined by email but did not complete a reservation do
+          not improve your queue position.
         </p>
       ),
     },
@@ -1065,7 +1082,7 @@ export default function WaitlistViewClient({
                     { label: "Name", info: "The waitlisted name and its referral code." },
                     { label: "Rank", info: "Rank among all entries with the same name, ordered by referral-adjusted line number and then original line number as the tie-breaker." },
                     { label: "Status", info: "Protected names are held back, reserved names have paid, pending names are waiting on reservation, and available names have no current conflict or hold." },
-                    { label: "Referrals", info: "Reserved referral totals. When both direct and indirect counts exist, both are shown together." },
+                    { label: "Refs", info: "Reserved referral totals. When both direct and indirect counts exist, both are shown together." },
                   ].map((column, index) => (
                     <th
                       key={column.label}
@@ -1079,17 +1096,14 @@ export default function WaitlistViewClient({
                         whiteSpace: "nowrap",
                       }}
                     >
-                      <span className="inline-flex items-center gap-2 align-middle">
-                        <span className="leading-none">{column.label}</span>
-                        <button
-                          type="button"
-                          onClick={() => setHeaderInfo({ title: column.label, body: column.info })}
-                          className="inline-flex h-5 w-5 shrink-0 items-center justify-center self-center align-middle leading-none text-[color:var(--fg-muted)] transition-colors hover:text-[var(--color-accent-interactive)]"
-                          aria-label={`About ${column.label}`}
-                        >
-                          <InfoIcon />
-                        </button>
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setHeaderInfo({ title: column.label, body: column.info })}
+                        className="inline-flex items-center leading-none text-[color:var(--fg-muted)] transition-colors hover:text-[var(--color-accent-interactive)]"
+                        aria-label={`About ${column.label}`}
+                      >
+                        {column.label}
+                      </button>
                     </th>
                   ))}
                 </tr>
