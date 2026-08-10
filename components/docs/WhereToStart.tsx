@@ -21,6 +21,7 @@ const SECTIONS: Section[] = [
       { label: "I use zcash.me", href: "/docs/learn/what-is-zns#already-using-zcashme" },
       { label: "I already claimed a name", href: "/docs/use/managing" },
       { label: "Will this expose me?", href: "/docs/learn/privacy" },
+      { label: "ZNS Developer Guide", href: "/docs/zns-developer-guide" },
     ],
   },
   {
@@ -81,7 +82,6 @@ const SECTIONS: Section[] = [
   {
     title: "More",
     links: [
-      { label: "FAQ", href: "/docs/faq" },
       { label: "Terminology", href: "/docs/terminology" },
       { label: "Ecosystem", href: "/docs/ecosystem" },
       { label: "Live Explorer", href: "/explorer" },

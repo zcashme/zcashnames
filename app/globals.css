@@ -4199,13 +4199,19 @@ body.app-shell-standalone {
   font-weight: 800;
 }
 
+.influencer-gate-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .influencer-gate input {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 16px;
   background: var(--color-raised);
   color: var(--fg-heading);
-  padding: 0.75rem 0.8rem;
+  padding: 0.75rem 5.25rem 0.75rem 0.9rem;
   font: inherit;
   font-size: 1rem;
   font-weight: 600;
@@ -4216,21 +4222,37 @@ body.app-shell-standalone {
   outline-offset: 2px;
 }
 
-.influencer-gate button {
-  min-height: 2.75rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--color-raised);
-  color: var(--fg-heading);
-  padding: 0.7rem 1rem;
+.influencer-gate-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  bottom: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.influencer-gate-submit {
+  display: inline-flex;
+  height: calc(100% - 2px);
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 13px;
+  background: var(--home-result-primary-bg, var(--color-raised));
+  color: var(--home-result-primary-fg, var(--fg-heading));
+  box-shadow: var(--home-result-primary-shadow, none);
+  padding: 0 1rem;
   font: inherit;
-  font-weight: 800;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 }
 
-.influencer-gate button:disabled {
+.influencer-gate-submit:disabled {
   cursor: not-allowed;
-  opacity: 0.48;
+  opacity: 0.7;
 }
 
 .influencer-gate-error {

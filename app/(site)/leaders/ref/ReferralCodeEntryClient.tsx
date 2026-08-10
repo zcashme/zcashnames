@@ -9,10 +9,13 @@ import { useState, type FormEvent } from "react";
 import ReferralCodeRecovery from "@/components/ReferralCodeRecovery";
 import { extractReferralCode } from "@/lib/referral-code";
 
+const ACTION_INSET_PX = 4;
+
 export default function ReferralCodeEntryPage() {
   const router = useRouter();
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
+  const hasInput = input.trim().length > 0;
 
   const submitReferralCode = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -44,7 +47,7 @@ export default function ReferralCodeEntryPage() {
             <label className="block text-sm font-semibold text-fg-heading" htmlFor="referral-code">
               Referral code or link
             </label>
-            <div className="mt-2">
+            <div className="relative mt-2 flex items-center">
               <input
                 id="referral-code"
                 type="text"
@@ -54,18 +57,35 @@ export default function ReferralCodeEntryPage() {
                   setError("");
                 }}
                 placeholder="zcashnames.com/?ref=your-code"
-                className="w-full min-w-0 rounded-lg border bg-transparent px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
+                className="w-full min-w-0 rounded-2xl border bg-transparent py-3 pl-4 pr-[5.5rem] text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
                 style={{ borderColor: "var(--leaders-card-border)" }}
               />
-            </div>
-            <div className="mt-3">
-              <button
-                type="submit"
-                className="w-full cursor-pointer rounded-lg border px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-muted"
-                style={{ borderColor: "var(--leaders-card-border)" }}
+              <span
+                className="absolute flex items-center"
+                style={{
+                  top: ACTION_INSET_PX,
+                  right: ACTION_INSET_PX,
+                  bottom: ACTION_INSET_PX,
+                }}
               >
-                View dashboard
-              </button>
+                <button
+                  type="submit"
+                  disabled={!hasInput}
+                  className="inline-flex h-[calc(100%-2px)] shrink-0 items-center justify-center rounded-[13px] px-4 text-sm font-semibold leading-none transition"
+                  style={{
+                    background: hasInput
+                      ? "var(--home-result-primary-bg)"
+                      : "color-mix(in srgb, var(--leaders-card-border, var(--border-muted)) 22%, transparent)",
+                    color: hasInput
+                      ? "var(--home-result-primary-fg)"
+                      : "var(--fg-muted)",
+                    boxShadow: hasInput ? "var(--home-result-primary-shadow)" : "none",
+                    cursor: hasInput ? "pointer" : "not-allowed",
+                  }}
+                >
+                  View
+                </button>
+              </span>
             </div>
             <div className="mt-3">
               <ReferralCodeRecovery

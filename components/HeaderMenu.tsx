@@ -23,9 +23,17 @@ const HEADER_MENU_LINKS: MenuLink[] = [
       { label: "View Waitlist", href: "/waitlist/view" },
       { label: "Reserve Position", href: "/reserve" },
       { label: "Referral Leaderboard", href: "/leaders" },
+      { label: "Referral Dashboard", href: "/leaders/ref" },
     ],
   },
-  { label: "Protected Names", href: "/protected" },
+  {
+    label: "Protected Names",
+    children: [
+      { label: "View Protected Names", href: "/protected" },
+      { label: "Suggest a Protected Name", href: "/protected/suggest" },
+      { label: "Dispute a Protected Name", href: "/protected/dispute" },
+    ],
+  },
   { label: "Blog", href: "/blogs" },
   { label: "Docs", href: "/docs" },
   { label: "FAQ", href: "/faq" },

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { SITEMAP_SECTIONS } from "@/lib/site-nav";
 
 const accentHoverClass =
@@ -32,6 +32,8 @@ export default function FooterSitemap() {
   const [open, setOpen] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const panelId = useId();
+  /** Open-map chrome only — excluded so expanding Sitemap cannot invent Top. */
+  const expandableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setOpen(false);
@@ -40,14 +42,17 @@ export default function FooterSitemap() {
   useEffect(() => {
     function recompute() {
       const doc = document.documentElement;
+      // Base page length: ignore height contributed by the open sitemap panel.
+      const expandable = expandableRef.current?.offsetHeight ?? 0;
       const longEnough =
-        doc.scrollHeight > window.innerHeight * LONG_PAGE_MIN_RATIO;
+        doc.scrollHeight - expandable > window.innerHeight * LONG_PAGE_MIN_RATIO;
       setShowBackToTop(longEnough);
     }
 
     recompute();
     window.addEventListener("resize", recompute);
-    // Content can load/expand after mount (tables, images).
+    // Content can load/expand after mount (tables, images). Also fires when
+    // the sitemap panel opens/closes; expandable height is subtracted above.
     const observer = new ResizeObserver(recompute);
     observer.observe(document.documentElement);
     return () => {
@@ -106,56 +111,59 @@ export default function FooterSitemap() {
         </div>
       </div>
 
-      {/* Site map panel */}
-      <div className={`mx-auto max-w-7xl px-6 ${open ? "pt-10" : "pt-0"}`}>
-        <div
-          id={panelId}
-          className="grid transition-[grid-template-rows] duration-300 ease-out"
-          style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
-          aria-hidden={!open}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <nav
-              aria-label="Site map"
-              className={`pb-8 transition-opacity duration-300 ease-out ${
-                open ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                {SITEMAP_SECTIONS.map((section) => (
-                  <div key={section.href} className="min-w-0">
-                    <Link
-                      href={section.href}
-                      className={`text-sm font-semibold text-fg-heading ${accentHoverClass}`}
-                    >
-                      {section.label}
-                    </Link>
-                    {section.children?.length ? (
-                      <ul className="mt-3 space-y-2">
-                        {section.children.map((child) => (
-                          <li key={child.href}>
-                            <Link
-                              href={child.href}
-                              className={`text-sm text-fg-muted ${accentHoverClass}`}
-                            >
-                              {child.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </nav>
+      {/* Expandable map only (not straddle controls) — height subtracted for Top. */}
+      <div ref={expandableRef}>
+        {/* Site map panel */}
+        <div className={`mx-auto max-w-7xl px-6 ${open ? "pt-10" : "pt-0"}`}>
+          <div
+            id={panelId}
+            className="grid transition-[grid-template-rows] duration-300 ease-out"
+            style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+            aria-hidden={!open}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <nav
+                aria-label="Site map"
+                className={`pb-8 transition-opacity duration-300 ease-out ${
+                  open ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                  {SITEMAP_SECTIONS.map((section) => (
+                    <div key={section.href} className="min-w-0">
+                      <Link
+                        href={section.href}
+                        className={`text-sm font-semibold text-fg-heading ${accentHoverClass}`}
+                      >
+                        {section.label}
+                      </Link>
+                      {section.children?.length ? (
+                        <ul className="mt-3 space-y-2">
+                          {section.children.map((child) => (
+                            <li key={child.href}>
+                              <Link
+                                href={child.href}
+                                className={`text-sm text-fg-muted ${accentHoverClass}`}
+                              >
+                                {child.label}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </nav>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Bottom border when open — line only, no second control row */}
-      {open ? (
-        <div className="w-full border-t border-border" aria-hidden="true" />
-      ) : null}
+        {/* Bottom border when open — line only, no second control row */}
+        {open ? (
+          <div className="w-full border-t border-border" aria-hidden="true" />
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -113,7 +113,7 @@ function formatCommunityCardHref(href: string) {
 
 export default function CommunityPageClient() {
   return (
-    <main id="top" className="w-full">
+    <main className="w-full">
       <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-16 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
         <div className="flex max-w-3xl flex-col gap-4">
           <h1 className="text-4xl font-bold leading-tight text-fg-heading sm:text-5xl">
@@ -133,20 +133,6 @@ export default function CommunityPageClient() {
         {COMMUNITY_SECTIONS.map((section) => (
           <CommunitySectionGroup key={section.slug} section={section} />
         ))}
-
-        <div className="flex justify-center pb-10">
-          <button
-            type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-transparent px-4 py-2 text-[1.02rem] font-semibold text-[var(--home-result-link-fg)] transition-[transform] duration-[140ms] hover:-translate-y-px"
-          >
-            <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
-              <path d="M12 19V5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M5 12L12 5L19 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Back to top
-          </button>
-        </div>
       </section>
     </main>
   );

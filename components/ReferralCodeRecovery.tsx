@@ -10,6 +10,8 @@ import type { ShareKitRecoveryPublicStatus } from "@/lib/sharekit-recovery";
 import { recoverShareKitReferralByEmail } from "@/app/(site)/sharekit/actions";
 import { getEmailAddressValidationMessage, normalizeEmailAddress } from "@/lib/email-address";
 
+const ACTION_INSET_PX = 4;
+
 export default function ReferralCodeRecovery({
   variant = "leaders",
   controlsId,
@@ -32,6 +34,7 @@ export default function ReferralCodeRecovery({
   const { resolvedTheme } = useTheme();
   const validationMessage = getEmailAddressValidationMessage(input);
   const emailIsValid = !validationMessage && normalizeEmailAddress(input).length > 0;
+  const submitReady = emailIsValid && !recovering && !captchaOpen;
 
   const isSharekit = variant === "sharekit";
   const isLightSharekit = isSharekit && resolvedTheme === "light";
@@ -42,8 +45,10 @@ export default function ReferralCodeRecovery({
     ? "cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading disabled:cursor-not-allowed disabled:opacity-60"
     : "cursor-pointer rounded-lg border px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-muted disabled:cursor-not-allowed disabled:opacity-60";
   const inputClassName = isSharekit
-    ? "min-w-0 rounded-lg border border-border-muted px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
-    : "min-w-0 rounded-lg border bg-transparent px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted";
+    ? `w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 pr-[6.5rem] text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
+        isLightSharekit ? "bg-[var(--color-card)]" : "bg-[var(--input-fill)]"
+      }`
+    : "w-full min-w-0 rounded-2xl border bg-transparent py-3 pl-4 pr-[6.5rem] text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted";
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -137,40 +142,60 @@ export default function ReferralCodeRecovery({
             Enter the email address you used to join the waitlist. We&rsquo;ll email every verified name and referral
             code tied to that inbox.
           </label>
-          <input
-            id={`${panelId}-input`}
-            type="email"
-            value={input}
-            onChange={(event) => {
-              setInput(event.target.value);
-              setStatus(null);
-              setMessage("");
-            }}
-            placeholder="you@example.com"
-            className={`${inputClassName} ${isSharekit ? "bg-[var(--input-fill)]" : ""}`}
-            style={isSharekit ? undefined : { borderColor: "var(--leaders-card-border)" }}
-          />
+          <div className="relative flex items-center">
+            <input
+              id={`${panelId}-input`}
+              type="email"
+              value={input}
+              onChange={(event) => {
+                setInput(event.target.value);
+                setStatus(null);
+                setMessage("");
+              }}
+              placeholder="you@example.com"
+              autoComplete="email"
+              className={inputClassName}
+              style={isSharekit ? undefined : { borderColor: "var(--leaders-card-border)" }}
+            />
+            <span
+              className="absolute flex items-center"
+              style={{
+                top: ACTION_INSET_PX,
+                right: ACTION_INSET_PX,
+                bottom: ACTION_INSET_PX,
+              }}
+            >
+              <button
+                type="submit"
+                disabled={!submitReady}
+                className="inline-flex h-[calc(100%-2px)] shrink-0 items-center justify-center rounded-[13px] px-4 text-sm font-semibold leading-none transition"
+                style={{
+                  background: submitReady
+                    ? "var(--home-result-primary-bg)"
+                    : "color-mix(in srgb, var(--leaders-card-border, var(--border-muted)) 22%, transparent)",
+                  color: submitReady
+                    ? "var(--home-result-primary-fg)"
+                    : "var(--fg-muted)",
+                  boxShadow: submitReady ? "var(--home-result-primary-shadow)" : "none",
+                  cursor: recovering ? "progress" : submitReady ? "pointer" : "not-allowed",
+                  opacity: recovering || captchaOpen ? 0.7 : 1,
+                }}
+              >
+                {recovering ? (
+                  <AnimatedLoadingLabel label="Checking" active />
+                ) : captchaOpen ? (
+                  "…"
+                ) : (
+                  "Recover"
+                )}
+              </button>
+            </span>
+          </div>
           {validationMessage ? (
             <p className="text-xs" style={{ color: "var(--accent-red, #e05252)" }}>
               {validationMessage}
             </p>
           ) : null}
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="submit"
-              disabled={!emailIsValid || recovering || captchaOpen}
-              className={buttonClassNameBase}
-              style={isSharekit ? undefined : { borderColor: "var(--leaders-card-border)" }}
-            >
-              {recovering ? (
-                <AnimatedLoadingLabel label="Checking" active />
-              ) : captchaOpen ? (
-                "Complete check…"
-              ) : (
-                "Recover codes"
-              )}
-            </button>
-          </div>
           {message ? (
             <p
               className={`text-sm ${

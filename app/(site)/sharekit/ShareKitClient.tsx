@@ -11,6 +11,8 @@ import { buildReferralUrl, extractReferralCode } from "@/lib/referral-code";
 import type { ShareKitDraft, ShareKitSection } from "@/lib/sharekit";
 import { lookupShareKitReferral } from "./actions";
 
+const ACTION_INSET_PX = 4;
+
 function replaceYourLink(post: string, shareUrl: string): string {
   return post.replaceAll("[your link]", shareUrl);
 }
@@ -140,13 +142,12 @@ export default function ShareKitClient({
   const referralPanelClassName = monochrome
     ? "bg-transparent"
     : "bg-[var(--color-raised)]";
-  const referralActionButtonClassName = resolvedTheme === "light"
-    ? "rounded-md border border-border-muted bg-[var(--color-card)] px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading disabled:cursor-not-allowed disabled:opacity-60"
-    : "cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading disabled:cursor-not-allowed disabled:opacity-60";
+  const hasInput = input.trim().length > 0;
+  const submitReady = hasInput && !submitting;
 
   return (
     <>
-      <div id="top" className="flex max-w-3xl flex-col gap-4">
+      <div className="flex max-w-3xl flex-col gap-4">
         <p className="type-section-title text-fg-body">
           Ready-made posts
         </p>
@@ -159,7 +160,7 @@ export default function ShareKitClient({
               ? `Posts will be populated with ${referralName}'s referral link`
               : "Referral code or link to populate posts."}
           </label>
-          <div className="relative w-full">
+          <div className="relative flex w-full items-center">
             <input
               id="sharekit-referral-input"
               type="text"
@@ -169,30 +170,48 @@ export default function ShareKitClient({
                 setError("");
               }}
               placeholder="zcashnames.com/?ref=your-code"
-              className={`w-full min-w-0 rounded-lg border border-border-muted px-3 py-2 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
+              className={`w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
                 resolvedTheme === "light" ? "bg-[var(--color-card)]" : "bg-transparent"
-              } ${input ? "pr-20" : ""}`}
+              } ${hasInput ? "pr-[9.5rem]" : "pr-[5.5rem]"}`}
             />
-            {input ? (
-              <button
-                type="button"
-                onClick={clearReferralCode}
-                className="absolute right-0 top-0 bottom-0 inline-flex items-center justify-center rounded-r-lg px-4 text-sm font-semibold text-fg-muted transition-colors hover:text-fg-heading"
-              >
-                Clear
-              </button>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="submit"
-              disabled={submitting}
-              className={referralActionButtonClassName}
+            <span
+              className="absolute flex items-center gap-1.5"
+              style={{
+                top: ACTION_INSET_PX,
+                right: ACTION_INSET_PX,
+                bottom: ACTION_INSET_PX,
+              }}
             >
-              {submitting ? <AnimatedLoadingLabel label="Checking" active /> : referralCode ? "Update code" : "Apply code"}
-            </button>
-            <ReferralCodeRecovery variant="sharekit" controlsId="sharekit-forgot-code" />
+              {hasInput ? (
+                <button
+                  type="button"
+                  onClick={clearReferralCode}
+                  className="inline-flex h-[calc(100%-2px)] items-center justify-center rounded-[13px] px-3 text-sm font-semibold leading-none text-fg-muted transition-colors hover:text-fg-heading"
+                >
+                  Clear
+                </button>
+              ) : null}
+              <button
+                type="submit"
+                disabled={!submitReady}
+                className="inline-flex h-[calc(100%-2px)] shrink-0 items-center justify-center rounded-[13px] px-4 text-sm font-semibold leading-none transition"
+                style={{
+                  background: submitReady
+                    ? "var(--home-result-primary-bg)"
+                    : "color-mix(in srgb, var(--leaders-card-border, var(--border-muted)) 22%, transparent)",
+                  color: submitReady
+                    ? "var(--home-result-primary-fg)"
+                    : "var(--fg-muted)",
+                  boxShadow: submitReady ? "var(--home-result-primary-shadow)" : "none",
+                  cursor: submitting ? "progress" : submitReady ? "pointer" : "not-allowed",
+                  opacity: submitting ? 0.7 : 1,
+                }}
+              >
+                {submitting ? <AnimatedLoadingLabel label="Checking" active /> : "Apply"}
+              </button>
+            </span>
           </div>
+          <ReferralCodeRecovery variant="sharekit" controlsId="sharekit-forgot-code" />
           {error && <p className="text-sm text-fg-muted">{error}</p>}
         </form>
       </section>
@@ -232,14 +251,6 @@ export default function ShareKitClient({
                     />
                     );
                   })}
-                </div>
-                <div>
-                  <a
-                    href="#top"
-                    className="text-sm font-semibold text-fg-muted underline-offset-2 transition-colors hover:text-fg-heading hover:underline"
-                  >
-                    Back to top
-                  </a>
                 </div>
               </section>
             </div>
@@ -318,7 +329,7 @@ function DraftCard({
           onChange={(event) => onChange(event.target.value)}
           className={`min-h-[320px] w-full flex-1 resize-y rounded-lg border px-3 py-3 text-sm leading-6 outline-none transition-colors ${textareaClassName}`}
         />
-        <div className={`flex flex-wrap gap-2 ${actionsClassName}`}>
+        <div className={`flex flex-wrap items-center gap-2 ${actionsClassName}`}>
           <button
             type="button"
             onClick={() => void copyState.copy(value)}
@@ -327,15 +338,6 @@ function DraftCard({
             <ShareCopyIcon />
             {copyState.copied ? "Copied!" : "Copy"}
           </button>
-          {resetVisible && (
-            <button
-              type="button"
-              onClick={onReset}
-              className={actionButtonClassName}
-            >
-              Reset
-            </button>
-          )}
           <ShareDropdown
             label="Share"
             message={value}
@@ -345,8 +347,19 @@ function DraftCard({
             systemShareLabel="Other"
             menuAlign="left"
             showTriggerIcon={true}
+            // Avoid ActionDropdown's default w-full root, which drops Share onto the next line.
+            rootClassName="relative shrink-0"
             buttonClassName={`inline-flex items-center gap-2 ${actionButtonClassName}`}
           />
+          {resetVisible && (
+            <button
+              type="button"
+              onClick={onReset}
+              className={actionButtonClassName}
+            >
+              Reset
+            </button>
+          )}
         </div>
       </div>
     </article>

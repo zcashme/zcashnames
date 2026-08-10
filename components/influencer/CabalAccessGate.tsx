@@ -11,8 +11,8 @@ function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <button type="submit" disabled={pending}>
-      {pending ? "Checking" : "Enter"}
+    <button type="submit" className="influencer-gate-submit" disabled={pending}>
+      {pending ? "…" : "Enter"}
     </button>
   );
 }
@@ -32,15 +32,19 @@ export default function CabalAccessGate({ deckTitle }: { deckTitle: string }) {
         <h1>Enter your invite password</h1>
         <label>
           <span>Password</span>
-          <input
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            autoFocus
-            required
-          />
+          <span className="influencer-gate-field">
+            <input
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              autoFocus
+              required
+            />
+            <span className="influencer-gate-actions">
+              <SubmitButton />
+            </span>
+          </span>
         </label>
-        <SubmitButton />
         {state.error ? (
           <p className="influencer-gate-error" role="alert">
             {state.error}

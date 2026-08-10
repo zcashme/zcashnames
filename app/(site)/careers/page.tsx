@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import ShareDropdown from "@/components/ShareDropdown";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import CareersPageControls from "@/components/careers/CareersPageControls";
 import { CareerCard } from "@/components/careers/CareerCards";
 import { listOpenCareerJobs } from "@/lib/careers";
 
@@ -91,7 +90,6 @@ export default async function CareersPage() {
             ))}
           </div>
         )}
-        <CareersPageControls />
       </section>
     </main>
   );
