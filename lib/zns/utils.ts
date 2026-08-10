@@ -2,6 +2,8 @@ import { ZNS } from "zcashname-sdk";
 import type { Network, Registration, ResolveName, NameAvailabilityState } from "@/lib/types";
 import {
   validateAddress,
+  isValidTransparentAddress,
+  decodeTransparentAddress,
   type AddressStatus,
   type AddressValidationResult,
 } from "@/lib/zns/address-validation";
@@ -12,7 +14,7 @@ const instances: Record<Network, ZNS> = {
 };
 
 export const getZns = (network: Network): ZNS => instances[network];
-export { validateAddress };
+export { validateAddress, isValidTransparentAddress, decodeTransparentAddress };
 export type { AddressStatus, AddressValidationResult };
 
 //

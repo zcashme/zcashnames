@@ -22,7 +22,7 @@ import { generateSessionId, buildZvsMemo } from "@/lib/purchases/memo";
 import { zip321Uri } from "@/lib/purchases/zip321";
 import { checkUtxo } from "@/lib/zns/mempool";
 import { resolveName } from "@/lib/zns/resolve";
-import { validateAddress } from "@/lib/zns/utils";
+import { isValidTransparentAddress, validateAddress } from "@/lib/zns/utils";
 import {
   checkUnlockCode,
   verifyOtp,
@@ -98,6 +98,12 @@ export function usePurchaseFlow({
   const phases: Phase[] = phasesFor(action, resolveResult);
   const phase = phases[s.step] ?? phases[phases.length - 1];
 
+  const otpVerifyInFlightRef = useRef(false);
+  const otpAdvanceTimerRef = useRef<number | null>(null);
+  const stateRef = useRef(s);
+  stateRef.current = s;
+  const sawMempoolRef = useRef(false);
+
   const set = useCallback((payload: Partial<PurchaseFlowState>) => {
     dispatch({ type: "SET", payload });
   }, []);
@@ -122,6 +128,15 @@ export function usePurchaseFlow({
     // phases is derived from action+resolveResult; omit identity from deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s, action, name, network, phase, disableResume]);
+
+  useEffect(() => {
+    return () => {
+      if (otpAdvanceTimerRef.current != null) {
+        window.clearTimeout(otpAdvanceTimerRef.current);
+        otpAdvanceTimerRef.current = null;
+      }
+    };
+  }, []);
 
   function goto(targetStep: number) {
     if (targetStep >= s.step) return;
@@ -211,9 +226,22 @@ export function usePurchaseFlow({
         return;
       }
     }
-    if (needsPayTaddr && !s.payTaddrInput.trim()) {
-      set({ inputError: "Payout address is required." });
-      return;
+    if (needsPayTaddr) {
+      const payTaddr = s.payTaddrInput.trim();
+      if (!payTaddr) {
+        set({ inputError: "Payout address is required." });
+        return;
+      }
+      // Full Base58Check + network-matched t-addr (t1/t3 mainnet, tm/tn testnet).
+      if (!isValidTransparentAddress(payTaddr, network)) {
+        set({
+          inputError:
+            network === "testnet"
+              ? "Enter a valid testnet transparent address (tm or tn)."
+              : "Enter a valid transparent Zcash address (t1 or t3).",
+        });
+        return;
+      }
     }
 
     if (action === "BUY" && resolveResult.status === "listed" && resolveResult.pendingBuy) {
@@ -279,7 +307,9 @@ export function usePurchaseFlow({
   }
 
   async function handleVerifyOtp() {
-    if (s.otpLoading) return;
+    // Guard concurrent clicks / double-invoke so we never step past confirm
+    // (Send Payment) into scanning after a successful passcode.
+    if (otpVerifyInFlightRef.current || s.otpLoading || s.otpVerified) return;
     if (!s.otpSent) {
       set({ otpError: "Send the verification transaction first." });
       return;
@@ -294,12 +324,14 @@ export function usePurchaseFlow({
       set({ otpError: "Max attempts reached." });
       return;
     }
+    otpVerifyInFlightRef.current = true;
     set({ otpError: "", otpLoading: true });
     try {
       const regAddr =
         "registration" in resolveResult ? resolveResult.registration.address : "";
       const result = await verifyOtp(s.otpMemo, code, regAddr);
       if (!result.ok) {
+        otpVerifyInFlightRef.current = false;
         set({
           otpAttempts: s.otpAttempts + 1,
           otpError: result.error,
@@ -323,34 +355,50 @@ export function usePurchaseFlow({
       );
 
       if (!ar.ok) {
+        otpVerifyInFlightRef.current = false;
         set({ otpError: ar.error, otpLoading: false, otpVerified: false });
         return;
       }
-      set({
+
+      const paymentPatch = {
         uri: ar.uri,
         memo: ar.memo,
         paymentAddress: ar.paymentAddress ?? "",
         amountZec: ar.amountZec ?? "",
+      };
+      // Always land on Send Payment (confirm) — never relative-advance, which
+      // can skip into Scanning if verify runs more than once.
+      const confirmIdx = phases.indexOf("confirm");
+      set({
+        ...paymentPatch,
         otpLoading: false,
         otpVerified: true,
       });
-      window.setTimeout(() => {
-        advance({
-          uri: ar.uri,
-          memo: ar.memo,
-          paymentAddress: ar.paymentAddress ?? "",
-          amountZec: ar.amountZec ?? "",
-          otpVerified: false,
-        });
+      if (otpAdvanceTimerRef.current != null) {
+        window.clearTimeout(otpAdvanceTimerRef.current);
+      }
+      otpAdvanceTimerRef.current = window.setTimeout(() => {
+        otpAdvanceTimerRef.current = null;
+        otpVerifyInFlightRef.current = false;
+        if (confirmIdx >= 0) {
+          set({
+            ...paymentPatch,
+            // Clear flash state so a later back-nav to OTP can re-verify.
+            otpVerified: false,
+            step: confirmIdx,
+          });
+        } else {
+          advance({
+            ...paymentPatch,
+            otpVerified: false,
+          });
+        }
       }, 650);
     } catch {
+      otpVerifyInFlightRef.current = false;
       set({ otpError: "Something went wrong. Try again.", otpLoading: false, otpVerified: false });
     }
   }
-
-  const stateRef = useRef(s);
-  stateRef.current = s;
-  const sawMempoolRef = useRef(false);
 
   useEffect(() => {
     if (phase !== "scanning") return;

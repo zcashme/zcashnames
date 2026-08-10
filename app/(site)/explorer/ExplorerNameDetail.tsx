@@ -21,6 +21,7 @@ import {
   NameStatusButtons,
   statusSupportsPrice,
 } from "@/components/NameStatus";
+import NameForSaleShareButton from "@/components/purchases/NameForSaleShareButton";
 
 function toAvailabilityState(result: ResolveName): NameAvailabilityState {
   if (result.status === "available") return "available";
@@ -109,9 +110,17 @@ export default function ExplorerNameDetail({
                   )}
                 </div>
                 <div className="home-result-trust-pills justify-end">
-                  <span className="home-result-feature-chip">
-                    {result.query.length} characters
-                  </span>
+                  {availabilityState === "forsale" ? (
+                    <NameForSaleShareButton
+                      name={result.query}
+                      variant="feature-chip"
+                      menuAlign="right"
+                    />
+                  ) : (
+                    <span className="home-result-feature-chip">
+                      {result.query.length} characters
+                    </span>
+                  )}
                 </div>
               </div>
               <div

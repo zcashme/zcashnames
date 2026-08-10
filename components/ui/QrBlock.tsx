@@ -149,7 +149,7 @@ export function QrBlock({
                       type="button"
                       onClick={() => setExpanded(true)}
                       className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                      style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                      style={{ background: "transparent", border: "none", color: "var(--fg-body)" }}
                       aria-label="Expand QR"
                       title="Expand QR"
                     >
@@ -159,7 +159,7 @@ export function QrBlock({
                       type="button"
                       onClick={handleSavePng}
                       className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                      style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                      style={{ background: "transparent", border: "none", color: "var(--fg-body)" }}
                       aria-label="Save QR"
                       title="Save QR"
                     >
@@ -231,7 +231,7 @@ export function QrBlock({
                 type="button"
                 onClick={() => setExpanded(true)}
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                style={{ background: "transparent", border: "none", color: "var(--fg-body)" }}
                 aria-label="Expand QR"
                 title="Expand QR"
               >
@@ -241,7 +241,7 @@ export function QrBlock({
                 type="button"
                 onClick={handleSavePng}
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                style={{ background: "transparent", border: "none", color: "var(--fg-body)" }}
                 aria-label="Save QR"
                 title="Save QR"
               >
@@ -338,26 +338,46 @@ function CopyRow({ label, value, copied, onCopy, variant = "default" }: CopyRowP
   const isVerify = variant === "verify";
 
   return (
-    <div className={`grid w-full items-center gap-2 text-left ${isVerify ? "grid-cols-[4.35rem_minmax(0,1fr)_2.75rem]" : "grid-cols-[4.5rem_1fr_auto]"}`}>
+    <div
+      className={`grid w-full items-center gap-2 text-left ${
+        isVerify ? "grid-cols-[4.35rem_minmax(0,1fr)]" : "grid-cols-[4.5rem_minmax(0,1fr)]"
+      }`}
+    >
       <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>{label}</span>
-      <code
-        className={`min-w-0 truncate font-mono ${isVerify ? "rounded-xl px-3 py-3 text-[0.78rem]" : "rounded-md px-2 py-1 text-xs"}`}
-        style={{ background: "var(--color-raised)", color: "var(--fg-body)", border: "1px solid var(--border-muted)" }}
-        title={value}
+      {/* Value scrolls in its own column; copy control is a sibling so they never overlap. */}
+      <div
+        className={`flex min-w-0 items-center ${isVerify ? "rounded-xl" : "rounded-md"}`}
+        style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)" }}
       >
-        {value || "Not set"}
-      </code>
-      <button
-        type="button"
-        onClick={onCopy}
-        disabled={!value}
-        className={`shrink-0 inline-flex items-center justify-center rounded-lg cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed ${isVerify ? "h-11 w-11 rounded-xl" : "h-7 w-7"}`}
-        style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
-        aria-label={`Copy ${label.toLowerCase()}`}
-        title={copied ? "Copied!" : `Copy ${label.toLowerCase()}`}
-      >
-        {copied ? <CheckIcon /> : <CopyIcon />}
-      </button>
+        <code
+          className={[
+            "min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono",
+            // Hide scrollbar; trackpad/touch/shift-wheel still scroll.
+            "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+            isVerify ? "py-3 pl-3 pr-2 text-[0.78rem]" : "py-1 pl-2 pr-1.5 text-xs",
+          ].join(" ")}
+          style={{ color: "var(--fg-body)" }}
+          title={value}
+        >
+          {value || "Not set"}
+        </code>
+        <button
+          type="button"
+          onClick={onCopy}
+          disabled={!value}
+          className={[
+            "inline-flex shrink-0 items-center justify-center self-stretch",
+            "cursor-pointer border-0 bg-transparent transition-opacity hover:opacity-80",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            isVerify ? "w-10 pr-2" : "w-7 pr-1.5",
+          ].join(" ")}
+          style={{ color: "var(--fg-body)" }}
+          aria-label={`Copy ${label.toLowerCase()}`}
+          title={copied ? "Copied!" : `Copy ${label.toLowerCase()}`}
+        >
+          {copied ? <CheckIcon /> : <CopyIcon />}
+        </button>
+      </div>
     </div>
   );
 }

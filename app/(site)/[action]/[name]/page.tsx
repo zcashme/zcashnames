@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import NameActionForm from "@/components/purchases/NameActionForm";
+import NameForSaleShareButton from "@/components/purchases/NameForSaleShareButton";
 import { NameStatusBadge } from "@/components/NameStatus";
 import { ACTION_LABELS } from "@/lib/types";
 import type { Action, NameAvailabilityState, Network, ResolveName } from "@/lib/types";
@@ -63,7 +64,7 @@ function featureChipsFor(
     chips.push(charLabel, "No previous owners");
     if (popular) chips.push("Popular name");
   } else if (availability === "forsale") {
-    chips.push(charLabel);
+    // Character-count chip is replaced by NameForSaleShareButton in FeatureChips.
     if (popular) chips.push("Popular name");
   } else if (availability === "protected") {
     // Claimable protected names: available-style chips + Protected
@@ -78,13 +79,30 @@ function featureChipsFor(
 function FeatureChips({
   chips,
   placement,
+  name,
+  network,
+  availability,
 }: {
   chips: string[];
   placement: "inline" | "hero";
+  name: string;
+  network: Network;
+  availability: NameAvailabilityState;
 }) {
-  if (chips.length === 0) return null;
+  const showForSaleShare = availability === "forsale";
+  if (chips.length === 0 && !showForSaleShare) return null;
+
   return (
     <div className={`name-action-chips name-action-chips--${placement}`}>
+      {showForSaleShare ? (
+        <NameForSaleShareButton
+          name={name}
+          network={network}
+          variant="trust-pill"
+          menuAlign={placement === "hero" ? "left" : "right"}
+          menuDirection={placement === "hero" ? "down" : "down"}
+        />
+      ) : null}
       {chips.map((chip) => (
         <span key={`${placement}-${chip}`} className="home-result-trust-pill">
           {chip}
@@ -149,14 +167,22 @@ export default async function NameActionPage({ params, searchParams }: PageProps
       <div className="name-action-column mx-auto w-full max-w-2xl">
         <div className="name-action-status-row mb-4">
           <div className="name-action-status-left flex min-w-0 flex-wrap items-center gap-2.5">
-            <NameStatusBadge status={availability} />
+            {availability !== "unavailable" ? (
+              <NameStatusBadge status={availability} />
+            ) : null}
             {showPrice ? (
               <p className="m-0 text-[var(--home-result-price-color)] text-[clamp(1.02rem,1.85vw,1.3rem)] font-extrabold tracking-[-0.012em]">
                 {priceZec} ZEC
               </p>
             ) : null}
           </div>
-          <FeatureChips chips={featureChips} placement="inline" />
+          <FeatureChips
+            chips={featureChips}
+            placement="inline"
+            name={name}
+            network={network}
+            availability={availability}
+          />
         </div>
 
         <section
@@ -168,9 +194,23 @@ export default async function NameActionPage({ params, searchParams }: PageProps
           }}
         >
           <div className="grid gap-4">
-            <FeatureChips chips={featureChips} placement="hero" />
+            <FeatureChips
+              chips={featureChips}
+              placement="hero"
+              name={name}
+              network={network}
+              availability={availability}
+            />
             <h1 className="text-center text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl">
-              <span className="action-hero-name">{name}</span>
+              <a
+                href={backHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="action-hero-name action-hero-name--link"
+                title={`View ${name} on Explorer`}
+              >
+                {name}
+              </a>
             </h1>
             <p
               className="mx-auto max-w-3xl text-center text-base leading-8 sm:text-lg"

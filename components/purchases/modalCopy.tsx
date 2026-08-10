@@ -43,16 +43,20 @@ export function AddressBadge({ address }: { address: string | undefined }) {
 export function SentenceLines({
   children,
   align = "start",
+  gap = "default",
 }: {
   children: React.ReactNode;
   align?: "start" | "center";
+  /** `relaxed` adds more space between stacked success lines. */
+  gap?: "default" | "relaxed";
 }) {
+  const gapClass = gap === "relaxed" ? "gap-3" : "gap-1";
   return (
     <span
       className={
         align === "center"
-          ? "inline-flex flex-col items-center gap-1 text-center"
-          : "inline-flex flex-col items-start gap-1 text-left"
+          ? `inline-flex flex-col items-center ${gapClass} text-center`
+          : `inline-flex flex-col items-start ${gapClass} text-left`
       }
     >
       {children}
@@ -92,17 +96,24 @@ export function inputDescription(action: Action, name: string, amount?: string):
 export function scanningStatusMessage(action: Action, scanState: ScanState): React.ReactNode {
   switch (scanState) {
     case "not_detected":
-      return <>Your {action === "BUY" ? "intent to purchase" : ACTION_NOUNS[action]} hasn&rsquo;t been detected yet.</>;
+      return (
+        <SentenceLines align="center">
+          <span>
+            Your {action === "BUY" ? "intent to purchase" : ACTION_NOUNS[action]} hasn&rsquo;t been
+            detected yet.
+          </span>
+        </SentenceLines>
+      );
     case "in_mempool":
       return (
-        <SentenceLines>
+        <SentenceLines align="center">
           <span>Your {ACTION_NOUNS[action]} is in the mempool.</span>
           <span>Waiting to be mined.</span>
         </SentenceLines>
       );
     case "confirming":
       return (
-        <SentenceLines>
+        <SentenceLines align="center">
           <span>Your {ACTION_NOUNS[action]} is being mined.</span>
           <span>Hang tight &mdash; this should only take a moment.</span>
         </SentenceLines>
@@ -133,21 +144,21 @@ export function minedMessage(action: Action, name: string, address?: string): Re
   switch (action) {
     case "CLAIM":
       return (
-        <SentenceLines align="center">
+        <SentenceLines align="center" gap="relaxed">
           <span>Claim confirmed on-chain!</span>
           <span><NameBadge name={name} /> now resolves to <AddressBadge address={address} />.</span>
         </SentenceLines>
       );
     case "BUY":
       return (
-        <SentenceLines align="center">
+        <SentenceLines align="center" gap="relaxed">
           <span>Purchase is confirmed on-chain!</span>
           <span><NameBadge name={name} /> now resolves to <AddressBadge address={address} />.</span>
         </SentenceLines>
       );
     case "UPDATE":
       return (
-        <SentenceLines align="center">
+        <SentenceLines align="center" gap="relaxed">
           <span>Address is updated on-chain!</span>
           <span><NameBadge name={name} /> now resolves to <AddressBadge address={address} />.</span>
         </SentenceLines>

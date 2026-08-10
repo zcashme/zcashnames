@@ -1,10 +1,11 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { usePurchaseFlow } from "@/components/hooks/usePurchaseFlow";
+import ShareDropdown from "@/components/ShareDropdown";
 import { ACTION_LABELS, getNetworkConstants } from "@/lib/types";
 import type { Action, Network, Phase, ResolveName } from "@/lib/types";
 import { validateAddress } from "@/lib/zns/utils";
@@ -17,10 +18,59 @@ import {
   AddressBadge,
   minedMessage,
   modalDescription,
+  NameBadge,
   phaseHeader,
   scanningStatusMessage,
   settlingStatusMessage,
 } from "@/components/purchases/modalCopy";
+import PasscodeBoxes from "@/components/purchases/PasscodeBoxes";
+
+const SITE_ORIGIN = "https://www.zcashnames.com";
+
+function successShareCopy(action: Action, name: string): {
+  message: string;
+  xMessage: string;
+  emailSubject: string;
+} {
+  switch (action) {
+    case "CLAIM":
+      return {
+        message: `I just claimed ${name} on Zcash Names.`,
+        xMessage: `I just claimed ${name} on @ZcashNames.`,
+        emailSubject: `I claimed ${name} on Zcash Names`,
+      };
+    case "BUY":
+      return {
+        message: `I just bought ${name} on Zcash Names.`,
+        xMessage: `I just bought ${name} on @ZcashNames.`,
+        emailSubject: `I bought ${name} on Zcash Names`,
+      };
+    case "UPDATE":
+      return {
+        message: `I just updated ${name} on Zcash Names.`,
+        xMessage: `I just updated ${name} on @ZcashNames.`,
+        emailSubject: `I updated ${name} on Zcash Names`,
+      };
+    case "LIST":
+      return {
+        message: `I just listed ${name} for sale on Zcash Names.`,
+        xMessage: `I just listed ${name} for sale on @ZcashNames.`,
+        emailSubject: `${name} is listed for sale on Zcash Names`,
+      };
+    case "DELIST":
+      return {
+        message: `I just delisted ${name} on Zcash Names.`,
+        xMessage: `I just delisted ${name} on @ZcashNames.`,
+        emailSubject: `${name} was delisted on Zcash Names`,
+      };
+    case "RELEASE":
+      return {
+        message: `I just released ${name} on Zcash Names - it is available to claim.`,
+        xMessage: `I just released ${name} on @ZcashNames - it is available to claim.`,
+        emailSubject: `${name} was released on Zcash Names`,
+      };
+  }
+}
 
 type NameActionFormProps = {
   action: Action;
@@ -230,9 +280,9 @@ export default function NameActionForm({
     name,
     network,
     resolveResult,
-    onSuccess: () => {
-      router.refresh();
-    },
+    // Do not router.refresh() on success — revalidating resolve status can
+    // flip the server page to "Action unavailable" and unmount this form
+    // before the user sees Share / step / Done confirmation.
   });
 
   const {
@@ -262,9 +312,34 @@ export default function NameActionForm({
       : undefined;
   const isResume = !!pendingBuy && phase === "input";
 
+  const successShare = useMemo(() => {
+    const path = explorerNameHref(name, network);
+    const copy = successShareCopy(action, name);
+    return {
+      ...copy,
+      shareUrl: `${SITE_ORIGIN}${path}`,
+    };
+  }, [action, name, network]);
+
   function handleDone() {
     clearResume();
     router.push(doneHref);
+  }
+
+  function successShareButton() {
+    return (
+      <ShareDropdown
+        label="Share"
+        message={successShare.message}
+        xMessage={successShare.xMessage}
+        shareUrl={successShare.shareUrl}
+        emailSubject={successShare.emailSubject}
+        menuAlign="left"
+        menuDirection="up"
+        rootClassName="relative inline-flex w-fit flex-col items-center"
+        buttonClassName="box-border inline-flex h-9 min-h-9 items-center justify-center gap-2 rounded-[13px] border border-border-muted bg-transparent px-4 text-sm font-semibold leading-none text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+      />
+    );
   }
 
   function confirmOtpBack() {
@@ -286,20 +361,7 @@ export default function NameActionForm({
 
   function footerPrimary() {
     if (isSuccess) {
-      return (
-        <button
-          type="button"
-          onClick={handleDone}
-          className="inline-flex h-[46px] items-center justify-center whitespace-nowrap rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-85"
-          style={{
-            background: "var(--home-result-primary-bg)",
-            color: "var(--home-result-primary-fg)",
-            boxShadow: "var(--home-result-primary-shadow)",
-          }}
-        >
-          Done
-        </button>
-      );
+      return <InlineStepButton label="View on Explorer" onClick={handleDone} />;
     }
 
     switch (phase) {
@@ -340,14 +402,12 @@ export default function NameActionForm({
           />
         );
       case "confirm":
-        return <InlineStepButton label="I sent it" onClick={() => advance()} />;
+        return <InlineStepButton label="I Sent It" onClick={() => advance()} />;
       case "fund":
         if (resolveResult.status !== "listed") {
           return <InlineStepButton label="Close" onClick={handleDone} />;
         }
-        return (
-          <InlineStepButton label="I've sent the payment" onClick={() => advance()} />
-        );
+        return <InlineStepButton label="I Sent It" onClick={() => advance()} />;
       case "scanning":
       case "settling":
         return (
@@ -531,10 +591,16 @@ export default function NameActionForm({
                   set({ payTaddrInput: e.target.value, inputError: "" });
                   if (muted) goto(phases.indexOf("input"));
                 }}
-                placeholder="t1…"
+                placeholder={network === "testnet" ? "tm…" : "t1…"}
                 className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none disabled:opacity-70"
-                style={fieldStyle(false)}
+                style={fieldStyle(
+                  !!s.inputError &&
+                    active &&
+                    needsPayTaddr &&
+                    /payout|transparent|checksum|t-address|tm or tn|t1 or t3/i.test(s.inputError),
+                )}
                 autoComplete="off"
+                spellCheck={false}
               />
             </div>
           )}
@@ -564,65 +630,65 @@ export default function NameActionForm({
               Send exact memo and minimum amount to the address below to receive a passcode.
             </p>
           </div>
-          {s.otpMemo && active && (
-            <div className="flex justify-center">
-              <QrBlock
-                address={getNetworkConstants(network).OTP_SIGNIN_ADDR}
-                amount={getNetworkConstants(network).OTP_AMOUNT}
-                memo={s.otpMemo}
-                size={180}
-              />
-            </div>
-          )}
-          {s.otpSent && (
-            <>
-              <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-                The registered owner will receive a code.
-              </p>
-              <div>
-                <PhaseLabel complete={complete}>
-                  Passcode
-                  {!complete && <RequiredAsterisk />}
-                </PhaseLabel>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={s.otpCode}
-                  disabled={muted || s.otpVerified}
-                  onChange={(e) =>
-                    set({
-                      otpCode: e.target.value.replace(/\D/g, "").slice(0, 6),
-                      otpError: "",
-                      otpVerified: false,
-                    })
-                  }
-                  placeholder="000000"
-                  className="w-full rounded-2xl px-4 py-2.5 text-center font-mono text-sm tracking-[0.3em] outline-none disabled:opacity-70"
-                  style={fieldStyle(!!s.otpError && active)}
-                  autoComplete="off"
+          {s.otpMemo && active ? (
+            <div className={`flex flex-col ${s.otpSent ? "gap-6" : ""}`}>
+              <div className="flex justify-center">
+                <QrBlock
+                  address={getNetworkConstants(network).OTP_SIGNIN_ADDR}
+                  amount={getNetworkConstants(network).OTP_AMOUNT}
+                  memo={s.otpMemo}
+                  size={180}
                 />
               </div>
-            </>
-          )}
-          {active && s.otpVerified && (
-            <p className="text-sm font-semibold" style={{ color: "var(--color-accent-green)" }}>
-              Passcode accepted.
+              {s.otpSent ? (
+                <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
+                  The owner of <NameBadge name={name} /> will receive a passcode in their wallet.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {s.otpSent && !active ? (
+            <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
+              The owner of <NameBadge name={name} /> will receive a passcode in their wallet.
             </p>
-          )}
-          {active && (s.otpError || s.otpAttempts > 0) && (
-            <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              {s.otpError && (
-                <span className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
-                  {s.otpError}
-                </span>
-              )}
-              {s.otpAttempts > 0 && (
-                <span className="text-xs" style={{ color: "var(--fg-muted)" }}>
-                  Attempt {s.otpAttempts} of {getNetworkConstants(network).OTP_MAX_ATTEMPTS}
-                </span>
-              )}
-            </p>
+          ) : null}
+          {s.otpSent && (
+            <div className="flex w-full flex-col items-center gap-3">
+              <PasscodeBoxes
+                id="name-action-passcode"
+                value={s.otpCode}
+                disabled={muted || s.otpVerified}
+                error={active && !!s.otpError}
+                success={active && s.otpVerified}
+                autoFocus={active && !s.otpVerified}
+                className="w-full max-w-sm"
+                onChange={(digits) =>
+                  set({
+                    otpCode: digits,
+                    otpError: "",
+                    otpVerified: false,
+                  })
+                }
+                onSubmit={() => void handleVerifyOtp()}
+              />
+              {active && (s.otpError || s.otpAttempts > 0) ? (
+                <p className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1">
+                  {s.otpError ? (
+                    <span
+                      className="text-sm font-semibold"
+                      style={{ color: "var(--accent-red, #e05252)" }}
+                    >
+                      {s.otpError}
+                    </span>
+                  ) : null}
+                  {s.otpAttempts > 0 ? (
+                    <span className="text-xs" style={{ color: "var(--fg-muted)" }}>
+                      Attempt {s.otpAttempts} of {getNetworkConstants(network).OTP_MAX_ATTEMPTS}
+                    </span>
+                  ) : null}
+                </p>
+              ) : null}
+            </div>
           )}
         </div>
       );
@@ -654,19 +720,16 @@ export default function NameActionForm({
     if (p === "scanning") {
       if (s.scanState === "mined" && action !== "BUY") {
         return (
-          <div className="flex w-full flex-col items-center gap-4 text-center">
+          <div className="w-full space-y-4">
+            {/* Label stays left; success body is centered. */}
             <PhaseLabel complete>Scanning</PhaseLabel>
-            <ZcashNamesLogoMark size={56} />
-            <div className="flex w-full flex-col items-center text-center text-sm" style={{ color: "var(--fg-body)" }}>
-              {minedMessage(action, name, s.address)}
+            <div className="flex w-full flex-col items-center gap-4 text-center">
+              <ZcashNamesLogoMark size={56} />
+              <div className="flex w-full flex-col items-center text-center text-sm" style={{ color: "var(--fg-body)" }}>
+                {minedMessage(action, name, s.address)}
+              </div>
+              {successShareButton()}
             </div>
-            <a
-              href={explorerNameHref(name, network)}
-              className="text-sm font-semibold underline"
-              style={{ color: "var(--fg-body)" }}
-            >
-              View on Explorer
-            </a>
           </div>
         );
       }
@@ -677,13 +740,12 @@ export default function NameActionForm({
             {modalDescription(action, "scanning", name, s)}
           </p>
           <div
-            className="w-full rounded-xl p-5"
+            className={`purchase-scan-status-loading flex w-full flex-col items-center justify-center rounded-xl p-5 text-center`}
             style={{
-              background: "var(--color-raised)",
               border: `1.5px solid ${s.scanState === "in_mempool" || s.scanState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
             }}
           >
-            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+            <p className="relative z-[1] w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
               {scanningStatusMessage(action, s.scanState)}
             </p>
           </div>
@@ -735,19 +797,16 @@ export default function NameActionForm({
     if (p === "settling") {
       if (s.settleState === "mined") {
         return (
-          <div className="flex w-full flex-col items-center gap-4 text-center">
+          <div className="w-full space-y-4">
+            {/* Label stays left; success body is centered. */}
             <PhaseLabel complete>Finalising purchase</PhaseLabel>
-            <ZcashNamesLogoMark size={56} />
-            <div className="flex w-full flex-col items-center text-center text-sm" style={{ color: "var(--fg-body)" }}>
-              {minedMessage("BUY", name, s.address)}
+            <div className="flex w-full flex-col items-center gap-4 text-center">
+              <ZcashNamesLogoMark size={56} />
+              <div className="flex w-full flex-col items-center text-center text-sm" style={{ color: "var(--fg-body)" }}>
+                {minedMessage("BUY", name, s.address)}
+              </div>
+              {successShareButton()}
             </div>
-            <a
-              href={explorerNameHref(name, network)}
-              className="text-sm font-semibold underline"
-              style={{ color: "var(--fg-body)" }}
-            >
-              View on Explorer
-            </a>
           </div>
         );
       }
@@ -758,13 +817,12 @@ export default function NameActionForm({
             {modalDescription(action, "settling", name, s)}
           </p>
           <div
-            className="w-full rounded-xl p-5"
+            className="purchase-scan-status-loading flex w-full flex-col items-center justify-center rounded-xl p-5 text-center"
             style={{
-              background: "var(--color-raised)",
               border: `1.5px solid ${s.settleState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
             }}
           >
-            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+            <p className="relative z-[1] w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
               {settlingStatusMessage(action, s.settleState)}
             </p>
           </div>
@@ -817,34 +875,19 @@ export default function NameActionForm({
           })}
         </div>
 
-        {isSuccess ? (
-          <div
-            className="mt-6 flex flex-col items-center gap-3 border-t pt-4 text-sm"
-            style={{
-              borderColor: "color-mix(in srgb, var(--faq-border) 72%, transparent)",
-              color: "var(--fg-muted)",
-            }}
-          >
-            <span>
-              Step {Math.min(s.step + 1, phases.length)} of {phases.length}
-            </span>
-            {footerPrimary()}
+        <div
+          className="mt-6 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-t pt-4 text-sm"
+          style={{
+            borderColor: "color-mix(in srgb, var(--faq-border) 72%, transparent)",
+            color: "var(--fg-muted)",
+          }}
+        >
+          <div className="flex min-w-0 justify-start">{isSuccess ? null : footerBack()}</div>
+          <div className="justify-self-center whitespace-nowrap text-center">
+            Step {Math.min(s.step + 1, phases.length)} of {phases.length}
           </div>
-        ) : (
-          <div
-            className="mt-6 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-t pt-4 text-sm"
-            style={{
-              borderColor: "color-mix(in srgb, var(--faq-border) 72%, transparent)",
-              color: "var(--fg-muted)",
-            }}
-          >
-            <div className="flex min-w-0 justify-start">{footerBack()}</div>
-            <div className="justify-self-center whitespace-nowrap text-center">
-              Step {Math.min(s.step + 1, phases.length)} of {phases.length}
-            </div>
-            <div className="flex min-w-0 justify-end">{footerPrimary()}</div>
-          </div>
-        )}
+          <div className="flex min-w-0 justify-end">{footerPrimary()}</div>
+        </div>
       </form>
     </>
   );

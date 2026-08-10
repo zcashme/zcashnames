@@ -21,6 +21,7 @@ import {
   scanningStatusMessage,
   settlingStatusMessage,
 } from "@/components/purchases/modalCopy";
+import PasscodeBoxes from "@/components/purchases/PasscodeBoxes";
 
 // ---- Component -------------------------------------------------------------
 
@@ -463,13 +464,21 @@ export default function Zip321Modal({
                           onKeyDown={(e) => {
                             if (e.key === "Enter") void handleInputContinue();
                           }}
-                          placeholder="t1…"
+                          placeholder={network === "testnet" ? "tm…" : "t1…"}
                           className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                           style={{
                             background: "var(--color-raised)",
-                            border: "1.5px solid var(--faq-border)",
+                            border: `1.5px solid ${
+                              s.inputError &&
+                              /payout|transparent|checksum|t-address|tm or tn|t1 or t3/i.test(
+                                s.inputError,
+                              )
+                                ? "var(--accent-red, #e05252)"
+                                : "var(--faq-border)"
+                            }`,
                             color: "var(--fg-heading)",
                           }}
+                          spellCheck={false}
                         />
                       </div>
                     )}
@@ -538,75 +547,60 @@ export default function Zip321Modal({
                 <p className="text-sm" style={{ color: "var(--fg-body)" }}>
                   Send exact amount and memo to address below to request verification code.
                 </p>
-                {s.otpMemo && (
-                  <QrBlock
-                    address={getNetworkConstants(network).OTP_SIGNIN_ADDR}
-                    amount={getNetworkConstants(network).OTP_AMOUNT}
-                    memo={s.otpMemo}
-                    size={180}
-                  />
-                )}
+                {s.otpMemo ? (
+                  <div className={`flex w-full flex-col items-center ${s.otpSent ? "gap-6" : ""}`}>
+                    <QrBlock
+                      address={getNetworkConstants(network).OTP_SIGNIN_ADDR}
+                      amount={getNetworkConstants(network).OTP_AMOUNT}
+                      memo={s.otpMemo}
+                      size={180}
+                    />
+                    {s.otpSent ? (
+                      <p className="m-0 text-center text-sm" style={{ color: "var(--fg-body)" }}>
+                        The owner of <NameBadge name={name} /> will receive a passcode in their
+                        wallet.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {s.otpSent && (
-                  <p className="m-0 text-sm" style={{ color: "var(--fg-body)" }}>
-                    The registered owner will receive a code.
-                  </p>
-                )}
-                {s.otpSent && (
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    value={s.otpCode}
-                    disabled={s.otpVerified}
-                    onChange={(e) =>
-                      set({
-                        otpCode: e.target.value.replace(/\D/g, "").slice(0, 6),
-                        otpError: "",
-                        otpVerified: false,
-                      })
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") void handleVerifyOtp();
-                    }}
-                    placeholder="000000"
-                    autoFocus
-                    className="w-full rounded-xl px-4 py-3 text-sm outline-none text-center tracking-[0.3em] font-mono disabled:opacity-70"
-                    style={{
-                      background: "var(--color-raised)",
-                      border: `1.5px solid ${s.otpError ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`,
-                      color: "var(--fg-heading)",
-                    }}
-                  />
-                )}
-                {s.otpVerified && (
-                  <p
-                    className="m-0 text-sm font-semibold transition-[opacity,transform] duration-[320ms] ease-out"
-                    style={{
-                      color: "var(--color-accent-green)",
-                      opacity: 1,
-                      transform: "translateY(0)",
-                    }}
-                    aria-live="polite"
-                  >
-                    Passcode accepted.
-                  </p>
-                )}
-                {(s.otpError || s.otpAttempts > 0) && (
-                  <p className="m-0 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1">
-                    {s.otpError && (
-                      <span
-                        className="text-sm font-semibold"
-                        style={{ color: "var(--accent-red, #e05252)" }}
-                      >
-                        {s.otpError}
-                      </span>
+                  <div className="flex w-full max-w-sm flex-col items-center gap-3">
+                    <PasscodeBoxes
+                      id="zip321-passcode"
+                      value={s.otpCode}
+                      disabled={s.otpVerified}
+                      error={!!s.otpError}
+                      success={s.otpVerified}
+                      autoFocus={!s.otpVerified}
+                      className="w-full"
+                      onChange={(digits) =>
+                        set({
+                          otpCode: digits,
+                          otpError: "",
+                          otpVerified: false,
+                        })
+                      }
+                      onSubmit={() => void handleVerifyOtp()}
+                    />
+                    {(s.otpError || s.otpAttempts > 0) && (
+                      <p className="m-0 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1">
+                        {s.otpError && (
+                          <span
+                            className="text-sm font-semibold"
+                            style={{ color: "var(--accent-red, #e05252)" }}
+                          >
+                            {s.otpError}
+                          </span>
+                        )}
+                        {s.otpAttempts > 0 && (
+                          <span className="text-xs" style={{ color: "var(--fg-muted)" }}>
+                            Attempt {s.otpAttempts} of{" "}
+                            {getNetworkConstants(network).OTP_MAX_ATTEMPTS}
+                          </span>
+                        )}
+                      </p>
                     )}
-                    {s.otpAttempts > 0 && (
-                      <span className="text-xs" style={{ color: "var(--fg-muted)" }}>
-                        Attempt {s.otpAttempts} of {getNetworkConstants(network).OTP_MAX_ATTEMPTS}
-                      </span>
-                    )}
-                  </p>
+                  </div>
                 )}
                 <div className="flex flex-wrap gap-3 w-full justify-between pt-1">
                   {s.step > 0 ? (
@@ -778,7 +772,7 @@ export default function Zip321Modal({
                         boxShadow: "var(--home-result-primary-shadow)",
                       }}
                     >
-                      I&rsquo;ve Sent the Payment
+                      I Sent It
                     </button>
                   </div>
                 );
@@ -792,13 +786,12 @@ export default function Zip321Modal({
                   {modalDescription(action, "scanning", name, s)}
                 </p>
                 <div
-                  className="w-full rounded-xl p-5 flex flex-col items-center gap-3"
+                  className="purchase-scan-status-loading flex w-full flex-col items-center justify-center gap-3 rounded-xl p-5 text-center"
                   style={{
-                    background: "var(--color-raised)",
                     border: `1.5px solid ${s.scanState === "in_mempool" || s.scanState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
                   }}
                 >
-                  <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+                  <p className="relative z-[1] w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
                     {scanningStatusMessage(action, s.scanState)}
                   </p>
                 </div>
@@ -896,13 +889,12 @@ export default function Zip321Modal({
                   {modalDescription(action, "settling", name, s)}
                 </p>
                 <div
-                  className="w-full rounded-xl p-5 flex flex-col items-center gap-3"
+                  className="purchase-scan-status-loading flex w-full flex-col items-center gap-3 rounded-xl p-5 text-center"
                   style={{
-                    background: "var(--color-raised)",
                     border: `1.5px solid ${s.settleState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
                   }}
                 >
-                  <p className="text-sm" style={{ color: "var(--fg-body)" }}>
+                  <p className="relative z-[1] w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
                     {settlingStatusMessage(action, s.settleState)}
                   </p>
                 </div>

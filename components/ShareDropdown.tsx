@@ -54,6 +54,8 @@ type ShareDropdownProps = {
   menuAlign?: "left" | "right";
   menuDirection?: "down" | "up";
   showTriggerIcon?: boolean;
+  /** Passed through to ActionDropdown — use to avoid full-width chip layout. */
+  rootClassName?: string;
 };
 
 export function ShareTriggerIcon() {
@@ -417,6 +419,7 @@ export default function ShareDropdown({
   menuAlign = "right",
   menuDirection = "down",
   showTriggerIcon = true,
+  rootClassName,
 }: ShareDropdownProps) {
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyState = useCopy();
@@ -508,6 +511,7 @@ export default function ShareDropdown({
         setOpen(nextOpen);
       }}
       open={open}
+      rootClassName={rootClassName}
       showTriggerIcon={showTriggerIcon}
       triggerIcon={<ShareTriggerIcon />}
     />

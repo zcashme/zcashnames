@@ -10,7 +10,13 @@ interface PreparedAction {
   readonly payload: string;
   complete(signature: string, userPubkey?: string): { memo: string; uri: string };
 }
-import { getZns, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
+import {
+  getZns,
+  normalizeUsername,
+  isValidUsername,
+  validateAddress,
+  isValidTransparentAddress,
+} from "@/lib/zns/utils";
 import { getNamePricing } from "@/lib/network-stats";
 import { MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
 import {
@@ -200,8 +206,15 @@ export async function listAction(
   const [, proofAddress] = parsed.subject.split(":");
   if (proofAddress !== reg.address) return { ok: false, error: "Verification invalid." };
 
-  if (!zns.isValidTransparentAddress(payTaddr.trim())) {
-    return { ok: false, error: "Enter a valid transparent Zcash address (t1, t3, tm, or tn)." };
+  // Full Base58Check (SDK only checks prefix/charset). Match the active network.
+  if (!isValidTransparentAddress(payTaddr.trim(), network)) {
+    return {
+      ok: false,
+      error:
+        network === "testnet"
+          ? "Enter a valid testnet transparent address (tm or tn) with a correct checksum."
+          : "Enter a valid transparent Zcash address (t1 or t3) with a correct checksum.",
+    };
   }
   const maxZats = MAX_LIST_FOR_SALE_AMOUNT * 100_000_000;
   if (priceZats < 0 || priceZats > maxZats) {
