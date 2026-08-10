@@ -90,37 +90,21 @@ export default function FooterSitemap() {
   ) : null;
 
   return (
-    // mt: body → Top/Sitemap (2/3 of prior 5rem/6rem).
-    // pb: button bottom → brand bar; sized so visual clear space matches
-    // footer brand↔social stack gap (2rem) after straddle half-height (~1.125rem).
-    <div
-      className={`mt-14 pb-12 sm:mt-16 sm:pb-14 ${
-        open ? "border-t border-border" : "border-t-0"
-      }`}
-    >
+    // mt: body → Top/Sitemap.
+    // pb: button bottom → brand bar (clears straddle half-height + stack gap).
+    <div className="mt-14 pb-12 sm:mt-16 sm:pb-14">
       {/*
-        Closed: one straddle line with [Top?] + Sitemap.
-        Open: top line keeps Top in place; Sitemap rides the bottom line
-        under the expanded map.
+        Controls always straddle the original top line (Top? + Sitemap).
+        When open, the map expands under that line; a plain bottom border
+        closes the panel — Sitemap does not move to a second straddle line.
       */}
-      {!open ? (
-        <div className="relative w-full">
-          <div className="w-full border-t border-border" aria-hidden="true" />
-          <div className="absolute left-1/2 top-0 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-3">
-            {backToTopButton}
-            {sitemapButton}
-          </div>
+      <div className="relative w-full">
+        <div className="w-full border-t border-border" aria-hidden="true" />
+        <div className="absolute left-1/2 top-0 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-3">
+          {backToTopButton}
+          {sitemapButton}
         </div>
-      ) : (
-        <div className="relative w-full">
-          {/* Top edge of open state (matches collapsed line position) */}
-          {showBackToTop ? (
-            <div className="absolute left-1/2 top-0 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-3">
-              {backToTopButton}
-            </div>
-          ) : null}
-        </div>
-      )}
+      </div>
 
       {/* Site map panel */}
       <div className={`mx-auto max-w-7xl px-6 ${open ? "pt-10" : "pt-0"}`}>
@@ -168,14 +152,9 @@ export default function FooterSitemap() {
         </div>
       </div>
 
-      {/* Bottom straddle line — Sitemap only when open (travels with expand) */}
+      {/* Bottom border when open — line only, no second control row */}
       {open ? (
-        <div className="relative w-full">
-          <div className="w-full border-t border-border" aria-hidden="true" />
-          <div className="absolute left-1/2 top-0 z-10 flex -translate-x-1/2 -translate-y-1/2 justify-center">
-            {sitemapButton}
-          </div>
-        </div>
+        <div className="w-full border-t border-border" aria-hidden="true" />
       ) : null}
     </div>
   );

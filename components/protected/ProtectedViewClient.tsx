@@ -479,7 +479,7 @@ export default function ProtectedViewClient({
               className="mx-auto mt-4 max-w-2xl text-lg leading-8"
               style={{ color: "var(--fg-body)" }}
             >
-              Search names, check protection status, and tap for details.
+              Search names, check status, and tap for details.
             </p>
             <div className="mt-6 hidden flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm sm:flex lg:text-base">
               <span className="inline-flex items-center gap-2" style={{ color: "var(--fg-body)" }}>

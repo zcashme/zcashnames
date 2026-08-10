@@ -4,6 +4,7 @@
 // Expand/collapse uses max-height + opacity transitions; active item gets a left border accent.
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import SectionHeaderPill from "@/components/landing/SectionHeaderPill";
@@ -256,6 +257,17 @@ export default function FAQ() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-5 flex justify-end">
+        <Link
+          href="/faq"
+          className="text-sm font-semibold transition-opacity hover:opacity-80"
+          style={{ color: "var(--color-accent-interactive, var(--fg-heading))" }}
+          aria-label="See more FAQs"
+        >
+          See more →
+        </Link>
       </div>
     </section>
   );
