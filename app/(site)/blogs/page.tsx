@@ -17,10 +17,7 @@ export default async function BlogsIndexPage() {
   const posts = await listAllBlogPosts();
 
   return (
-    <BlogIndexLayout
-      title="Blogs"
-      description="Product notes, launch context, and builder stories — written in the open."
-    >
+    <BlogIndexLayout title="Blogs">
       <BlogPostList posts={posts} showSeries />
       <BlogSubscribeCallout
         defaultSeries="general"

@@ -1,13 +1,16 @@
 import "server-only";
 
+import { execFile } from "node:child_process";
 import path from "node:path";
 import { promises as fs } from "node:fs";
+import { promisify } from "node:util";
 import {
   type BlogSeriesSlug,
   BLOG_SERIES,
   getBlogSeries,
 } from "@/lib/blog-series";
 
+const execFileAsync = promisify(execFile);
 const BLOGS_CONTENT_ROOT = path.join(process.cwd(), "content", "blogs");
 
 export type BlogPostSummary = {
@@ -76,6 +79,8 @@ function firstParagraph(markdown: string): string | undefined {
     if (/^import\s+/.test(line)) continue;
     if (/^[-*]\s+/.test(line)) continue;
     if (/^\|/.test(line)) continue;
+    if (/^---$/.test(line)) continue;
+    if (/^[a-zA-Z0-9_-]+:\s*/.test(line) && paragraphs.length === 0) continue;
     paragraphs.push(line);
   }
 
@@ -84,12 +89,87 @@ function firstParagraph(markdown: string): string | undefined {
   return text.length > 180 ? `${text.slice(0, 177).trimEnd()}…` : text;
 }
 
-function formatPublishedLabel(modifiedAt: number): string {
+/**
+ * Optional YAML frontmatter date, e.g.
+ * ---
+ * date: 2026-08-08
+ * ---
+ */
+function dateFromFrontmatter(markdown: string): number | null {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(markdown);
+  if (!match) return null;
+  const dateLine = /^date:\s*['"]?(\d{4}-\d{2}-\d{2})['"]?\s*$/m.exec(match[1] ?? "");
+  if (!dateLine?.[1]) return null;
+  const ms = Date.parse(`${dateLine[1]}T12:00:00.000Z`);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function formatPublishedLabel(timestampMs: number): string {
   return new Intl.DateTimeFormat("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
-  }).format(new Date(modifiedAt));
+    timeZone: "UTC",
+  }).format(new Date(timestampMs));
+}
+
+/**
+ * Prefer intentional frontmatter `date`, then git history.
+ * Never trust filesystem mtime on deploy — CI/Vercel checkouts often stamp
+ * every file with the same artificial mtime (commonly seen as Oct 2018).
+ */
+async function resolvePostTimestampMs(
+  filePath: string,
+  markdown: string,
+): Promise<number> {
+  const fromFrontmatter = dateFromFrontmatter(markdown);
+  if (fromFrontmatter != null) return fromFrontmatter;
+
+  const fromGit = await getGitFileTimestampMs(filePath);
+  if (fromGit != null) return fromGit;
+
+  try {
+    const stat = await fs.stat(filePath);
+    return stat.mtimeMs;
+  } catch {
+    return Date.now();
+  }
+}
+
+async function getGitFileTimestampMs(filePath: string): Promise<number | null> {
+  const relativePath = path.relative(process.cwd(), filePath).split(path.sep).join("/");
+
+  try {
+    // Oldest commit that added the path = publication time.
+    // git log is newest-first; take the last %ct line when following history.
+    const { stdout: addedStdout } = await execFileAsync(
+      "git",
+      ["log", "--diff-filter=A", "--follow", "--format=%ct", "--", relativePath],
+      { cwd: process.cwd(), windowsHide: true, maxBuffer: 1024 * 1024 },
+    );
+    const addedLines = addedStdout
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (addedLines.length > 0) {
+      const oldestSec = Number(addedLines[addedLines.length - 1]);
+      if (Number.isFinite(oldestSec) && oldestSec > 0) return oldestSec * 1000;
+    }
+
+    // Fallback: most recent commit that touched the file.
+    const { stdout: recentStdout } = await execFileAsync(
+      "git",
+      ["log", "-1", "--format=%ct", "--", relativePath],
+      { cwd: process.cwd(), windowsHide: true, maxBuffer: 1024 * 1024 },
+    );
+    const recentSec = Number(recentStdout.trim());
+    if (Number.isFinite(recentSec) && recentSec > 0) return recentSec * 1000;
+  } catch {
+    // No git binary, shallow history without the path, or not a git checkout.
+  }
+
+  return null;
 }
 
 async function readSeriesPosts(series: BlogSeriesSlug): Promise<Array<BlogPostSummary & { modifiedAt: number }>> {
@@ -104,10 +184,8 @@ async function readSeriesPosts(series: BlogSeriesSlug): Promise<Array<BlogPostSu
         .map(async (entry) => {
           const slug = entry.name.replace(/\.mdx$/, "");
           const filePath = path.join(dir, entry.name);
-          const [stat, markdown] = await Promise.all([
-            fs.stat(filePath),
-            fs.readFile(filePath, "utf8"),
-          ]);
+          const markdown = await fs.readFile(filePath, "utf8");
+          const modifiedAt = await resolvePostTimestampMs(filePath, markdown);
 
           return {
             slug,
@@ -116,8 +194,8 @@ async function readSeriesPosts(series: BlogSeriesSlug): Promise<Array<BlogPostSu
             series,
             seriesLabel: seriesMeta.label,
             excerpt: firstParagraph(markdown),
-            modifiedAt: stat.mtimeMs,
-            publishedLabel: formatPublishedLabel(stat.mtimeMs),
+            modifiedAt,
+            publishedLabel: formatPublishedLabel(modifiedAt),
           };
         }),
     );
@@ -160,8 +238,9 @@ export async function getBlogPostMeta(
 ): Promise<{ publishedLabel: string } | null> {
   try {
     const filePath = path.join(BLOGS_CONTENT_ROOT, series, `${postSlug}.mdx`);
-    const stat = await fs.stat(filePath);
-    return { publishedLabel: formatPublishedLabel(stat.mtimeMs) };
+    const markdown = await fs.readFile(filePath, "utf8");
+    const modifiedAt = await resolvePostTimestampMs(filePath, markdown);
+    return { publishedLabel: formatPublishedLabel(modifiedAt) };
   } catch {
     return null;
   }

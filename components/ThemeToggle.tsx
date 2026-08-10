@@ -12,6 +12,8 @@ import {
 
 type Theme = ThemeName;
 const TRIPLE_TAP_WINDOW_MS = 650;
+/** Wait after the last click before committing a single light/dark (or mono exit) toggle. */
+const SINGLE_TAP_DEBOUNCE_MS = 300;
 
 const icons: Record<Theme, React.ReactNode> = {
   dark: (
@@ -46,19 +48,33 @@ function nextLightDark(theme: Theme): Theme {
 
 // Single-icon theme switcher powered by next-themes, with a hidden monochrome easter egg.
 // Light↔dark: directional 3D flip + full-viewport color sweep (View Transitions API).
+// Triple-tap: monochrome green with vertical flip + top→bottom sweep.
 // Before hydration (mounted=false), a hidden placeholder renders to prevent layout shift.
 export default function ThemeToggle() {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const tapTimesRef = useRef<number[]>([]);
+  const pendingSingleTapRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Live-DOM dual-face flip only when View Transitions are unavailable.
   const [fallbackFront, setFallbackFront] = useState<Theme | null>(null);
   const [fallbackBack, setFallbackBack] = useState<Theme | null>(null);
   const [flipDir, setFlipDir] = useState<ThemeDirection | null>(null);
   const [busy, setBusy] = useState(false);
+  // Keep latest theme in a ref so debounced single-tap sees current value.
+  const activeThemeRef = useRef<Theme>("light");
+  /** Prevents a preempted applyTheme finally from clearing busy during a forced run. */
+  const applyGenerationRef = useRef(0);
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pendingSingleTapRef.current !== null) {
+        clearTimeout(pendingSingleTapRef.current);
+      }
+    };
   }, []);
 
   const resolvedActive = resolvedTheme ?? theme;
@@ -66,24 +82,25 @@ export default function ThemeToggle() {
     resolvedActive && ["dark", "light", "monochrome"].includes(resolvedActive as Theme)
       ? (resolvedActive as Theme)
       : "light";
+  activeThemeRef.current = activeTheme;
 
   const usingFallbackFlip = flipDir !== null && fallbackFront !== null && fallbackBack !== null;
   const displayTheme = usingFallbackFlip ? fallbackFront! : activeTheme;
 
-  async function applyTheme(next: Theme, from: Theme) {
-    if (busy || isThemeTransitioning()) return;
+  function clearPendingSingleTap() {
+    if (pendingSingleTapRef.current !== null) {
+      clearTimeout(pendingSingleTapRef.current);
+      pendingSingleTapRef.current = null;
+    }
+  }
+
+  async function applyTheme(next: Theme, from: Theme, options?: { force?: boolean }) {
+    const force = options?.force ?? false;
+    if (!force && (busy || isThemeTransitioning())) return;
+    if (next === from) return;
 
     const direction = getThemeDirection(from, next);
-
-    // Monochrome (and other non-directional) paths: instant.
-    if (!direction) {
-      document.documentElement.setAttribute("data-theme", next);
-      setTheme(next);
-      setFlipDir(null);
-      setFallbackFront(null);
-      setFallbackBack(null);
-      return;
-    }
+    const generation = ++applyGenerationRef.current;
 
     setBusy(true);
 
@@ -92,47 +109,76 @@ export default function ThemeToggle() {
         nextTheme: next,
         direction,
         setTheme,
+        force,
         onFallbackFlipStart: (dir) => {
+          if (generation !== applyGenerationRef.current) return;
           setFallbackFront(from);
           setFallbackBack(next);
           setFlipDir(null);
-          requestAnimationFrame(() => setFlipDir(dir));
+          requestAnimationFrame(() => {
+            if (generation !== applyGenerationRef.current) return;
+            setFlipDir(dir);
+          });
         },
         onFallbackFlipEnd: () => {
+          if (generation !== applyGenerationRef.current) return;
           setFallbackFront(null);
           setFallbackBack(null);
           setFlipDir(null);
         },
       });
 
-      setFallbackFront(null);
-      setFallbackBack(null);
-      setFlipDir(null);
+      if (generation === applyGenerationRef.current) {
+        setFallbackFront(null);
+        setFallbackBack(null);
+        setFlipDir(null);
+      }
     } finally {
-      setBusy(false);
+      if (generation === applyGenerationRef.current) {
+        setBusy(false);
+      }
     }
   }
 
-  function handleToggle() {
-    if (busy || isThemeTransitioning()) return;
+  function scheduleSingleTapAction() {
+    clearPendingSingleTap();
+    pendingSingleTapRef.current = setTimeout(() => {
+      pendingSingleTapRef.current = null;
+      tapTimesRef.current = [];
 
+      const current = activeThemeRef.current;
+      if (current === "monochrome") {
+        void applyTheme("light", current);
+        return;
+      }
+
+      void applyTheme(nextLightDark(current), current);
+    }, SINGLE_TAP_DEBOUNCE_MS);
+  }
+
+  function handleToggle() {
     const now = Date.now();
     const recentTaps = tapTimesRef.current.filter((time) => now - time <= TRIPLE_TAP_WINDOW_MS);
     recentTaps.push(now);
     tapTimesRef.current = recentTaps;
 
+    // Triple-tap easter egg: monochrome green (vertical flip + top→bottom sweep).
+    // Counts even while a light/dark transition is busy; force preempts in-flight VT.
     if (recentTaps.length >= 3) {
+      clearPendingSingleTap();
       tapTimesRef.current = [];
-      void applyTheme("monochrome", activeTheme);
+      const from = activeThemeRef.current;
+      if (from === "monochrome") {
+        // Already mono — treat as a normal exit rather than re-entering.
+        void applyTheme("light", from, { force: true });
+        return;
+      }
+      void applyTheme("monochrome", from, { force: true });
       return;
     }
 
-    if (activeTheme === "monochrome") {
-      void applyTheme("light", activeTheme);
-      return;
-    }
-
-    void applyTheme(nextLightDark(activeTheme), activeTheme);
+    // 1–2 taps: wait for more taps before committing light/dark (or mono exit).
+    scheduleSingleTapAction();
   }
 
   if (!mounted) {
@@ -156,9 +202,8 @@ export default function ThemeToggle() {
       type="button"
       aria-label={`${activeTheme} theme`}
       aria-busy={busy || undefined}
-      disabled={busy}
       onClick={handleToggle}
-      className="theme-toggle-btn relative flex h-8 w-8 items-center justify-center rounded-full text-fg-heading transition-colors duration-200 cursor-pointer hover:text-[var(--color-accent-interactive)] disabled:cursor-wait"
+      className="theme-toggle-btn relative flex h-8 w-8 items-center justify-center rounded-full text-fg-heading transition-colors duration-200 cursor-pointer hover:text-[var(--color-accent-interactive)]"
       style={{ background: "var(--color-raised)" }}
     >
       {usingFallbackFlip ? (

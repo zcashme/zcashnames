@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import type { ComponentProps } from "react";
 import fs from "fs/promises";
 import path from "path";
@@ -24,6 +23,7 @@ import {
   getProtectedNameInfoByName,
 } from "@/lib/campaigns/waitlist-protected-access";
 import { parseShareKitMarkdown } from "@/lib/sharekit";
+import { RESERVE_METADATA } from "@/lib/reserve-metadata";
 import {
   WAITLIST_VIEW_EARLY_ACCESS_LABEL,
   WAITLIST_VIEW_EARLY_ACCESS_START_AT,
@@ -35,11 +35,7 @@ type ReservePageProps = {
 
 type ReservePageCard = ComponentProps<typeof WaitlistVerifyClient>["cards"][number];
 
-export const metadata: Metadata = {
-  title: "Reserve Waitlist Spot - Zcash Names",
-  description: "Open your Zcash Names reservation dashboard and prepare one ZIP-321 payment request per name.",
-  robots: { index: false, follow: false, nocache: true },
-};
+export const metadata = RESERVE_METADATA;
 
 export const dynamic = "force-dynamic";
 const SHAREKIT_PATH = path.join(process.cwd(), "content", "sharekit.md");

@@ -4312,7 +4312,10 @@ body.app-shell-standalone {
 /* ═══════════════════════════════════════════════
    Theme transition — View Transitions API
    Root: directional clip-path color sweep
-   Toggle: 3D rotateY flip (named group)
+     light↔dark: horizontal (ltr/rtl)
+     monochrome enter/exit: vertical (ttb/btt)
+   Toggle: 3D flip on named group
+     horizontal rotateY / vertical rotateX
    ═══════════════════════════════════════════════ */
 
 ::view-transition-old(root),
@@ -4358,12 +4361,22 @@ body.app-shell-standalone {
   transition: transform var(--theme-transition-duration) var(--theme-transition-easing);
 }
 
+/* Horizontal (light ↔ dark) */
 .theme-toggle-flip[data-flip="ltr"] {
   transform: rotateY(180deg);
 }
 
 .theme-toggle-flip[data-flip="rtl"] {
   transform: rotateY(-180deg);
+}
+
+/* Vertical (enter / leave monochrome) */
+.theme-toggle-flip[data-flip="ttb"] {
+  transform: rotateX(180deg);
+}
+
+.theme-toggle-flip[data-flip="btt"] {
+  transform: rotateX(-180deg);
 }
 
 .theme-toggle-face {
@@ -4375,8 +4388,15 @@ body.app-shell-standalone {
   -webkit-backface-visibility: hidden;
 }
 
+/* Default back face for horizontal flip */
 .theme-toggle-face--back {
   transform: rotateY(180deg);
+}
+
+/* Vertical back face for monochrome enter/exit */
+.theme-toggle-flip[data-flip="ttb"] .theme-toggle-face--back,
+.theme-toggle-flip[data-flip="btt"] .theme-toggle-face--back {
+  transform: rotateX(180deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
