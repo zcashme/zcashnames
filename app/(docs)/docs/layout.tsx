@@ -1,4 +1,4 @@
-import { Footer, Layout, Navbar } from "nextra-theme-docs";
+import { Layout, Navbar } from "nextra-theme-docs";
 import { getPageMap } from "nextra/page-map";
 import Link from "next/link";
 import "nextra-theme-docs/style.css";
@@ -60,15 +60,20 @@ const navbar = (
   />
 );
 
+/* Custom footer — not Nextra <Footer>, which always adds switchers, <hr>, and a tinted band. */
 const footer = (
-  <Footer>MIT {new Date().getFullYear()} © ZcashMe</Footer>
+  <footer className="docs-page-footer">
+    MIT {new Date().getFullYear()} © ZcashMe, Inc.
+  </footer>
 );
 
 /**
  * Nextra docs layout: renders the full documentation chrome — Navbar with logo
  * and GitHub link, sidebar page map resolved from /docs, and Footer.
- * Theme is isolated from the main site via a dedicated "zns-docs-theme" storage key.
- * MDX pages rendered as children are sourced from content/docs.
+ *
+ * Docs are dark-only. Marketing-site light/monochrome themes set data-theme on
+ * <html> and that used to leak into /docs (cream body + pale Nextra text).
+ * We force dark here and reassert dark tokens in docs.css.
  */
 export default async function DocsLayout({
   children,
@@ -81,9 +86,11 @@ export default async function DocsLayout({
       pageMap={await getPageMap("/docs")}
       docsRepositoryBase="https://github.com/zcashme/zcashnames/tree/main/content/docs"
       footer={footer}
+      darkMode={false}
       nextThemes={{
         attribute: "class",
         defaultTheme: "dark",
+        forcedTheme: "dark",
         storageKey: "zns-docs-theme",
       }}
     >

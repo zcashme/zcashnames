@@ -118,7 +118,7 @@ export default function LandingNewsletterSignup({
       : buttonLabel;
 
   return (
-    <section id="newsletter" className="mx-auto w-full max-w-3xl px-4 pb-6 sm:px-6">
+    <section id="newsletter" className="mx-auto w-full max-w-3xl px-4 pb-24 sm:px-6 sm:pb-28">
       <CaptchaChallengeModal
         isOpen={captchaOpen}
         title="Confirm you're human"
@@ -128,19 +128,16 @@ export default function LandingNewsletterSignup({
         onCancel={closeCaptchaModal}
         onConfirm={completeSubmitAfterCaptcha}
       />
-      <div className="mb-5 flex justify-center">
-        <SectionHeaderPill title="Stay Up-to-date" />
+      <div className="mb-6 text-center sm:mb-7">
+        <SectionHeaderPill title="News" />
+        <p
+          className="type-section-subtitle mx-auto mt-6 max-w-2xl"
+          style={{ color: "var(--fg-muted)" }}
+        >
+          Don&apos;t miss out. Stay up-to-date.
+        </p>
       </div>
-      <div
-        className="rounded-[24px] border px-5 py-5 sm:px-6 sm:py-6"
-        style={{
-          borderColor: "color-mix(in srgb, var(--feature-heading-line-to) 28%, var(--faq-border))",
-          background:
-            "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 58%, transparent), color-mix(in srgb, var(--faq-border) 14%, transparent))",
-          boxShadow: "0 18px 38px rgba(0, 0, 0, 0.08)",
-        }}
-      >
-        <form onSubmit={onSubmit} className="mx-auto max-w-2xl">
+      <form onSubmit={onSubmit} className="mx-auto max-w-2xl">
           <label className="block min-w-0">
             <span className="sr-only">Email</span>
             <span className="relative flex items-center">
@@ -151,7 +148,7 @@ export default function LandingNewsletterSignup({
                 onChange={(event) => setEmail(event.target.value)}
                 className="w-full rounded-2xl border py-3 pl-4 pr-[7.25rem] text-sm outline-none transition-colors"
                 style={{
-                  background: "var(--color-bg-elevated, transparent)",
+                  background: "transparent",
                   borderColor: "var(--faq-border, var(--border-muted))",
                   color: "var(--fg-body)",
                   minHeight: "3rem",
@@ -208,7 +205,6 @@ export default function LandingNewsletterSignup({
             We will email a confirmation link before sending updates.
           </p>
         </form>
-      </div>
     </section>
   );
 }

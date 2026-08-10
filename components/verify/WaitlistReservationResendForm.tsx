@@ -38,24 +38,7 @@ function MailIcon() {
   );
 }
 
-function SendIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-      aria-hidden="true"
-    >
-      <path d="M22 2 11 13" />
-      <path d="m22 2-7 20-4-9-9-4Z" />
-    </svg>
-  );
-}
+const ACTION_INSET_PX = 4;
 
 function LockIcon() {
   return (
@@ -223,34 +206,46 @@ export default function WaitlistReservationResendForm({
               setStatus(null);
             }}
             placeholder="you@example.com"
-            className="min-w-0 w-full rounded-2xl border bg-transparent py-3 pl-14 pr-4 text-base outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
+            className="min-w-0 w-full rounded-2xl border bg-transparent py-3 pl-14 pr-[7.5rem] text-base outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
             style={{ borderColor: "var(--faq-border)", color: "var(--fg-heading)" }}
           />
+          <span
+            className="absolute flex items-center"
+            style={{
+              top: ACTION_INSET_PX,
+              right: ACTION_INSET_PX,
+              bottom: ACTION_INSET_PX,
+            }}
+          >
+            <button
+              type="submit"
+              disabled={!emailIsValid || submitting || captchaOpen}
+              className="inline-flex h-[calc(100%-2px)] shrink-0 cursor-pointer items-center justify-center rounded-[13px] px-4 text-sm font-semibold leading-none transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              style={{
+                background: emailIsValid && !submitting && !captchaOpen
+                  ? "var(--home-result-primary-bg)"
+                  : "color-mix(in srgb, var(--leaders-card-border, var(--faq-border)) 22%, transparent)",
+                color: emailIsValid && !submitting && !captchaOpen
+                  ? "var(--home-result-primary-fg)"
+                  : "var(--fg-muted)",
+                boxShadow: emailIsValid && !submitting && !captchaOpen
+                  ? "var(--home-result-primary-shadow)"
+                  : "none",
+              }}
+            >
+              {submitting
+                ? "Sending..."
+                : captchaOpen
+                  ? "Complete check…"
+                  : "Send link"}
+            </button>
+          </span>
         </div>
         {validationMessage ? (
           <p className="text-sm" style={{ color: "var(--accent-red, #e05252)" }}>
             {validationMessage}
           </p>
         ) : null}
-        <button
-          type="submit"
-          disabled={!emailIsValid || submitting || captchaOpen}
-          className="inline-flex h-[42px] w-full cursor-pointer items-center justify-center gap-3 rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          style={{
-            background: "var(--home-result-primary-bg)",
-            color: "var(--home-result-primary-fg)",
-            boxShadow: "var(--home-result-primary-shadow)",
-          }}
-        >
-          <SendIcon />
-          <span>
-            {submitting
-              ? "Sending..."
-              : captchaOpen
-                ? "Complete check…"
-                : "Send reservation link"}
-          </span>
-        </button>
         {message ? (
           <p
             className="text-base text-center"

@@ -295,7 +295,7 @@ function DraftCard({
     ? "border-[rgba(155,188,15,0.36)] bg-[rgba(48,98,48,0.34)]"
     : "border-border-muted bg-[var(--color-raised)]";
   const textareaClassName = monochrome
-    ? "border-[rgba(155,188,15,0.42)] bg-[rgba(48,98,48,0.22)] text-[var(--mono-3)] placeholder:text-[color:rgba(155,188,15,0.7)] focus:border-[rgba(155,188,15,0.72)] focus:bg-[rgba(48,98,48,0.3)]"
+    ? "border-[rgba(155,188,15,0.42)] bg-transparent text-[var(--mono-3)] placeholder:text-[color:rgba(155,188,15,0.7)] focus:border-[rgba(155,188,15,0.72)]"
     : "border-border-muted bg-transparent text-fg-body focus:border-fg-muted";
   const actionsClassName = monochrome
     ? "bg-transparent"

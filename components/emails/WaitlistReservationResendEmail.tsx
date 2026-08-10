@@ -109,7 +109,7 @@ export default function WaitlistReservationResendEmail(props: WaitlistReservatio
   return (
     <EmailLayout
       preview={preview}
-      headingText="Ready to Claim Your Name?"
+      headingText="Get Ready to Claim Your Name!"
     >
       <Section style={content}>
         <Text style={paragraph}>Hi {variant === "multi-name" ? "there" : displayName},</Text>

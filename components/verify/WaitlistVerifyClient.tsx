@@ -2725,7 +2725,7 @@ function ProtectedRequestAction({
     <>
       <span className="flex min-w-0 items-center gap-3">
         <span style={{ color: "var(--fg-muted)" }}>{icon}</span>
-        <span className="text-sm font-semibold sm:text-base">{label}</span>
+        <span className="text-sm font-semibold">{label}</span>
       </span>
       <span style={{ color: "var(--fg-muted)" }}>
         <ExternalArrowIcon />
@@ -3018,7 +3018,7 @@ function ProtectedAccessRequestPanel({
         className="rounded-[24px] border px-4 py-4 text-left sm:px-5"
         style={{
           borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
-          background: "color-mix(in srgb, var(--color-card) 92%, transparent)",
+          background: "var(--verify-panel-fill)",
         }}
       >
         <h3 className="text-lg font-bold tracking-tight" style={{ color: "var(--fg-heading)" }}>
@@ -3028,7 +3028,13 @@ function ProtectedAccessRequestPanel({
           Your request has been approved. We will deliver the access code to your preferred contact method. You may purchase this name during the Early Access period.
         </p>
         <div className="mt-5 grid gap-3">
-          <div className="rounded-[18px] border px-4 py-3" style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}>
+          <div
+            className="rounded-[18px] border px-4 py-3"
+            style={{
+              borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
+              background: "var(--verify-panel-soft-fill)",
+            }}
+          >
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
               Preferred contact
             </p>
@@ -3049,6 +3055,10 @@ function ProtectedAccessRequestPanel({
           .map((contact) => `${CONTACT_LABEL[contact.kind]}: ${contact.value}`)
           .join("\n")
       : "Not provided";
+    const detailFieldStyle = {
+      borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
+      background: "var(--verify-panel-soft-fill)",
+    } satisfies React.CSSProperties;
 
     return (
       <div
@@ -3056,7 +3066,7 @@ function ProtectedAccessRequestPanel({
         className="rounded-[24px] border px-4 py-4 text-left sm:px-5"
         style={{
           borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
-          background: "color-mix(in srgb, var(--color-card) 92%, transparent)",
+          background: "var(--verify-panel-fill)",
         }}
       >
         <h3 className="text-lg font-bold tracking-tight" style={{ color: "var(--fg-heading)" }}>
@@ -3066,7 +3076,7 @@ function ProtectedAccessRequestPanel({
           {formatProtectedRequestTimestamp(card.protectedRequestSubmittedAt)}
         </p>
         <div className="mt-5 grid gap-3">
-          <div className="rounded-[18px] border px-4 py-3" style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}>
+          <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
               Preferred contact method
             </p>
@@ -3076,7 +3086,7 @@ function ProtectedAccessRequestPanel({
                 : "Not provided"}
             </p>
           </div>
-          <div className="rounded-[18px] border px-4 py-3" style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}>
+          <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
               Status
             </p>
@@ -3084,7 +3094,7 @@ function ProtectedAccessRequestPanel({
               Under review
             </p>
           </div>
-          <div className="rounded-[18px] border px-4 py-3" style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}>
+          <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
               Reference number
             </p>
@@ -3103,7 +3113,7 @@ function ProtectedAccessRequestPanel({
         </button>
         {showSubmittedDetails ? (
           <div className="mt-5 grid gap-3">
-            <div className="rounded-[18px] border px-4 py-3" style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}>
+            <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
                 Contact methods
               </p>
@@ -3111,7 +3121,7 @@ function ProtectedAccessRequestPanel({
                 {contactMethods}
               </p>
             </div>
-            <div className="rounded-[18px] border px-4 py-3" style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}>
+            <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
                 Relationship to this name
               </p>
@@ -3121,7 +3131,7 @@ function ProtectedAccessRequestPanel({
                   : "Not provided"}
               </p>
             </div>
-            <div className="rounded-[18px] border px-4 py-3" style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}>
+            <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
                 Supporting link
               </p>
@@ -3129,7 +3139,7 @@ function ProtectedAccessRequestPanel({
                 {card.protectedRequestSupportingLink ?? "Not provided"}
               </p>
             </div>
-            <div className="rounded-[18px] border px-4 py-3" style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}>
+            <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
                 Additional context
               </p>
@@ -3157,7 +3167,7 @@ function ProtectedAccessRequestPanel({
         className="rounded-[24px] border px-4 py-4 text-left sm:px-5"
         style={{
           borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
-          background: "color-mix(in srgb, var(--color-card) 92%, transparent)",
+          background: "var(--verify-panel-fill)",
         }}
       >
         <h3 className="text-lg font-bold tracking-tight" style={{ color: "var(--fg-heading)" }}>
@@ -4332,9 +4342,9 @@ export default function WaitlistVerifyClient({
                 className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
                 style={{ color: "var(--hero-headline-primary)" }}
               >
-                Ready to
+                Get ready to
                 <br />
-                <span style={{ color: "var(--color-accent-interactive)" }}>claim your name?</span>
+                <span style={{ color: "var(--color-accent-interactive)" }}>claim your name!</span>
               </h1>
               <HeroHowReservationsWork />
             </div>
@@ -4387,8 +4397,7 @@ export default function WaitlistVerifyClient({
               style={{ color: "var(--fg-body)" }}
             >
               <strong>
-                Add your name to the waitlist, reserve your place, and refer others to move up
-                before receiving your access code.
+                Join the waitlist, reserve your place, and refer others for the best chance to claim your name.
               </strong>
             </p>
           </div>

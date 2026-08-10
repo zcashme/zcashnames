@@ -33,8 +33,14 @@ export default function LandingRecentBlogs({
       className="mx-auto w-full max-w-[1320px] px-4 pb-16 pt-0 sm:px-6 sm:pb-20"
       aria-labelledby="landing-blog-heading"
     >
-      <div className="mb-8 flex justify-center sm:mb-10">
+      <div className="mb-14 text-center">
         <SectionHeaderPill id="landing-blog-heading" title="Blog" />
+        <p
+          className="type-section-subtitle mx-auto mt-6 max-w-2xl"
+          style={{ color: "var(--fg-muted)" }}
+        >
+          Read all about us
+        </p>
       </div>
 
       <ul

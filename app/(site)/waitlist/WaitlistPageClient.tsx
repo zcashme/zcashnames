@@ -14,7 +14,8 @@ function LeaderboardLink() {
       proximityId="leaderboard-link"
       href="/leaders"
       label="Leaderboard"
-      showArrow={false}
+      variant="text"
+      showArrow
       icon={
         <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
           <path d="M8 21L12 17L16 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -34,7 +35,8 @@ function DashboardLink() {
       proximityId="dashboard-link"
       href="/leaders/ref"
       label="Dashboard"
-      showArrow={false}
+      variant="text"
+      showArrow
       icon={
         <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
           <rect x="3" y="4" width="8" height="7" rx="1.8" stroke="currentColor" strokeWidth="1.8" />

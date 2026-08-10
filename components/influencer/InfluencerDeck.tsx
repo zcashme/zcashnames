@@ -12,7 +12,6 @@ import {
   type ReactNode,
   type TouchEvent,
 } from "react";
-import { createPortal } from "react-dom";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { submitCabalChat, submitCabalInterest } from "@/app/(site)/cabal/actions";
@@ -166,21 +165,9 @@ const markdownComponents: Components = {
   },
 };
 
-export function InfluencerHeaderTitle({ title }: { title: string }) {
-  const [target, setTarget] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    setTarget(document.getElementById("site-route-title"));
-  }, []);
-
-  if (!target || !title) return null;
-
-  return createPortal(
-    <span className="site-route-title" aria-label="Current page">
-      {title}
-    </span>,
-    target,
-  );
+/** Header no longer shows page titles; kept as a no-op for existing callers. */
+export function InfluencerHeaderTitle(_props: { title: string }) {
+  return null;
 }
 
 function shouldShowTocItem(itemNumber: string, activeNumber: string): boolean {

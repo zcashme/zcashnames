@@ -154,19 +154,19 @@ export default function FAQ() {
 
   return (
     <section className="w-full max-w-3xl mx-auto px-6 pt-0 pb-24">
-      <div className="mb-14 flex justify-center">
-        <SectionHeaderPill id="faq" title="Frequently Asked Questions" />
+      <div className="mb-14 text-center">
+        <SectionHeaderPill id="faq" title="FAQs" />
+        <p
+          className="type-section-subtitle mx-auto mt-6 max-w-2xl"
+          style={{ color: "var(--fg-muted)" }}
+        >
+          Answers to the most common questions. If yours is not covered, join the{" "}
+          <a href="/community" className="underline" style={{ color: "var(--fg-body)" }}>
+            community
+          </a>{" "}
+          and ask us directly.
+        </p>
       </div>
-      <p
-        className="type-section-subtitle mx-auto mb-16 max-w-2xl text-center"
-        style={{ color: "var(--fg-muted)" }}
-      >
-        Answers to the most common questions. If yours is not covered, join the{" "}
-        <a href="/community" className="underline" style={{ color: "var(--fg-body)" }}>
-          community
-        </a>{" "}
-        and ask us directly.
-      </p>
 
       <div className="flex flex-col gap-10">
         {groups.map((group, groupIndex) => (

@@ -29,9 +29,9 @@ const steps: Step[] = [
   {
     id: "step-1",
     number: "01",
-    eyebrow: "Get in line",
+    eyebrow: "Join the waitlist",
     description:
-      "Invites go out in order, so early signups get first pick of the best Zcash names before the crowd shows up. Free to join. No commitment.",
+      "Invites go out in order, so reserve your spot to get first pick of the best Zcash names before the crowd shows up.",
   },
   {
     id: "step-2",
@@ -86,7 +86,7 @@ const benefitGroups: BenefitGroup[] = [
       },
       {
         title: "No renewal fees",
-        description: "Just sign in once every 6 months.",
+        description: "Just rotate your address once every 6 months.",
       },
     ],
   },
@@ -243,7 +243,7 @@ export default function HowItWorks() {
     <section className="mx-auto w-full max-w-6xl px-6 pb-24 pt-0">
       {sectionHeading(
         "benefits",
-        "Benefits",
+        "Features",
         "Readable, ownable, privacy-preserving identity for payments and apps built around Zcash.",
         "center",
         "mt-6",
@@ -255,7 +255,7 @@ export default function HowItWorks() {
       <div className="mt-24">
         {sectionHeading(
           "how-it-works",
-          "How It Works",
+          "Get yours",
           "Three steps: get positioned early, improve your spot, then claim the name before public launch.",
         )}
 

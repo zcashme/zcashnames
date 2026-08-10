@@ -558,7 +558,7 @@ function CommunityShareModal({
           <select
             value={shareTarget}
             onChange={(event) => setShareTarget(event.target.value as ShareTarget)}
-            className="min-h-11 w-full appearance-none rounded-xl border border-border-muted bg-[var(--color-raised)] px-3 py-2 pr-10 text-sm font-semibold text-fg-heading outline-none transition-colors focus:border-fg-heading"
+            className="min-h-11 w-full appearance-none rounded-xl border border-border-muted bg-[var(--input-fill)] px-3 py-2 pr-10 text-sm font-semibold text-fg-heading outline-none transition-colors focus:border-fg-heading"
           >
             {shareTargets.map((target) => (
               <option key={target.value} value={target.value}>

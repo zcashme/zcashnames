@@ -223,7 +223,7 @@ export default function ExplorerListPane({
             <th
               className="px-4 py-3 sm:px-6"
               style={{
-                background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                background: "var(--table-header-bg)",
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >
@@ -232,7 +232,7 @@ export default function ExplorerListPane({
             <th
               className="px-4 py-3 sm:px-6"
               style={{
-                background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                background: "var(--table-header-bg)",
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >
@@ -241,7 +241,7 @@ export default function ExplorerListPane({
             <th
               className="px-4 py-3 sm:px-6"
               style={{
-                background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                background: "var(--table-header-bg)",
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >
@@ -250,7 +250,7 @@ export default function ExplorerListPane({
             <th
               className="hidden sm:table-cell px-4 py-3 sm:px-6"
               style={{
-                background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                background: "var(--table-header-bg)",
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >
@@ -331,7 +331,7 @@ export default function ExplorerListPane({
             <th
               className="px-4 py-3 sm:px-6"
               style={{
-                background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                background: "var(--table-header-bg)",
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >
@@ -340,7 +340,7 @@ export default function ExplorerListPane({
             <th
               className="px-4 py-3 sm:px-6"
               style={{
-                background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                background: "var(--table-header-bg)",
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >
@@ -349,7 +349,7 @@ export default function ExplorerListPane({
             <th
               className="px-4 py-3 sm:px-6"
               style={{
-                background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                background: "var(--table-header-bg)",
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >
@@ -358,7 +358,7 @@ export default function ExplorerListPane({
             <th
               className="hidden sm:table-cell px-4 py-3 sm:px-6"
               style={{
-                background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                background: "var(--table-header-bg)",
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >
@@ -436,7 +436,7 @@ export default function ExplorerListPane({
             <th
               className="px-4 py-3 sm:px-6"
               style={{
-                background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                background: "var(--table-header-bg)",
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >
@@ -445,7 +445,7 @@ export default function ExplorerListPane({
             <th
               className="px-4 py-3 sm:px-6"
               style={{
-                background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                background: "var(--table-header-bg)",
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >
@@ -454,7 +454,7 @@ export default function ExplorerListPane({
             <th
               className="px-4 py-3 text-right sm:px-6"
               style={{
-                background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                background: "var(--table-header-bg)",
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >
@@ -463,7 +463,7 @@ export default function ExplorerListPane({
             <th
               className="px-4 py-3 sm:px-6"
               style={{
-                background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                background: "var(--table-header-bg)",
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >

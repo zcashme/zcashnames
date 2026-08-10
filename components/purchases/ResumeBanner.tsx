@@ -144,9 +144,6 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
   const clearWarning = isConfirm
     ? "Removes this prepared request. Sent payments cannot be undone."
     : "Payment processing, if any, cannot be cancelled. Ignore?";
-  const clearWarningLines = clearWarning.split(". ").map((line, index, lines) =>
-    index < lines.length - 1 && !line.endsWith(".") ? `${line}.` : line
-  );
 
   function handleClear() {
     if (!confirmingClear) { setConfirmingClear(true); return; }
@@ -251,11 +248,7 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
               className="m-0 text-right text-sm font-medium leading-relaxed"
               style={{ color: "var(--home-result-status-negative-fg, #ff8a8a)" }}
             >
-              {clearWarningLines.map((line) => (
-                <span key={line} className="block">
-                  {line}
-                </span>
-              ))}
+              {clearWarning}
             </p>
           </>
         )}

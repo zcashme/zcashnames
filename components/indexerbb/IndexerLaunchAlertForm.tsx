@@ -28,7 +28,7 @@ function buildUid() {
 }
 
 const inputStyle: React.CSSProperties = {
-  background: "var(--color-raised)",
+  background: "var(--input-fill)",
   border: "1.5px solid light-dark(rgba(31, 41, 55, 0.26), rgba(255, 255, 255, 0.24))",
   color: "var(--fg-heading)",
 };

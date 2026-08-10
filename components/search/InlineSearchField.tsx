@@ -214,7 +214,7 @@ export function InlineSearchField({
   const inputStyle: CSSProperties | undefined =
     variant === "table"
       ? {
-          background: "var(--color-bg-elevated, transparent)",
+          background: "var(--input-fill, transparent)",
           borderColor: "var(--faq-border)",
           color: "var(--fg-body)",
         }

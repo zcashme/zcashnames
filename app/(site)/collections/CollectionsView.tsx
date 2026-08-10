@@ -129,7 +129,7 @@ export default function CollectionsView({
       }}
       className="flex w-full items-center gap-2 rounded-full border p-1.5 pl-4"
       style={{
-        background: "var(--color-raised)",
+        background: "var(--input-fill)",
         borderColor: "var(--leaders-card-border)",
         boxShadow: "0 12px 34px rgba(0,0,0,0.14)",
       }}

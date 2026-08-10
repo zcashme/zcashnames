@@ -13,7 +13,8 @@ function ExplorerLink({ network }: { network: "mainnet" | "testnet" }) {
       proximityId="explorer-link"
       href={network === "testnet" ? "/explorer?env=testnet" : "/explorer"}
       label="Explorer"
-      showArrow={false}
+      variant="text"
+      showArrow
       icon={
         <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
           <circle cx="12" cy="12" r="4.25" stroke="currentColor" strokeWidth="1.7" />

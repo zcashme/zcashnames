@@ -1048,7 +1048,7 @@ export default function WaitlistViewClient({
           className="relative overflow-hidden rounded-2xl border"
           style={{
             borderColor: "var(--faq-border)",
-            background: "color-mix(in srgb, var(--color-bg-elevated, transparent) 72%, transparent)",
+            background: "var(--table-shell-bg)",
           }}
         >
           <div className="overflow-x-auto">
@@ -1071,7 +1071,7 @@ export default function WaitlistViewClient({
                       key={column.label}
                       className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] align-middle sm:px-6"
                       style={{
-                        background: "color-mix(in srgb, var(--color-raised) 72%, transparent)",
+                        background: "var(--table-header-bg)",
                         borderBottom: "1px solid var(--faq-border)",
                         borderRight:
                           index === 5 ? "none" : "1px solid color-mix(in srgb, var(--faq-border) 78%, transparent)",

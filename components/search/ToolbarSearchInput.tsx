@@ -54,7 +54,7 @@ export default function ToolbarSearchInput({
         aria-label={ariaLabel}
         className="w-full rounded-lg border py-2 pl-9 pr-16 text-sm outline-none"
         style={{
-          background: "var(--color-raised)",
+          background: "var(--input-fill, transparent)",
           borderColor: "var(--leaders-card-border)",
           color: "var(--fg-heading)",
         }}

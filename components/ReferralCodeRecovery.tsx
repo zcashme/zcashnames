@@ -147,7 +147,7 @@ export default function ReferralCodeRecovery({
               setMessage("");
             }}
             placeholder="you@example.com"
-            className={`${inputClassName} ${isSharekit ? "bg-[var(--color-card)]" : ""}`}
+            className={`${inputClassName} ${isSharekit ? "bg-[var(--input-fill)]" : ""}`}
             style={isSharekit ? undefined : { borderColor: "var(--leaders-card-border)" }}
           />
           {validationMessage ? (

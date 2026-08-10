@@ -80,7 +80,7 @@ export default function BetaPasswordModal({ target, onCancel, onSubmit }: Props)
             placeholder="Password"
             className="w-full rounded-xl px-4 py-3 type-body outline-none"
             style={{
-              background: "var(--color-raised)",
+              background: "var(--input-fill)",
               border: error
                 ? "1.5px solid var(--accent-red, #e05252)"
                 : "1.5px solid var(--faq-border)",

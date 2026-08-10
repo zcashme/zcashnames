@@ -55,7 +55,7 @@ export default function PasscodeBoxes({
     else if (isActive) borderColor = "var(--fg-heading)";
 
     return {
-      background: "var(--color-raised)",
+      background: "var(--input-fill)",
       border: `1.5px solid ${borderColor}`,
       color: error
         ? "var(--accent-red, #e05252)"

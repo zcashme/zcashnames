@@ -96,7 +96,7 @@ export default function FeedbackForm({
   const [justSubmitted, setJustSubmitted] = useState(false);
 
   const inputStyle: React.CSSProperties = {
-    background: monochrome ? "transparent" : "var(--color-raised)",
+    background: "var(--input-fill)",
     border: "1.5px solid var(--faq-border)",
     color: "var(--fg-heading)",
   };

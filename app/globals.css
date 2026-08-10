@@ -22,6 +22,11 @@
   --color-overlay: #0f0f0f;
   --color-raised: #1e1e1e;
 
+  /* Text fields: transparent shell (border-only). Tables keep raised headers in dark/light. */
+  --input-fill: transparent;
+  --table-shell-bg: color-mix(in srgb, var(--color-bg-elevated, transparent) 72%, transparent);
+  --table-header-bg: color-mix(in srgb, var(--color-raised) 72%, transparent);
+
   /* Foreground */
   --fg: #e0e0e0;
   --fg-heading: #f0f0f0;
@@ -63,7 +68,7 @@
   --theme-media-filter-home: none;
 
   /* Searchform scoped */
-  --sf-bg: #1a1a1a;
+  --sf-bg: transparent;
   --sf-input-color: #d1d5db;
   --sf-placeholder-color: #555555;
   --sf-search-btn-bg: linear-gradient(116deg, #d09a24 0%, #f4b728 62%, #ffe08b 100%);
@@ -226,7 +231,7 @@
   --verify-panel-fill: color-mix(in srgb, var(--color-card) 92%, transparent);
   --verify-panel-soft-fill: color-mix(in srgb, var(--color-card) 94%, transparent);
   --verify-accent-panel-fill: color-mix(in srgb, var(--color-brand-blue) 8%, var(--color-card));
-  --verify-input-fill: var(--color-raised);
+  --verify-input-fill: var(--input-fill);
   --verify-menu-fill: color-mix(in srgb, var(--color-card) 96%, transparent);
   --verify-menu-hover-fill: var(--color-raised);
 
@@ -246,6 +251,14 @@
   --type-chip: clamp(0.74rem, 0.72vw, 0.82rem);
 }
 
+/*
+ * Light theme tokens.
+ * - Marketing site uses next-themes attribute="data-theme" → html[data-theme=light]
+ * - Docs (Nextra) use attribute="class" → html.light
+ * Both selectors must set the same tokens so body bg/text (and any shared
+ * utilities) flip correctly when docs are in light mode.
+ */
+html.light,
 [data-theme="light"] {
   /* Background */
   --color-background: #fefcf7;
@@ -295,7 +308,7 @@
   --theme-media-filter-home: none;
 
   /* Searchform scoped */
-  --sf-bg: #f3f5fb;
+  --sf-bg: transparent;
   --sf-input-color: #5a6074;
   --sf-placeholder-color: #a6adbc;
   --sf-search-btn-bg: linear-gradient(116deg, #2a6be6 0%, #2b8feb 62%, #46b7ff 100%);
@@ -461,8 +474,8 @@
   --logo-filter: brightness(0) invert(1) sepia(1) hue-rotate(30deg) saturate(8) brightness(0.9);
   --theme-media-filter-home: grayscale(1) sepia(1) hue-rotate(34deg) saturate(4.8) brightness(0.9) contrast(1.05);
 
-  /* Searchform */
-  --sf-bg: var(--mono-1);
+  /* Searchform — shell fill zeroed with other monochrome inputs below */
+  --sf-bg: transparent;
   --sf-input-color: var(--mono-3);
   --sf-placeholder-color: var(--mono-2);
   --sf-search-btn-bg: linear-gradient(116deg, rgba(139,172,15,0.9) 0%, rgba(155,188,15,0.9) 100%);
@@ -532,9 +545,14 @@
   --partner-avatar-slate: var(--mono-2);
 
   /* Leaders */
-  --leaders-card-bg: rgba(48, 98, 48, 0.42);
+  --leaders-card-bg: transparent;
   --leaders-card-bg-solid: #1e4a1e;
   --leaders-card-border: rgba(139, 172, 15, 0.46);
+
+  /* Flat monochrome surfaces: no fill on tables or text fields */
+  --input-fill: transparent;
+  --table-shell-bg: transparent;
+  --table-header-bg: transparent;
   --leaders-tooltip-bg: rgba(15, 56, 15, 0.92);
   --leaders-tooltip-border: rgba(139, 172, 15, 0.46);
   --leaders-area-referred: #F4B728;
@@ -735,17 +753,6 @@ body {
   color: var(--mono-0);
 }
 
-.site-route-title {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  max-width: 100%;
-  white-space: nowrap;
-  color: var(--fg-muted);
-  font-size: var(--type-section-subtitle);
-  font-weight: 600;
-  line-height: 1;
-}
 
 .ambient-signal-field {
   pointer-events: none;
@@ -1019,46 +1026,6 @@ body {
   .signal-particle--streak .signal-particle__visual {
     width: calc(var(--signal-width) * 0.72);
   }
-}
-
-#site-route-title {
-  display: inline-flex;
-  flex: 1 1 auto;
-  align-items: center;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.site-route-title::before {
-  content: "/";
-  display: inline-flex;
-  align-items: center;
-  margin-right: 0.75rem;
-  color: var(--fg-dim);
-}
-
-@media (min-width: 640px) {
-  .site-route-title::before {
-    margin-right: 1rem;
-  }
-}
-
-/* Blog routes: replace brand wordmark with SiteRouteTitle "Blogs" */
-html[data-blog-route] .site-brand-wordmark {
-  display: none !important;
-}
-
-html[data-blog-route] .site-route-title::before {
-  content: none;
-  margin: 0;
-}
-
-html[data-blog-route] .site-route-title {
-  color: var(--fg-heading);
-  font-family: var(--font-brand);
-  font-weight: 400;
-  font-size: var(--type-section-subtitle);
-  letter-spacing: normal;
 }
 
 .phone-stage,
@@ -1646,6 +1613,11 @@ html[data-blog-route] .site-route-title {
   --hero-chip-subtitle: var(--mono-2);
   --hero-chip-icon-bg: rgba(155,188,15,0.52);
   --hero-chip-text-shadow: none;
+}
+
+/* Anchor for header "Join Waitlist" → /waitlist#waitlist-name-entry */
+#waitlist-name-entry {
+  scroll-margin-top: 1.25rem;
 }
 
 /* SearchForm extracted stack (zechariah2 parity) */
@@ -2389,7 +2361,7 @@ html[data-blog-route] .site-route-title {
   --waitlist-surface: linear-gradient(135deg, #1f192b 0%, #2a2038 48%, #1f2636 100%);
   --waitlist-border: rgba(255, 255, 255, 0.17);
   --waitlist-title: #f4b728;
-  --waitlist-input-bg: rgba(255, 255, 255, 0.9);
+  --waitlist-input-bg: transparent;
   --waitlist-input-border: rgba(255, 255, 255, 0.85);
   --waitlist-input-text: #242039;
   --waitlist-input-placeholder: #7c7891;
@@ -2406,11 +2378,12 @@ html[data-blog-route] .site-route-title {
   --waitlist-noise-mask: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.85) 18%, rgba(0, 0, 0, 0.85) 82%, transparent 100%);
 }
 
+html.light,
 [data-theme="light"] {
   --waitlist-surface: linear-gradient(140deg, #f4f7ff 0%, #edf2ff 52%, #e7f4f2 100%);
   --waitlist-border: rgba(255, 255, 255, 0.72);
   --waitlist-title: #1d2a44;
-  --waitlist-input-bg: rgba(255, 255, 255, 0.92);
+  --waitlist-input-bg: transparent;
   --waitlist-input-border: rgba(255, 255, 255, 0.94);
   --waitlist-input-text: #3d2b3f;
   --waitlist-input-placeholder: #827093;
@@ -2431,7 +2404,7 @@ html[data-blog-route] .site-route-title {
   --waitlist-surface: linear-gradient(140deg, rgba(48, 98, 48, 0.76) 0%, rgba(15, 56, 15, 0.84) 100%);
   --waitlist-border: rgba(139, 172, 15, 0.44);
   --waitlist-title: var(--mono-3);
-  --waitlist-input-bg: rgba(155, 188, 15, 0.2);
+  --waitlist-input-bg: transparent;
   --waitlist-input-border: rgba(139, 172, 15, 0.46);
   --waitlist-input-text: var(--mono-3);
   --waitlist-input-placeholder: var(--mono-2);
@@ -2874,29 +2847,6 @@ html[data-blog-route] .site-route-title {
 
 .leaders-table-scroll::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--leaders-card-border) 96%, var(--fg-muted) 4%);
-}
-
-.site-header-menu-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--fg-muted) 72%, transparent) color-mix(in srgb, var(--color-raised) 90%, transparent);
-}
-
-.site-header-menu-scroll::-webkit-scrollbar {
-  width: 8px;
-}
-
-.site-header-menu-scroll::-webkit-scrollbar-track {
-  background: color-mix(in srgb, var(--color-raised) 90%, transparent);
-}
-
-.site-header-menu-scroll::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--fg-muted) 72%, transparent);
-  border: 2px solid var(--color-raised);
-  border-radius: 999px;
-}
-
-.site-header-menu-scroll::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--fg-heading) 72%, transparent);
 }
 
 .app-shell-standalone [data-site-chrome="true"] {
@@ -4142,7 +4092,7 @@ body.app-shell-standalone {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--color-raised);
+  background: var(--input-fill);
   color: var(--fg-heading);
   padding: 0.7rem 0.75rem;
   font: inherit;

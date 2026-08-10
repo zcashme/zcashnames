@@ -219,7 +219,7 @@ export default function CaptchaChallengeModal({
                 disabled={!challenge || busy}
                 className="min-w-0 flex-1 rounded-xl px-4 py-2.5 text-sm outline-none transition-colors disabled:opacity-70"
                 style={{
-                  background: "var(--color-bg, transparent)",
+                  background: "var(--input-fill)",
                   border: "1px solid var(--border-muted)",
                   color: "var(--fg-heading)",
                 }}

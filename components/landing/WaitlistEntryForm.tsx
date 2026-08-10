@@ -152,6 +152,69 @@ export default function WaitlistEntryForm({
     if (ref) referredByRef.current = ref;
   }, []);
 
+  // Header "Join Waitlist" → /waitlist#waitlist-name-entry: put the name field
+  // near the top of the viewport (Next.js client nav often skips native hash scroll).
+  useEffect(() => {
+    const HASH = "#waitlist-name-entry";
+    let retryId: number | null = null;
+
+    function scrollToNameEntry() {
+      if (window.location.hash !== HASH) return;
+      const target = nameFieldTopRef.current;
+      if (!target) return;
+      const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      target.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+    }
+
+    function scheduleScrollToNameEntry() {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(scrollToNameEntry);
+      });
+      if (retryId !== null) window.clearTimeout(retryId);
+      // Retry after layout (phone stage / fonts) settles
+      retryId = window.setTimeout(scrollToNameEntry, 280);
+    }
+
+    function isJoinWaitlistAnchor(anchor: HTMLAnchorElement): boolean {
+      try {
+        const url = new URL(anchor.href, window.location.href);
+        if (url.origin !== window.location.origin) return false;
+        if (url.hash !== HASH) return false;
+        const path = url.pathname.replace(/\/$/, "") || "/";
+        return path === "/waitlist";
+      } catch {
+        return false;
+      }
+    }
+
+    // Same-page menu clicks: App Router pushState often does not fire hashchange.
+    function onDocumentClick(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      if (!isJoinWaitlistAnchor(anchor)) return;
+      scheduleScrollToNameEntry();
+    }
+
+    scheduleScrollToNameEntry();
+    window.addEventListener("hashchange", scheduleScrollToNameEntry);
+    document.addEventListener("click", onDocumentClick, true);
+
+    return () => {
+      if (retryId !== null) window.clearTimeout(retryId);
+      window.removeEventListener("hashchange", scheduleScrollToNameEntry);
+      document.removeEventListener("click", onDocumentClick, true);
+    };
+  }, []);
+
   const name = normalizeUsername(nameInput);
   const showResult = confirmedName.length > 0;
 

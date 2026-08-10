@@ -84,7 +84,7 @@ type NameActionFormProps = {
 
 function fieldStyle(hasError: boolean): CSSProperties {
   return {
-    background: "var(--color-raised)",
+    background: "var(--input-fill)",
     border: `1.5px solid ${hasError ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`,
     color: "var(--fg-heading)",
   };

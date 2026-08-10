@@ -1,18 +1,7 @@
-"use client";
-
-import { useEffect } from "react";
-
 /**
- * On blog routes, the header wordmark becomes "Blogs" via SiteRouteTitle
- * and the default "Zcash Names" label is hidden (see globals.css).
+ * Previously swapped the header wordmark for a portaled "Blogs" label.
+ * Header no longer shows page titles; brand wordmark stays when the viewport is wide enough.
  */
 export default function BlogRouteChrome() {
-  useEffect(() => {
-    document.documentElement.setAttribute("data-blog-route", "true");
-    return () => {
-      document.documentElement.removeAttribute("data-blog-route");
-    };
-  }, []);
-
   return null;
 }

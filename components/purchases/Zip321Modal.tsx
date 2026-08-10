@@ -266,7 +266,7 @@ export default function Zip321Modal({
                   placeholder="XXXX-XXXX-XXXX"
                   className="w-full rounded-xl px-4 py-3 text-sm font-mono tracking-[0.15em] outline-none text-center"
                   style={{
-                    background: "var(--color-raised)",
+                    background: "var(--input-fill)",
                     border: `1.5px solid ${s.unlockError ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`,
                     color: "var(--fg-heading)",
                   }}
@@ -396,7 +396,7 @@ export default function Zip321Modal({
                               placeholder="u1…"
                               className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                               style={{
-                                background: "var(--color-raised)",
+                                background: "var(--input-fill)",
                                 border: `1.5px solid ${borderColor}`,
                                 color: "var(--fg-heading)",
                               }}
@@ -442,7 +442,7 @@ export default function Zip321Modal({
                           placeholder="0.00"
                           className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                           style={{
-                            background: "var(--color-raised)",
+                            background: "var(--input-fill)",
                             border: "1.5px solid var(--faq-border)",
                             color: "var(--fg-heading)",
                           }}
@@ -467,7 +467,7 @@ export default function Zip321Modal({
                           placeholder={network === "testnet" ? "tm…" : "t1…"}
                           className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                           style={{
-                            background: "var(--color-raised)",
+                            background: "var(--input-fill)",
                             border: `1.5px solid ${
                               s.inputError &&
                               /payout|transparent|checksum|t-address|tm or tn|t1 or t3/i.test(

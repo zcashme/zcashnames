@@ -69,7 +69,7 @@ function walletWarning(choice: WalletChoice | "other"): string | null {
 }
 
 const inputStyle: React.CSSProperties = {
-  background: "var(--color-raised)",
+  background: "var(--input-fill)",
   border: "1.5px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
   color: "var(--fg-heading)",
 };

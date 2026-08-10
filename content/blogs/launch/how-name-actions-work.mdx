@@ -1,0 +1,272 @@
+# How Name Actions Work
+
+Every change to a Zcash name—claiming it, pointing it at a new address, listing it, buying it, or giving it up—is a **name action**. Actions are not account settings on a website. They are ordinary Zcash shielded transactions whose memos carry a signed instruction the registry understands.
+
+This post walks through the general model, then follows one name—**`zatoshi`**—through the steps you see in the product. For each step we say what it establishes and what it prevents. For wire formats and admission rules, see [Memo Format](/docs/protocol/memo-format) and [Name Lifecycle](/docs/learn/name-lifecycle).
+
+## The idea in one paragraph
+
+ZNS does not store names in a proprietary database you have to trust. You broadcast a memo that looks conceptually like:
+
+```
+ZNS:CLAIM:zatoshi:u1…your-unified-address…:<signature>
+```
+
+Once that transaction confirms, any honest indexer scanning the same chain derives the same result: `zatoshi` resolves to your address. Management and marketplace actions use the same pattern with different keywords (`UPDATE`, `LIST`, `BUY`, and so on). The site and wallets help you build the payment; the chain is the source of truth.
+
+## Why “steps” exist at all
+
+There are no ZNS logins. There is no “edit name” button that silently mutates a server row. Proving intent means:
+
+1. **Saying what you want** in a memo the protocol can parse
+2. **Authorizing that statement** with a signature the indexer verifies
+3. **Paying whatever economic cost** the action requires (claim fee, listing commission, OTP dust, seller price)
+4. **Waiting until confirmation** so first-come-first-served and race rules are unambiguous
+
+The UI breaks that into short phases so you never skip a check that would make the on-chain memo invalid or leave ownership ambiguous.
+
+---
+
+## Running example: `zatoshi`
+
+Assume you want the human-readable name **`zatoshi`** (as in `zatoshi.zcash` / `zatoshi.zec`—same underlying name). We will use it for claim, update, list, buy, and release so the same label stays concrete while the action type changes.
+
+---
+
+## CLAIM — register an available name
+
+**When:** Search shows `zatoshi` as **Available**.
+
+**What success establishes:** A permanent registration: `zatoshi` → your unified address, nonce `0`, recorded in confirmed chain history.
+
+**What failure modes it avoids:** Free-for-all spam (claim cost), ambiguous winners (first confirmed memo wins), fake “registered” UI state (indexer only accepts valid signed memos).
+
+### Step 1 — Enter the destination address
+
+You type the unified address that `zatoshi` should resolve to.
+
+| | |
+|--|--|
+| **Establishes** | The exact bech32m string that wallets will pay when someone sends to `zatoshi` |
+| **Prevents** | Registering a name that cannot receive Orchard traffic (non-unified or incomplete receivers) |
+
+Only unified addresses are accepted. Transparent-only or malformed strings would create a name that cannot serve its purpose.
+
+### Step 2 — Confirm and send the claim payment
+
+The app builds a ZIP-321 payment request: amount ≥ the [claim cost](/docs/learn/pricing) for this length, memo `ZNS:CLAIM:zatoshi:<ua>:<sig>`, sent to the registry address. You open it in a wallet that supports ZIP-321, Orchard, and verbatim memos.
+
+| | |
+|--|--|
+| **Establishes** | On-chain evidence of registration intent, with fee and admin signature |
+| **Prevents** | Zero-cost name squatting; unsigned or altered memos the indexer must reject |
+
+The signature binds `CLAIM:zatoshi:<ua>` under the admin key so indexers accept only properly authorized claims. The note value enforces economic spam resistance: anyone can claim any available name by paying the network fee structure—not by waiting on a whitelist.
+
+### Step 3 — Wait for scanning / confirmation
+
+You wait until the transaction mines and the indexer processes the memo.
+
+| | |
+|--|--|
+| **Establishes** | Final, ordered ownership: first valid confirmed claim for `zatoshi` wins |
+| **Prevents** | Two people both believing they own `zatoshi` from a race in the mempool |
+
+Until confirmation, the name is not yours. After confirmation, it is registered—no auction window, no dispute period. If someone else’s claim confirms first, yours is rejected even if you paid.
+
+**After claim:** Search and the [Explorer](/explorer) show a `CLAIM` for `zatoshi`. A matching `zcash.me` profile path exists for the same label. Wallet resolution may still be rolling out in some apps; that is separate from whether the registry row is real.
+
+---
+
+## Why management actions need extra steps
+
+Claim proves “I paid and published a signed memo for this free name.” After that, the name already points at an address. Changing it, selling it, or releasing it must prove **control of the current registered address**—without inventing passwords or custodial accounts.
+
+That is what [OTP verification](/docs/use/otp-verification) (ZVS) does: you send a tiny shielded payment from the registered address; a 6-digit passcode comes back in a shielded memo to that same address; the web app accepts the code and then issues the management memo.
+
+OTP is required for **UPDATE**, **LIST**, **DELIST**, and **RELEASE**. It is not required for **CLAIM** or the buyer’s **BUY** path (those establish new control via payment + signature, not “I still hold the old address”).
+
+---
+
+## UPDATE — repoint `zatoshi`
+
+**When:** You own `zatoshi` and want it to resolve to a different unified address (new wallet, rotated keys, etc.).
+
+**What success establishes:** Same name, new resolution target; nonce advances.
+
+**What it prevents:** Strangers rebinding `zatoshi` to their address; replay of an old update memo.
+
+### Step 1 — Enter the new address
+
+| | |
+|--|--|
+| **Establishes** | The next resolution target for `zatoshi` |
+| **Prevents** | Accidental no-op or invalid UA being signed into the memo |
+
+OTP still proves the **current** owner address—not the new one. That is intentional: you prove you still control the registration, then you choose where it points next.
+
+### Step 2 — OTP (passcode) verification
+
+You send the ZVS verification memo (fixed small amount) from the address currently registered to `zatoshi`. You enter the 6-digit code that arrives in a reply memo.
+
+| | |
+|--|--|
+| **Establishes** | Cryptographic-economic proof that you can spend from the owner address |
+| **Prevents** | Website-only “I’m the owner” assertions; passcodes delivered to the wrong wallet |
+
+Because the code is bound to session + address and travels shielded, observers on a public channel do not get a usable credential. The registry never sees a password file—only a later signed action memo that the signing service issues after OTP succeeds.
+
+### Step 3 — Confirm and send the UPDATE memo
+
+Memo shape: `ZNS:UPDATE:zatoshi:<new_ua>:<nonce>:<sig>` with `nonce` strictly greater than the current value.
+
+| | |
+|--|--|
+| **Establishes** | Ordered state transition: this update supersedes prior ones |
+| **Prevents** | Replay of an older UPDATE; out-of-order application if two updates race |
+
+### Step 4 — Scanning
+
+Same as claim: confirmation is when the world agrees `zatoshi` points at the new address.
+
+---
+
+## LIST — put `zatoshi` on the market
+
+**When:** You own `zatoshi` and want to sell it at a price you choose.
+
+**What success establishes:** A listing row (price + transparent `pay_taddr` for buyer payment) while registration stays yours until a sale finalizes.
+
+**What it prevents:** Free listing spam (0.01 ZEC non-refundable commission); buyers sending ZEC to an unknown or wrong payment path.
+
+### Steps (same skeleton as UPDATE)
+
+1. **Input** — price and the transparent address where you want to receive payment.
+   - *Establishes:* exact sale terms and payout destination.
+   - *Prevents:* ambiguous “DM me for price” sales that the indexer cannot finalize.
+
+2. **OTP** — prove you control the registered address.
+   - *Establishes:* only the owner can advertise `zatoshi` for sale.
+   - *Prevents:* grief-listings by non-owners.
+
+3. **Confirm / send** — LIST memo + listing commission.
+   - *Establishes:* signed marketplace intent independent of the registration signature.
+   - *Prevents:* clients that only verify ownership but not the price claim (verify both).
+
+4. **Scanning** — listing becomes visible (e.g. Explorer **For Sale**).
+
+Listing does not transfer `zatoshi`. It only creates a buyable offer. You can list again with a new price (nonce advances); the new row replaces the old one.
+
+---
+
+## BUY — acquire listed `zatoshi`
+
+**When:** Search shows `zatoshi` as **For Sale**.
+
+Buying is deliberately **two on-chain phases**. One memo cannot both lock the listing and pay the seller in the model ZNS uses: the sale price goes **directly** to the seller’s transparent address (no escrow, no registry custody).
+
+### Phase A — Claim the listing (shielded BUY memo)
+
+1. **Input** — your buyer unified address (where `zatoshi` will resolve after transfer).
+2. **Confirm / send** — signed `BUY` memo with a small non-refundable dust commission.
+3. **Scanning** — wait until the indexer records a **pending buy**.
+
+| | |
+|--|--|
+| **Establishes** | Exclusive lock on the listing for ~2 hours (~144 blocks); your address as the intended new owner |
+| **Prevents** | Two buyers racing payment without a clear winner; seller delisting mid-flight once a lock is active |
+
+If you never pay within the lock window, the lock expires and `zatoshi` is listed again. The dust commission is already spent—that discourages lock-spam.
+
+### Phase B — Pay the seller (transparent)
+
+4. **Fund** — send **exactly** the listing price as a transparent transaction to the seller’s `pay_taddr` (not the registry, not ZVS).
+5. **Settling** — indexer watches for a qualifying payment, then finalizes: registration moves to your UA, nonce resets to `0`, listing deleted.
+
+| | |
+|--|--|
+| **Establishes** | Seller received payment on-chain; buyer becomes registrant |
+| **Prevents** | Custodial “platform holds the ZEC”; silent transfer without economic settlement |
+
+There is no refund of overpayment. Skipping the transparent step means the lock eventually expires and you do not get the name.
+
+---
+
+## DELIST — take `zatoshi` off the market
+
+**When:** You listed `zatoshi` and want it registered but not for sale.
+
+Steps: **OTP → confirm DELIST memo → scanning**.
+
+| | |
+|--|--|
+| **Establishes** | Listing removed; registration unchanged |
+| **Prevents** | Buyers acting on a stale price you no longer intend |
+
+**Blocked while a buy is pending.** If someone already locked `zatoshi` with BUY, delist is rejected until the lock expires or the sale completes. That prevents yanking the listing out from under a buyer who is mid-payment.
+
+---
+
+## RELEASE — give `zatoshi` up forever
+
+**When:** You intentionally want the name available for anyone to claim again.
+
+Steps: **OTP → confirm RELEASE memo → scanning**.
+
+| | |
+|--|--|
+| **Establishes** | Registration (and any listing) deleted; name returns to **Available** |
+| **Prevents** | Accidental “delete” without owner proof; silent operator revocation of valid claims |
+
+Release is irreversible once confirmed. Released names are indistinguishable from never-claimed names at the registration layer. Use UPDATE if you only meant to change the address.
+
+---
+
+## The pattern across every action
+
+| Concern | How ZNS handles it | What it prevents / establishes |
+|--------|---------------------|--------------------------------|
+| **No accounts** | Control of a Zcash address (pay-to-claim, OTP, or buy settlement) | Password databases; site-only ownership |
+| **Intent is public-to-indexers, private-to-chain observers** | Shielded memos + deterministic indexing | “Trust our API row” without chain backing |
+| **Authorization** | Ed25519 signatures on fixed pre-images | Forged memos; unverifiable resolve results |
+| **Spam / DoS** | Claim tiers, LIST commission, BUY dust, OTP amount | Free flooding of names and locks |
+| **Ordering** | Block height + nonce monotonicity | Replays and ambiguous concurrent updates |
+| **Marketplace fairness** | BUY lock window + transparent seller payment | Double-sale races; platform escrow |
+| **Finality** | Confirmed txs only | UI that claims success before the chain does |
+
+---
+
+## What each action is for (cheat sheet)
+
+| Action | `zatoshi` story | Needs OTP? | Main economic cost |
+|--------|-----------------|------------|--------------------|
+| **CLAIM** | Name free → you own it | No | Claim price by length |
+| **UPDATE** | Same name, new address | Yes | Network fee (+ OTP dust) |
+| **LIST** | Offer it for sale | Yes | 0.01 ZEC commission |
+| **BUY** | Buy a listing | No (buyer) | Listing price + dust; then transparent price |
+| **DELIST** | Stop selling, keep name | Yes | Network fee (+ OTP dust) |
+| **RELEASE** | Abandon name entirely | Yes | Network fee (+ OTP dust) |
+
+---
+
+## Practical checklist when you act on `zatoshi`
+
+1. **Search first** — Available / Registered / For Sale / Protected / Blocked change the legal next step.
+2. **Use a compatible wallet** — ZIP-321, Orchard, verbatim memos; do not let the wallet rewrite the memo.
+3. **Do not skip scanning** — mempool is not ownership.
+4. **For owner actions, complete OTP from the registered address** — not from a random spare wallet.
+5. **For BUY, finish both legs** — lock memo, then transparent payment to `pay_taddr` before the lock expires.
+6. **Treat RELEASE as permanent** — there is no “undo” memo.
+
+---
+
+## Where to go next
+
+- [Claiming a name](/docs/use/claiming) — product claim flow
+- [Managing names](/docs/use/managing) — update and release
+- [Buying & selling](/docs/use/buying-and-selling) — marketplace detail
+- [OTP verification](/docs/use/otp-verification) — passcode path
+- [How it works](/docs/learn/how-it-works) — architecture
+- [Trust model](/docs/learn/trust-model) — what you verify vs what you assume
+
+Name actions are small on purpose: each step is either **collecting the exact fields the memo needs**, **proving the right person is initiating**, **paying the cost that keeps the system open but not free to abuse**, or **waiting until the chain—and every honest indexer—agree on the new state of `zatoshi`**.

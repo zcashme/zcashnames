@@ -2,13 +2,10 @@
  * Tailwind utilities for docs-route components.
  *
  * The (docs) route loads `nextra-theme-docs/style.css` (Nextra's own bundled
- * Tailwind v4 build) and does NOT load the site's globals.css. Without this
- * file, classes used by components rendered inside MDX pages - like
- * components/docs/WhereToStart.tsx - get stripped because Nextra's bundle
- * was compiled against its own source set, not ours.
- *
- * This pulls in Tailwind utilities scoped to the components and MDX files we
- * actually use in the docs route.
+ * Tailwind v4 build) and also inherits the root layout's globals.css. Marketing
+ * site themes use data-theme on <html>; Nextra uses class="dark"|"light".
+ * Docs are dark-only — reassert dark tokens so a light marketing session cannot
+ * leave cream backgrounds with pale prose.
  */
 
 @import "tailwindcss";
@@ -16,17 +13,82 @@
 @source "../../components/docs/**/*.{ts,tsx}";
 @source "../../content/**/*.{md,mdx}";
 
-:root {
+/* ── Dark-only palette (wins over leaked data-theme=light|monochrome) ── */
+:root,
+html,
+html.light,
+html.dark,
+html[data-theme="light"],
+html[data-theme="dark"],
+html[data-theme="monochrome"] {
+  color-scheme: dark;
   --docs-fg-heading: #f0f0f0;
   --type-section-subtitle: clamp(1.04rem, 1.2vw, 1.2rem);
+  /* Nextra expects space-separated RGB channels: rgb(var(--nextra-bg)) */
+  --nextra-bg: 10 10 10;
+  /* Mirror marketing :root dark tokens used by body { color; background } */
+  --color-background: #0a0a0a;
+  --fg: #e0e0e0;
+  --fg-heading: #f0f0f0;
+  --fg-body: #d1d5db;
+  --fg-muted: #8b8b8b;
+  --fg-dim: #6b7280;
+  --border: #2a2a2a;
+  --border-light: #222222;
+  --border-muted: #333333;
+  --color-card: #141414;
+  --color-surface: #1a1a1a;
+  --color-raised: #1e1e1e;
 }
 
-html.light {
-  --docs-fg-heading: #111318;
+html,
+body {
+  background: #0a0a0a !important;
+  color: #e0e0e0 !important;
 }
 
-html.dark {
-  --docs-fg-heading: #f0f0f0;
+/*
+ * Dropdowns (Copy page Select, etc.) use x:bg-nextra-bg/70 + backdrop-blur.
+ * When --nextra-bg is missing or half-transparent, menus read as empty glass.
+ * Force solid page fill so options sit on the same surface as the page.
+ */
+ul[role="listbox"],
+[data-headlessui-portal] ul[role="listbox"],
+.nextra-mobile-nav {
+  background-color: #0a0a0a !important;
+  background: #0a0a0a !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Hide Nextra theme toggle if theme chrome still mounts */
+.nextra-navbar button[aria-label*="theme" i],
+.nextra-navbar button[aria-label*="Theme" i],
+.nextra-navbar [data-toggle-theme],
+button.nextra-theme-switch {
+  display: none !important;
+}
+
+/* Compact copyright under prev/next nav — no band, border, or section chrome */
+.docs-page-footer {
+  margin: 0 auto;
+  max-width: var(--nextra-content-width);
+  padding: 0.35rem max(env(safe-area-inset-right), 1.5rem)
+    max(env(safe-area-inset-bottom), 1rem) max(env(safe-area-inset-left), 1.5rem);
+  border: none;
+  background: transparent;
+  color: var(--fg-muted, #8b8b8b);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .docs-page-footer {
+    text-align: left;
+  }
 }
 
 .docs-navbar-logo {
@@ -89,13 +151,4 @@ html.dark {
 .nextra-navbar .nextra-hamburger svg {
   color: var(--docs-fg-heading) !important;
   opacity: 1 !important;
-}
-
-html.light .docs-navbar-logo,
-html.light .docs-navbar-logo-text,
-html.light .nextra-navbar a[href="https://github.com/zcashme/zcashnames"],
-html.light .nextra-navbar a[href="https://github.com/zcashme/zcashnames"] svg,
-html.light .nextra-navbar .nextra-hamburger,
-html.light .nextra-navbar .nextra-hamburger svg {
-  color: #111318 !important;
 }

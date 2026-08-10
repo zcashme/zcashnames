@@ -180,7 +180,7 @@ export default function SurveyForm({
               onChange={(e) => setOtherUseCase(e.target.value)}
               placeholder="Tell us more…"
               className="w-full rounded-xl px-4 py-2.5 text-sm outline-none transition-colors"
-              style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)", marginTop: "0.25rem" }}
+              style={{ background: "var(--input-fill)", border: "1px solid var(--border-muted)", color: "var(--fg-body)", marginTop: "0.25rem" }}
             />
           )}
         </div>
@@ -206,7 +206,7 @@ export default function SurveyForm({
               placeholder="Type here…"
               rows={3}
               className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none transition-colors"
-              style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
+              style={{ background: "var(--input-fill)", border: "1px solid var(--border-muted)", color: "var(--fg-body)" }}
             />
           )}
         </div>

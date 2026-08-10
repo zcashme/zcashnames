@@ -14,6 +14,8 @@ type LandingActionLinkProps = {
   arrowDirection?: "left" | "right";
   arrowPosition?: "left" | "right";
   iconPosition?: "left" | "right";
+  /** "text" matches homepage "See more →" under Blog (no pill chrome). */
+  variant?: "pill" | "text";
 };
 
 export default function LandingActionLink({
@@ -26,6 +28,7 @@ export default function LandingActionLink({
   arrowDirection = "right",
   arrowPosition = "right",
   iconPosition = "left",
+  variant = "pill",
 }: LandingActionLinkProps) {
   const proximity = usePointerProximity<HTMLAnchorElement>({
     radius: 170,
@@ -33,6 +36,31 @@ export default function LandingActionLink({
     maxShadowOpacity: 0.14,
   });
   const arrow = arrowDirection === "left" ? "\u2190" : "\u2192";
+
+  if (variant === "text") {
+    return (
+      <Link
+        href={href}
+        className="inline-flex items-center gap-2 text-sm font-semibold transition-opacity hover:opacity-80"
+        style={{ color: "var(--color-accent-interactive, var(--fg-heading))" }}
+        aria-label={label}
+      >
+        {showArrow && arrowPosition === "left" ? <span aria-hidden="true">{arrow}</span> : null}
+        {iconPosition === "left" ? (
+          <span aria-hidden="true" className="inline-flex" style={{ width: "1.08em", height: "1.08em" }}>
+            {icon}
+          </span>
+        ) : null}
+        <span>{label}</span>
+        {iconPosition === "right" ? (
+          <span aria-hidden="true" className="inline-flex" style={{ width: "1.08em", height: "1.08em" }}>
+            {icon}
+          </span>
+        ) : null}
+        {showArrow && arrowPosition === "right" ? <span aria-hidden="true">{arrow}</span> : null}
+      </Link>
+    );
+  }
 
   return (
     <div onPointerMove={proximity.handlePointerMove} onPointerLeave={proximity.handlePointerLeave}>

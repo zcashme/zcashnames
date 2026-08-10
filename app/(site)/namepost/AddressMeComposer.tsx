@@ -551,7 +551,7 @@ export default function AddressMeComposer() {
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="min-w-0 rounded-md border border-border-muted bg-[var(--color-raised)] px-3 py-2 text-sm font-semibold text-fg-heading outline-none focus:border-fg-heading"
+              className="min-w-0 rounded-md border border-border-muted bg-[var(--input-fill)] px-3 py-2 text-sm font-semibold text-fg-heading outline-none focus:border-fg-heading"
               placeholder={DEFAULT_NAME}
               maxLength={32}
               spellCheck={false}
@@ -634,7 +634,7 @@ export default function AddressMeComposer() {
                 type="text"
                 value={nameHexInput}
                 onChange={(event) => handleNameHexChange(event.target.value)}
-                className="min-w-0 rounded-md border border-border-muted bg-[var(--color-raised)] px-3 py-2 font-mono text-sm font-semibold text-fg-heading outline-none focus:border-fg-heading"
+                className="min-w-0 rounded-md border border-border-muted bg-[var(--input-fill)] px-3 py-2 font-mono text-sm font-semibold text-fg-heading outline-none focus:border-fg-heading"
                 placeholder="#f8f8f8"
                 spellCheck={false}
               />

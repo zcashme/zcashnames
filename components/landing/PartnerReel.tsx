@@ -77,7 +77,8 @@ function WalletsLink() {
       proximityId="wallets-link"
       href="/beta/wallets"
       label="Wallets"
-      showArrow={false}
+      variant="text"
+      showArrow
       icon={
         <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
           <path d="M4.75 7.25A2.25 2.25 0 0 1 7 5h10.25A1.75 1.75 0 0 1 19 6.75v1.5H8.25A2.25 2.25 0 0 0 6 10.5v3A2.25 2.25 0 0 0 8.25 15.75H19v1.5A1.75 1.75 0 0 1 17.25 19H7A2.25 2.25 0 0 1 4.75 16.75v-9.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
@@ -408,25 +409,25 @@ export default function PartnerReel() {
 
   return (
     <section id="supporters" className="relative z-[2] my-24 w-full px-5">
-      <div className="mb-14 flex justify-center">
-        <SectionHeaderPill id="supported-by-pill" title="Supporters" />
+      <div className="mb-14 text-center">
+        <SectionHeaderPill id="supported-by-pill" title="Partners" />
+        <p
+          className="type-section-subtitle mx-auto mt-6 max-w-2xl"
+          style={{ color: "var(--fg-muted)" }}
+        >
+          Wallets, apps, and ecosystem teams already helping bring Zcash names to life. To integrate, read the{" "}
+          <a href="/docs/zns-developer-guide" className="underline" style={{ color: "var(--fg-body)" }}>
+            developer guide
+          </a>
+          .
+        </p>
       </div>
-      <p
-        className="type-section-subtitle mx-auto mb-16 max-w-2xl text-center"
-        style={{ color: "var(--fg-muted)" }}
-      >
-        Wallets, apps, and ecosystem teams already helping bring Zcash names to life. To integrate, read the{" "}
-        <a href="/docs/zns-developer-guide" className="underline" style={{ color: "var(--fg-body)" }}>
-          developer guide
-        </a>
-        .
-      </p>
 
       <div className="mx-auto max-w-6xl">
         <MarqueeRow items={partners} direction="left" speed={20} />
       </div>
 
-      <div className="mt-8 flex justify-center">
+      <div className="mt-5 flex justify-center">
         <WalletsLink />
       </div>
     </section>

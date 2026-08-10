@@ -11,7 +11,6 @@ import ExplorerToolbar from "./ExplorerToolbar";
 import ExplorerNameDetail from "./ExplorerNameDetail";
 import ExplorerListPane from "./ExplorerListPane";
 import ResumeReplacementDialog from "@/components/purchases/ResumeReplacementDialog";
-import SiteRouteTitle from "@/components/SiteRouteTitle";
 import { useUsdPrice } from "@/components/hooks/useUsdPrice";
 import CopyIconButton from "@/components/CopyIconButton";
 import SearchResultsSummary from "@/components/table/SearchResultsSummary";
@@ -313,8 +312,6 @@ export default function ExplorerView({
 
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-6">
-      <SiteRouteTitle title="Explorer" />
-
       <div
         ref={headerRowRef}
         className="relative flex min-w-0 w-full max-w-full flex-nowrap items-center justify-between gap-3 overflow-x-clip"
@@ -325,8 +322,8 @@ export default function ExplorerView({
           aria-hidden="true"
         >
           <div className="flex w-max items-center gap-3 opacity-0">
-            <span ref={headerDescMeasureRef} className="whitespace-nowrap text-sm">
-              Browse names, activity, and listings.
+            <span ref={headerDescMeasureRef} className="blog-shell-title whitespace-nowrap">
+              Explorer
             </span>
             <div ref={headerPillsFullMeasureRef} className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <span
@@ -352,14 +349,8 @@ export default function ExplorerView({
           </div>
         </div>
 
-        <p
-          className="min-w-0 flex-1 truncate text-sm"
-          style={{ color: "var(--fg-muted)" }}
-          title="Browse names, activity, and listings."
-        >
-          Browse names, activity, and listings.
-        </p>
-        <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
+        <h1 className="blog-shell-title min-w-0 flex-1 truncate">Explorer</h1>
+        <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1.5 sm:gap-2 self-center">
           <button
             type="button"
             onClick={handleRefresh}

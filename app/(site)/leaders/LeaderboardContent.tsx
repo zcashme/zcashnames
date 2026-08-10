@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import {
   Area,
   AreaChart,
@@ -375,7 +374,7 @@ function StatCard({
 
 export default function LeaderboardContent({ data }: { data: LeadersData }) {
   const { timeSeries, leaderboard, dailyRankings: dailyRows, weeklyRankings: weeklyRows, stats } = data;
-  const [headerTitleTarget, setHeaderTitleTarget] = useState<HTMLElement | null>(null);
+
   const [weeklyRankingsMode, setWeeklyRankingsMode] = useState<"weekly" | "allTime">("weekly");
   const [rankingsMode, setRankingsMode] = useState<"daily" | "allTime">("daily");
   const [chartRange, setChartRange] = useState<"7d" | "30d" | "allTime">("allTime");
@@ -527,10 +526,6 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
   }, [filteredWeeklyRows]);
 
   useEffect(() => {
-    setHeaderTitleTarget(document.getElementById("site-route-title"));
-  }, []);
-
-  useEffect(() => {
     setVisibleDailyRows(7);
   }, [filteredDailyRows.length]);
 
@@ -572,13 +567,6 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
 
   return (
     <>
-      {headerTitleTarget &&
-        createPortal(
-          <span className="site-route-title" aria-label="Current page">
-            Leaders
-          </span>,
-          headerTitleTarget,
-        )}
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline">
           <HomeIcon className="h-4 w-4 shrink-0" />

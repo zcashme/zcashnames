@@ -4,6 +4,7 @@ import path from "path";
 import WaitlistVerifyClient, { HeroHowReservationsWork } from "@/components/verify/WaitlistVerifyClient";
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import WaitlistReservationResendForm from "@/components/verify/WaitlistReservationResendForm";
+import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import {
   getWaitlistReservePaymentAddress,
   getWaitlistReserveFeeZec,
@@ -123,50 +124,24 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
               </div>
             }
             footer={
-              <div className="mx-auto mt-8 max-w-[920px]">
-                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-sm">
-                  <span
-                    className="inline-flex items-center gap-3"
-                    style={{ color: "var(--fg-muted)" }}
+              <div className="mx-auto mt-10 max-w-[920px] sm:mt-12">
+                <div className="mx-auto max-w-4xl">
+                  <h2
+                    className="text-balance text-center text-[1.65rem] font-bold tracking-tight"
+                    style={{ color: "var(--hero-headline-primary, var(--fg-heading))" }}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-5 w-5"
-                      aria-hidden="true"
-                    >
-                      <rect x="4" y="11" width="16" height="10" rx="2" />
-                      <path d="M8 11V7a4 4 0 1 1 8 0v4" />
-                    </svg>
-                    <span>We only use your email to send your reservation link.</span>
-                  </span>
-                  <a
-                    href="/docs/learn/privacy"
-                    className="inline-flex items-center gap-2 font-semibold transition hover:opacity-80"
-                    style={{ color: "var(--color-accent-interactive)" }}
+                    Join the waitlist{" "}
+                    <span style={{ color: "var(--color-accent-interactive)" }}>first</span>
+                  </h2>
+                  <p
+                    className="mx-auto mt-3 max-w-2xl text-center text-sm leading-6 sm:text-base"
+                    style={{ color: "var(--fg-body)" }}
                   >
-                    <span>Privacy policy</span>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-4 w-4"
-                      aria-hidden="true"
-                    >
-                      <path d="M14 3h7v7" />
-                      <path d="M10 14 21 3" />
-                      <path d="M21 14v4a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h4" />
-                    </svg>
-                  </a>
+                    <strong>Add your name to the waitlist then reserve your place.</strong>
+                  </p>
+                </div>
+                <div className="mt-6 flex justify-center">
+                  <WaitlistEntryForm showNewsletter={false} />
                 </div>
               </div>
             }
