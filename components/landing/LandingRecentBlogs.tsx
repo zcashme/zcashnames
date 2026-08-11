@@ -7,7 +7,7 @@ export type LandingBlogPostCard = {
   title: string;
   href: string;
   seriesLabel: string;
-  publishedLabel: string;
+  publishedLabel?: string;
   excerpt?: string;
 };
 
@@ -56,45 +56,35 @@ export default function LandingRecentBlogs({
             >
               <Link
                 href={post.href}
-                className="group relative flex h-full min-h-[11rem] flex-col overflow-hidden p-5 no-underline"
-                style={{
-                  background:
-                    "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 38%, transparent), transparent)",
-                }}
+                className="group flex h-full min-h-[11rem] flex-col bg-transparent p-5 no-underline"
               >
-                <div
-                  className="pointer-events-none absolute inset-0 opacity-25"
-                  style={{
-                    backgroundImage:
-                      "radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--feature-heading-line-to) 36%, transparent), transparent 48%)",
-                  }}
-                  aria-hidden="true"
-                />
-                <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
+                <p
+                  className="m-0 text-[0.68rem] font-bold uppercase tracking-[0.16em]"
+                  style={{ color: "var(--fg-muted)" }}
+                >
+                  {post.seriesLabel}
+                </p>
+                <h3 className="type-section-subtitle mt-2 line-clamp-2 font-semibold leading-snug text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]">
+                  {post.title}
+                </h3>
+                {post.excerpt ? (
                   <p
-                    className="m-0 text-[0.68rem] font-bold uppercase tracking-[0.16em]"
+                    className="mt-2 line-clamp-2 text-sm leading-relaxed"
                     style={{ color: "var(--fg-muted)" }}
                   >
-                    {post.seriesLabel}
+                    {post.excerpt}
                   </p>
-                  <h3 className="type-section-subtitle mt-2 line-clamp-2 font-semibold leading-snug text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]">
-                    {post.title}
-                  </h3>
-                  {post.excerpt ? (
-                    <p
-                      className="mt-2 line-clamp-2 text-sm leading-relaxed"
-                      style={{ color: "var(--fg-muted)" }}
-                    >
-                      {post.excerpt}
-                    </p>
-                  ) : null}
+                ) : null}
+                {post.publishedLabel ? (
                   <time
                     className="mt-auto pt-4 text-xs"
                     style={{ color: "var(--fg-muted)" }}
                   >
                     {post.publishedLabel}
                   </time>
-                </div>
+                ) : (
+                  <div className="mt-auto pt-4" aria-hidden />
+                )}
               </Link>
             </li>
           );

@@ -4,8 +4,11 @@
  * The (docs) route loads `nextra-theme-docs/style.css` (Nextra's own bundled
  * Tailwind v4 build) and also inherits the root layout's globals.css. Marketing
  * site themes use data-theme on <html>; Nextra uses class="dark"|"light".
- * Docs are dark-only — reassert dark tokens so a light marketing session cannot
- * leave cream backgrounds with pale prose.
+ *
+ * Docs are dark-only. Dark token overrides are scoped under `html.zns-docs`
+ * (toggled by DocsHtmlScope) so they apply only while /docs is mounted.
+ * Unscoped global rules used to stick after client-nav back to the marketing
+ * site and corrupt light/monochrome sessions.
  */
 
 @import "tailwindcss";
@@ -13,14 +16,13 @@
 @source "../../components/docs/**/*.{ts,tsx}";
 @source "../../content/**/*.{md,mdx}";
 
-/* ── Dark-only palette (wins over leaked data-theme=light|monochrome) ── */
-:root,
-html,
-html.light,
-html.dark,
-html[data-theme="light"],
-html[data-theme="dark"],
-html[data-theme="monochrome"] {
+/* ── Dark-only palette (docs route only; wins over leaked data-theme) ── */
+html.zns-docs,
+html.zns-docs.light,
+html.zns-docs.dark,
+html.zns-docs[data-theme="light"],
+html.zns-docs[data-theme="dark"],
+html.zns-docs[data-theme="monochrome"] {
   color-scheme: dark;
   --docs-fg-heading: #f0f0f0;
   --type-section-subtitle: clamp(1.04rem, 1.2vw, 1.2rem);
@@ -41,8 +43,8 @@ html[data-theme="monochrome"] {
   --color-raised: #1e1e1e;
 }
 
-html,
-body {
+html.zns-docs,
+html.zns-docs body {
   background: #0a0a0a !important;
   color: #e0e0e0 !important;
 }
@@ -52,9 +54,9 @@ body {
  * When --nextra-bg is missing or half-transparent, menus read as empty glass.
  * Force solid page fill so options sit on the same surface as the page.
  */
-ul[role="listbox"],
-[data-headlessui-portal] ul[role="listbox"],
-.nextra-mobile-nav {
+html.zns-docs ul[role="listbox"],
+html.zns-docs [data-headlessui-portal] ul[role="listbox"],
+html.zns-docs .nextra-mobile-nav {
   background-color: #0a0a0a !important;
   background: #0a0a0a !important;
   backdrop-filter: none !important;
@@ -62,10 +64,10 @@ ul[role="listbox"],
 }
 
 /* Hide Nextra theme toggle if theme chrome still mounts */
-.nextra-navbar button[aria-label*="theme" i],
-.nextra-navbar button[aria-label*="Theme" i],
-.nextra-navbar [data-toggle-theme],
-button.nextra-theme-switch {
+html.zns-docs .nextra-navbar button[aria-label*="theme" i],
+html.zns-docs .nextra-navbar button[aria-label*="Theme" i],
+html.zns-docs .nextra-navbar [data-toggle-theme],
+html.zns-docs button.nextra-theme-switch {
   display: none !important;
 }
 
@@ -145,10 +147,10 @@ button.nextra-theme-switch {
   text-decoration: none;
 }
 
-.nextra-navbar a[href="https://github.com/zcashme/zcashnames"],
-.nextra-navbar a[href="https://github.com/zcashme/zcashnames"] svg,
-.nextra-navbar .nextra-hamburger,
-.nextra-navbar .nextra-hamburger svg {
+html.zns-docs .nextra-navbar a[href="https://github.com/zcashme/zcashnames"],
+html.zns-docs .nextra-navbar a[href="https://github.com/zcashme/zcashnames"] svg,
+html.zns-docs .nextra-navbar .nextra-hamburger,
+html.zns-docs .nextra-navbar .nextra-hamburger svg {
   color: var(--docs-fg-heading) !important;
   opacity: 1 !important;
 }

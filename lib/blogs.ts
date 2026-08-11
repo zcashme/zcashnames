@@ -19,7 +19,8 @@ export type BlogPostSummary = {
   href: string;
   series: BlogSeriesSlug;
   seriesLabel: string;
-  publishedLabel: string;
+  /** Omitted only when frontmatter date and git history are both unavailable. */
+  publishedLabel?: string;
   excerpt?: string;
 };
 
@@ -114,26 +115,28 @@ function formatPublishedLabel(timestampMs: number): string {
 }
 
 /**
- * Prefer intentional frontmatter `date`, then git history.
- * Never trust filesystem mtime on deploy — CI/Vercel checkouts often stamp
- * every file with the same artificial mtime (commonly seen as Oct 2018).
+ * Publication time for a post.
+ *
+ * Order of preference:
+ * 1. Frontmatter `date` (authoritative; works in every environment)
+ * 2. Git history (local/dev convenience when frontmatter is missing)
+ *
+ * Never use filesystem mtime. Vercel/serverless checkouts stamp artificial
+ * mtimes (often the same bogus date for every file), and the marketing site
+ * layout is dynamic (`cookies()`), so dates resolve at request time without
+ * a usable `.git` directory — mtime was the production bug.
+ *
+ * Returns null when no reliable source exists so callers can omit the label
+ * rather than invent a wrong date.
  */
 async function resolvePostTimestampMs(
   filePath: string,
   markdown: string,
-): Promise<number> {
+): Promise<number | null> {
   const fromFrontmatter = dateFromFrontmatter(markdown);
   if (fromFrontmatter != null) return fromFrontmatter;
 
-  const fromGit = await getGitFileTimestampMs(filePath);
-  if (fromGit != null) return fromGit;
-
-  try {
-    const stat = await fs.stat(filePath);
-    return stat.mtimeMs;
-  } catch {
-    return Date.now();
-  }
+  return getGitFileTimestampMs(filePath);
 }
 
 async function getGitFileTimestampMs(filePath: string): Promise<number | null> {
@@ -172,7 +175,9 @@ async function getGitFileTimestampMs(filePath: string): Promise<number | null> {
   return null;
 }
 
-async function readSeriesPosts(series: BlogSeriesSlug): Promise<Array<BlogPostSummary & { modifiedAt: number }>> {
+async function readSeriesPosts(
+  series: BlogSeriesSlug,
+): Promise<Array<BlogPostSummary & { modifiedAt: number }>> {
   const dir = path.join(BLOGS_CONTENT_ROOT, series);
   try {
     const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -185,7 +190,9 @@ async function readSeriesPosts(series: BlogSeriesSlug): Promise<Array<BlogPostSu
           const slug = entry.name.replace(/\.mdx$/, "");
           const filePath = path.join(dir, entry.name);
           const markdown = await fs.readFile(filePath, "utf8");
-          const modifiedAt = await resolvePostTimestampMs(filePath, markdown);
+          const timestampMs = await resolvePostTimestampMs(filePath, markdown);
+          // Sort key: real publish time when known; unknown dates sink to the bottom.
+          const modifiedAt = timestampMs ?? 0;
 
           return {
             slug,
@@ -195,7 +202,8 @@ async function readSeriesPosts(series: BlogSeriesSlug): Promise<Array<BlogPostSu
             seriesLabel: seriesMeta.label,
             excerpt: firstParagraph(markdown),
             modifiedAt,
-            publishedLabel: formatPublishedLabel(modifiedAt),
+            publishedLabel:
+              timestampMs != null ? formatPublishedLabel(timestampMs) : undefined,
           };
         }),
     );
@@ -235,12 +243,15 @@ export async function listRecentBlogPostsAcrossAllSeries(limit = 8): Promise<Blo
 export async function getBlogPostMeta(
   series: BlogSeriesSlug,
   postSlug: string,
-): Promise<{ publishedLabel: string } | null> {
+): Promise<{ publishedLabel?: string } | null> {
   try {
     const filePath = path.join(BLOGS_CONTENT_ROOT, series, `${postSlug}.mdx`);
     const markdown = await fs.readFile(filePath, "utf8");
-    const modifiedAt = await resolvePostTimestampMs(filePath, markdown);
-    return { publishedLabel: formatPublishedLabel(modifiedAt) };
+    const timestampMs = await resolvePostTimestampMs(filePath, markdown);
+    return {
+      publishedLabel:
+        timestampMs != null ? formatPublishedLabel(timestampMs) : undefined,
+    };
   } catch {
     return null;
   }

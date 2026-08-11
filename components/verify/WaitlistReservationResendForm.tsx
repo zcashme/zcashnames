@@ -182,13 +182,6 @@ export default function WaitlistReservationResendForm({
         onConfirm={completeSubmitAfterCaptcha}
       />
       <form onSubmit={onSubmit} className="mx-auto flex max-w-[920px] flex-col gap-4">
-        <label
-          htmlFor="verify-resend-email"
-          className="text-lg font-bold"
-          style={{ color: "var(--fg-heading)" }}
-        >
-          Email address
-        </label>
         <div className="relative">
           <span
             className="pointer-events-none absolute left-7 top-1/2 -translate-y-1/2"
@@ -206,6 +199,7 @@ export default function WaitlistReservationResendForm({
               setStatus(null);
             }}
             placeholder="you@example.com"
+            aria-label="Email address"
             className="min-w-0 w-full rounded-2xl border bg-transparent py-3 pl-14 pr-[7.5rem] text-base outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
             style={{ borderColor: "var(--faq-border)", color: "var(--fg-heading)" }}
           />

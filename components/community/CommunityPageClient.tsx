@@ -78,7 +78,6 @@ const ICON_CLASS_BY_NAME: Record<string, string> = {
 const THEMED_ICON_CLASS_BY_ID: Record<string, string> = {
   "beta-test": "h-10 w-10",
   "builder-stories": "h-10 w-10",
-  collections: "h-10 w-10",
   events: "h-10 w-10",
   explorer: "h-10 w-10",
   "launch-notes": "h-10 w-10",
@@ -192,7 +191,6 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
   const shareUrl = `${BRAND.url}/community#${card.id}`;
   const external = isExternalHref(card.href);
   const footerHref = formatCommunityCardHref(card.href);
-  const cardSurfaceClassName = resolvedTheme === "monochrome" ? "bg-transparent" : "bg-[var(--color-raised)]";
   const cardMenuClassName = resolvedTheme === "monochrome"
     ? "!overflow-hidden !rounded-[18px] !border-[rgba(155,188,15,0.62)] !bg-[rgba(15,56,15,0.96)] !shadow-[0_18px_40px_rgba(15,56,15,0.62)]"
     : "!overflow-hidden !rounded-[18px] !border-border-muted !bg-[var(--color-raised)] !shadow-2xl";
@@ -242,7 +240,7 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
         ref={(node) => proximity.register(card.id, node)}
         onPointerMove={proximity.handlePointerMove}
         onPointerLeave={proximity.handlePointerLeave}
-        className={`community-card group relative flex min-h-[17.5rem] w-full min-w-0 flex-col gap-5 overflow-visible rounded-[20px] border border-border-muted px-5 py-5 transition-[transform,box-shadow,border-color] duration-200 ease-out sm:min-h-0 ${cardSurfaceClassName}`}
+        className="community-card group relative flex min-h-[17.5rem] w-full min-w-0 flex-col gap-5 overflow-visible rounded-[20px] border border-border-muted bg-transparent px-5 py-5 transition-[transform,box-shadow,border-color] duration-200 ease-out sm:min-h-0"
         style={{
           transform: "translateZ(0) scale(var(--prox-scale, 1))",
           boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",

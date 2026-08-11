@@ -5,6 +5,7 @@ import WaitlistVerifyClient, { HeroHowReservationsWork } from "@/components/veri
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import WaitlistReservationResendForm from "@/components/verify/WaitlistReservationResendForm";
 import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
+import ShareDropdown from "@/components/ShareDropdown";
 import {
   getWaitlistReservePaymentAddress,
   getWaitlistReserveFeeZec,
@@ -89,23 +90,42 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
   if (!token) {
     return (
       <>
-        <div className="mx-auto w-full max-w-[1320px] px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-14">
+        {/* No extra page pb — FooterSitemap mt alone matches rule → join heading. */}
+        <div className="mx-auto w-full max-w-[1320px] px-4 pb-0 pt-10 sm:px-6 sm:pt-14">
           <VerifyAmbientHeroSection
             earlyAccessStartAt={WAITLIST_VIEW_EARLY_ACCESS_START_AT}
             hero={
               <div
-                className="mx-auto mb-12 max-w-[920px] rounded-2xl border px-6 py-8 text-center sm:mb-14 sm:px-8 sm:py-10"
+                className="relative mx-auto mb-12 max-w-[920px] rounded-2xl border px-6 py-8 text-center sm:mb-14 sm:px-8 sm:py-10"
                 style={{
                   borderColor: "var(--faq-border)",
                   background:
                     "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
                 }}
               >
+                {/*
+                  Theme-toggle twin: h-8 w-8 raised circle, accent on hover.
+                  Absolute top-right so hero copy does not reflow. z-30 stacks the
+                  open menu above the email field.
+                */}
+                <div className="absolute right-4 top-4 z-30 sm:right-5 sm:top-5">
+                  <ShareDropdown
+                    label="Share"
+                    message="Recover your Zcash Names reservation link or join the waitlist:"
+                    xMessage="Recover your Zcash Names reservation link or join the waitlist:"
+                    shareUrl="https://www.zcashnames.com/reserve"
+                    emailSubject="Zcash Names reservation link"
+                    menuAlign="right"
+                    rootClassName="relative"
+                    buttonClassName="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-[var(--color-raised)] text-fg-heading transition-colors duration-200 hover:text-[var(--color-accent-interactive)] [&>span]:hidden"
+                  />
+                </div>
                 <h1
                   className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
                   style={{ color: "var(--fg-heading)" }}
                 >
-                  Recover your{" "}
+                  Recover your
+                  <br />
                   <span style={{ color: "var(--color-accent-interactive)" }}>
                     reservation link
                   </span>
@@ -117,33 +137,42 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
                   If you are on the waitlist, check your email - we sent you a reservation link.
                   Need another? Enter your email address below.
                 </p>
-                <HeroHowReservationsWork />
-                <div className="mx-auto mt-10 w-full max-w-[760px] text-left">
+                <div className="mx-auto mt-8 w-full max-w-[760px] text-left sm:mt-9">
                   <WaitlistReservationResendForm showFooter={false} />
                 </div>
               </div>
             }
             footer={
-              <div className="mx-auto mt-10 max-w-[920px] sm:mt-12">
-                <div className="mx-auto max-w-4xl">
-                  <h2
-                    className="text-balance text-center text-[1.65rem] font-bold tracking-tight"
-                    style={{ color: "var(--hero-headline-primary, var(--fg-heading))" }}
-                  >
-                    Join the waitlist{" "}
-                    <span style={{ color: "var(--color-accent-interactive)" }}>first</span>
-                  </h2>
-                  <p
-                    className="mx-auto mt-3 max-w-2xl text-center text-sm leading-6 sm:text-base"
-                    style={{ color: "var(--fg-body)" }}
-                  >
-                    <strong>Add your name to the waitlist then reserve your place.</strong>
-                  </p>
+              <>
+                <div className="mx-auto w-full max-w-[920px]">
+                  <HeroHowReservationsWork />
                 </div>
-                <div className="mt-6 flex justify-center">
-                  <WaitlistEntryForm showNewsletter={false} />
+                <div
+                  className="mx-auto mt-10 max-w-[920px] border-t sm:mt-12"
+                  style={{ borderColor: "var(--faq-border)" }}
+                  aria-hidden="true"
+                />
+                <div className="mx-auto mt-10 max-w-[920px] sm:mt-12">
+                  <div className="mx-auto max-w-4xl">
+                    <h2
+                      className="text-balance text-center text-[1.65rem] font-bold tracking-tight"
+                      style={{ color: "var(--hero-headline-primary, var(--fg-heading))" }}
+                    >
+                      Join the waitlist{" "}
+                      <span style={{ color: "var(--color-accent-interactive)" }}>first</span>
+                    </h2>
+                    <p
+                      className="mx-auto mt-3 max-w-2xl text-center text-sm leading-6 sm:text-base"
+                      style={{ color: "var(--fg-body)" }}
+                    >
+                      <strong>Add your name to the waitlist then reserve your place.</strong>
+                    </p>
+                  </div>
+                  <div className="mt-6 flex justify-center">
+                    <WaitlistEntryForm showNewsletter={false} />
+                  </div>
                 </div>
-              </div>
+              </>
             }
           />
         </div>

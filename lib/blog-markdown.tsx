@@ -24,9 +24,16 @@ const BLOG_MARKDOWN_TOKENS: Record<string, string> = {
   WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
 };
 
+function stripYamlFrontmatter(markdown: string): string {
+  // Drop leading `--- ... ---` so publication metadata never renders as body content.
+  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+}
+
 function expandBlogMarkdownTokens(markdown: string): string {
+  const withoutFrontmatter = stripYamlFrontmatter(markdown);
+
   // Drop MDX import lines — site blogs are rendered as plain Markdown, not MDX.
-  const withoutImports = markdown.replace(/^import\s+.+;?\s*$/gm, "");
+  const withoutImports = withoutFrontmatter.replace(/^import\s+.+;?\s*$/gm, "");
 
   // `{{TOKEN}}` mustache form
   const withMustache = withoutImports.replace(

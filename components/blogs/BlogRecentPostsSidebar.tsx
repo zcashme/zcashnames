@@ -9,7 +9,7 @@ export default function BlogRecentPostsSidebar({
   posts,
   seriesTitle,
 }: {
-  posts: Array<{ slug: string; title: string; href: string; publishedLabel: string }>;
+  posts: Array<{ slug: string; title: string; href: string; publishedLabel?: string }>;
   seriesTitle: string;
 }) {
   const normalized: BlogPostSummary[] = posts.map((post) => ({

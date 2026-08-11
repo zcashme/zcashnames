@@ -260,17 +260,6 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
         detail: "Names, events, and listings",
         themedIconSrc: themedCommunityIcon("explorer"),
       },
-      {
-        id: "collections",
-        name: "Collections",
-        label: "Inventory",
-        description:
-          "Track the names you own and the names you're watching, no account required.",
-        href: "/collections",
-        shareText: "Track the names you own and watch with ZcashNames Collections.",
-        detail: "Owned and watched names",
-        themedIconSrc: themedCommunityIcon("collections"),
-      },
     ],
   },
   {

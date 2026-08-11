@@ -145,7 +145,7 @@ export default function CaptchaChallengeModal({
           <div
             className="flex flex-col gap-3 rounded-xl px-3 py-3"
             style={{
-              background: "var(--color-surface)",
+              background: "transparent",
               border: "1px solid var(--border-muted)",
             }}
           >
@@ -188,7 +188,7 @@ export default function CaptchaChallengeModal({
                   style={{
                     width: 150,
                     height: 50,
-                    background: "var(--color-surface)",
+                    background: "transparent",
                     border: "1px solid var(--border-muted)",
                     color: "var(--fg-muted)",
                   }}
@@ -219,7 +219,7 @@ export default function CaptchaChallengeModal({
                 disabled={!challenge || busy}
                 className="min-w-0 flex-1 rounded-xl px-4 py-2.5 text-sm outline-none transition-colors disabled:opacity-70"
                 style={{
-                  background: "var(--input-fill)",
+                  background: "transparent",
                   border: "1px solid var(--border-muted)",
                   color: "var(--fg-heading)",
                 }}

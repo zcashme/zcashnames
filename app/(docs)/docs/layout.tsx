@@ -1,6 +1,7 @@
 import { Layout, Navbar } from "nextra-theme-docs";
 import { getPageMap } from "nextra/page-map";
 import Link from "next/link";
+import DocsHtmlScope from "@/components/docs/DocsHtmlScope";
 import "nextra-theme-docs/style.css";
 import "../docs.css";
 
@@ -71,9 +72,10 @@ const footer = (
  * Nextra docs layout: renders the full documentation chrome — Navbar with logo
  * and GitHub link, sidebar page map resolved from /docs, and Footer.
  *
- * Docs are dark-only. Marketing-site light/monochrome themes set data-theme on
- * <html> and that used to leak into /docs (cream body + pale Nextra text).
- * We force dark here and reassert dark tokens in docs.css.
+ * Docs are dark-only. Marketing themes set data-theme on <html>; Nextra uses
+ * class-based theming. DocsHtmlScope marks <html class="zns-docs"> while this
+ * layout is mounted so docs.css can force dark tokens without leaking those
+ * overrides back onto the marketing site after client navigation.
  */
 export default async function DocsLayout({
   children,
@@ -81,20 +83,23 @@ export default async function DocsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Layout
-      navbar={navbar}
-      pageMap={await getPageMap("/docs")}
-      docsRepositoryBase="https://github.com/zcashme/zcashnames/tree/main/content/docs"
-      footer={footer}
-      darkMode={false}
-      nextThemes={{
-        attribute: "class",
-        defaultTheme: "dark",
-        forcedTheme: "dark",
-        storageKey: "zns-docs-theme",
-      }}
-    >
-      {children}
-    </Layout>
+    <>
+      <DocsHtmlScope />
+      <Layout
+        navbar={navbar}
+        pageMap={await getPageMap("/docs")}
+        docsRepositoryBase="https://github.com/zcashme/zcashnames/tree/main/content/docs"
+        footer={footer}
+        darkMode={false}
+        nextThemes={{
+          attribute: "class",
+          defaultTheme: "dark",
+          forcedTheme: "dark",
+          storageKey: "zns-docs-theme",
+        }}
+      >
+        {children}
+      </Layout>
+    </>
   );
 }

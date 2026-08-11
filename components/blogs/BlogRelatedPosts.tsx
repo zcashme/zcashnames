@@ -24,7 +24,9 @@ export default function BlogRelatedPosts({
           <li key={post.href}>
             <Link href={post.href} className="blog-related-link">
               <span className="blog-related-link-title">{post.title}</span>
-              <span className="blog-related-link-date">{post.publishedLabel}</span>
+              {post.publishedLabel ? (
+                <span className="blog-related-link-date">{post.publishedLabel}</span>
+              ) : null}
             </Link>
           </li>
         ))}

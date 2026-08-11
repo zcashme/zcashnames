@@ -19,7 +19,6 @@ type BenefitGroup = {
 
 type Step = {
   id: string;
-  number: string;
   eyebrow: string;
   description: ReactNode;
 };
@@ -27,26 +26,39 @@ type Step = {
 const steps: Step[] = [
   {
     id: "step-1",
-    number: "01",
     eyebrow: "Join the waitlist",
     description:
       "Invites go out in order, so reserve your spot to get first pick of the best Zcash names before the crowd shows up.",
   },
   {
     id: "step-2",
-    number: "02",
     eyebrow: "Climb the queue",
     description:
       "Referrals push you toward the front of the line, improving your odds of landing high-demand names. If they claim one, you earn ZEC.",
   },
   {
     id: "step-3",
-    number: "03",
     eyebrow: "Lock it in",
     description:
       "When your turn opens, you get an email. Log in, choose your Zcash name, and secure it before public launch. Keep it, use it, or sell it later.",
   },
 ];
+
+/** Matches the encircled step badges on /reserve (HeroHowReservationsWork / WhatToDoSteps). */
+function StepNumberBadge({ n }: { n: number }) {
+  return (
+    <span
+      className="relative z-[1] inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+      style={{
+        background: "var(--color-accent-interactive-soft)",
+        color: "var(--color-accent-interactive)",
+      }}
+      aria-hidden="true"
+    >
+      {n}
+    </span>
+  );
+}
 
 const benefitGroups: BenefitGroup[] = [
   {
@@ -125,11 +137,15 @@ const sectionHeading = (
 
 const rowHeading = (title: string, prefix?: ReactNode) => (
   // mb-2 + type/color/hover match Features item titles (parent uses group/step).
-  <div className="mb-2 px-1">
-    {/* Center when Get yours steps stack; left-align in the lg 3-up row. */}
-    <div className="flex items-center justify-center gap-3 text-center lg:justify-start lg:text-left">
+  <div className="mb-2 text-center lg:text-left">
+    {/*
+      Stacked: title is page-centered; badge hangs to the left of the title
+      (absolute) so icon+title are not centered as a single unit.
+      lg: normal left-aligned flex row with gap.
+    */}
+    <div className="relative inline-flex items-center gap-3">
       {prefix ? (
-        <span className="type-section-subtitle font-semibold text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover/step:text-[var(--color-accent-interactive,var(--fg-heading))]">
+        <span className="absolute right-full top-1/2 mr-3 -translate-y-1/2 lg:static lg:right-auto lg:top-auto lg:mr-0 lg:translate-y-0">
           {prefix}
         </span>
       ) : null}
@@ -252,7 +268,7 @@ function BenefitsBento() {
                 <div
                   key={b.title}
                   className={[
-                    "group relative overflow-hidden p-5",
+                    "group bg-transparent p-5",
                     b.span ?? "",
                     separatorClassName({
                       mobile: mobileFlags[index]!,
@@ -262,40 +278,26 @@ function BenefitsBento() {
                   ]
                     .filter(Boolean)
                     .join(" ")}
-                  style={{
-                    background:
-                      "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 38%, transparent), transparent)",
-                  }}
                 >
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-25"
-                    style={{
-                      backgroundImage:
-                        "radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--feature-heading-line-to) 36%, transparent), transparent 48%)",
-                    }}
-                    aria-hidden="true"
-                  />
-                  <div className="relative z-[1]">
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <h4 className="type-section-subtitle font-semibold text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]">
-                        {b.title}
-                      </h4>
-                      {b.soon && (
-                        <span
-                          className="rounded-full px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
-                          style={{
-                            background: "color-mix(in srgb, #eab308 16%, transparent)",
-                            color: "#eab308",
-                          }}
-                        >
-                          Soon
-                        </span>
-                      )}
-                    </div>
-                    <p className="type-section-subtitle" style={{ color: "var(--fg-muted)" }}>
-                      {b.description}
-                    </p>
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <h4 className="type-section-subtitle font-semibold text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]">
+                      {b.title}
+                    </h4>
+                    {b.soon && (
+                      <span
+                        className="rounded-full px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
+                        style={{
+                          background: "color-mix(in srgb, #eab308 16%, transparent)",
+                          color: "#eab308",
+                        }}
+                      >
+                        Soon
+                      </span>
+                    )}
                   </div>
+                  <p className="type-section-subtitle" style={{ color: "var(--fg-muted)" }}>
+                    {b.description}
+                  </p>
                 </div>
               ))}
             </div>
@@ -325,29 +327,23 @@ export default function HowItWorks() {
                 key={step.id}
                 className="group/step relative"
               >
+                {/*
+                  Shared horizontal padding so title + body share one left edge.
+                  lg:pl-11 on the body (= badge w-8 + gap-3) aligns description with the title,
+                  not the step icon. Stacked stays centered.
+                */}
                 <div className="px-1 pt-1 lg:px-5">
-                  {rowHeading(step.eyebrow, step.number)}
-                </div>
+                  {rowHeading(step.eyebrow, <StepNumberBadge n={index + 1} />)}
 
-                {/* pt-0 pulls body up to the title without shifting the step heading. */}
-                <div
-                  className="relative overflow-hidden px-5 pb-5 pt-0"
-                  style={{
-                    background:
-                      "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 38%, transparent), transparent)",
-                  }}
-                >
+                  {/* When a stacked chevron follows, bottom padding lives on the chevron
+                      so space above the legs matches space below the tip. */}
                   <div
-                    className="pointer-events-none absolute inset-0 opacity-25"
-                    style={{
-                      backgroundImage:
-                        "radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--feature-heading-line-to) 36%, transparent), transparent 48%)",
-                    }}
-                    aria-hidden="true"
-                  />
-                  <div className="relative z-[1]">
+                    className={`bg-transparent pt-0 ${
+                      showChevron ? "pb-0 lg:pb-5" : "pb-5"
+                    }`}
+                  >
                     <p
-                      className="type-section-subtitle mx-auto max-w-md text-center lg:mx-0 lg:max-w-none lg:text-left"
+                      className="type-section-subtitle mx-auto max-w-md text-center lg:mx-0 lg:max-w-none lg:pl-11 lg:text-left"
                       style={{ color: "var(--fg-muted)" }}
                     >
                       {step.description}
@@ -356,23 +352,44 @@ export default function HowItWorks() {
                 </div>
 
                 {showChevron ? (
-                  <span
-                    className="pointer-events-none absolute bottom-0 left-1/2 z-[2] -translate-x-1/2 translate-y-1/2 rotate-90 text-[var(--border-muted)] lg:bottom-auto lg:left-auto lg:right-0 lg:top-1/2 lg:translate-x-1/2 lg:-translate-y-1/2 lg:rotate-0"
-                    aria-hidden="true"
-                  >
-                    {/* ">" between columns; rotate 90° when stacked → "\/" between rows */}
-                    <svg
-                      viewBox="0 0 16 48"
-                      className="h-12 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                  <>
+                    {/* Stacked: in-flow chevron with equal space above legs and below tip. */}
+                    <div
+                      className="flex justify-center py-5 text-[var(--border-muted)] lg:hidden"
+                      aria-hidden="true"
                     >
-                      <path d="M4 4 L12 24 L4 44" />
-                    </svg>
-                  </span>
+                      <svg
+                        viewBox="0 0 48 16"
+                        className="h-4 w-12"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        {/* Same chevron as desktop, oriented down for the stacked column. */}
+                        <path d="M4 4 L24 12 L44 4" />
+                      </svg>
+                    </div>
+
+                    {/* Desktop: absolute ">" between side-by-side columns. */}
+                    <span
+                      className="pointer-events-none absolute bottom-0 left-1/2 z-[2] hidden -translate-x-1/2 translate-y-1/2 rotate-90 text-[var(--border-muted)] lg:bottom-auto lg:left-auto lg:right-0 lg:top-1/2 lg:block lg:translate-x-1/2 lg:-translate-y-1/2 lg:rotate-0"
+                      aria-hidden="true"
+                    >
+                      <svg
+                        viewBox="0 0 16 48"
+                        className="h-12 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M4 4 L12 24 L4 44" />
+                      </svg>
+                    </span>
+                  </>
                 ) : null}
               </div>
             );

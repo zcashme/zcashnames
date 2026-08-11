@@ -21,7 +21,9 @@ export default function BlogPostList({
           <Link href={post.href} className="blog-post-list-link">
             <div className="blog-post-list-meta">
               {showSeries ? <span className="blog-post-list-series">{post.seriesLabel}</span> : null}
-              <time className="blog-post-list-date">{post.publishedLabel}</time>
+              {post.publishedLabel ? (
+                <time className="blog-post-list-date">{post.publishedLabel}</time>
+              ) : null}
             </div>
             <h2 className="blog-post-list-title">{post.title}</h2>
             {post.excerpt ? <p className="blog-post-list-excerpt">{post.excerpt}</p> : null}

@@ -1267,9 +1267,9 @@ function HeroCountdownCard({
     );
   }
 
+/** Three-step row matching landing "Get yours", with step-1 title strike/check animation. */
 export function HeroHowReservationsWork() {
   const [firstStepTitleStruck, setFirstStepTitleStruck] = useState(false);
-  const [firstStepBodyStruck, setFirstStepBodyStruck] = useState(false);
   const [firstStepChecked, setFirstStepChecked] = useState(false);
   const animationTimersRef = useState<number[]>([])[0];
 
@@ -1283,24 +1283,19 @@ export function HeroHowReservationsWork() {
   function playFirstStepAnimation() {
     clearAnimationTimers();
     setFirstStepTitleStruck(false);
-    setFirstStepBodyStruck(false);
     setFirstStepChecked(false);
 
     animationTimersRef.push(
       window.setTimeout(() => setFirstStepTitleStruck(true), 220),
     );
     animationTimersRef.push(
-      window.setTimeout(() => setFirstStepBodyStruck(true), 760),
-    );
-    animationTimersRef.push(
-      window.setTimeout(() => setFirstStepChecked(true), 1360),
+      window.setTimeout(() => setFirstStepChecked(true), 900),
     );
   }
 
   function resetFirstStepAnimation() {
     clearAnimationTimers();
     setFirstStepTitleStruck(false);
-    setFirstStepBodyStruck(false);
     setFirstStepChecked(false);
   }
 
@@ -1314,7 +1309,7 @@ export function HeroHowReservationsWork() {
   const steps = [
     {
       title: "Join the waitlist",
-      body: "Find your name and join for free.",
+      body: "Find your name and refer your friends.",
     },
     {
       title: "Complete your reservation",
@@ -1327,102 +1322,144 @@ export function HeroHowReservationsWork() {
   ];
 
   return (
-    <div className="relative mx-auto mt-8 max-w-[34rem] text-left lg:mx-0">
-      {steps.map((item, index) => (
-        <div
-          key={item.title}
-          className={`${index === 0 ? "" : "mt-4"} flex items-start gap-4`}
-          onMouseEnter={index === 0 ? resetFirstStepAnimation : undefined}
-          onMouseLeave={index === 0 ? playFirstStepAnimation : undefined}
-        >
-          <span
-            className="relative z-[1] inline-flex h-8 w-8 shrink-0 rounded-full text-sm font-bold"
-            style={{
-              background: "var(--color-accent-interactive-soft)",
-              color: "var(--color-accent-interactive)",
-              perspective: "800px",
-            }}
+    <div className="grid w-full grid-cols-1 gap-0 lg:grid-cols-3">
+      {steps.map((item, index) => {
+        const showChevron = index < steps.length - 1;
+        const isFirst = index === 0;
+
+        return (
+          <div
+            key={item.title}
+            className="group/step relative"
+            onMouseEnter={isFirst ? resetFirstStepAnimation : undefined}
+            onMouseLeave={isFirst ? playFirstStepAnimation : undefined}
           >
-            <span
-              className="relative block h-8 w-8"
-              style={{
-                transformStyle: "preserve-3d",
-                transition: index === 0 ? "transform 720ms cubic-bezier(0.2, 0.8, 0.2, 1)" : undefined,
-                transform: index === 0 && firstStepChecked ? "rotateY(180deg)" : "rotateY(0deg)",
-              }}
-            >
-              <span
-                className="absolute inset-0 flex items-center justify-center rounded-full"
-                style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
-              >
-                {index + 1}
-              </span>
-              <span
-                className="absolute inset-0 flex items-center justify-center rounded-full"
-                style={{
-                  backfaceVisibility: "hidden",
-                  WebkitBackfaceVisibility: "hidden",
-                  transform: "rotateY(180deg)",
-                }}
-              >
-                <CheckIcon className="h-4 w-4" />
-              </span>
-            </span>
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-base font-bold" style={{ color: "var(--fg-heading)" }}>
-              {index === 0 ? (
-                <span className="relative inline-block">
-                  <span>{item.title}</span>
+            <div className="px-1 pt-1 lg:px-5">
+              {/*
+                Stacked: title is page-centered; badge hangs to the left of the title
+                so icon+title are not centered as a single unit.
+                lg: normal left-aligned flex row with gap.
+                Description uses lg:pl-11 (= badge w-8 + gap-3) so it lines up with the title.
+              */}
+              <div className="mb-2 text-center lg:text-left">
+                <div className="relative inline-flex items-center gap-3">
                   <span
-                    aria-hidden="true"
-                    className="absolute left-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full"
+                    className="absolute right-full top-1/2 z-[1] mr-3 inline-flex h-8 w-8 shrink-0 -translate-y-1/2 rounded-full text-sm font-semibold lg:static lg:right-auto lg:top-auto lg:mr-0 lg:translate-y-0"
                     style={{
-                      width: "100%",
-                      background: "currentColor",
-                      transformOrigin: "left center",
-                      transition: "transform 650ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-                      transform: firstStepTitleStruck ? "scaleX(1)" : "scaleX(0)",
+                      background: "var(--color-accent-interactive-soft)",
+                      color: "var(--color-accent-interactive)",
+                      perspective: "800px",
                     }}
-                  />
-                </span>
-              ) : (
-                item.title
-              )}
-            </h2>
-            <p className="mt-1 text-base leading-7" style={{ color: "var(--fg-body)" }}>
-              {index === 0 ? (
-                <span className="relative inline-block">
-                  <span>{item.body}</span>
-                  <span
                     aria-hidden="true"
-                    className="absolute left-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full"
-                    style={{
-                      width: "100%",
-                      background: "currentColor",
-                      transformOrigin: "left center",
-                      transition: "transform 650ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-                      transform: firstStepBodyStruck ? "scaleX(1)" : "scaleX(0)",
-                    }}
-                  />
+                  >
+                    <span
+                      className="relative block h-8 w-8"
+                      style={{
+                        transformStyle: "preserve-3d",
+                        transition: isFirst
+                          ? "transform 720ms cubic-bezier(0.2, 0.8, 0.2, 1)"
+                          : undefined,
+                        transform:
+                          isFirst && firstStepChecked ? "rotateY(180deg)" : "rotateY(0deg)",
+                      }}
+                    >
+                      <span
+                        className="absolute inset-0 flex items-center justify-center rounded-full"
+                        style={{
+                          backfaceVisibility: "hidden",
+                          WebkitBackfaceVisibility: "hidden",
+                        }}
+                      >
+                        {index + 1}
+                      </span>
+                      <span
+                        className="absolute inset-0 flex items-center justify-center rounded-full"
+                        style={{
+                          backfaceVisibility: "hidden",
+                          WebkitBackfaceVisibility: "hidden",
+                          transform: "rotateY(180deg)",
+                        }}
+                      >
+                        <CheckIcon className="h-4 w-4" />
+                      </span>
+                    </span>
+                  </span>
+                  <h3 className="type-section-subtitle font-semibold text-[var(--fg-heading)]">
+                    {isFirst ? (
+                      <span className="relative inline-block">
+                        <span>{item.title}</span>
+                        <span
+                          aria-hidden="true"
+                          className="absolute left-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full"
+                          style={{
+                            width: "100%",
+                            background: "currentColor",
+                            transformOrigin: "left center",
+                            transition: "transform 650ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+                            transform: firstStepTitleStruck ? "scaleX(1)" : "scaleX(0)",
+                          }}
+                        />
+                      </span>
+                    ) : (
+                      item.title
+                    )}
+                  </h3>
+                </div>
+              </div>
+
+              <div
+                className={`bg-transparent pt-0 ${
+                  showChevron ? "pb-0 lg:pb-5" : "pb-5"
+                }`}
+              >
+                <p
+                  className="type-section-subtitle mx-auto max-w-md text-center lg:mx-0 lg:max-w-none lg:pl-11 lg:text-left"
+                  style={{ color: "var(--fg-muted)" }}
+                >
+                  {item.body}
+                </p>
+              </div>
+            </div>
+
+            {showChevron ? (
+              <>
+                <div
+                  className="flex justify-center py-5 text-[var(--border-muted)] lg:hidden"
+                  aria-hidden="true"
+                >
+                  <svg
+                    viewBox="0 0 48 16"
+                    className="h-4 w-12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M4 4 L24 12 L44 4" />
+                  </svg>
+                </div>
+                <span
+                  className="pointer-events-none absolute bottom-0 left-1/2 z-[2] hidden -translate-x-1/2 translate-y-1/2 rotate-90 text-[var(--border-muted)] lg:bottom-auto lg:left-auto lg:right-0 lg:top-1/2 lg:block lg:translate-x-1/2 lg:-translate-y-1/2 lg:rotate-0"
+                  aria-hidden="true"
+                >
+                  <svg
+                    viewBox="0 0 16 48"
+                    className="h-12 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M4 4 L12 24 L4 44" />
+                  </svg>
                 </span>
-              ) : (
-                item.body
-              )}
-            </p>
+              </>
+            ) : null}
           </div>
-          {index < steps.length - 1 ? (
-            <span
-              aria-hidden="true"
-              className="absolute left-4 top-8 h-8 w-px -translate-x-1/2"
-              style={{
-                background:
-                  "linear-gradient(180deg, color-mix(in srgb, var(--faq-border) 84%, transparent) 0%, color-mix(in srgb, var(--faq-border) 84%, transparent) 100%)",
-              }}
-            />
-          ) : null}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -4346,6 +4383,8 @@ export default function WaitlistVerifyClient({
                 <br />
                 <span style={{ color: "var(--color-accent-interactive)" }}>claim your name!</span>
               </h1>
+            </div>
+            <div className="mx-auto mt-10 w-full max-w-2xl sm:mt-12">
               <HeroHowReservationsWork />
             </div>
           </section>

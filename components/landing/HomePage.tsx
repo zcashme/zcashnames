@@ -114,7 +114,9 @@ export default function HomePage({
       ) : null}
       <MarketStats stats={stats} sectionId="stats" />
       {actionLinkPosition === "belowStats" ? (
-        <div className="relative z-[2] -mt-1 mb-8 flex justify-center sm:mb-10">
+        // Match Partners: carousel → Wallets is mt-5. MarketStats uses pb-10/sm:pb-12;
+        // pull Explorer up so the gap under the counter is ~mt-5, not the full section pad.
+        <div className="relative z-[2] -mt-5 mb-8 flex justify-center sm:-mt-7 sm:mb-10">
           {actionLink}
         </div>
       ) : null}

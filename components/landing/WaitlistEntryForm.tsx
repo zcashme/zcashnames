@@ -298,6 +298,11 @@ export default function WaitlistEntryForm({
     }
   }, []);
 
+  const emailValid = isValidEmail(email);
+
+  // Load captcha only once a valid email is present; clear when it becomes invalid
+  // or when phase 2 is dismissed. Validity (not raw email) is the dependency so
+  // retyping within a still-valid address does not thrash the challenge.
   useEffect(() => {
     if (!showResult) {
       setSubmitError("");
@@ -305,12 +310,21 @@ export default function WaitlistEntryForm({
       setCaptchaAnswer("");
       return;
     }
+    if (!emailValid) {
+      setCaptchaAnswer("");
+      // Keep the image through the collapse animation so the panel does not
+      // flash empty mid-transition, then drop the challenge.
+      const clearId = window.setTimeout(() => {
+        setCaptchaChallenge(null);
+      }, 320);
+      return () => window.clearTimeout(clearId);
+    }
     void loadCaptchaChallenge();
-  }, [showResult, loadCaptchaChallenge]);
+  }, [showResult, emailValid, loadCaptchaChallenge]);
 
   const canSubmit =
     confirmedName.length > 0 &&
-    isValidEmail(email) &&
+    emailValid &&
     Boolean(captchaChallenge?.token) &&
     captchaAnswer.trim().length > 0 &&
     !captchaLoading;
@@ -385,7 +399,7 @@ export default function WaitlistEntryForm({
   };
 
   const inputBase: React.CSSProperties = {
-    background: "var(--color-surface)",
+    background: "transparent",
     border: "1px solid var(--border-muted)",
     color: "var(--fg-body)",
   };
@@ -824,74 +838,96 @@ export default function WaitlistEntryForm({
                 </div>
               )}
 
-              {/* Human check */}
+              {/* Human check — expands after a valid email; collapses if email goes invalid.
+                  Spacing lives inside the collapsible so a closed panel does not leave a double flex gap. */}
               <div
-                className="flex flex-col gap-2 rounded-xl px-3 py-3"
+                className="-mt-3 grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none"
                 style={{
-                  background: "var(--color-surface)",
-                  border: "1px solid var(--border-muted)",
+                  gridTemplateRows: emailValid ? "1fr" : "0fr",
+                  opacity: emailValid ? 1 : 0,
                 }}
+                aria-hidden={!emailValid}
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label
-                    htmlFor="waitlist-captcha-answer"
-                    className="text-xs font-semibold"
-                    style={{ color: "var(--fg-muted)" }}
-                  >
-                    Type the characters you see
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => void loadCaptchaChallenge()}
-                    disabled={captchaLoading || submitting}
-                    className="cursor-pointer text-xs font-semibold underline disabled:cursor-not-allowed disabled:opacity-50"
-                    style={{ color: "var(--fg-body)" }}
-                  >
-                    Refresh
-                  </button>
-                </div>
-                <div className="flex items-center gap-3">
-                  {captchaChallenge ? (
-                    <img
-                      src={captchaChallenge.image}
-                      alt="Captcha"
-                      width={150}
-                      height={50}
-                      className="rounded-md"
-                      style={{
-                        background: "#fff",
-                        border: "1px solid var(--border-muted)",
-                      }}
-                    />
-                  ) : (
+                <div className="min-h-0 overflow-hidden">
+                  <div className="pt-3">
                     <div
-                      className="flex items-center justify-center rounded-md text-xs"
+                      className="flex flex-col gap-2 rounded-xl px-3 py-3"
                       style={{
-                        width: 150,
-                        height: 50,
-                        background: "var(--color-surface)",
+                        background: "transparent",
                         border: "1px solid var(--border-muted)",
-                        color: "var(--fg-muted)",
                       }}
                     >
-                      {captchaLoading ? "Loading…" : "Unavailable"}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <label
+                          htmlFor="waitlist-captcha-answer"
+                          className="text-xs font-semibold"
+                          style={{ color: "var(--fg-muted)" }}
+                        >
+                          Type the characters you see
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => void loadCaptchaChallenge()}
+                          disabled={!emailValid || captchaLoading || submitting}
+                          tabIndex={emailValid ? 0 : -1}
+                          className="cursor-pointer text-xs font-semibold underline disabled:cursor-not-allowed disabled:opacity-50"
+                          style={{ color: "var(--fg-body)" }}
+                        >
+                          Refresh
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {captchaChallenge ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- captcha is an inline data URL
+                          <img
+                            src={captchaChallenge.image}
+                            alt="Captcha"
+                            width={150}
+                            height={50}
+                            className="rounded-md"
+                            style={{
+                              background: "#fff",
+                              border: "1px solid var(--border-muted)",
+                            }}
+                          />
+                        ) : (
+                          <div
+                            className="flex items-center justify-center rounded-md text-xs"
+                            style={{
+                              width: 150,
+                              height: 50,
+                              background: "transparent",
+                              border: "1px solid var(--border-muted)",
+                              color: "var(--fg-muted)",
+                            }}
+                          >
+                            {captchaLoading ? "Loading…" : "Unavailable"}
+                          </div>
+                        )}
+                        <input
+                          id="waitlist-captcha-answer"
+                          type="text"
+                          value={captchaAnswer}
+                          onChange={(e) => setCaptchaAnswer(e.target.value)}
+                          placeholder="Answer"
+                          autoComplete="off"
+                          autoCapitalize="off"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          disabled={
+                            !emailValid ||
+                            !captchaChallenge ||
+                            captchaLoading ||
+                            submitting
+                          }
+                          required={emailValid}
+                          tabIndex={emailValid ? 0 : -1}
+                          className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none transition-colors disabled:opacity-70"
+                          style={inputBase}
+                        />
+                      </div>
                     </div>
-                  )}
-                  <input
-                    id="waitlist-captcha-answer"
-                    type="text"
-                    value={captchaAnswer}
-                    onChange={(e) => setCaptchaAnswer(e.target.value)}
-                    placeholder="Answer"
-                    autoComplete="off"
-                    autoCapitalize="off"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    disabled={!captchaChallenge || captchaLoading || submitting}
-                    required
-                    className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none transition-colors disabled:opacity-70"
-                    style={inputBase}
-                  />
+                  </div>
                 </div>
               </div>
 

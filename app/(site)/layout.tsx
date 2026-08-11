@@ -30,6 +30,7 @@ import { BRAND } from "@/lib/zns/brand";
 import PwaShellClient from "@/components/PwaShellClient";
 import PurchaseResumeShell from "@/components/purchases/PurchaseResumeShell";
 import SiteSupportMenu from "@/components/SiteSupportMenu";
+import SiteThemeScope from "@/components/SiteThemeScope";
 import { WAITLIST_VIEW_EARLY_ACCESS_START_AT } from "@/lib/waitlist/view";
 
 const previewImage = {
@@ -88,6 +89,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <>
       <PwaShellClient />
+      <SiteThemeScope />
       <ThemeProvider
         attribute="data-theme"
         defaultTheme="light"
