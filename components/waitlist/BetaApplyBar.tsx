@@ -52,7 +52,7 @@ export default function BetaApplyBar() {
       <span className="h-6 w-6" aria-hidden="true" />
       <Link
         href={href}
-        className="col-start-2 flex min-w-0 items-center justify-center gap-2 whitespace-nowrap text-center transition-opacity hover:opacity-90"
+        className="col-start-2 flex min-w-0 items-center justify-center gap-2 whitespace-nowrap text-center transition-colors hover:text-[var(--color-accent-interactive)]"
       >
         <span
           className="inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider sm:text-[0.65rem]"

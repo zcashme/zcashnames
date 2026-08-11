@@ -196,21 +196,14 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
             <div className="flex flex-wrap items-center justify-end gap-2">
               <a
                 href={explorerHref(snapshot)}
-                className="rounded-full px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-80"
-                style={{
-                  background: "transparent",
-                  border: "1.5px solid var(--border-muted)",
-                  color: "var(--fg-body)",
-                  textDecoration: "none",
-                }}
+                className="rounded-full border-[1.5px] border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body no-underline transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               >
                 View on Explorer
               </a>
               <button
                 type="button"
                 onClick={onDismiss}
-                className="rounded-full px-4 py-2 text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                className="rounded-full border-[1.5px] border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               >
                 Dismiss
               </button>
@@ -220,15 +213,14 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
               <button
                 type="button"
                 onClick={handleClear}
-                className="rounded-full px-4 py-2 text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                className="rounded-full border-[1.5px] border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               >
                 {isConfirm ? "Abandon" : "Ignore"}
               </button>
               <button
                 type="button"
                 onClick={onResume}
-                className="rounded-full px-4 py-2 text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                className="rounded-full px-4 py-2 text-sm font-semibold cursor-pointer transition-[transform,box-shadow] duration-200 hover:-translate-y-px"
                 style={{
                   background: "var(--home-result-primary-bg)",
                   color: "var(--home-result-primary-fg)",

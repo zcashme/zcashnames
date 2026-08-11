@@ -224,7 +224,7 @@ export default function FAQ() {
       <div className="mt-5 flex justify-end">
         <Link
           href="/faq"
-          className="text-sm font-semibold transition-opacity hover:opacity-80"
+          className="text-sm font-semibold transition-colors hover:text-[var(--color-accent-interactive)]"
           style={{ color: "var(--color-accent-interactive, var(--fg-heading))" }}
           aria-label="See more FAQs"
         >

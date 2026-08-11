@@ -43,10 +43,10 @@ export default function ReferralCodeRecovery({
   const buttonClassNameBase =
     "cursor-pointer bg-transparent p-0 text-sm font-semibold text-fg-body transition-colors hover:text-[var(--color-accent-interactive)] disabled:cursor-not-allowed disabled:opacity-60";
   const inputClassName = isSharekit
-    ? `w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 pr-[6.5rem] text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
+    ? `w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 pr-[6.5rem] text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted ${
         isLightSharekit ? "bg-[var(--color-card)]" : "bg-[var(--input-fill)]"
       }`
-    : `w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 pr-[6.5rem] text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
+    : `w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 pr-[6.5rem] text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted ${
         resolvedTheme === "light" ? "bg-[var(--color-card)]" : "bg-[var(--input-fill)]"
       }`;
   // Default: sharekit centered, leaders left. Callers may pass className to override.

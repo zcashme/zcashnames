@@ -135,7 +135,7 @@ export default function BetaInstructionsBrief() {
           </div>
           <Link
             href="/beta/apply"
-            className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-80"
+            className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition-[transform,box-shadow] duration-200 hover:-translate-y-px"
             style={{
               background: "var(--home-result-primary-bg)",
               color: "var(--home-result-primary-fg)",
@@ -366,11 +366,8 @@ export default function BetaInstructionsBrief() {
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-80"
+                className="flex items-center gap-3 rounded-xl border border-border-muted bg-[var(--color-raised)] px-4 py-3 text-sm font-semibold text-fg-body no-underline transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                 style={{
-                  background: "var(--color-raised)",
-                  border: "1px solid var(--border-muted)",
-                  color: "var(--fg-body)",
                   textDecoration: "none",
                 }}
               >
@@ -394,7 +391,7 @@ export default function BetaInstructionsBrief() {
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:opacity-80 transition-opacity"
+                className="transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
                 style={{ color: "var(--fg-body)" }}
               >
                 {label}

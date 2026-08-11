@@ -313,7 +313,7 @@ export function ActionDropdown({
 
   const triggerClassName =
     buttonClassName ??
-    "inline-flex min-h-11 items-center gap-2 rounded-md border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading";
+    "inline-flex min-h-11 items-center gap-2 rounded-md border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]";
   const menuPositionClassName = menuAlign === "left" ? "left-0" : "right-0";
   const menuDirectionClassName = menuDirection === "up" ? "bottom-full mb-2" : "top-full mt-2";
   const hiddenOffsetClassName = menuDirection === "up" ? "translate-y-1" : "-translate-y-1";

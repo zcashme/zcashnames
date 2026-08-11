@@ -239,7 +239,6 @@ export default function SiteSupportMenu({
 
   const actionButtonStyle: React.CSSProperties = {
     background: "var(--color-raised)",
-    border: "1px solid var(--border-muted)",
     color: "var(--fg-body)",
     boxShadow: "0 16px 32px rgba(0, 0, 0, 0.16)",
   };
@@ -288,7 +287,7 @@ export default function SiteSupportMenu({
                     onClick={() => setOpen(false)}
                     tabIndex={open ? undefined : -1}
                     aria-label={action.label}
-                    className="inline-flex h-16 w-16 items-center justify-center rounded-full transition-[transform,opacity,border-color,background-color] duration-150 hover:opacity-85 group-hover:bg-[var(--verify-menu-hover-fill)]"
+                    className="inline-flex h-16 w-16 items-center justify-center rounded-full border border-border-muted transition-[transform,color,border-color,background-color] duration-150 hover:scale-[1.03] hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] group-hover:bg-[var(--verify-menu-hover-fill)]"
                     style={actionButtonStyle}
                   >
                     <ActionIcon label={action.label} />
@@ -305,7 +304,7 @@ export default function SiteSupportMenu({
           aria-expanded={open}
           aria-label={open ? "Close support menu" : "Open support menu"}
           onClick={() => setOpen((current) => !current)}
-          className="inline-flex h-16 w-16 items-center justify-center rounded-full transition-[transform,opacity] duration-150 hover:opacity-90"
+          className="inline-flex h-16 w-16 items-center justify-center rounded-full transition-[filter,transform] duration-150 hover:scale-[1.03] hover:brightness-110"
           style={supportButtonStyle}
         >
           <HeadsetIcon />

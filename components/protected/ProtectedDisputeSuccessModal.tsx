@@ -68,12 +68,12 @@ export default function ProtectedDisputeSuccessModal({
             <ProtectedDisputeShareButton
               mode="success"
               submittedName={name}
-              buttonClassName="inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-opacity hover:opacity-85 [background:var(--home-result-primary-bg)] [box-shadow:var(--home-result-primary-shadow)] [color:var(--home-result-primary-fg)]"
+              buttonClassName="inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 [background:var(--home-result-primary-bg)] [box-shadow:var(--home-result-primary-shadow)] [color:var(--home-result-primary-fg)]"
               menuDirection="down"
             />
             <Link
               href="/protected"
-              className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-full border border-border-muted bg-transparent px-5 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+              className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-full border border-border-muted bg-transparent px-5 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             >
               View List
             </Link>
@@ -81,7 +81,7 @@ export default function ProtectedDisputeSuccessModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-sm font-semibold underline underline-offset-2"
+            className="zns-hover-accent text-sm font-semibold"
             style={{ color: "var(--fg-body)" }}
           >
             Close

@@ -137,8 +137,8 @@ export function SearchModeDropdown({
               }}
               className={
                 selected
-                  ? "flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-[var(--color-accent-interactive)] transition-colors"
-                  : "flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-[var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)]"
+                  ? "zns-menu-hover flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-[var(--color-accent-interactive)] transition-colors"
+                  : "zns-menu-hover flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-[var(--fg-body)] transition-colors"
               }
               style={{
                 background: selected
@@ -221,7 +221,7 @@ export function InlineSearchField({
       : undefined;
   const submitButtonClassName =
     variant === "table"
-      ? "px-4 hover:opacity-85 disabled:cursor-not-allowed disabled:hover:opacity-100"
+      ? "px-4 transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:brightness-100"
       : "";
   const submitButtonStyle: CSSProperties | undefined =
     variant === "table"

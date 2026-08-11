@@ -44,15 +44,14 @@ export default function ResumeReplacementDialog({
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-full px-4 py-2 text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
-              style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+              className="rounded-full border-[1.5px] border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={onContinue}
-              className="rounded-full px-4 py-2 text-sm font-semibold cursor-pointer transition-opacity hover:opacity-90"
+              className="cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
               style={{ background: "var(--color-brand-orange, #f59e0b)", color: "var(--button-primary-fg, #111)" }}
             >
               Continue

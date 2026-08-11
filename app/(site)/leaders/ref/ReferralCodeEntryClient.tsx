@@ -82,7 +82,7 @@ export default function ReferralCodeEntryPage() {
                   setError("");
                 }}
                 placeholder="zcashnames.com/?ref=your-code"
-                className={`w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
+                className={`w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted ${
                   resolvedTheme === "light" ? "bg-[var(--color-card)]" : "bg-[var(--input-fill)]"
                 } pr-[5.5rem]`}
               />

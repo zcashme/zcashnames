@@ -34,7 +34,7 @@ export default function LeadersOfflinePage() {
             </a>
             <a
               href="/leaders"
-              className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
+              className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline"
             >
               View leaderboard
             </a>

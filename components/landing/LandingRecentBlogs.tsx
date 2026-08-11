@@ -94,7 +94,7 @@ export default function LandingRecentBlogs({
       <div className="mt-5 flex justify-end">
         <Link
           href="/blogs"
-          className="text-sm font-semibold transition-opacity hover:opacity-80"
+          className="text-sm font-semibold transition-[filter] duration-200 hover:brightness-110"
           style={{ color: "var(--color-accent-interactive, var(--fg-heading))" }}
           aria-label="See more blog posts"
         >

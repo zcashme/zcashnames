@@ -191,7 +191,7 @@ export default function ShareKitClient({
                     setError("");
                   }}
                   placeholder="zcashnames.com/?ref=your-code"
-                  className={`w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
+                  className={`w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted ${
                     resolvedTheme === "light" ? "bg-[var(--color-card)]" : "bg-[var(--input-fill)]"
                   } ${hasInput ? "pr-[9.5rem]" : "pr-[5.5rem]"}`}
                 />
@@ -207,7 +207,7 @@ export default function ShareKitClient({
                     <button
                       type="button"
                       onClick={clearReferralCode}
-                      className="inline-flex h-[calc(100%-2px)] items-center justify-center rounded-[13px] px-3 text-sm font-semibold leading-none text-fg-muted transition-colors hover:text-fg-heading"
+                      className="inline-flex h-[calc(100%-2px)] items-center justify-center rounded-[13px] px-3 text-sm font-semibold leading-none text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
                     >
                       Clear
                     </button>
@@ -314,7 +314,7 @@ function SectionPills({ sections }: { sections: ShareKitSection[] }) {
           <a
             key={section.id}
             href={`#${section.id}`}
-            className="rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+            className="rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           >
             {section.title}
           </a>
@@ -350,11 +350,11 @@ function DraftCard({
     ? "border-[rgba(155,188,15,0.36)] bg-[rgba(48,98,48,0.34)]"
     : "border-border-muted bg-[var(--color-raised)]";
   const textareaClassName = monochrome
-    ? "border-[rgba(155,188,15,0.42)] bg-transparent text-[var(--mono-3)] placeholder:text-[color:rgba(155,188,15,0.7)] focus:border-[rgba(155,188,15,0.72)]"
-    : "border-border-muted bg-transparent text-fg-body focus:border-fg-muted";
+    ? "border-[rgba(155,188,15,0.42)] bg-transparent text-[var(--mono-3)] placeholder:text-[color:rgba(155,188,15,0.7)]"
+    : "border-border-muted bg-transparent text-fg-body";
   const actionButtonClassName = light
-    ? "cursor-pointer rounded-md border border-border-muted bg-transparent px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
-    : "cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading";
+    ? "cursor-pointer rounded-md border border-border-muted bg-transparent px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
+    : "cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]";
 
   return (
     <article className={`flex h-full flex-col overflow-hidden rounded-lg border ${cardClassName}`}>

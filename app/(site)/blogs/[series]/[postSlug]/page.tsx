@@ -109,7 +109,7 @@ export default async function BlogPostPage({
             shareUrl={shareUrl}
             emailSubject={blog.title}
             menuAlign="left"
-            buttonClassName="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-border-muted bg-transparent px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+            buttonClassName="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-border-muted bg-transparent px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           />
         </div>
       }

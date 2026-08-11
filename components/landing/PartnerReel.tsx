@@ -136,7 +136,7 @@ function PartnerIcon({ item }: { item: PartnerReelItem }) {
           +
         </div>
         <span
-          className="text-xs font-semibold leading-tight transition-colors duration-300 group-hover:text-fg-heading sm:text-sm"
+          className="text-xs font-semibold leading-tight transition-colors duration-300 group-hover:text-[var(--color-accent-interactive)] sm:text-sm"
           style={{ color: "var(--fg-muted)", transform: "translateZ(16px)" }}
         >
           {item.displayName}
@@ -162,7 +162,7 @@ function PartnerIcon({ item }: { item: PartnerReelItem }) {
         />
       </div>
       <span
-        className="text-xs font-semibold leading-tight transition-colors duration-300 group-hover:text-fg-heading sm:text-sm"
+        className="text-xs font-semibold leading-tight transition-colors duration-300 group-hover:text-[var(--color-accent-interactive)] sm:text-sm"
         style={{ color: "var(--fg-muted)", transform: "translateZ(16px)" }}
       >
         {item.displayName}

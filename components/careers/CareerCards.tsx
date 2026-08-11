@@ -42,7 +42,7 @@ export function CareerCard({ job }: { job: CareerJob }) {
       <div className="mt-6 flex flex-wrap gap-3">
         <Link
           href={`/careers/${job.slug}`}
-          className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-80"
+          className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
           style={{
             background: "var(--home-result-primary-bg)",
             color: "var(--home-result-primary-fg)",
@@ -56,7 +56,7 @@ export function CareerCard({ job }: { job: CareerJob }) {
             href={applyHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors"
+            className="inline-flex items-center justify-center rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             style={{
               color: "var(--fg-heading)",
               borderColor: "color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
@@ -67,7 +67,7 @@ export function CareerCard({ job }: { job: CareerJob }) {
         ) : (
           <Link
             href={applyHref}
-            className="inline-flex items-center justify-center rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors"
+            className="inline-flex items-center justify-center rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             style={{
               color: "var(--fg-heading)",
               borderColor: "color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",

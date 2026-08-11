@@ -366,7 +366,7 @@ function FilterPanel({
         </div>
         <a
           href="/brandkit"
-          className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+          className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
         >
           Clear filters
         </a>
@@ -448,7 +448,7 @@ function FilterRow({
               className={`rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors ${
                 active
                   ? "border-fg-heading bg-[var(--fg-heading)] text-[var(--color-background)]"
-                  : "border-border-muted text-fg-body hover:border-fg-heading hover:text-fg-heading"
+                  : "border-border-muted text-fg-body hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               }`}
             >
               {text}
@@ -553,7 +553,7 @@ function AssetCard({ asset }: { asset: Asset }) {
           <a
             href={src}
             download
-            className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+            className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           >
             Download PNG
           </a>
@@ -561,7 +561,7 @@ function AssetCard({ asset }: { asset: Asset }) {
             <a
               href={svgSrc}
               download
-              className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+              className="inline-flex w-fit items-center rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             >
               Download SVG
             </a>

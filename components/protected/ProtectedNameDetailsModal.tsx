@@ -214,7 +214,7 @@ function UrlList({ urls }: { urls: string[] }) {
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="break-all font-medium underline underline-offset-2 transition-opacity hover:opacity-85"
+            className="break-all font-medium underline underline-offset-2 transition-[filter] duration-200 hover:brightness-110"
             style={{ color: "var(--color-accent-interactive)" }}
           >
             {url}
@@ -396,7 +396,7 @@ export default function ProtectedNameDetailsModal({
                 {row.redeemed ? (
                   <Link
                     href={`/explorer?name=${encodeURIComponent(row.normalized_name || row.name)}`}
-                    className="font-medium underline underline-offset-2 transition-opacity hover:opacity-85"
+                    className="font-medium underline underline-offset-2 transition-[filter] duration-200 hover:brightness-110"
                     style={{ color: "var(--color-accent-interactive)" }}
                   >
                     View on Explorer
@@ -471,7 +471,7 @@ export default function ProtectedNameDetailsModal({
                     ? "Open the dispute form with this name selected"
                     : "Only non-redeemed protected or rejected names can be disputed"
                 }
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:brightness-100"
                 style={{
                   background: "var(--home-result-primary-bg)",
                   color: "var(--home-result-primary-fg)",
@@ -483,7 +483,7 @@ export default function ProtectedNameDetailsModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-border-muted bg-transparent px-5 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-border-muted bg-transparent px-5 py-2 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               >
                 Close
               </button>

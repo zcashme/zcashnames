@@ -98,8 +98,7 @@ export default function BetaPasswordModal({ target, onCancel, onSubmit }: Props)
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2.5 rounded-full type-body font-bold transition-opacity duration-200 hover:opacity-60 cursor-pointer"
-            style={{ color: "var(--fg-muted)" }}
+            className="cursor-pointer rounded-full border-[1.5px] border-border-muted bg-transparent px-4 py-2.5 type-body font-bold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           >
             Cancel
           </button>
@@ -107,7 +106,7 @@ export default function BetaPasswordModal({ target, onCancel, onSubmit }: Props)
             type="button"
             onClick={handleSubmit}
             disabled={checking}
-            className="px-5 py-2.5 rounded-full type-body font-bold cursor-pointer transition-opacity duration-200 hover:opacity-80"
+            className="cursor-pointer rounded-full px-5 py-2.5 type-body font-bold transition-[transform,box-shadow] duration-200 hover:-translate-y-px disabled:hover:translate-y-0"
             style={{
               background: "var(--sf-search-btn-bg)",
               color: "var(--sf-claim-text)",

@@ -77,7 +77,7 @@ export default function HomeResultCard({
           type="button"
           onClick={onDismiss}
           aria-label={`Dismiss ${displayName}`}
-          className="absolute right-2 top-2 z-[2] inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border text-base font-semibold leading-none transition-opacity hover:opacity-80"
+          className="absolute right-2 top-2 z-[2] inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border text-base font-semibold leading-none transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           style={{
             borderColor: "var(--home-result-secondary-border)",
             background: "var(--home-result-secondary-bg)",

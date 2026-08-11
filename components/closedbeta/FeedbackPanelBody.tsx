@@ -345,7 +345,7 @@ export default function FeedbackPanelBody({
           onClick={() => setWalletOpen((open) => !open)}
           aria-expanded={walletOpen}
           aria-haspopup="menu"
-          className="rounded-lg px-2.5 py-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-90 inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
+          className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-semibold cursor-pointer opacity-90 transition-[color,border-color,background-color,opacity] duration-200 hover:opacity-100 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           style={selectedWalletStyle}
         >
           {walletSummary(selectedWalletVariantId)}
@@ -373,7 +373,7 @@ export default function FeedbackPanelBody({
                 <button
                   type="button"
                   onClick={onTooltipClose}
-                  className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                  className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
                   style={tooltipActionStyle}
                 >
                   Skip
@@ -381,7 +381,7 @@ export default function FeedbackPanelBody({
                 <button
                   type="button"
                   onClick={onTooltipNext}
-                  className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                  className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
                   style={tooltipActionStyle}
                 >
                   Next
@@ -410,7 +410,7 @@ export default function FeedbackPanelBody({
                     setSelectedWalletVariantId(variant.variantId);
                     setWalletOpen(false);
                   }}
-                  className="block w-full px-3 py-2 text-left text-xs font-semibold transition-colors hover:opacity-80 cursor-pointer"
+                  className="zns-menu-hover block w-full cursor-pointer px-3 py-2 text-left text-xs font-semibold transition-colors"
                   style={{
                     color: active ? "var(--fg-heading)" : "var(--fg-body)",
                     background: active
@@ -437,7 +437,7 @@ export default function FeedbackPanelBody({
           href={walletDownloadHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-lg px-2.5 py-1.5 transition-opacity hover:opacity-100 opacity-90 inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
+          className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-semibold opacity-90 transition-[color,border-color,background-color,opacity] duration-200 hover:opacity-100 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           style={utilityBtnStyle}
           aria-label="Download wallet"
           title="Download wallet"
@@ -506,7 +506,7 @@ export default function FeedbackPanelBody({
                 onClick={openInNewWindow}
                 title="Open in new window"
                 aria-label="Open in new window"
-                className="rounded-lg p-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70"
+                className="rounded-lg p-1.5 cursor-pointer opacity-70 transition-[color,border-color,background-color,opacity] duration-200 hover:opacity-100 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                 style={utilityBtnStyle}
               >
                 <svg
@@ -535,7 +535,7 @@ export default function FeedbackPanelBody({
                       <button
                         type="button"
                         onClick={onTooltipClose}
-                        className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                        className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
                         style={tooltipActionStyle}
                       >
                         Skip
@@ -543,7 +543,7 @@ export default function FeedbackPanelBody({
                       <button
                         type="button"
                         onClick={onTooltipNext}
-                        className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                        className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
                         style={tooltipActionStyle}
                       >
                         Next
@@ -629,7 +629,7 @@ export default function FeedbackPanelBody({
                 onClick={collapsePanel}
                 aria-label="Collapse feedback panel"
                 title="Collapse"
-                className="rounded-lg p-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70"
+                className="rounded-lg p-1.5 cursor-pointer opacity-70 transition-[color,border-color,background-color,opacity] duration-200 hover:opacity-100 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                 style={utilityBtnStyle}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
@@ -647,7 +647,7 @@ export default function FeedbackPanelBody({
                       <button
                         type="button"
                         onClick={onTooltipClose}
-                        className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                        className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
                         style={tooltipActionStyle}
                       >
                         Skip
@@ -655,7 +655,7 @@ export default function FeedbackPanelBody({
                       <button
                         type="button"
                         onClick={onTooltipNext}
-                        className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                        className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
                         style={tooltipActionStyle}
                       >
                         Next
@@ -689,7 +689,7 @@ export default function FeedbackPanelBody({
               aria-pressed={tooltipStep ? true : undefined}
               aria-label={tooltipStep ? "Hide tooltips" : "Show tooltips"}
               title={tooltipStep ? "Hide tooltips" : "Show tooltips"}
-              className="rounded-lg p-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70"
+              className="rounded-lg p-1.5 cursor-pointer opacity-70 transition-[color,border-color,background-color,opacity] duration-200 hover:opacity-100 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               style={utilityBtnStyle}
             >
               <svg
@@ -716,7 +716,7 @@ export default function FeedbackPanelBody({
                   <button
                     type="button"
                     onClick={onTooltipClose}
-                    className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                    className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
                     style={tooltipActionStyle}
                   >
                     Okay
@@ -731,7 +731,7 @@ export default function FeedbackPanelBody({
               onClick={() => setReadMeOpen((open) => !open)}
               aria-expanded={readMeOpen}
               aria-haspopup="menu"
-              className="rounded-lg px-2.5 py-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70 inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-semibold cursor-pointer opacity-70 transition-[color,border-color,background-color,opacity] duration-200 hover:opacity-100 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               style={utilityBtnStyle}
             >
               Read
@@ -759,7 +759,7 @@ export default function FeedbackPanelBody({
                     <button
                       type="button"
                       onClick={onTooltipClose}
-                      className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                      className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
                       style={tooltipActionStyle}
                     >
                       Skip
@@ -767,7 +767,7 @@ export default function FeedbackPanelBody({
                     <button
                       type="button"
                       onClick={onTooltipNext}
-                      className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                      className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
                       style={tooltipActionStyle}
                     >
                       Next
@@ -790,7 +790,7 @@ export default function FeedbackPanelBody({
                   rel="noopener noreferrer"
                   role="menuitem"
                   onClick={() => setReadMeOpen(false)}
-                  className="block px-3 py-2 text-xs font-semibold transition-colors hover:opacity-80"
+                  className="zns-menu-hover block px-3 py-2 text-xs font-semibold transition-colors"
                   style={{
                     color: "var(--fg-body)",
                     textDecoration: "none",
@@ -806,7 +806,7 @@ export default function FeedbackPanelBody({
                     rel="noopener noreferrer"
                     role="menuitem"
                     onClick={() => setReadMeOpen(false)}
-                    className="block px-3 py-2 text-xs font-semibold transition-colors hover:opacity-80"
+                    className="zns-menu-hover block px-3 py-2 text-xs font-semibold transition-colors"
                     style={{
                       color: "var(--fg-body)",
                       textDecoration: "none",
@@ -824,7 +824,7 @@ export default function FeedbackPanelBody({
                     rel="noopener noreferrer"
                     role="menuitem"
                     onClick={() => setReadMeOpen(false)}
-                    className="block px-3 py-2 text-xs font-semibold transition-colors hover:opacity-80"
+                    className="zns-menu-hover block px-3 py-2 text-xs font-semibold transition-colors"
                     style={{
                       color: "var(--fg-body)",
                       textDecoration: "none",
@@ -844,7 +844,7 @@ export default function FeedbackPanelBody({
               onClick={() => setContactOpen((open) => !open)}
               aria-expanded={contactOpen}
               aria-haspopup="menu"
-              className="rounded-lg px-2.5 py-1.5 cursor-pointer transition-opacity hover:opacity-100 opacity-70 inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-semibold cursor-pointer opacity-70 transition-[color,border-color,background-color,opacity] duration-200 hover:opacity-100 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               style={utilityBtnStyle}
             >
               Contact
@@ -872,7 +872,7 @@ export default function FeedbackPanelBody({
                     <button
                       type="button"
                       onClick={onTooltipClose}
-                      className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                      className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
                       style={tooltipActionStyle}
                     >
                       Skip
@@ -880,7 +880,7 @@ export default function FeedbackPanelBody({
                     <button
                       type="button"
                       onClick={onTooltipNext}
-                      className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                      className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
                       style={tooltipActionStyle}
                     >
                       Next
@@ -905,7 +905,7 @@ export default function FeedbackPanelBody({
                     rel="noopener noreferrer"
                     role="menuitem"
                     onClick={() => setContactOpen(false)}
-                    className="block px-3 py-2 text-xs font-semibold transition-colors hover:opacity-80"
+                    className="zns-menu-hover block px-3 py-2 text-xs font-semibold transition-colors"
                     style={{
                       color: "var(--fg-body)",
                       textDecoration: "none",

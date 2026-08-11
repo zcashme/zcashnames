@@ -168,12 +168,7 @@ function HeaderInfoModal({
         <button
           type="button"
           onClick={onClose}
-          className="mt-5 inline-flex rounded-full px-4 py-2 text-sm font-semibold transition hover:opacity-80"
-          style={{
-            border: "1px solid var(--faq-border)",
-            background: "color-mix(in srgb, var(--color-bg-elevated, transparent) 78%, transparent)",
-            color: "var(--fg-body)",
-          }}
+          className="mt-5 inline-flex rounded-full border border-[var(--faq-border)] bg-[color-mix(in_srgb,var(--color-bg-elevated,transparent)_78%,transparent)] px-4 py-2 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
         >
           OK
         </button>
@@ -426,8 +421,7 @@ function ViewKeyCopyRow({
       <button
         type="button"
         onClick={onCopy}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition-opacity hover:opacity-80"
-        style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border-[1.5px] border-border-muted bg-transparent text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
         aria-label="Copy view key"
         title={copied ? "Copied!" : "Copy view key"}
       >
@@ -509,8 +503,7 @@ function QueueViewKeyModal({
                 <button
                   type="button"
                   onClick={handleSavePng}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
-                  style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border-[1.5px] border-border-muted bg-transparent text-xs font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                   aria-label="Save QR"
                   title="Save QR"
                 >
@@ -534,8 +527,7 @@ function QueueViewKeyModal({
                 <button
                   type="button"
                   onClick={() => setExpanded(true)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
-                  style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border-[1.5px] border-border-muted bg-transparent text-xs font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                   aria-label="Expand QR"
                   title="Expand QR"
                 >
@@ -558,8 +550,7 @@ function QueueViewKeyModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-full px-3 py-1 text-sm font-semibold transition hover:opacity-80"
-                style={{ color: "var(--fg-body)" }}
+                className="rounded-full border-[1.5px] border-border-muted bg-transparent px-3 py-1 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               >
                 Close
               </button>
@@ -864,7 +855,7 @@ export default function WaitlistViewClient({
           <button
             type="button"
             onClick={() => setShowViewKeyModal(true)}
-            className="cursor-pointer underline underline-offset-4 transition hover:opacity-80"
+            className="cursor-pointer underline underline-offset-4 transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
             style={{ color: "var(--fg-body)" }}
           >
             <strong>{maskedQueueViewKey}</strong>
@@ -959,7 +950,7 @@ export default function WaitlistViewClient({
                   <span className="mt-1 block text-center text-base">
                     <Link
                       href="/reserve"
-                      className="font-normal transition-opacity hover:opacity-80"
+                      className="font-normal transition-[filter] duration-200 hover:brightness-110"
                       style={{ color: "var(--color-accent-interactive)" }}
                     >
                       Get started
@@ -1176,8 +1167,8 @@ export default function WaitlistViewClient({
                           }}
                         >
                           {row.leaderHref ? (
-                            <Link href={row.leaderHref} className="block transition hover:opacity-80" title={row.name}>
-                              <span className="block" style={{ color: "var(--fg-body)" }}>
+                            <Link href={row.leaderHref} className="group block" title={row.name}>
+                              <span className="block text-fg-body transition-colors group-hover:text-[var(--color-accent-interactive)]">
                                 {row.name}
                               </span>
                               {row.displayReferralCode ? (

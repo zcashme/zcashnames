@@ -211,7 +211,7 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
               <button
                 type="button"
                 onClick={expandCurrentPeriods}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               >
                 <span
                   className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-green)]"
@@ -255,7 +255,7 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
                     <a
                       key={title}
                       href={`#${sectionAnchorId(title)}`}
-                      className="rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+                      className="rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                     >
                       {title}
                     </a>
@@ -381,7 +381,7 @@ function ListRoadmapCard({
             {period.badgeLabel && period.badgeHref ? (
               <Link
                 href="/beta/apply"
-                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors hover:border-fg-heading ${isApplyBadge ? applyBadgeClassName : badgeClassName}`}
+                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] ${isApplyBadge ? applyBadgeClassName : badgeClassName}`}
               >
                 <span>{isCompleteBadge ? `✓ ${period.badgeLabel}` : period.badgeLabel}</span>
                 {isApplyBadge ? <span aria-hidden="true">→</span> : null}

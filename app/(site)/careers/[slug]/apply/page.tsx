@@ -154,7 +154,7 @@ export default async function CareerApplyPage(
                   href={job.applicationUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-6 inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-80"
+                  className="mt-6 inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
                   style={{
                     background: "var(--home-result-primary-bg)",
                     color: "var(--home-result-primary-fg)",

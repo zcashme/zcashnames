@@ -203,14 +203,13 @@ export default function LeaderSnapshotPage() {
     <main className="px-2 pb-10 pt-3 sm:px-4">
       <section className="mx-auto w-[min(96vw,calc(90vh*16/9))]">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <Link href="/leaders" className="text-sm font-semibold text-fg-muted hover:text-fg-heading transition-colors">
+          <Link href="/leaders" className="text-sm font-semibold text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]">
             ← Back to Leaderboard
           </Link>
           <button
             type="button"
             onClick={handleSaveSnapshotSvg}
-            className="rounded-full border px-3 py-1 text-xs font-semibold text-fg-muted hover:text-fg-heading transition-colors cursor-pointer"
-            style={{ borderColor: "var(--leaders-card-border)" }}
+            className="cursor-pointer rounded-full border border-[var(--leaders-card-border)] px-3 py-1 text-xs font-semibold text-fg-muted transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           >
             Save 16:9 SVG
           </button>
@@ -288,8 +287,7 @@ export default function LeaderSnapshotPage() {
             <button
               type="button"
               onClick={handleCopyNames}
-              className="rounded-full border px-3 py-1 text-xs font-semibold text-fg-muted hover:text-fg-heading transition-colors cursor-pointer"
-              style={{ borderColor: "var(--leaders-card-border)" }}
+              className="cursor-pointer rounded-full border border-[var(--leaders-card-border)] px-3 py-1 text-xs font-semibold text-fg-muted transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             >
               {namesCopied ? "Copied" : "Copy Names"}
             </button>
@@ -297,8 +295,7 @@ export default function LeaderSnapshotPage() {
               <button
                 type="button"
                 onClick={() => setHiddenNameKeys(new Set())}
-                className="rounded-full border px-3 py-1 text-xs font-semibold text-fg-muted hover:text-fg-heading transition-colors cursor-pointer"
-                style={{ borderColor: "var(--leaders-card-border)" }}
+                className="cursor-pointer rounded-full border border-[var(--leaders-card-border)] px-3 py-1 text-xs font-semibold text-fg-muted transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               >
                 Reset hidden
               </button>
@@ -308,8 +305,7 @@ export default function LeaderSnapshotPage() {
             <button
               type="button"
               onClick={handleSaveNamesSvg}
-              className="rounded-full border px-3 py-1 text-xs font-semibold text-fg-muted hover:text-fg-heading transition-colors cursor-pointer"
-              style={{ borderColor: "var(--leaders-card-border)" }}
+              className="cursor-pointer rounded-full border border-[var(--leaders-card-border)] px-3 py-1 text-xs font-semibold text-fg-muted transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             >
               Save 1:1 SVG
             </button>
@@ -422,7 +418,7 @@ function NewNamesSection({
                 </span>
                 <button
                   type="button"
-                  className="mt-1 cursor-pointer text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-fg-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-fg-heading"
+                  className="mt-1 cursor-pointer text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-fg-muted opacity-0 transition-[color,opacity] group-hover:opacity-100 hover:text-[var(--color-accent-interactive)]"
                   onClick={() => onHide(entry)}
                 >
                   Hide

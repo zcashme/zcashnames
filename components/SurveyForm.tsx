@@ -231,7 +231,7 @@ export default function SurveyForm({
           type="button"
           onClick={handleSubmit}
           disabled={submitting || captchaOpen}
-          className="px-8 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+          className="cursor-pointer rounded-full px-8 py-2.5 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
           style={{
             background: "var(--home-result-primary-bg)",
             color: "var(--home-result-primary-fg)",
@@ -250,7 +250,7 @@ export default function SurveyForm({
         <button
           type="button"
           onClick={onBack}
-          className="px-8 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+          className="cursor-pointer rounded-full px-8 py-2.5 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
           style={{
             background: "var(--home-result-secondary-bg)",
             color: "var(--home-result-secondary-fg)",

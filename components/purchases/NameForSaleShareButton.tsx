@@ -49,7 +49,7 @@ export default function NameForSaleShareButton({
       menuAlign={menuAlign}
       menuDirection={menuDirection}
       rootClassName="relative inline-flex w-fit max-w-full flex-col items-stretch gap-1"
-      buttonClassName={`${chipClass} gap-1.5 cursor-pointer transition-opacity hover:opacity-85`}
+      buttonClassName={`${chipClass} gap-1.5 cursor-pointer transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]`}
     />
   );
 }

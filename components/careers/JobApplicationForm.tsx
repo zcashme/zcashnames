@@ -270,7 +270,7 @@ export default function JobApplicationForm({ job }: { job: CareerJob }) {
         <button
           type="submit"
           disabled={pending || captchaOpen}
-          className="mt-6 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-6 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:brightness-100"
           style={{
             background: "var(--home-result-primary-bg)",
             color: "var(--home-result-primary-fg)",

@@ -551,7 +551,7 @@ export default function AddressMeComposer() {
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="min-w-0 rounded-md border border-border-muted bg-[var(--input-fill)] px-3 py-2 text-sm font-semibold text-fg-heading outline-none focus:border-fg-heading"
+              className="min-w-0 rounded-md border border-border-muted bg-[var(--input-fill)] px-3 py-2 text-sm font-semibold text-fg-heading outline-none"
               placeholder={DEFAULT_NAME}
               maxLength={32}
               spellCheck={false}
@@ -577,14 +577,14 @@ export default function AddressMeComposer() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="cursor-pointer rounded-md border border-border-muted px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+                className="cursor-pointer rounded-md border border-border-muted px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               >
                 Upload image
               </button>
               <button
                 type="button"
                 onClick={useSampleImage}
-                className="cursor-pointer rounded-md border border-border-muted px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+                className="cursor-pointer rounded-md border border-border-muted px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               >
                 See sample
               </button>
@@ -592,7 +592,7 @@ export default function AddressMeComposer() {
                 <button
                   type="button"
                   onClick={removeImage}
-                  className="cursor-pointer rounded-md border border-border-muted px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+                  className="cursor-pointer rounded-md border border-border-muted px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                 >
                   Remove image
                 </button>
@@ -634,7 +634,7 @@ export default function AddressMeComposer() {
                 type="text"
                 value={nameHexInput}
                 onChange={(event) => handleNameHexChange(event.target.value)}
-                className="min-w-0 rounded-md border border-border-muted bg-[var(--input-fill)] px-3 py-2 font-mono text-sm font-semibold text-fg-heading outline-none focus:border-fg-heading"
+                className="min-w-0 rounded-md border border-border-muted bg-[var(--input-fill)] px-3 py-2 font-mono text-sm font-semibold text-fg-heading outline-none"
                 placeholder="#f8f8f8"
                 spellCheck={false}
               />
@@ -649,7 +649,7 @@ export default function AddressMeComposer() {
               id="address-font"
               value={addressFont}
               onChange={(event) => setAddressFont(event.target.value as AddressFont)}
-              className="rounded-md border border-border-muted bg-[var(--color-raised)] px-3 py-2 text-sm font-semibold text-fg-heading outline-none focus:border-fg-heading"
+              className="rounded-md border border-border-muted bg-[var(--color-raised)] px-3 py-2 text-sm font-semibold text-fg-heading outline-none"
             >
               {addressFontOptions.map((font) => (
                 <option key={font.value} value={font.value}>
@@ -667,7 +667,7 @@ export default function AddressMeComposer() {
               id="address-logo-variation"
               value={logoVariation}
               onChange={(event) => setLogoVariation(event.target.value as LogoVariation)}
-              className="rounded-md border border-border-muted bg-[var(--color-raised)] px-3 py-2 text-sm font-semibold text-fg-heading outline-none focus:border-fg-heading"
+              className="rounded-md border border-border-muted bg-[var(--color-raised)] px-3 py-2 text-sm font-semibold text-fg-heading outline-none"
             >
               {logoVariations.map((logo) => (
                 <option key={logo.value} value={logo.value}>
@@ -702,7 +702,7 @@ export default function AddressMeComposer() {
             <button
               type="button"
               onClick={downloadPng}
-              className="cursor-pointer rounded-md border border-fg-heading bg-[var(--fg-heading)] px-4 py-3 text-sm font-bold text-[var(--color-background)] transition-opacity hover:opacity-90"
+              className="cursor-pointer rounded-md border border-fg-heading bg-[var(--fg-heading)] px-4 py-3 text-sm font-bold text-[var(--color-background)] transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
             >
               Download PNG
             </button>
@@ -710,7 +710,7 @@ export default function AddressMeComposer() {
               <button
                 type="button"
                 onClick={() => void sharePng()}
-className="cursor-pointer rounded-md border border-fg-heading bg-[var(--fg-heading)] px-4 py-3 text-sm font-bold text-[var(--color-background)] transition-opacity hover:opacity-90"
+className="cursor-pointer rounded-md border border-fg-heading bg-[var(--fg-heading)] px-4 py-3 text-sm font-bold text-[var(--color-background)] transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
                >
                 Share PNG
               </button>
@@ -730,14 +730,14 @@ className="cursor-pointer rounded-md border border-fg-heading bg-[var(--fg-headi
                     <button
                       type="button"
                       onClick={() => void copySamplePost(post)}
-                      className="cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+                      className="cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                     >
                       Copy
                     </button>
                     <button
                       type="button"
                       onClick={() => sharePostOnX(post)}
-                      className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+                      className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                     >
                       <span>Share on</span>
                       <svg

@@ -101,8 +101,7 @@ function ConfirmView({
           <button
             type="button"
             onClick={copyLink}
-            className="flex items-center justify-center gap-2 flex-1 rounded-lg py-2 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-            style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+            className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border-[1.5px] border-border-muted bg-transparent py-2 text-xs font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           >
             {copied ? (
               <>
@@ -124,8 +123,7 @@ function ConfirmView({
           <button
             type="button"
             onClick={shareLink}
-            className="flex items-center justify-center gap-2 flex-1 rounded-lg py-2 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-            style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+            className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border-[1.5px] border-border-muted bg-transparent py-2 text-xs font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           >
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -138,8 +136,7 @@ function ConfirmView({
             href={`https://x.com/intent/post?text=${encodeURIComponent(`Whoa - @zcashnames is going to be big. I found the waitlist. Sign up and get alerted before they launch. ${shareUrl}`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 flex-1 rounded-lg py-2 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-            style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)", textDecoration: "none" }}
+            className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border-[1.5px] border-border-muted bg-transparent py-2 text-xs font-semibold text-fg-body no-underline transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           >
             <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -152,7 +149,7 @@ function ConfirmView({
         <button
           type="button"
           onClick={onTakeSurvey}
-          className="px-6 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+          className="cursor-pointer rounded-full px-6 py-2.5 text-sm font-semibold transition-[transform,box-shadow] duration-200 hover:-translate-y-px"
           style={{
             background: "var(--home-result-primary-bg)",
             color: "var(--home-result-primary-fg)",
@@ -164,8 +161,7 @@ function ConfirmView({
         <button
           type="button"
           onClick={onClose}
-          className="px-8 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
-          style={{ background: "var(--fg-heading)", color: "var(--color-background)" }}
+          className="cursor-pointer rounded-full border-[1.5px] border-border-muted bg-transparent px-8 py-2.5 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
         >
           Done
         </button>
@@ -205,8 +201,7 @@ function ThankYouView({
       <button
         type="button"
         onClick={onClose}
-        className="px-8 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
-        style={{ background: "var(--fg-heading)", color: "var(--color-background)" }}
+        className="cursor-pointer rounded-full border-[1.5px] border-border-muted bg-transparent px-8 py-2.5 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
       >
         Done
       </button>

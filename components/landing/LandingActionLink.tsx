@@ -41,7 +41,7 @@ export default function LandingActionLink({
     return (
       <Link
         href={href}
-        className="inline-flex items-center gap-2 text-sm font-semibold transition-opacity hover:opacity-80"
+        className="inline-flex items-center gap-2 text-sm font-semibold transition-[filter] duration-200 hover:brightness-110"
         style={{ color: "var(--color-accent-interactive, var(--fg-heading))" }}
         aria-label={label}
       >

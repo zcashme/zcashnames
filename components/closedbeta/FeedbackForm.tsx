@@ -302,7 +302,7 @@ export default function FeedbackForm({
               onClick={onClearChecklistItem}
               aria-label="Clear linked checklist item"
               title="Clear"
-              className="shrink-0 text-xl leading-none opacity-60 hover:opacity-100 cursor-pointer"
+              className="zns-hover-accent shrink-0 cursor-pointer text-xl leading-none opacity-60 transition-[color,opacity] duration-200 hover:opacity-100"
               style={{ color: "var(--fg-body)" }}
             >
               &times;
@@ -353,7 +353,11 @@ export default function FeedbackForm({
               type="button"
               onClick={() => setExperienceRating(option.value)}
               aria-pressed={experienceRating === option.value}
-              className="rounded-lg px-2 py-2 text-[0.68rem] font-semibold leading-tight cursor-pointer transition-opacity hover:opacity-80"
+              className={
+                experienceRating === option.value
+                  ? "rounded-lg px-2 py-2 text-[0.68rem] font-semibold leading-tight cursor-pointer transition-[transform,box-shadow] duration-200 hover:-translate-y-px"
+                  : "rounded-lg border-[1.5px] border-border-muted px-2 py-2 text-[0.68rem] font-semibold leading-tight cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
+              }
               style={experienceRating === option.value ? primaryBtnStyle : secondaryBtnStyle}
             >
               <svg
@@ -401,7 +405,7 @@ export default function FeedbackForm({
           type="button"
           onClick={() => setBugReportOpen((prev) => !prev)}
           aria-expanded={bugReportOpen}
-          className="w-full flex items-center gap-2 px-3 py-3 text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+          className="zns-menu-hover flex w-full cursor-pointer items-center gap-2 px-3 py-3 text-sm font-semibold transition-colors"
           style={{
             color: "var(--fg-heading)",
             background: monochrome ? "var(--color-background, #0f1115)" : "var(--color-raised)",
@@ -527,7 +531,7 @@ export default function FeedbackForm({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="rounded-lg px-3 py-2 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                  className="rounded-lg border-[1.5px] border-border-muted px-3 py-2 text-xs font-semibold text-fg-body cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                   style={secondaryBtnStyle}
                 >
                   Upload screenshots
@@ -548,7 +552,7 @@ export default function FeedbackForm({
                       <button
                         type="button"
                         onClick={() => removeFile(i)}
-                        className="opacity-60 hover:opacity-100 cursor-pointer"
+                        className="zns-hover-accent cursor-pointer opacity-60 transition-[color,opacity] duration-200 hover:opacity-100"
                         aria-label={`Remove ${f.name}`}
                       >
                         &times;
@@ -590,7 +594,7 @@ export default function FeedbackForm({
           <button
             type="button"
             onClick={onOpenChecklist}
-            className="w-full rounded-full py-3 text-sm font-semibold transition-opacity hover:opacity-80 cursor-pointer"
+            className="w-full rounded-full border-[1.5px] border-border-muted bg-transparent py-3 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] cursor-pointer"
             style={secondaryBtnStyle}
           >
             Back to Checklist
@@ -599,7 +603,7 @@ export default function FeedbackForm({
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-full py-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full rounded-full py-3 text-sm font-semibold transition-[transform,box-shadow] duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 cursor-pointer"
           style={primaryBtnStyle}
         >
           {submitting ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit"}

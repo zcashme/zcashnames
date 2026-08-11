@@ -3672,6 +3672,43 @@ body.app-shell-standalone {
   background-size: 0.42rem 0.42rem;
 }
 
+.zns-focus-field {
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="color"]):not([type="file"]):not([disabled]),
+  textarea:not([disabled]),
+  select:not([disabled]),
+  .zns-focus-field
+) {
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="color"]):not([type="file"]):not([disabled]),
+  textarea:not([disabled]),
+  select:not([disabled]),
+  .zns-focus-field
+):focus,
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="color"]):not([type="file"]):not([disabled]),
+  textarea:not([disabled]),
+  select:not([disabled]),
+  .zns-focus-field
+):focus-visible,
+.zns-themed-select:focus,
+.zns-themed-select:focus-visible {
+  border-color: var(--color-accent-interactive) !important;
+  box-shadow: 0 0 0 1px var(--color-accent-interactive);
+}
+
 .zns-themed-select::-ms-expand {
   display: none;
 }

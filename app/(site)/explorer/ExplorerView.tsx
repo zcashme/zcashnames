@@ -487,7 +487,7 @@ export default function ExplorerView({
               <button
                 type="button"
                 onClick={() => setUivkOpen(false)}
-                className="shrink-0 cursor-pointer text-fg-muted transition-colors hover:text-fg-heading"
+                className="shrink-0 cursor-pointer text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
                 aria-label="Close"
               >
                 <svg viewBox="0 0 16 16" fill="none" className="h-5 w-5" aria-hidden="true">

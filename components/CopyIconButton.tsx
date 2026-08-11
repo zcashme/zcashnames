@@ -24,14 +24,8 @@ export default function CopyIconButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-      style={
-        style ?? {
-          background: "transparent",
-          border: "1.5px solid var(--border-muted)",
-          color: "var(--fg-body)",
-        }
-      }
+      className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-border-muted bg-transparent text-xs font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] disabled:cursor-not-allowed disabled:border-border-muted disabled:opacity-50 disabled:hover:text-fg-body"
+      style={style}
       aria-label={ariaLabel}
       title={title ?? (copied ? "Copied!" : ariaLabel)}
     >

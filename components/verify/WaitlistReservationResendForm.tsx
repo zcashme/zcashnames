@@ -200,7 +200,7 @@ export default function WaitlistReservationResendForm({
             }}
             placeholder="you@example.com"
             aria-label="Email address"
-            className="min-w-0 w-full rounded-2xl border bg-transparent py-3 pl-14 pr-[7.5rem] text-base outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
+            className="min-w-0 w-full rounded-2xl border bg-transparent py-3 pl-14 pr-[7.5rem] text-base outline-none transition-colors placeholder:text-fg-muted"
             style={{ borderColor: "var(--faq-border)", color: "var(--fg-heading)" }}
           />
           <span
@@ -214,7 +214,7 @@ export default function WaitlistReservationResendForm({
             <button
               type="submit"
               disabled={!emailIsValid || submitting || captchaOpen}
-              className="inline-flex h-[calc(100%-2px)] shrink-0 cursor-pointer items-center justify-center rounded-[13px] px-4 text-sm font-semibold leading-none transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-[calc(100%-2px)] shrink-0 cursor-pointer items-center justify-center rounded-[13px] px-4 text-sm font-semibold leading-none transition-[transform,box-shadow] duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
               style={{
                 background: emailIsValid && !submitting && !captchaOpen
                   ? "var(--home-result-primary-bg)"
@@ -267,7 +267,7 @@ export default function WaitlistReservationResendForm({
             </span>
             <Link
               href="/docs/learn/privacy"
-              className="inline-flex items-center gap-2 font-semibold transition hover:opacity-80"
+              className="inline-flex items-center gap-2 font-semibold transition-[filter] duration-200 hover:brightness-110"
               style={{ color: "var(--color-accent-interactive)" }}
             >
               <span>Privacy policy</span>

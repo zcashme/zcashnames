@@ -181,7 +181,7 @@ export function FaqSectionPills() {
           <a
             key={group.id}
             href={`#${group.id}`}
-            className="rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+            className="rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           >
             {group.title}
           </a>

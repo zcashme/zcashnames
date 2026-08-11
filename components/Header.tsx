@@ -57,7 +57,7 @@ export default function Header() {
             <Link
               href="/"
               aria-label="Zcash Names"
-              className="group type-section-subtitle inline-flex shrink-0 items-center gap-3 whitespace-nowrap text-fg-heading font-bold tracking-tight leading-tight transition-opacity sm:gap-4 [[data-theme=dark]_&]:hover:opacity-80 [[data-theme=monochrome]_&]:hover:opacity-80"
+              className="group type-section-subtitle inline-flex shrink-0 items-center gap-3 whitespace-nowrap font-bold leading-tight tracking-tight text-fg-heading transition-colors hover:text-[var(--color-accent-interactive)] sm:gap-4"
             >
               <ZcashNamesLogoMark
                 alt="Zcash Names"

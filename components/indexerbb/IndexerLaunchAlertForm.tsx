@@ -36,13 +36,6 @@ const inputStyle: CSSProperties = {
 
 const selectStyle: CSSProperties = {
   ...inputStyle,
-  appearance: "none",
-  paddingRight: "2rem",
-  backgroundImage:
-    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='gray' stroke-width='2'><polyline points='3 5 6 8 9 5'/></svg>\")",
-  backgroundRepeat: "no-repeat",
-  backgroundPosition: "right 0.6rem center",
-  backgroundSize: "0.8rem",
 };
 
 const labelStyle: CSSProperties = {
@@ -289,7 +282,7 @@ export default function IndexerLaunchAlertForm() {
                     <select
                       value={contact.kind}
                       onChange={(e) => updateContactKind(contact.uid, e.target.value as ContactKind)}
-                      className="cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none"
+                      className="zns-themed-select cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none"
                       style={{ ...selectStyle, minWidth: 130 }}
                     >
                       {CONTACT_KINDS.map((kind) => (
@@ -312,7 +305,7 @@ export default function IndexerLaunchAlertForm() {
                         type="button"
                         onClick={() => removeContact(contact.uid)}
                         aria-label="Remove this contact"
-                        className="cursor-pointer px-1 text-2xl leading-none opacity-60 hover:opacity-100"
+                        className="zns-hover-accent cursor-pointer px-1 text-2xl leading-none opacity-60 transition-[color,opacity] duration-200 hover:opacity-100"
                         style={{ color: "var(--fg-body)" }}
                       >
                         &times;
@@ -326,7 +319,7 @@ export default function IndexerLaunchAlertForm() {
               <button
                 type="button"
                 onClick={addContact}
-                className="mt-2 cursor-pointer text-xs font-semibold underline underline-offset-2 transition-colors hover:text-[var(--color-accent-interactive)]"
+                className="zns-hover-accent mt-2 cursor-pointer text-xs font-semibold"
                 style={{ color: "var(--fg-body)" }}
               >
                 + Add another contact method
@@ -385,7 +378,7 @@ export default function IndexerLaunchAlertForm() {
           <button
             type="submit"
             disabled={pending || captchaOpen}
-            className="inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:brightness-100"
             style={{
               background: "var(--home-result-primary-bg)",
               color: "var(--home-result-primary-fg)",

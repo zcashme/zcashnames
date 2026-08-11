@@ -115,10 +115,7 @@ export default function IndexerBugBountyPage() {
           <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
               href="/docs"
-              className="inline-flex items-center justify-center rounded-full border px-5 py-2.5 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading hover:text-[var(--color-accent-interactive)]"
-              style={{
-                borderColor: "color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-              }}
+              className="inline-flex items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--fg-heading)_18%,var(--faq-border))] px-5 py-2.5 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             >
               Read the docs
             </Link>
@@ -126,10 +123,7 @@ export default function IndexerBugBountyPage() {
               href="https://github.com/zcashme/ZNS/tree/master"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-full border px-5 py-2.5 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading hover:text-[var(--color-accent-interactive)]"
-              style={{
-                borderColor: "color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-              }}
+              className="inline-flex items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--fg-heading)_18%,var(--faq-border))] px-5 py-2.5 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             >
               View the code
             </Link>

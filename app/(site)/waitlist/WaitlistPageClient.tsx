@@ -72,7 +72,7 @@ export default function WaitlistPageClient({ stats }: { stats: Stats }) {
             <button
               type="button"
               onClick={clearBanner}
-              className="shrink-0 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+              className="zns-modal-close shrink-0 cursor-pointer opacity-60 transition-[color,opacity] duration-200 hover:opacity-100"
               aria-label="Dismiss"
             >
               &times;

@@ -13,6 +13,7 @@ import {
   ShareCopyIcon,
   ShareTriggerIcon,
   TelegramIcon,
+  WhatsAppIcon,
   XIcon,
   type ActionDropdownItem,
 } from "@/components/ShareDropdown";
@@ -28,6 +29,7 @@ import {
   buildEmailShareHref,
   buildShareMessageWithLink,
   buildTelegramShareHref,
+  buildWhatsAppShareHref,
   buildXShareHref,
 } from "@/lib/share";
 import { BRAND } from "@/lib/zns/brand";
@@ -92,7 +94,7 @@ const THEMED_ICON_CLASS_BY_ID: Record<string, string> = {
 
 const DIRECT_MONO_ICON_IDS = new Set(["leaderboard", "explorer", "builder-stories", "sharekit"]);
 
-type ShareTarget = "x" | "telegram" | "email" | "system";
+type ShareTarget = "x" | "telegram" | "whatsapp" | "email" | "system";
 
 function formatCommunityCardHref(href: string) {
   if (!href) return "/";
@@ -190,7 +192,7 @@ function SectionPills() {
           <a
             key={section.slug}
             href={communitySectionHref(section.slug)}
-            className="rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+            className="rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           >
             {section.title}
           </a>
@@ -310,7 +312,7 @@ function CommunityCardTile({ card }: { card: CommunityCard }) {
             onPointerDown={(event) => event.stopPropagation()}
           >
             <ActionDropdown
-              buttonClassName="flex h-9 w-9 items-center justify-center rounded-full border border-border-muted bg-transparent text-fg-heading transition-colors duration-200 hover:border-fg-heading hover:text-fg-heading"
+              buttonClassName="flex h-9 w-9 items-center justify-center rounded-full border border-border-muted bg-transparent text-fg-heading transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
               iconPosition="right"
               items={menuItems}
               itemClassName="text-left"
@@ -470,7 +472,7 @@ function CommunityActionModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border-muted text-fg-muted transition-colors hover:border-fg-heading hover:text-fg-heading"
+            className="zns-modal-close flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border-muted text-fg-muted transition-colors hover:border-[var(--color-accent-interactive)]"
             aria-label="Close popup"
           >
             <CloseIcon />
@@ -509,7 +511,7 @@ function CommunityDownloadModal({
             href={websiteUrl}
             target="_blank"
             rel="noreferrer"
-            className="font-semibold text-fg-heading underline underline-offset-2"
+            className="font-semibold text-fg-heading underline underline-offset-2 transition-colors hover:text-[var(--color-accent-interactive)]"
           >
             {formatCommunityCardHref(websiteUrl)}
           </a>
@@ -532,16 +534,27 @@ function CommunityShareModal({
   const copyState = useCopy();
   const supportsSystemShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
   const [shareTarget, setShareTarget] = useState<ShareTarget>("x");
+  const [shareTargetMenuOpen, setShareTargetMenuOpen] = useState(false);
   const [draft, setDraft] = useState(() => buildShareMessageWithLink(card.shareText, shareUrl));
   const shareTargets: { icon: ReactNode; label: string; value: ShareTarget }[] = [
     { value: "x", label: "X", icon: <XIcon /> },
     { value: "telegram", label: "Telegram", icon: <TelegramIcon /> },
+    { value: "whatsapp", label: "WhatsApp", icon: <WhatsAppIcon /> },
     { value: "email", label: "Email", icon: <EmailIcon /> },
     ...(supportsSystemShare
       ? [{ value: "system" as const, label: "Other", icon: <MoreIcon /> }]
       : []),
   ];
   const activeTarget = shareTargets.find((target) => target.value === shareTarget) ?? shareTargets[0];
+  const shareTargetItems: ActionDropdownItem[] = shareTargets.map((target) => ({
+    key: target.value,
+    label: target.label,
+    icon: target.icon,
+    onClick: () => {
+      setShareTarget(target.value);
+      setShareTargetMenuOpen(false);
+    },
+  }));
 
   async function handleCopy() {
     await copyState.copy(draft);
@@ -556,6 +569,12 @@ function CommunityShareModal({
 
     if (shareTarget === "telegram") {
       window.open(buildTelegramShareHref(draft), "_blank", "noopener,noreferrer");
+      onClose();
+      return;
+    }
+
+    if (shareTarget === "whatsapp") {
+      window.open(buildWhatsAppShareHref(draft), "_blank", "noopener,noreferrer");
       onClose();
       return;
     }
@@ -582,38 +601,58 @@ function CommunityShareModal({
     <CommunityActionModal ariaLabel={`Share ${card.name}`} onClose={onClose}>
       <label className="flex flex-col gap-2 text-sm font-semibold text-fg-heading">
         <span>Share on:</span>
-        <span className="relative">
-          <select
-            value={shareTarget}
-            onChange={(event) => setShareTarget(event.target.value as ShareTarget)}
-            className="min-h-11 w-full appearance-none rounded-xl border border-border-muted bg-[var(--input-fill)] px-3 py-2 pr-10 text-sm font-semibold text-fg-heading outline-none transition-colors focus:border-fg-heading"
-          >
-            {shareTargets.map((target) => (
-              <option key={target.value} value={target.value}>
-                {target.label}
-              </option>
-            ))}
-          </select>
-          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-fg-muted" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </span>
-        </span>
+        <ActionDropdown
+          buttonClassName="zns-focus-field inline-flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-border-muted bg-[var(--input-fill)] px-3 py-2.5 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] focus-visible:border-[var(--color-accent-interactive)] focus-visible:outline-none"
+          iconPosition="left"
+          items={shareTargetItems}
+          itemClassName="rounded-xl"
+          label="Share on"
+          menuAlign="left"
+          menuClassName="w-full min-w-0 rounded-2xl border-border-muted bg-[var(--color-raised)] p-1.5 shadow-2xl"
+          menuStyle={{ width: "100%" }}
+          onOpenChange={setShareTargetMenuOpen}
+          open={shareTargetMenuOpen}
+          renderTriggerContent={(open) => (
+            <>
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="shrink-0 opacity-70">{activeTarget.icon}</span>
+                <span className="truncate">{activeTarget.label}</span>
+              </span>
+              <span
+                className={`shrink-0 text-fg-muted transition-transform duration-200 ${open ? "rotate-180 text-[var(--color-accent-interactive)]" : ""}`}
+                aria-hidden="true"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </span>
+            </>
+          )}
+          showTriggerIcon={false}
+          triggerAriaLabel="Choose share target"
+        />
       </label>
       <label className="flex flex-col gap-2 text-sm font-semibold text-fg-heading">
         <span>Message</span>
         <textarea
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          className="min-h-40 rounded-[18px] border border-border-muted bg-transparent px-4 py-3 text-sm font-normal leading-relaxed text-fg-body outline-none transition-colors focus:border-fg-heading"
+          className="min-h-40 rounded-[18px] border border-border-muted bg-transparent px-4 py-3 text-sm font-normal leading-relaxed text-fg-body outline-none transition-colors"
         />
       </label>
       <div className="flex flex-wrap items-center justify-end gap-3">
         <button
           type="button"
           onClick={() => void handleCopy()}
-          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border-muted px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border-muted px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
         >
           <ShareCopyIcon />
           <span>{copyState.copied ? "Copied!" : "Copy"}</span>
@@ -621,7 +660,7 @@ function CommunityShareModal({
         <button
           type="button"
           onClick={() => void handleShare()}
-          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border-muted px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border-muted px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
         >
           {activeTarget?.icon}
           <span>Share</span>

@@ -76,13 +76,6 @@ const inputStyle: React.CSSProperties = {
 
 const selectStyle: React.CSSProperties = {
   ...inputStyle,
-  appearance: "none",
-  paddingRight: "2rem",
-  backgroundImage:
-    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='gray' stroke-width='2'><polyline points='3 5 6 8 9 5'/></svg>\")",
-  backgroundRepeat: "no-repeat",
-  backgroundPosition: "right 0.6rem center",
-  backgroundSize: "0.8rem",
 };
 
 const labelStyle: React.CSSProperties = {
@@ -490,7 +483,7 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
                 <select
                   value={contact.kind}
                   onChange={(e) => updateContactKind(contact.uid, e.target.value as ContactKind)}
-                  className="cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none"
+                  className="zns-themed-select cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none"
                   style={{ ...selectStyle, minWidth: 130 }}
                 >
                   {CONTACT_KINDS.map((kind) => (
@@ -513,7 +506,7 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
                     type="button"
                     onClick={() => removeContact(contact.uid)}
                     aria-label="Remove this contact"
-                    className="cursor-pointer px-1 text-2xl leading-none opacity-60 hover:opacity-100"
+                    className="zns-hover-accent cursor-pointer px-1 text-2xl leading-none opacity-60 transition-[color,opacity] duration-200 hover:opacity-100"
                     style={{ color: "var(--fg-body)" }}
                   >
                     &times;
@@ -527,11 +520,11 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
           <button
             type="button"
             onClick={addContact}
-            className="mt-2 cursor-pointer text-xs font-semibold"
+            className="zns-hover-accent mt-2 cursor-pointer text-xs font-semibold"
             style={{ color: "var(--fg-body)" }}
           >
             <span>+ </span>
-            <span className="underline">Add another contact method</span>
+            <span>Add another contact method</span>
           </button>
         )}
       </div>
@@ -583,7 +576,7 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
                   <select
                     value={wallet.device}
                     onChange={(e) => updateWalletDevice(wallet.uid, e.target.value as WalletDeviceChoice)}
-                    className="cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none"
+                    className="zns-themed-select cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none"
                     style={{ ...selectStyle, minWidth: 130 }}
                   >
                     <option value="mobile">Mobile</option>
@@ -596,7 +589,7 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
                     value={wallet.subcategory}
                     onChange={(e) => updateWalletSubcategory(wallet.uid, e.target.value as WalletSubcategory)}
                     disabled={wallet.device === "not_sure"}
-                    className="cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none disabled:opacity-80"
+                    className="zns-themed-select cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none disabled:opacity-80"
                     style={{ ...selectStyle, minWidth: 130 }}
                   >
                     {wallet.device === "not_sure" ? (
@@ -614,7 +607,7 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
                     <select
                       value="not_sure"
                       disabled
-                      className="min-w-0 flex-1 rounded-xl px-4 py-2.5 text-sm outline-none disabled:opacity-80"
+                      className="zns-themed-select min-w-0 flex-1 rounded-xl px-4 py-2.5 text-sm outline-none disabled:opacity-80"
                       style={selectStyle}
                     >
                       <option value="not_sure">Not sure yet</option>
@@ -623,7 +616,7 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
                     <select
                       value={wallet.choice}
                       onChange={(e) => updateWalletChoice(wallet.uid, e.target.value as WalletChoice | "other")}
-                      className="min-w-0 flex-1 cursor-pointer rounded-xl px-4 py-2.5 text-sm outline-none"
+                      className="zns-themed-select min-w-0 flex-1 cursor-pointer rounded-xl px-4 py-2.5 text-sm outline-none"
                       style={selectStyle}
                     >
                       {walletOptions.map((option) => (
@@ -641,7 +634,7 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
                       type="button"
                       onClick={() => removeWallet(wallet.uid)}
                       aria-label="Remove this planned wallet"
-                      className="cursor-pointer px-1 text-2xl leading-none opacity-60 hover:opacity-100"
+                      className="zns-hover-accent cursor-pointer px-1 text-2xl leading-none opacity-60 transition-[color,opacity] duration-200 hover:opacity-100"
                       style={{ color: "var(--fg-body)" }}
                     >
                       &times;
@@ -688,11 +681,11 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
         <button
           type="button"
           onClick={addWallet}
-          className="mt-2 cursor-pointer text-xs font-semibold"
+          className="zns-hover-accent mt-2 cursor-pointer text-xs font-semibold"
           style={{ color: "var(--fg-body)" }}
         >
           <span>+ </span>
-          <span className="underline">Add another wallet</span>
+          <span>Add another wallet</span>
         </button>
       </div>
 
@@ -857,7 +850,7 @@ export default function BetaV2ApplicationForm({ brandSlug }: BetaV2ApplicationFo
       <button
         type="submit"
         disabled={pending || captchaOpen}
-        className="w-full rounded-full py-3 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        className="w-full cursor-pointer rounded-full py-3 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:brightness-100"
         style={primaryBtnStyle}
       >
         {pending ? (

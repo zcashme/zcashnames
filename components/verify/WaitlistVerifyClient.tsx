@@ -880,7 +880,7 @@ export function VerifyEarlyAccessNotice({
       <span className="h-6 w-6" aria-hidden="true" />
       <Link
         href="/reserve"
-        className="col-start-2 flex min-w-0 items-center justify-center gap-2 overflow-hidden text-center transition-opacity hover:opacity-90"
+        className="col-start-2 flex min-w-0 items-center justify-center gap-2 overflow-hidden text-center transition-colors hover:text-[var(--color-accent-interactive)]"
       >
         <span
           className="inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider sm:text-[0.65rem]"
@@ -1109,7 +1109,7 @@ function InlineDropdown({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex min-h-[46px] w-full items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold outline-none transition-[border-color,box-shadow,color]"
+        className="zns-focus-field flex min-h-[46px] w-full items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold outline-none transition-[border-color,box-shadow,color]"
         style={{
           background: "var(--verify-input-fill)",
           border: "1.5px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
@@ -2165,14 +2165,13 @@ function DeleteNameModal({
               type="button"
               onClick={onConfirm}
               disabled={isSubmitting}
-              className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-[1.15rem] border px-4 py-4 text-left text-base font-semibold transition hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
+              className="group inline-flex h-14 w-full items-center justify-center gap-3 rounded-[1.15rem] border border-[color-mix(in_srgb,var(--faq-border)_84%,transparent)] px-4 py-4 text-left text-base font-semibold transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] disabled:cursor-not-allowed disabled:opacity-60"
               style={{
-                borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
                 background: "var(--verify-panel-soft-fill)",
                 color: "var(--fg-heading)",
               }}
             >
-              <span style={{ color: "var(--fg-muted)" }}>
+              <span className="text-fg-muted transition-colors group-hover:text-[var(--color-accent-interactive)]">
                 <MailIcon />
               </span>
               <span>
@@ -2332,9 +2331,8 @@ function ReservationCelebrationModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-14 w-full items-center justify-center rounded-[1.15rem] border px-4 py-4 text-base font-semibold transition hover:opacity-85"
+            className="inline-flex h-14 w-full items-center justify-center rounded-[1.15rem] border border-[color-mix(in_srgb,var(--faq-border)_84%,transparent)] px-4 py-4 text-base font-semibold transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             style={{
-              borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
               background: "var(--verify-panel-soft-fill)",
               color: "var(--fg-heading)",
             }}
@@ -2345,9 +2343,8 @@ function ReservationCelebrationModal({
             href={shareHref}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-[1.15rem] border px-4 py-4 text-base font-semibold transition hover:opacity-85"
+            className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-[1.15rem] border border-[color-mix(in_srgb,var(--faq-border)_84%,transparent)] px-4 py-4 text-base font-semibold transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             style={{
-              borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
               background: "transparent",
               color: "var(--fg-heading)",
             }}
@@ -2771,7 +2768,7 @@ function ReservationStatusPane({
           type="button"
           onClick={() => void runStatusCheck()}
           disabled={isChecking || isCoolingDown}
-          className="mt-4 inline-flex h-[42px] items-center justify-center rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-55"
+          className="mt-4 inline-flex h-[42px] items-center justify-center rounded-full px-5 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0 disabled:hover:brightness-100"
           style={{
             background: "var(--home-result-primary-bg)",
             color: "var(--home-result-primary-fg)",
@@ -3632,7 +3629,7 @@ function ProtectedAccessRequestPanel({
             type="button"
             onClick={() => submitRequest()}
             disabled={isSubmitting || captchaOpen}
-            className="inline-flex h-[46px] w-full items-center justify-center rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-[46px] w-full items-center justify-center rounded-full px-5 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:brightness-100"
             style={{
               background: "var(--home-result-primary-bg)",
               color: "var(--home-result-primary-fg)",
@@ -3653,7 +3650,7 @@ function ProtectedAccessRequestPanel({
           type="button"
           onClick={() => submitRequest()}
           disabled={isSubmitting || captchaOpen}
-          className="mt-6 inline-flex h-[46px] w-full items-center justify-center rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-6 inline-flex h-[46px] w-full items-center justify-center rounded-full px-5 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:brightness-100"
           style={{
             background: "var(--home-result-primary-bg)",
             color: "var(--home-result-primary-fg)",

@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { SITEMAP_SECTIONS } from "@/lib/site-nav";
 
 const accentHoverClass =
-  "transition-colors hover:text-[var(--color-accent-interactive)]";
+  "transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]";
 
 const straddleButtonClassName = `inline-flex cursor-pointer items-center gap-2 rounded-full border border-border-muted bg-[var(--color-background)] px-4 py-2 text-sm font-semibold text-fg-heading ${accentHoverClass}`;
 

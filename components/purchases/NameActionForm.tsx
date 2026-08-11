@@ -106,7 +106,7 @@ function InlineStepButton({
       type="button"
       onClick={onClick}
       disabled={disabled || loading}
-      className="inline-flex h-9 items-center justify-center rounded-[13px] px-4 text-sm font-semibold transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:hover:opacity-100"
+      className="inline-flex h-9 items-center justify-center rounded-[13px] px-4 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:brightness-100"
       style={{
         background:
           disabled || loading
@@ -239,19 +239,14 @@ function OtpBackWarningModal({
             <button
               type="button"
               onClick={onCancel}
-              className="inline-flex min-h-11 items-center justify-center rounded-full border px-5 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
-              style={{
-                background: "transparent",
-                borderColor: "var(--border-muted)",
-                color: "var(--fg-body)",
-              }}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border-[1.5px] border-border-muted bg-transparent px-5 py-2 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             >
               Stay here
             </button>
             <button
               type="button"
               onClick={onConfirm}
-              className="inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+              className="inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
               style={{
                 background: "var(--home-result-primary-bg)",
                 color: "var(--home-result-primary-fg)",
@@ -344,8 +339,7 @@ export default function NameActionForm({
         menuAlign="left"
         menuDirection="up"
         rootClassName="relative inline-flex w-fit flex-col items-start"
-        // Match footer step buttons: h-9, opacity hover (same as View on Explorer / Continue)
-        buttonClassName="box-border inline-flex h-9 min-h-9 items-center justify-center gap-2 rounded-[13px] border border-border-muted bg-transparent px-4 text-sm font-semibold leading-none text-fg-body transition-opacity hover:opacity-85"
+        buttonClassName="box-border inline-flex h-9 min-h-9 items-center justify-center gap-2 rounded-[13px] border border-border-muted bg-transparent px-4 text-sm font-semibold leading-none text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
       />
     );
   }

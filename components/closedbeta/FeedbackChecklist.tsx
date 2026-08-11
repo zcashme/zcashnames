@@ -123,7 +123,7 @@ export default function FeedbackChecklist({
           <button
             type="button"
             onClick={onTooltipClose}
-            className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+            className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
             style={actionStyle}
           >
             Skip
@@ -131,7 +131,7 @@ export default function FeedbackChecklist({
           <button
             type="button"
             onClick={onTooltipNext}
-            className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-opacity hover:opacity-80"
+            className="rounded-lg px-2 py-1 text-[0.68rem] font-semibold cursor-pointer transition-colors duration-200 hover:bg-white/20"
             style={actionStyle}
           >
             Next
@@ -195,7 +195,7 @@ export default function FeedbackChecklist({
                       type="button"
                       onClick={() => onToggleSection(item.section!)}
                       aria-expanded={!!expandedSections[item.section!]}
-                      className="flex w-full items-center gap-2 py-1 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                      className="flex w-full items-center gap-2 py-1 text-xs font-semibold cursor-pointer transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
                       style={{ color: "var(--fg-heading)" }}
                     >
                       <svg
@@ -421,7 +421,7 @@ function ChecklistBadgeLink({
       aria-label={`${label}: ${itemLabel}`}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
-      className="inline-flex shrink-0 rounded-md border px-1.5 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.1em] transition-opacity hover:opacity-85"
+      className="inline-flex shrink-0 rounded-md border px-1.5 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.1em] transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
       style={{
         borderColor: "color-mix(in srgb, var(--color-accent-green) 45%, transparent)",
         color: "var(--color-accent-green)",

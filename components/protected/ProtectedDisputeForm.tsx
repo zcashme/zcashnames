@@ -84,7 +84,7 @@ function InlineStepButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex h-9 items-center justify-center rounded-[13px] px-4 text-sm font-semibold transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:hover:opacity-100"
+      className="inline-flex h-9 items-center justify-center rounded-[13px] px-4 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:brightness-100"
       style={{
         background: disabled
           ? "color-mix(in srgb, var(--leaders-card-border) 22%, transparent)"
@@ -339,7 +339,7 @@ function SearchableNameInput({
                     onSelect(option);
                     setOpen(false);
                   }}
-                  className="flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--fg-heading)_10%,transparent)]"
+                  className="zns-menu-hover flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-fg-body transition-colors"
                 >
                   <span className="min-w-0">
                     <span className="block text-sm font-semibold text-fg-heading">
@@ -436,7 +436,7 @@ function DropdownField({
           id={id}
           type="button"
           onClick={() => setOpen((current) => !current)}
-          className="flex min-h-[46px] w-full items-center justify-between gap-4 rounded-2xl px-4 py-2.5 text-left text-sm font-semibold outline-none transition-[border-color,box-shadow]"
+          className="zns-focus-field flex min-h-[46px] w-full items-center justify-between gap-4 rounded-2xl px-4 py-2.5 text-left text-sm font-semibold outline-none transition-[border-color,box-shadow]"
           style={fieldStyle(invalid)}
           aria-haspopup="listbox"
           aria-expanded={open}
@@ -462,7 +462,7 @@ function DropdownField({
                   onSelect(option.value);
                   setOpen(false);
                 }}
-                className="flex w-full items-start justify-between rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--fg-heading)_10%,transparent)]"
+                className="zns-menu-hover flex w-full items-start justify-between rounded-xl px-3 py-2.5 text-left text-fg-body transition-colors"
               >
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-fg-heading">{option.label}</span>
@@ -1202,11 +1202,11 @@ export default function ProtectedDisputeForm({
               <button
                 type="button"
                 onClick={addEvidenceLink}
-                className="mt-3 inline-flex items-center gap-1 text-sm font-semibold"
+                className="zns-hover-accent mt-3 inline-flex items-center gap-1 text-sm font-semibold"
                 style={{ color: "var(--fg-body)" }}
               >
                 <PlusIcon />
-                <span className="underline">Add another link</span>
+                <span>Add another link</span>
               </button>
               {filledEvidenceLinks.length > 0 && !allEvidenceLinksValid ? (
                 <ErrorText message="Evidence links must start with http:// or https://." />
@@ -1301,11 +1301,11 @@ export default function ProtectedDisputeForm({
                   <button
                     type="button"
                     onClick={addContact}
-                    className="mt-3 inline-flex items-center gap-1 text-sm font-semibold"
+                    className="zns-hover-accent mt-3 inline-flex items-center gap-1 text-sm font-semibold"
                     style={{ color: "var(--fg-body)" }}
                   >
                     <PlusIcon />
-                    <span className="underline">Add another contact method</span>
+                    <span>Add another contact method</span>
                   </button>
                 ) : null}
                 <ErrorText message={contactError} />
@@ -1361,7 +1361,7 @@ export default function ProtectedDisputeForm({
                 type="button"
                 onClick={() => void handleSubmit()}
                 disabled={isSubmitting || captchaOpen}
-                className="inline-flex h-[46px] items-center justify-center whitespace-nowrap rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-[46px] items-center justify-center whitespace-nowrap rounded-full px-5 text-sm font-semibold transition-[transform,box-shadow] duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 style={{
                   background: "var(--home-result-primary-bg)",
                   color: "var(--home-result-primary-fg)",

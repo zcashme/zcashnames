@@ -568,13 +568,13 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
   return (
     <>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline">
           <HomeIcon className="h-4 w-4 shrink-0" />
           Back to Home
         </Link>
         <Link
           href="/leaders/ref"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline"
         >
           See your dashboard
           <DashboardIcon className="h-4 w-4 shrink-0" />
@@ -938,7 +938,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
             {canShowMoreLeaderboardRows ? (
               <button
                 type="button"
-                className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
+                className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
                 onClick={() => {
                   setVisibleLeaderboardRows((current) => Math.min(current + 10, leaderboard.length));
                 }}
@@ -951,7 +951,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
             {canHideLeaderboardRows && (
               <button
                 type="button"
-                className="ml-auto cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
+                className="ml-auto cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
                 onClick={() => {
                   setVisibleLeaderboardRows((current) => Math.max(10, current - 10));
                 }}
@@ -1086,7 +1086,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
             {canShowMoreWeeklyRows ? (
               <button
                 type="button"
-                className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
+                className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
                 onClick={() => {
                   setVisibleWeeklyRows((current) => Math.min(current + 7, filteredWeeklyRows.length));
                 }}
@@ -1099,7 +1099,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
             {canHideWeeklyRows && (
               <button
                 type="button"
-                className="ml-auto cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
+                className="ml-auto cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
                 onClick={() => {
                   setVisibleWeeklyRows((current) => Math.max(7, current - 7));
                 }}
@@ -1235,7 +1235,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
             {canShowMoreRows ? (
               <button
                 type="button"
-                className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
+                className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
                 onClick={() => {
                   setVisibleDailyRows((current) => Math.min(current + 7, filteredDailyRows.length));
                 }}
@@ -1248,7 +1248,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
             {canHideRows && (
               <button
                 type="button"
-                className="ml-auto cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
+                className="ml-auto cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
                 onClick={() => {
                   setVisibleDailyRows((current) => Math.max(7, current - 7));
                 }}

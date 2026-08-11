@@ -283,13 +283,8 @@ export default function Zip321Modal({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="px-5 py-2.5 rounded-full text-sm font-semibold"
-                    style={{
-                      background: "transparent",
-                      border: "1.5px solid var(--border-muted)",
-                      color: "var(--fg-body)",
-                    }}
-                  >
+                    className="rounded-full border-[1.5px] border-border-muted bg-transparent px-5 py-2.5 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
+                    >
                     Cancel
                   </button>
                   <button
@@ -501,12 +496,7 @@ export default function Zip321Modal({
                         <button
                           type="button"
                           onClick={() => goto(s.step - 1)}
-                          className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                          style={{
-                            background: "transparent",
-                            border: "1.5px solid var(--border-muted)",
-                            color: "var(--fg-body)",
-                          }}
+                          className="rounded-full border-[1.5px] border-border-muted bg-transparent px-5 py-2.5 text-sm font-semibold text-fg-body cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                         >
                           Back
                         </button>
@@ -609,12 +599,7 @@ export default function Zip321Modal({
                     <button
                       type="button"
                       onClick={handleOtpBack}
-                      className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                      style={{
-                        background: "transparent",
-                        border: "1.5px solid var(--border-muted)",
-                        color: "var(--fg-body)",
-                      }}
+                      className="rounded-full border-[1.5px] border-border-muted bg-transparent px-5 py-2.5 text-sm font-semibold text-fg-body cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                     >
                       Back
                     </button>
@@ -625,12 +610,7 @@ export default function Zip321Modal({
                     type="button"
                     onClick={() => set({ otpSent: true, otpError: "", otpVerified: false })}
                     disabled={s.otpSent}
-                    className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{
-                      background: "transparent",
-                      border: "1.5px solid var(--border-muted)",
-                      color: "var(--fg-body)",
-                    }}
+                    className="rounded-full border-[1.5px] border-border-muted bg-transparent px-5 py-2.5 text-sm font-semibold text-fg-body cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-muted disabled:hover:text-fg-body"
                   >
                     I Sent It!
                   </button>
@@ -644,7 +624,7 @@ export default function Zip321Modal({
                       s.otpVerified ||
                       s.otpAttempts >= getNetworkConstants(network).OTP_MAX_ATTEMPTS
                     }
-                    className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="cursor-pointer rounded-full px-5 py-2.5 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:brightness-100"
                     style={
                       s.otpVerified
                         ? {
@@ -691,12 +671,7 @@ export default function Zip321Modal({
                     <button
                       type="button"
                       onClick={() => goto(s.step - 1)}
-                      className="px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                      style={{
-                        background: "transparent",
-                        border: "1.5px solid var(--border-muted)",
-                        color: "var(--fg-body)",
-                      }}
+                      className="rounded-full border-[1.5px] border-border-muted bg-transparent px-5 py-2.5 text-sm font-semibold text-fg-body cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                     >
                       Back
                     </button>
@@ -815,12 +790,7 @@ export default function Zip321Modal({
                       type="button"
                       onClick={() => goto(s.step - 1)}
                       tabIndex={s.scanState === "not_detected" && s.step > 0 ? 0 : -1}
-                      className="whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                      style={{
-                        background: "transparent",
-                        border: "1.5px solid var(--border-muted)",
-                        color: "var(--fg-body)",
-                      }}
+                      className="whitespace-nowrap rounded-full border-[1.5px] border-border-muted bg-transparent px-5 py-2.5 text-sm font-semibold text-fg-body cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                     >
                       Back
                     </button>
@@ -855,13 +825,7 @@ export default function Zip321Modal({
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-5 py-2.5 rounded-full text-sm font-semibold transition-opacity hover:opacity-80"
-                    style={{
-                      background: "transparent",
-                      border: "1.5px solid var(--border-muted)",
-                      color: "var(--fg-body)",
-                      textDecoration: "none",
-                    }}
+                    className="rounded-full border-[1.5px] border-border-muted bg-transparent px-5 py-2.5 text-sm font-semibold text-fg-body no-underline transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                   >
                     View on Explorer
                   </a>
@@ -931,13 +895,7 @@ export default function Zip321Modal({
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-5 py-2.5 rounded-full text-sm font-semibold transition-opacity hover:opacity-80"
-                    style={{
-                      background: "transparent",
-                      border: "1.5px solid var(--border-muted)",
-                      color: "var(--fg-body)",
-                      textDecoration: "none",
-                    }}
+                    className="rounded-full border-[1.5px] border-border-muted bg-transparent px-5 py-2.5 text-sm font-semibold text-fg-body no-underline transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                   >
                     View on Explorer
                   </a>

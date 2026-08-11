@@ -61,7 +61,7 @@ export default function ProtectedSuggestPage() {
         <div className="mb-4 flex items-center gap-3">
           <Link
             href="/protected"
-            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
           >
             <ArrowLeftIcon className="h-4 w-4" />
             Names
@@ -94,8 +94,7 @@ export default function ProtectedSuggestPage() {
             style={{ color: "var(--fg-body)" }}
           >
             Protected names help reduce impersonation, phishing, fraud, and public confusion across
-            the Zcash Names ecosystem. Use this form to suggest a name for protection.
-            Suggestions are reviewed manually.
+            the Zcash Names ecosystem.
           </p>
           </div>
         </section>

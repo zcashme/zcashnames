@@ -63,7 +63,7 @@ export default function ToolbarSearchInput({
         <button
           type="button"
           onClick={onClear}
-          className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded px-2 py-1 text-[0.72rem] font-semibold text-fg-muted transition-colors hover:text-fg-heading"
+          className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded px-2 py-1 text-[0.72rem] font-semibold text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
         >
           Clear
         </button>

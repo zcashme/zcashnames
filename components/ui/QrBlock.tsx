@@ -269,8 +269,7 @@ export function QrBlock({
                   <button
                     type="button"
                     onClick={() => setShowUri((v) => !v)}
-                    className="w-20 shrink-0 self-start rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                    style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                    className="w-20 shrink-0 self-start rounded-lg border-[1.5px] border-border-muted bg-transparent px-3 py-1.5 text-xs font-semibold text-fg-body cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                   >
                     {showUri ? "Hide URI" : "Show URI"}
                   </button>
@@ -280,8 +279,7 @@ export function QrBlock({
                   <button
                     type="button"
                     onClick={handleSavePng}
-                    className="w-20 shrink-0 self-start rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                    style={{ background: "transparent", border: "1.5px solid var(--border-muted)", color: "var(--fg-body)" }}
+                    className="w-20 shrink-0 self-start rounded-lg border-[1.5px] border-border-muted bg-transparent px-3 py-1.5 text-xs font-semibold text-fg-body cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                   >
                     Save QR
                   </button>
@@ -416,7 +414,7 @@ function ExpandedQrModal({ uriEncoded, onClose }: ExpandedQrModalProps) {
             e.stopPropagation();
             onClose();
           }}
-          className="mt-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-black cursor-pointer transition-opacity hover:opacity-85"
+          className="mt-2 zns-modal-close inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/10 bg-white text-black cursor-pointer transition-colors duration-200 hover:border-[var(--color-accent-interactive)]"
           aria-label="Retract QR"
           title="Retract QR"
         >

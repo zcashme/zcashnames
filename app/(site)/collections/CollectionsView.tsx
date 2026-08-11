@@ -156,7 +156,7 @@ export default function CollectionsView({
       <button
         type="button"
         onClick={() => { setAddOpen(false); setInput(""); }}
-        className="mr-1 shrink-0 cursor-pointer text-fg-muted transition-colors hover:text-fg-heading"
+        className="mr-1 shrink-0 cursor-pointer text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
         aria-label="Close"
       >
         <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4" aria-hidden="true">

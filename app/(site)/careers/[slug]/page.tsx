@@ -143,7 +143,7 @@ export default async function CareerJobPage(
                 href={applyHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-80"
+                className="inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
                 style={{
                   background: "var(--home-result-primary-bg)",
                   color: "var(--home-result-primary-fg)",
@@ -155,7 +155,7 @@ export default async function CareerJobPage(
             ) : (
               <Link
                 href={applyHref}
-                className="inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-80"
+                className="inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
                 style={{
                   background: "var(--home-result-primary-bg)",
                   color: "var(--home-result-primary-fg)",

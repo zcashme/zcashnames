@@ -520,7 +520,7 @@ export default function WaitlistEntryForm({
                     <button
                       type="button"
                       onClick={handleClose}
-                      className="px-8 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                      className="cursor-pointer rounded-full px-8 py-2.5 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
                       style={primaryBtnStyle}
                     >
                       Done
@@ -556,10 +556,9 @@ export default function WaitlistEntryForm({
                           href={href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-3 w-full rounded-xl px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-80"
+                          className="flex w-full items-center gap-3 rounded-xl border border-border-muted px-4 py-3 text-sm font-semibold transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                           style={{
                             background: "var(--color-surface)",
-                            border: "1px solid var(--border-muted)",
                             color: "var(--fg-body)",
                             textDecoration: "none",
                           }}
@@ -579,7 +578,7 @@ export default function WaitlistEntryForm({
                     <button
                       type="button"
                       onClick={() => setModalView("confirm")}
-                      className="px-8 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                      className="cursor-pointer rounded-full px-8 py-2.5 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
                       style={primaryBtnStyle}
                     >
                       Back
@@ -659,7 +658,7 @@ export default function WaitlistEntryForm({
                     <button
                       type="button"
                       onClick={handleClose}
-                      className="px-8 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-80"
+                      className="cursor-pointer rounded-full px-8 py-2.5 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
                       style={primaryBtnStyle}
                     >
                       Done

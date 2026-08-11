@@ -51,13 +51,13 @@ const primaryBtnStyle: CSSProperties = {
 };
 
 const fieldClassName =
-  "w-full rounded-2xl border border-border-muted bg-transparent px-4 py-3 text-sm text-fg-heading outline-none transition-[border-color,box-shadow] placeholder:text-fg-muted focus:border-fg-heading focus:[box-shadow:0_0_0_1px_var(--fg-heading)]";
+  "w-full rounded-2xl border border-border-muted bg-transparent px-4 py-3 text-sm text-fg-heading outline-none transition-[border-color,box-shadow] placeholder:text-fg-muted";
 
 const readOnlyFieldClassName =
   "w-full rounded-2xl border border-border-muted bg-transparent px-4 py-3 text-sm text-fg-muted outline-none";
 
 const fileFieldClassName =
-  "block w-full rounded-2xl border border-border-muted bg-transparent px-4 py-3 text-sm text-fg-heading outline-none transition-[border-color,box-shadow] file:mr-3 file:rounded-full file:border file:border-border-muted file:bg-transparent file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-fg-body focus:border-fg-heading focus:[box-shadow:0_0_0_1px_var(--fg-heading)]";
+  "block w-full rounded-2xl border border-border-muted bg-transparent px-4 py-3 text-sm text-fg-heading outline-none transition-[border-color,box-shadow] file:mr-3 file:rounded-full file:border file:border-border-muted file:bg-transparent file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-fg-body";
 
 const ACTION_OPTIONS: SelectOption[] = [
   { value: "CLAIM", label: "CLAIM" },
@@ -535,12 +535,12 @@ function RefundSelectField({
           if (disabled) return;
           setOpen((current) => !current);
         }}
-        className={`flex min-h-[50px] w-full items-center justify-between gap-4 rounded-2xl border bg-transparent pl-4 pr-5 text-left text-sm font-semibold outline-none transition-[border-color,box-shadow] ${
+        className={`zns-focus-field flex min-h-[50px] w-full items-center justify-between gap-4 rounded-2xl border bg-transparent pl-4 pr-5 text-left text-sm font-semibold outline-none transition-[border-color,box-shadow] ${
           disabled
             ? "cursor-not-allowed border-border-muted text-fg-muted opacity-80"
             : open
               ? "border-fg-heading text-fg-heading [box-shadow:0_0_0_1px_var(--fg-heading)]"
-              : "border-border-muted text-fg-heading hover:border-fg-heading focus:border-fg-heading focus:[box-shadow:0_0_0_1px_var(--fg-heading)]"
+              : "border-border-muted text-fg-heading hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] focus:border-[var(--color-accent-interactive)] focus:[box-shadow:0_0_0_1px_var(--color-accent-interactive)]"
         }`}
       >
         <span>{activeOption?.label ?? placeholder}</span>

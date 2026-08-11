@@ -107,7 +107,7 @@ export default function BetaInstructionsToc({ sections }: Props) {
         <button
           type="button"
           onClick={() => setCollapsed((value) => !value)}
-          className="flex items-center gap-2 w-full text-left mb-3 cursor-pointer transition-opacity hover:opacity-80"
+          className="mb-3 flex w-full cursor-pointer items-center gap-2 text-left transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
           style={{ color: "var(--fg-muted)" }}
           aria-expanded={!collapsed}
         >
@@ -138,7 +138,7 @@ export default function BetaInstructionsToc({ sections }: Props) {
         aria-label="Open page menu"
         aria-expanded={mobileOpen}
         aria-controls="beta-instructions-toc-drawer"
-        className="md:hidden fixed bottom-5 left-5 z-40 flex items-center justify-center w-12 h-12 rounded-full border shadow-lg transition-opacity hover:opacity-90 cursor-pointer"
+        className="md:hidden fixed bottom-5 left-5 z-40 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border shadow-lg transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
         style={{
           background: "var(--color-card)",
           color: "var(--fg-heading)",
@@ -191,7 +191,7 @@ export default function BetaInstructionsToc({ sections }: Props) {
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 aria-label="Close page menu"
-                className="cursor-pointer transition-opacity hover:opacity-80"
+                className="zns-modal-close cursor-pointer transition-colors duration-200"
               >
                 <svg
                   viewBox="0 0 24 24"

@@ -574,7 +574,7 @@ export default function ReferralDashboardPage() {
                 type="button"
                 onClick={restoreInstallCard}
                 aria-label="Add to Home Screen"
-                className="cursor-pointer whitespace-nowrap text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
+                className="cursor-pointer whitespace-nowrap text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline"
               >
                 <span className="sm:hidden">Add to...</span>
                 <span className="hidden sm:inline">Add to Home Screen</span>
@@ -584,7 +584,7 @@ export default function ReferralDashboardPage() {
           <div className="min-w-0 justify-self-end">
             <Link
               href={`/sharekit?ref=${encodeURIComponent(data.referralCode)}`}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline"
             >
               Share your reflink
               <ShareIcon className="h-4 w-4 shrink-0" />
@@ -722,14 +722,14 @@ export default function ReferralDashboardPage() {
               </button>
               <button
                 type="button"
-                className="cursor-pointer px-2 py-2 text-sm font-semibold text-fg-muted transition-colors hover:text-fg-heading"
+                className="cursor-pointer px-2 py-2 text-sm font-semibold text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
                 onClick={closeAccessPrompt}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="cursor-pointer px-2 py-2 text-sm font-semibold text-fg-muted underline-offset-2 transition-colors hover:text-fg-heading hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer px-2 py-2 text-sm font-semibold text-fg-muted underline-offset-2 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => {
                   setCommissionPinRecoveryOpen(true);
                   setCommissionError("");
@@ -939,7 +939,7 @@ export default function ReferralDashboardPage() {
                               </button>
                               <button
                                 type="button"
-                                className="cursor-pointer px-2 py-2 text-sm font-semibold text-fg-muted transition-colors hover:text-fg-heading"
+                                className="cursor-pointer px-2 py-2 text-sm font-semibold text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
                                 onClick={closeAccessPrompt}
                               >
                                 Cancel
@@ -947,7 +947,7 @@ export default function ReferralDashboardPage() {
                             </div>
                             <button
                               type="button"
-                              className="mt-2 cursor-pointer px-2 py-1 text-sm font-semibold text-fg-muted underline-offset-2 transition-colors hover:text-fg-heading hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                              className="mt-2 cursor-pointer px-2 py-1 text-sm font-semibold text-fg-muted underline-offset-2 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                               onClick={() => {
                                 setCommissionPinRecoveryOpen(true);
                                 setCommissionError("");
@@ -1042,7 +1042,7 @@ export default function ReferralDashboardPage() {
               {canShowMoreReferralRows ? (
                 <button
                   type="button"
-                  className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
+                  className="cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
                   onClick={() => {
                     setVisibleReferralRows((current) => Math.min(current + 10, visibleReferrals.length));
                   }}
@@ -1055,7 +1055,7 @@ export default function ReferralDashboardPage() {
               {canHideReferralRows && (
                 <button
                   type="button"
-                  className="ml-auto cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg-heading"
+                  className="ml-auto cursor-pointer text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)]"
                   onClick={() => {
                     setVisibleReferralRows((current) => Math.max(10, current - 10));
                   }}
@@ -1248,7 +1248,7 @@ function InstallHomeScreenCard({
 
 function BackLink() {
   return (
-    <Link href="/leaders" className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg-heading hover:underline">
+    <Link href="/leaders" className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline">
       <DashboardIcon className="h-4 w-4 shrink-0" />
       Back to Leaders
     </Link>
@@ -1867,7 +1867,7 @@ function MetricCard({
           type="button"
           aria-label={actionAriaLabel}
           onClick={onActionClick}
-          className="absolute right-2.5 top-2.5 z-10 cursor-pointer rounded-md p-1 text-fg-muted opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)]"
+          className="zns-modal-close absolute right-2.5 top-2.5 z-10 cursor-pointer rounded-md p-1 opacity-70 transition-[color,opacity] duration-200 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)]"
         >
           {actionIcon}
         </button>

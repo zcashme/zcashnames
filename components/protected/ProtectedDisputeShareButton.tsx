@@ -142,7 +142,7 @@ export default function ProtectedDisputeShareButton({
     <ActionDropdown
       buttonClassName={
         buttonClassName
-        ?? "inline-flex min-h-10 items-center gap-2 rounded-full border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+        ?? "inline-flex min-h-10 items-center gap-2 rounded-full border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
       }
       items={items}
       label={label}
