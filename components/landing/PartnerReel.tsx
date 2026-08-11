@@ -409,18 +409,8 @@ export default function PartnerReel() {
 
   return (
     <section id="supporters" className="relative z-[2] my-24 w-full px-5">
-      <div className="mb-14 text-center">
+      <div className="mb-6 text-center">
         <SectionHeaderPill id="supported-by-pill" title="Partners" />
-        <p
-          className="type-section-subtitle mx-auto mt-6 max-w-2xl"
-          style={{ color: "var(--fg-muted)" }}
-        >
-          Wallets, apps, and ecosystem teams already helping bring Zcash names to life. To integrate, read the{" "}
-          <a href="/docs/zns-developer-guide" className="underline" style={{ color: "var(--fg-body)" }}>
-            developer guide
-          </a>
-          .
-        </p>
       </div>
 
       <div className="mx-auto max-w-6xl">

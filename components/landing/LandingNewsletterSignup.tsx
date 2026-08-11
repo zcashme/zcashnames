@@ -128,14 +128,8 @@ export default function LandingNewsletterSignup({
         onCancel={closeCaptchaModal}
         onConfirm={completeSubmitAfterCaptcha}
       />
-      <div className="mb-6 text-center sm:mb-7">
-        <SectionHeaderPill title="News" />
-        <p
-          className="type-section-subtitle mx-auto mt-6 max-w-2xl"
-          style={{ color: "var(--fg-muted)" }}
-        >
-          Don&apos;t miss out. Stay up-to-date.
-        </p>
+      <div className="mb-6 text-center">
+        <SectionHeaderPill title="Newsletter" />
       </div>
       <form onSubmit={onSubmit} className="mx-auto max-w-2xl">
           <label className="block min-w-0">

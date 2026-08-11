@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { usePointerProximity } from "@/components/hooks/usePointerProximity";
 import SectionHeaderPill from "@/components/landing/SectionHeaderPill";
 
 type Benefit = {
@@ -115,32 +114,26 @@ const benefitGroups: BenefitGroup[] = [
 const sectionHeading = (
   id: string,
   title: string,
-  subtitle: string,
   align: "center" | "left" = "center",
-  subtitleClassName = "mt-6",
 ) => (
-  <div className={`mb-14 ${align === "center" ? "text-center" : "text-left"}`}>
+  <div className={`mb-6 ${align === "center" ? "text-center" : "text-left"}`}>
     <div className={`flex items-center ${align === "center" ? "justify-center" : "justify-start"}`}>
       <SectionHeaderPill id={id} title={title} />
     </div>
-    <p
-      className={`type-section-subtitle ${subtitleClassName} max-w-2xl ${align === "center" ? "mx-auto" : ""}`}
-      style={{ color: "var(--fg-muted)" }}
-    >
-      {subtitle}
-    </p>
   </div>
 );
 
 const rowHeading = (title: string, prefix?: ReactNode) => (
-  <div className="mb-4 px-1">
-    <div className="inline-flex items-center gap-3 text-left">
+  // mb-2 + type/color/hover match Features item titles (parent uses group/step).
+  <div className="mb-2 px-1">
+    {/* Center when Get yours steps stack; left-align in the lg 3-up row. */}
+    <div className="flex items-center justify-center gap-3 text-center lg:justify-start lg:text-left">
       {prefix ? (
-        <span className="type-kicker" style={{ color: "var(--fg-heading)" }}>
+        <span className="type-section-subtitle font-semibold text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover/step:text-[var(--color-accent-interactive,var(--fg-heading))]">
           {prefix}
         </span>
       ) : null}
-      <h3 className="type-kicker text-left" style={{ color: "var(--section-title-accent)" }}>
+      <h3 className="type-section-subtitle font-semibold text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover/step:text-[var(--color-accent-interactive,var(--fg-heading))]">
         {title}
       </h3>
     </div>
@@ -149,155 +142,241 @@ const rowHeading = (title: string, prefix?: ReactNode) => (
 
 const benefitGroupHeading = (title: string, description: string) => (
   <div className="mb-4 px-1">
-    <div className="inline-flex max-w-xl flex-col text-left">
-      <h3 className="type-kicker text-left" style={{ color: "var(--section-title-accent)" }}>
+    {/* Always centered above the group's items, including when two groups sit side by side. */}
+    <div className="mx-auto flex max-w-xl flex-col items-center text-center">
+      <h3 className="type-kicker" style={{ color: "var(--section-title-accent)" }}>
         {title}
       </h3>
-      <p className="mt-1 type-section-subtitle text-left" style={{ color: "var(--fg-body)" }}>
+      <p className="mt-1 type-section-subtitle" style={{ color: "var(--fg-body)" }}>
         {description}
       </p>
     </div>
   </div>
 );
 
+type GridSpanItem = { span?: string };
+
+/** CSS-grid auto-placement for fixed columns (row-major, wrap when span does not fit). */
+function placeGridItems(items: readonly GridSpanItem[], columns: number) {
+  const placed: Array<{ index: number; row: number; col: number; colSpan: number }> = [];
+  let row = 0;
+  let col = 0;
+
+  for (let index = 0; index < items.length; index += 1) {
+    const rawSpan = items[index]?.span?.includes("col-span-3")
+      ? 3
+      : items[index]?.span?.includes("col-span-2")
+        ? 2
+        : 1;
+    const colSpan = Math.min(rawSpan, columns);
+
+    if (col + colSpan > columns) {
+      row += 1;
+      col = 0;
+    }
+
+    placed.push({ index, row, col, colSpan });
+    col += colSpan;
+    if (col >= columns) {
+      row += 1;
+      col = 0;
+    }
+  }
+
+  return placed;
+}
+
+/** Minimal separators: vertical only between side-by-side peers; bottom only when a lower row exists. */
+function gridSeparatorFlags(items: readonly GridSpanItem[], columns: number) {
+  const placed = placeGridItems(items, columns);
+  const maxRow = placed.reduce((max, cell) => Math.max(max, cell.row), 0);
+
+  return placed.map((cell) => ({
+    borderBottom: cell.row < maxRow,
+    borderRight: placed.some(
+      (other) => other.row === cell.row && other.col === cell.col + cell.colSpan,
+    ),
+  }));
+}
+
+function benefitGridClassName(group: BenefitGroup) {
+  if (group.title === "Sign with Zcash") return "lg:grid-cols-3";
+  if (group.span === "lg:col-span-12") return "sm:grid-cols-3";
+  return "sm:grid-cols-2";
+}
+
+function benefitGridColumns(group: BenefitGroup) {
+  // Column counts must match the responsive grid classes above.
+  if (group.title === "Sign with Zcash") {
+    return { mobile: 1, sm: 1, lg: 3 };
+  }
+  if (group.span === "lg:col-span-12") {
+    return { mobile: 1, sm: 3, lg: 3 };
+  }
+  return { mobile: 1, sm: 2, lg: 2 };
+}
+
+function separatorClassName(flags: {
+  mobile: { borderBottom: boolean; borderRight: boolean };
+  sm: { borderBottom: boolean; borderRight: boolean };
+  lg: { borderBottom: boolean; borderRight: boolean };
+}) {
+  return [
+    flags.mobile.borderBottom ? "border-b border-border-muted" : "border-b-0",
+    flags.mobile.borderRight ? "border-r border-border-muted" : "border-r-0",
+    flags.sm.borderBottom ? "sm:border-b sm:border-border-muted" : "sm:border-b-0",
+    flags.sm.borderRight ? "sm:border-r sm:border-border-muted" : "sm:border-r-0",
+    flags.lg.borderBottom ? "lg:border-b lg:border-border-muted" : "lg:border-b-0",
+    flags.lg.borderRight ? "lg:border-r lg:border-border-muted" : "lg:border-r-0",
+  ].join(" ");
+}
+
 function BenefitsBento() {
-  const proximity = usePointerProximity<HTMLElement>({
-    radius: 180,
-    maxScaleBoost: 0.03,
-    maxShadowOpacity: 0.18,
-  });
-
   return (
-    <div
-      className="grid grid-cols-1 gap-x-5 gap-y-10 lg:grid-cols-12"
-      onPointerMove={proximity.handlePointerMove}
-      onPointerLeave={proximity.handlePointerLeave}
-    >
-      {benefitGroups.map((group) => (
-        <div
-          key={group.title}
-          className={`${group.span ?? "lg:col-span-6"}`}
-        >
-          {benefitGroupHeading(group.title, group.description)}
+    <div className="grid grid-cols-1 gap-x-5 gap-y-10 lg:grid-cols-12">
+      {benefitGroups.map((group) => {
+        const cols = benefitGridColumns(group);
+        const mobileFlags = gridSeparatorFlags(group.items, cols.mobile);
+        const smFlags = gridSeparatorFlags(group.items, cols.sm);
+        const lgFlags = gridSeparatorFlags(group.items, cols.lg);
 
-          <div className={`grid grid-cols-1 gap-4 ${group.title === "Sign with Zcash" ? "lg:grid-cols-3" : group.span === "lg:col-span-12" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-            {group.items.map((b) => (
-              <div
-                key={b.title}
-                ref={(node) => proximity.register(`${group.title}-${b.title}`, node)}
-                className={`relative overflow-hidden rounded-2xl p-5 ${b.span ?? ""}`}
-                style={{
-                  border: "1px solid color-mix(in srgb, var(--fg-heading) 8%, var(--faq-border))",
-                  background:
-                    "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 38%, transparent), transparent)",
-                  transform: "translateZ(0) scale(var(--prox-scale, 1))",
-                  boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
-                }}
-              >
+        return (
+          <div
+            key={group.title}
+            className={`${group.span ?? "lg:col-span-6"}`}
+          >
+            {benefitGroupHeading(group.title, group.description)}
+
+            <div className={`grid grid-cols-1 gap-0 ${benefitGridClassName(group)}`}>
+              {group.items.map((b, index) => (
                 <div
-                  className="pointer-events-none absolute inset-0 opacity-25"
+                  key={b.title}
+                  className={[
+                    "group relative overflow-hidden p-5",
+                    b.span ?? "",
+                    separatorClassName({
+                      mobile: mobileFlags[index]!,
+                      sm: smFlags[index]!,
+                      lg: lgFlags[index]!,
+                    }),
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                   style={{
-                    backgroundImage:
-                      "radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--feature-heading-line-to) 36%, transparent), transparent 48%)",
+                    background:
+                      "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 38%, transparent), transparent)",
                   }}
-                  aria-hidden="true"
-                />
-                <div className="relative z-[1]">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <h4 className="type-section-subtitle font-semibold" style={{ color: "var(--fg-heading)" }}>
-                      {b.title}
-                    </h4>
-                    {b.soon && (
-                      <span
-                        className="rounded-full px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
-                        style={{
-                          background: "color-mix(in srgb, #eab308 16%, transparent)",
-                          color: "#eab308",
-                        }}
-                      >
-                        Soon
-                      </span>
-                    )}
+                >
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-25"
+                    style={{
+                      backgroundImage:
+                        "radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--feature-heading-line-to) 36%, transparent), transparent 48%)",
+                    }}
+                    aria-hidden="true"
+                  />
+                  <div className="relative z-[1]">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <h4 className="type-section-subtitle font-semibold text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]">
+                        {b.title}
+                      </h4>
+                      {b.soon && (
+                        <span
+                          className="rounded-full px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
+                          style={{
+                            background: "color-mix(in srgb, #eab308 16%, transparent)",
+                            color: "#eab308",
+                          }}
+                        >
+                          Soon
+                        </span>
+                      )}
+                    </div>
+                    <p className="type-section-subtitle" style={{ color: "var(--fg-muted)" }}>
+                      {b.description}
+                    </p>
                   </div>
-                  <p className="type-section-subtitle" style={{ color: "var(--fg-muted)" }}>
-                    {b.description}
-                  </p>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
 export default function HowItWorks() {
-  const proximity = usePointerProximity<HTMLElement>({
-    radius: 180,
-    maxScaleBoost: 0.035,
-    maxShadowOpacity: 0.2,
-  });
-
   return (
     <section className="mx-auto w-full max-w-6xl px-6 pb-24 pt-0">
-      {sectionHeading(
-        "benefits",
-        "Features",
-        "Readable, ownable, privacy-preserving identity for payments and apps built around Zcash.",
-        "center",
-        "mt-6",
-      )}
-      <div className="mt-16">
-        <BenefitsBento />
-      </div>
+      {sectionHeading("benefits", "Features")}
+      <BenefitsBento />
 
       <div className="mt-24">
-        {sectionHeading(
-          "how-it-works",
-          "Get yours",
-          "Three steps: get positioned early, improve your spot, then claim the name before public launch.",
-        )}
+        {sectionHeading("how-it-works", "Get yours")}
 
-        <div
-          className="grid grid-cols-1 gap-x-5 gap-y-10 lg:grid-cols-12"
-          onPointerMove={proximity.handlePointerMove}
-          onPointerLeave={proximity.handlePointerLeave}
-        >
-          {steps.map((step) => (
-            <div key={step.id} className="lg:col-span-4">
-              {rowHeading(step.eyebrow, step.number)}
+        <div className="grid grid-cols-1 gap-0 lg:grid-cols-3">
+          {steps.map((step, index) => {
+            // No line rules while stacked; side-by-side uses ">" chevrons (not plain borders).
+            const showChevron = index < steps.length - 1;
 
+            return (
               <div
-                ref={(node) => proximity.register(step.id, node)}
-                className="relative overflow-hidden rounded-2xl p-5"
-                style={{
-                  border: "1px solid color-mix(in srgb, var(--fg-heading) 8%, var(--faq-border))",
-                  background:
-                    "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 38%, transparent), transparent)",
-                  transform: "translateZ(0) scale(var(--prox-scale, 1))",
-                  boxShadow: "0 18px 38px rgba(0, 0, 0, var(--prox-shadow-opacity, 0))",
-                }}
+                key={step.id}
+                className="group/step relative"
               >
-                <div
-                  className="pointer-events-none absolute inset-0 opacity-25"
-                  style={{
-                    backgroundImage:
-                      "radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--feature-heading-line-to) 36%, transparent), transparent 48%)",
-                  }}
-                  aria-hidden="true"
-                />
-                <div className="relative z-[1]">
-                  <p
-                    className="type-section-subtitle"
-                    style={{ color: "var(--fg-muted)" }}
-                  >
-                    {step.description}
-                  </p>
+                <div className="px-1 pt-1 lg:px-5">
+                  {rowHeading(step.eyebrow, step.number)}
                 </div>
+
+                {/* pt-0 pulls body up to the title without shifting the step heading. */}
+                <div
+                  className="relative overflow-hidden px-5 pb-5 pt-0"
+                  style={{
+                    background:
+                      "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 38%, transparent), transparent)",
+                  }}
+                >
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-25"
+                    style={{
+                      backgroundImage:
+                        "radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--feature-heading-line-to) 36%, transparent), transparent 48%)",
+                    }}
+                    aria-hidden="true"
+                  />
+                  <div className="relative z-[1]">
+                    <p
+                      className="type-section-subtitle mx-auto max-w-md text-center lg:mx-0 lg:max-w-none lg:text-left"
+                      style={{ color: "var(--fg-muted)" }}
+                    >
+                      {step.description}
+                    </p>
+                  </div>
+                </div>
+
+                {showChevron ? (
+                  <span
+                    className="pointer-events-none absolute bottom-0 left-1/2 z-[2] -translate-x-1/2 translate-y-1/2 rotate-90 text-[var(--border-muted)] lg:bottom-auto lg:left-auto lg:right-0 lg:top-1/2 lg:translate-x-1/2 lg:-translate-y-1/2 lg:rotate-0"
+                    aria-hidden="true"
+                  >
+                    {/* ">" between columns; rotate 90° when stacked → "\/" between rows */}
+                    <svg
+                      viewBox="0 0 16 48"
+                      className="h-12 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M4 4 L12 24 L4 44" />
+                    </svg>
+                  </span>
+                ) : null}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

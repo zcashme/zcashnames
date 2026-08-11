@@ -57,7 +57,7 @@ export const SITEMAP_SECTIONS: SiteNavLink[] = [
       { label: "Get Names", href: "/#names" },
       { label: "Get yours", href: "/#how-it-works" },
       { label: "FAQs", href: "/#faq" },
-      { label: "News", href: "/#newsletter" },
+      { label: "Newsletter", href: "/#newsletter" },
     ],
   },
   {
