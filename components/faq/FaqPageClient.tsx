@@ -10,12 +10,14 @@ type FAQItem = {
 };
 
 type FAQGroup = {
+  id: string;
   title: string;
   items: FAQItem[];
 };
 
 const groups: FAQGroup[] = [
   {
+    id: "reservations",
     title: "Reservations",
     items: [
       {
@@ -35,6 +37,7 @@ const groups: FAQGroup[] = [
     ],
   },
   {
+    id: "queue-ranking",
     title: "Queue & ranking",
     items: [
       {
@@ -55,6 +58,7 @@ const groups: FAQGroup[] = [
     ],
   },
   {
+    id: "payments-confirmation",
     title: "Payments & confirmation",
     items: [
       {
@@ -75,6 +79,7 @@ const groups: FAQGroup[] = [
     ],
   },
   {
+    id: "recovery-support",
     title: "Recovery & support",
     items: [
       {
@@ -107,7 +112,7 @@ function FAQGroupAccordion({ group, groupIndex }: { group: FAQGroup; groupIndex:
   const [openKey, setOpenKey] = useState<string | null>(groupIndex === 0 ? "0" : null);
 
   return (
-    <div>
+    <div id={group.id} className="scroll-mt-24">
       <div className="mb-4 px-1">
         <h3 className="type-kicker" style={{ color: "var(--section-title-accent)" }}>
           {group.title}
@@ -190,13 +195,37 @@ function FAQGroupAccordion({ group, groupIndex }: { group: FAQGroup; groupIndex:
   );
 }
 
+function FaqSectionPills() {
+  return (
+    <nav className="flex flex-col gap-3" aria-label="FAQ sections">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Jump to section</p>
+      <div className="flex flex-wrap gap-2">
+        {groups.map((group) => (
+          <a
+            key={group.id}
+            href={`#${group.id}`}
+            className="rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+          >
+            {group.title}
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 export default function FaqPageClient() {
   return (
     <section className="mx-auto mt-10 w-full max-w-3xl px-0 pb-4 sm:mt-12">
-      <div className="flex flex-col gap-10">
-        {groups.map((group, groupIndex) => (
-          <FAQGroupAccordion key={group.title} group={group} groupIndex={groupIndex} />
-        ))}
+      <div className="flex flex-col gap-5">
+        <div className="border-t border-border-muted" aria-hidden="true" />
+        <FaqSectionPills />
+        <div className="border-t border-border-muted" aria-hidden="true" />
+        <div className="flex flex-col gap-10">
+          {groups.map((group, groupIndex) => (
+            <FAQGroupAccordion key={group.id} group={group} groupIndex={groupIndex} />
+          ))}
+        </div>
       </div>
     </section>
   );

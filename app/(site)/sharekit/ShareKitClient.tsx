@@ -39,7 +39,6 @@ export default function ShareKitClient({
   initialWarning: string;
 }) {
   const { resolvedTheme } = useTheme();
-  const monochrome = resolvedTheme === "monochrome";
   const router = useRouter();
   const pathname = usePathname();
   const [referralCode, setReferralCode] = useState(initialReferralCode);
@@ -139,9 +138,6 @@ export default function ShareKitClient({
     setDraftValues((current) => ({ ...current, [draftId]: replaceYourLink(template, shareUrl) }));
   }
 
-  const referralPanelClassName = monochrome
-    ? "bg-transparent"
-    : "bg-[var(--color-raised)]";
   const hasInput = input.trim().length > 0;
   const submitReady = hasInput && !submitting;
 
@@ -153,12 +149,12 @@ export default function ShareKitClient({
         </p>
       </div>
 
-      <section className={`w-full max-w-[36rem] rounded-lg border border-border-muted p-5 ${referralPanelClassName}`}>
+      <section className="w-full max-w-[36rem]">
         <form onSubmit={applyReferralCode} className="flex flex-col gap-3">
           <label htmlFor="sharekit-referral-input" className="text-sm font-semibold text-fg-heading">
             {referralCode && referralName
               ? `Posts will be populated with ${referralName}'s referral link`
-              : "Referral code or link to populate posts."}
+              : "Populate posts with your referral link:"}
           </label>
           <div className="relative flex w-full items-center">
             <input
@@ -318,7 +314,7 @@ function DraftCard({
     : "cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading";
 
   return (
-    <article className={`flex h-full flex-col rounded-lg border ${cardClassName}`}>
+    <article className={`flex h-full flex-col overflow-hidden rounded-lg border ${cardClassName}`}>
       <div className={`flex items-center justify-between gap-3 border-b p-4 ${headerClassName}`}>
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">{draft.label}</p>
         <p className="text-xs font-medium text-fg-muted/70">{characterCount} chars</p>
