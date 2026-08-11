@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import HeroShareButton from "@/components/HeroShareButton";
 import PaginationControls from "@/components/PaginationControls";
 import ProtectedNameDetailsModal from "@/components/protected/ProtectedNameDetailsModal";
 import { InlineSearchField } from "@/components/search/InlineSearchField";
@@ -460,13 +461,18 @@ export default function ProtectedViewClient({
   return (
     <div className="min-w-0 max-w-full space-y-6">
       <section
-        className="rounded-2xl border px-6 py-8 sm:px-8 sm:py-10"
+        className="relative rounded-2xl border px-6 py-8 sm:px-8 sm:py-10"
         style={{
           borderColor: "var(--faq-border)",
           background:
             "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
         }}
       >
+        <HeroShareButton
+          message="Browse protected Zcash names — search status and tap for details:"
+          shareUrl="https://www.zcashnames.com/protected"
+          emailSubject="Zcash Names protected list"
+        />
         <div className="grid gap-6">
           <div className="min-w-0 text-center">
             <h1

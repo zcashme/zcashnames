@@ -12,6 +12,7 @@ import SearchResultsSummary from "@/components/table/SearchResultsSummary";
 import { TableRowsMenu, TableSortMenu } from "@/components/table/TableIconMenus";
 import TableLoadingOverlay from "@/components/table/TableLoadingOverlay";
 import useCachedRemoteTableData from "@/components/table/useCachedRemoteTableData";
+import HeroShareButton from "@/components/HeroShareButton";
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import type {
   PublicWaitlistViewData,
@@ -891,13 +892,18 @@ export default function WaitlistViewClient({
         bandInsetClassName="-mt-5 pt-5 sm:-mt-6 sm:pt-6"
         hero={
           <section
-            className="mb-6 rounded-2xl border px-6 py-8 sm:px-8 sm:py-10"
+            className="relative mb-6 rounded-2xl border px-6 py-8 sm:px-8 sm:py-10"
             style={{
               borderColor: "var(--faq-border)",
               background:
                 "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
             }}
           >
+            <HeroShareButton
+              message="Search the Zcash Names waitlist — check position and reservation status:"
+              shareUrl="https://www.zcashnames.com/waitlist/view"
+              emailSubject="Zcash Names waitlist"
+            />
             <div className="grid gap-6">
               <div className="min-w-0 text-center">
                 <h1

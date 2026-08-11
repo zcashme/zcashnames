@@ -17,6 +17,7 @@ import { useCopy } from "@/components/hooks/useCopy";
 import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { QrBlock } from "@/components/ui/QrBlock";
+import HeroShareButton from "@/components/HeroShareButton";
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import {
   CONTACT_KINDS,
@@ -4367,14 +4368,23 @@ export default function WaitlistVerifyClient({
         bandInsetClassName="-mt-5 pt-5 sm:-mt-6 sm:pt-6"
         hero={
           <section className="mx-auto max-w-[63rem] xl:max-w-[65rem]">
+            {/*
+              Authenticated /reserve only: one bordered hero wraps title + 3 steps.
+              Share sits top-right without reflowing content.
+            */}
             <div
-              className="mx-auto max-w-2xl rounded-2xl border px-6 py-8 text-center sm:px-8 sm:py-10"
+              className="relative mx-auto w-full max-w-[920px] rounded-2xl border px-6 py-8 text-center sm:px-8 sm:py-10"
               style={{
                 borderColor: "var(--faq-border)",
                 background:
                   "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
               }}
             >
+              <HeroShareButton
+                message="Get ready to claim your Zcash name — reserve your waitlist position at ZcashNames:"
+                shareUrl="https://www.zcashnames.com/reserve"
+                emailSubject="Reserve your Zcash name"
+              />
               <h1
                 className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
                 style={{ color: "var(--hero-headline-primary)" }}
@@ -4383,9 +4393,9 @@ export default function WaitlistVerifyClient({
                 <br />
                 <span style={{ color: "var(--color-accent-interactive)" }}>claim your name!</span>
               </h1>
-            </div>
-            <div className="mx-auto mt-10 w-full max-w-2xl sm:mt-12">
-              <HeroHowReservationsWork />
+              <div className="mt-10 w-full sm:mt-12">
+                <HeroHowReservationsWork />
+              </div>
             </div>
           </section>
         }

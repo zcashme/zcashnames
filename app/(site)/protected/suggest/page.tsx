@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import ProtectedSuggestionShareButton from "@/components/protected/ProtectedSuggestionShareButton";
+import HeroShareButton from "@/components/HeroShareButton";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import ProtectedSuggestionForm from "@/components/protected/ProtectedSuggestionForm";
 
@@ -58,7 +58,7 @@ export default function ProtectedSuggestPage() {
       <SiteRouteTitle title="Protect a Name" href="/protected/suggest" />
 
       <div className="mx-auto w-full max-w-2xl">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-4 flex items-center gap-3">
           <Link
             href="/protected"
             className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
@@ -66,17 +66,22 @@ export default function ProtectedSuggestPage() {
             <ArrowLeftIcon className="h-4 w-4" />
             Names
           </Link>
-          <ProtectedSuggestionShareButton mode="page" />
         </div>
 
         <section
-          className="w-full rounded-t-2xl border border-b-0 px-6 py-8 sm:px-8 sm:py-10"
+          className="relative w-full rounded-t-2xl border border-b-0 px-6 py-8 sm:px-8 sm:py-10"
           style={{
             borderColor: "var(--faq-border)",
             background:
               "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
           }}
         >
+          <HeroShareButton
+            message="Suggest a name that should be protected in the Zcash Name Space at ZcashNames. If they accept, earn $ZEC:"
+            xMessage="Suggest a name that should be protected in the Zcash Name Space at @ZcashNames. If they accept, earn $ZEC:"
+            shareUrl="https://www.zcashnames.com/protected/suggest"
+            emailSubject="Protect Zcash Name Space from Impersonation"
+          />
           <div className="grid gap-4">
           <h1
             className="text-center text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"

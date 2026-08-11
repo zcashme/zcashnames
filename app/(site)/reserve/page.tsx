@@ -5,7 +5,7 @@ import WaitlistVerifyClient, { HeroHowReservationsWork } from "@/components/veri
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import WaitlistReservationResendForm from "@/components/verify/WaitlistReservationResendForm";
 import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
-import ShareDropdown from "@/components/ShareDropdown";
+import HeroShareButton from "@/components/HeroShareButton";
 import {
   getWaitlistReservePaymentAddress,
   getWaitlistReserveFeeZec,
@@ -103,23 +103,11 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
                     "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
                 }}
               >
-                {/*
-                  Theme-toggle twin: h-8 w-8 raised circle, accent on hover.
-                  Absolute top-right so hero copy does not reflow. z-30 stacks the
-                  open menu above the email field.
-                */}
-                <div className="absolute right-4 top-4 z-30 sm:right-5 sm:top-5">
-                  <ShareDropdown
-                    label="Share"
-                    message="Recover your Zcash Names reservation link or join the waitlist:"
-                    xMessage="Recover your Zcash Names reservation link or join the waitlist:"
-                    shareUrl="https://www.zcashnames.com/reserve"
-                    emailSubject="Zcash Names reservation link"
-                    menuAlign="right"
-                    rootClassName="relative"
-                    buttonClassName="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-[var(--color-raised)] text-fg-heading transition-colors duration-200 hover:text-[var(--color-accent-interactive)] [&>span]:hidden"
-                  />
-                </div>
+                <HeroShareButton
+                  message="Recover your Zcash Names reservation link or join the waitlist:"
+                  shareUrl="https://www.zcashnames.com/reserve"
+                  emailSubject="Zcash Names reservation link"
+                />
                 <h1
                   className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
                   style={{ color: "var(--fg-heading)" }}
