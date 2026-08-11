@@ -113,49 +113,33 @@ function FAQGroupAccordion({ group, groupIndex }: { group: FAQGroup; groupIndex:
 
   return (
     <div id={group.id} className="scroll-mt-24">
-      <div className="mb-4 px-1">
+      <div className="mb-2 px-0">
         <h3 className="type-kicker" style={{ color: "var(--section-title-accent)" }}>
           {group.title}
         </h3>
       </div>
-      <div
-        className="overflow-hidden rounded-xl"
-        style={{ border: "1px solid var(--faq-border)", backgroundColor: "transparent" }}
-      >
+      <div>
         {group.items.map((item, index) => {
           const key = `${index}`;
           const isOpen = openKey === key;
-          const isLast = index === group.items.length - 1;
 
           return (
             <div
               key={`${group.title}-${item.question}`}
-              style={{
-                borderBottom: isLast ? "none" : "1px solid var(--faq-border)",
-              }}
+              className="border-b border-border-muted"
             >
               <button
                 type="button"
                 onClick={() => setOpenKey((current) => (current === key ? null : key))}
-                className="flex w-full cursor-pointer items-center justify-between px-6 py-5 text-left transition-colors duration-200"
-                style={{
-                  backgroundColor: "transparent",
-                  borderLeft: isOpen
-                    ? "3px solid var(--faq-active-border)"
-                    : "3px solid transparent",
-                }}
-                onMouseEnter={(event) => {
-                  if (!isOpen) {
-                    event.currentTarget.style.borderLeftColor = "var(--faq-active-border)";
-                  }
-                }}
-                onMouseLeave={(event) => {
-                  if (!isOpen) {
-                    event.currentTarget.style.borderLeftColor = "transparent";
-                  }
-                }}
+                className="group flex w-full cursor-pointer items-center justify-between py-5 text-left"
               >
-                <span className="type-body pr-4" style={{ color: "var(--fg-heading)" }}>
+                <span
+                  className={
+                    isOpen
+                      ? "type-body pr-4 text-[var(--color-accent-interactive,var(--fg-heading))] transition-colors duration-[140ms] ease-out"
+                      : "type-body pr-4 text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]"
+                  }
+                >
                   {item.question}
                 </span>
                 <span
@@ -174,16 +158,9 @@ function FAQGroupAccordion({ group, groupIndex }: { group: FAQGroup; groupIndex:
                 style={{
                   maxHeight: isOpen ? "720px" : "0px",
                   opacity: isOpen ? 1 : 0,
-                  backgroundColor: "transparent",
                 }}
               >
-                <div
-                  className="px-6 pb-5 type-body"
-                  style={{
-                    color: "var(--fg-muted)",
-                    paddingLeft: "calc(1.5rem + 3px)",
-                  }}
-                >
+                <div className="pb-5 type-body" style={{ color: "var(--fg-muted)" }}>
                   {item.answer}
                 </div>
               </div>

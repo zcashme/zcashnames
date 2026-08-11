@@ -172,7 +172,7 @@ export default function FAQ() {
       <div className="flex flex-col gap-10">
         {groups.map((group, groupIndex) => (
           <div key={groupIndex}>
-            <div className="mb-4 px-1">
+            <div className="mb-2">
               <h3
                 className="type-kicker"
                 style={{ color: "var(--section-title-accent)" }}
@@ -180,50 +180,29 @@ export default function FAQ() {
                 {group.title}
               </h3>
             </div>
-            <div
-              className="rounded-xl overflow-hidden"
-              style={{ border: "1px solid var(--faq-border)", backgroundColor: "transparent" }}
-            >
+            <div>
               {group.items.map((item, index) => {
                 const key = `${groupIndex}-${index}`;
                 const isOpen = openKey === key;
-                const isLast = index === group.items.length - 1;
 
                 return (
-                  <div
-                    key={key}
-                    style={{
-                      borderBottom: isLast ? "none" : "1px solid var(--faq-border)",
-                    }}
-                  >
+                  <div key={key} className="border-b border-border-muted">
                     <button
+                      type="button"
                       onClick={() => toggle(key)}
-                      className="w-full flex items-center justify-between px-6 py-5 text-left transition-colors duration-200 cursor-pointer"
-                      style={{
-                        backgroundColor: "transparent",
-                        borderLeft: isOpen
-                          ? "3px solid var(--faq-active-border)"
-                          : "3px solid transparent",
-                      }}
-                      onMouseEnter={(event) => {
-                        if (!isOpen) {
-                          event.currentTarget.style.borderLeftColor = "var(--faq-active-border)";
-                        }
-                      }}
-                      onMouseLeave={(event) => {
-                        if (!isOpen) {
-                          event.currentTarget.style.borderLeftColor = "transparent";
-                        }
-                      }}
+                      className="group flex w-full cursor-pointer items-center justify-between py-5 text-left"
                     >
                       <span
-                        className="type-body pr-4"
-                        style={{ color: "var(--fg-heading)" }}
+                        className={
+                          isOpen
+                            ? "type-body pr-4 text-[var(--color-accent-interactive,var(--fg-heading))] transition-colors duration-[140ms] ease-out"
+                            : "type-body pr-4 text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]"
+                        }
                       >
                         {item.question}
                       </span>
                       <span
-                        className="flex-shrink-0 text-xl leading-none transition-transform duration-200"
+                        className="shrink-0 text-xl leading-none transition-transform duration-200"
                         style={{
                           color: "var(--fg-muted)",
                           transform: isOpen ? "rotate(45deg)" : "rotate(0deg)",
@@ -238,16 +217,9 @@ export default function FAQ() {
                       style={{
                         maxHeight: isOpen ? "600px" : "0px",
                         opacity: isOpen ? 1 : 0,
-                        backgroundColor: "transparent",
                       }}
                     >
-                      <p
-                        className="px-6 pb-5 type-body"
-                        style={{
-                          color: "var(--fg-muted)",
-                          paddingLeft: "calc(1.5rem + 3px)",
-                        }}
-                      >
+                      <p className="pb-5 type-body" style={{ color: "var(--fg-muted)" }}>
                         {item.answer}
                       </p>
                     </div>

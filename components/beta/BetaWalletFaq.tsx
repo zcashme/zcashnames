@@ -64,54 +64,36 @@ export default function BetaWalletFaq({ brandSlug }: { brandSlug: WalletBrandSlu
 
       <div className="flex flex-col gap-10">
         {faq.map((section, groupIndex) => (
-          <section key={section.id} id={section.id}>
-            <h3 className="type-kicker mb-4 px-1" style={{ color: "var(--fg-muted)" }}>
+          <section key={section.id} id={section.id} className="scroll-mt-24">
+            <h3 className="type-kicker mb-2" style={{ color: "var(--fg-muted)" }}>
               {section.label}
             </h3>
-            <div
-              className="overflow-hidden rounded-xl"
-              style={{ border: "1px solid var(--faq-border)", backgroundColor: "transparent" }}
-            >
-              {section.entries.map((entry, index) => {
+            <div>
+              {section.entries.map((entry) => {
                 const key = `${groupIndex}-${entry.id}`;
                 const isOpen = openKey === key;
-                const isLast = index === section.entries.length - 1;
 
                 return (
-                  <div
-                    key={entry.id}
-                    id={entry.id}
-                    style={{ borderBottom: isLast ? "none" : "1px solid var(--faq-border)" }}
-                  >
+                  <div key={entry.id} id={entry.id} className="border-b border-border-muted">
                     <button
                       type="button"
                       onClick={() => toggleEntry(key)}
                       aria-expanded={isOpen}
                       aria-controls={`${entry.id}-answer`}
-                      className="flex w-full cursor-pointer items-center justify-between px-6 py-5 text-left transition-colors duration-200"
-                      style={{
-                        backgroundColor: "transparent",
-                        borderLeft: isOpen
-                          ? "3px solid var(--faq-active-border)"
-                          : "3px solid transparent",
-                      }}
-                      onMouseEnter={(event) => {
-                        if (!isOpen) {
-                          event.currentTarget.style.borderLeftColor = "var(--faq-active-border)";
-                        }
-                      }}
-                      onMouseLeave={(event) => {
-                        if (!isOpen) {
-                          event.currentTarget.style.borderLeftColor = "transparent";
-                        }
-                      }}
+                      className="group flex w-full cursor-pointer items-center justify-between py-5 text-left"
                     >
-                      <span className="type-body pr-4" style={{ color: "var(--fg-heading)" }}>
+                      <span
+                        className={
+                          isOpen
+                            ? "type-body pr-4 text-[var(--color-accent-interactive,var(--fg-heading))] transition-colors duration-[140ms] ease-out"
+                            : "type-body pr-4 text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]"
+                        }
+                      >
                         {entry.question}
                       </span>
                       <span
                         aria-hidden="true"
-                        className="flex-shrink-0 text-xl leading-none transition-transform duration-200"
+                        className="shrink-0 text-xl leading-none transition-transform duration-200"
                         style={{
                           color: "var(--fg-muted)",
                           transform: isOpen ? "rotate(45deg)" : "rotate(0deg)",
@@ -127,15 +109,11 @@ export default function BetaWalletFaq({ brandSlug }: { brandSlug: WalletBrandSlu
                       style={{
                         maxHeight: isOpen ? "800px" : "0px",
                         opacity: isOpen ? 1 : 0,
-                        backgroundColor: "transparent",
                       }}
                     >
                       <div
-                        className="[&_a]:text-[var(--fg-heading)] [&_a]:underline [&_code]:rounded [&_code]:bg-black/10 [&_code]:px-1.5 [&_code]:py-0.5 [&_li]:mb-2 [&_p]:mb-3 [&_ul]:mb-3 px-6 pb-5 type-body"
-                        style={{
-                          color: "var(--fg-muted)",
-                          paddingLeft: "calc(1.5rem + 3px)",
-                        }}
+                        className="[&_a]:text-[var(--fg-heading)] [&_a]:underline [&_code]:rounded [&_code]:bg-black/10 [&_code]:px-1.5 [&_code]:py-0.5 [&_li]:mb-2 [&_p]:mb-3 [&_ul]:mb-3 pb-5 type-body"
+                        style={{ color: "var(--fg-muted)" }}
                       >
                         {entry.answer}
                       </div>
