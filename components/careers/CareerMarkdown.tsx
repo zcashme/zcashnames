@@ -19,7 +19,7 @@ function textFromChildren(children: ReactNode): string {
 }
 
 type CareerSectionStyle = {
-  kind: "check" | "plus" | "circle" | "dot";
+  kind: "check" | "plus" | "circle" | "dot" | "box";
 };
 
 type CareerSection = {
@@ -31,7 +31,7 @@ function styleForSection(section: string | null): CareerSectionStyle {
   const normalized = section?.trim().toLowerCase() ?? "";
 
   if (normalized === "responsibilities") return { kind: "circle" };
-  if (normalized === "required") return { kind: "dot" };
+  if (normalized === "required") return { kind: "box" };
   if (normalized === "strong plus") return { kind: "plus" };
   if (normalized === "success" || normalized === "success measures") return { kind: "check" };
 
@@ -133,23 +133,22 @@ function SectionBody({ markdown, sectionHeading }: { markdown: string; sectionHe
         li({ children }) {
           const style = styleForSection(sectionHeading);
           return (
-            <li
-              className="[--career-accent:var(--color-accent-interactive)] [--career-accent-soft:var(--color-accent-interactive-soft)] [--career-icon-on-accent:white] [--career-item-bg:color-mix(in_srgb,var(--color-raised)_72%,transparent)] [--career-icon-bg:linear-gradient(180deg,color-mix(in_srgb,var(--career-accent-soft)_92%,white_8%),var(--career-accent-soft))] flex items-start gap-3 rounded-2xl border px-4 py-3 [[data-theme=monochrome]_&]:[--career-item-bg:transparent] [[data-theme=monochrome]_&]:[--career-icon-bg:linear-gradient(180deg,color-mix(in_srgb,var(--career-accent-soft)_78%,transparent),color-mix(in_srgb,var(--career-accent-soft)_58%,transparent))]"
-              style={{
-                borderColor: "color-mix(in srgb, var(--fg-heading) 14%, var(--faq-border))",
-                background: "var(--career-item-bg)",
-              }}
-            >
+            <li className="grid grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-x-3 py-1">
+              {/*
+                Icon column height matches first text line (leading-7) so the mark
+                centers on the first word baseline/x-height band.
+              */}
               <span
                 aria-hidden="true"
-                className="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border"
-                style={{
-                  borderColor: "var(--career-accent)",
-                  background: "var(--career-icon-bg)",
-                  color: "var(--career-accent)",
-                }}
+                className="flex h-7 w-5 shrink-0 items-center justify-center"
+                style={{ color: "var(--fg-body)" }}
               >
-                {style.kind === "plus" ? (
+                {style.kind === "box" ? (
+                  <span
+                    className="block h-3.5 w-3.5 rounded-[3px] border-2 bg-transparent"
+                    style={{ borderColor: "currentColor" }}
+                  />
+                ) : style.kind === "plus" ? (
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
                     <path d="M8 3.5v9" />
                     <path d="M3.5 8h9" />
@@ -164,7 +163,7 @@ function SectionBody({ markdown, sectionHeading }: { markdown: string; sectionHe
                   </svg>
                 )}
               </span>
-              <span className="min-w-0 flex-1 [&_p]:m-0 [&_p]:text-base [&_p]:leading-7" style={{ color: "var(--fg-body)" }}>
+              <span className="min-w-0 text-base leading-7 [&_p]:m-0 [&_p]:text-base [&_p]:leading-7" style={{ color: "var(--fg-body)" }}>
                 {children}
               </span>
             </li>

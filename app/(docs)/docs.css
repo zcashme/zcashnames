@@ -127,8 +127,8 @@ html.zns-docs button.nextra-theme-switch {
   inset: 0;
   background: var(--docs-fg-heading);
   pointer-events: none;
-  -webkit-mask-image: url("/brandkit/zcashnames-primary-logo-white-black-square-background-403x403.png");
-  mask-image: url("/brandkit/zcashnames-primary-logo-white-black-square-background-403x403.png");
+  -webkit-mask-image: url("/brandkit/zcashnames-primary-logo-white-transparent-377x403.png");
+  mask-image: url("/brandkit/zcashnames-primary-logo-white-transparent-377x403.png");
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;

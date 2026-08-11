@@ -43,9 +43,9 @@ const navbar = (
           aria-label="ZcashNames home"
         >
           <img
-            src="/brandkit/zcashnames-primary-logo-white-black-square-background-403x403.png"
+            src="/brandkit/zcashnames-primary-logo-white-transparent-377x403.png"
             alt=""
-            width={403}
+            width={377}
             height={403}
             className="docs-navbar-logo-mark docs-navbar-logo-mark-image"
           />

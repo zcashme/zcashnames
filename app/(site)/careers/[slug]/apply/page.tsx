@@ -1,9 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import ShareDropdown from "@/components/ShareDropdown";
+import HeroShareButton from "@/components/HeroShareButton";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import CareersPageControls from "@/components/careers/CareersPageControls";
 import JobApplicationForm from "@/components/careers/JobApplicationForm";
 import { getOpenCareerJobBySlug, listCareerJobs } from "@/lib/careers";
 
@@ -59,54 +58,95 @@ export default async function CareerApplyPage(
   const job = await getOpenCareerJobBySlug(slug);
   if (!job) notFound();
   const isExternal = job.applicationMode === "external";
-  const applyLabel = "Now Hiring";
   const shareMessage = `Seeking ${job.title} at Zcash Names. Apply here:`;
   const xShareMessage = `Seeking ${job.title} at @ZcashNames. Apply here:`;
+  // Location + compensation only (e.g. Remote, Contract-to-hire) — not team/employment type.
+  const heroPills = [job.location, job.compensation].filter(
+    (value): value is string => Boolean(value?.trim()),
+  );
+
+  // Match /protected/suggest form pane (filled surface + soft elevation).
+  const formPaneStyle = {
+    borderColor: "var(--faq-border)",
+    background:
+      "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 76%, transparent), color-mix(in srgb, var(--faq-border) 10%, transparent))",
+    boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
+  } as const;
 
   return (
     <main className="w-full">
       <SiteRouteTitle title="Careers" href="/careers" />
-      <section className="mx-auto grid w-full max-w-[1320px] gap-8 px-4 pb-20 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-8">
-        <div>
-          <div className="max-w-3xl">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span
-                className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
-                style={{
-                  background: "transparent",
-                  color: "var(--fg-heading)",
-                  border: "1px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-                }}
-              >
-                {applyLabel}
-              </span>
-              <ShareDropdown
-                label="Share"
-                message={shareMessage}
-                xMessage={xShareMessage}
-                shareUrl={job.applicationUrl}
-                emailSubject={`Apply: ${job.title} | Zcash Names Careers`}
-                menuAlign="right"
-                buttonClassName="inline-flex min-h-10 items-center gap-2 rounded-md border border-border-muted bg-transparent px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-              />
-            </div>
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight" style={{ color: "var(--fg-heading)" }}>
-              Apply for {job.title}
+      <section className="mx-auto w-full max-w-[1320px] px-4 pb-20 pt-10 sm:px-6 sm:pt-14 lg:px-8">
+        {/*
+          Same join as /protected/suggest: open-bottom hero, fully rounded form card,
+          vertical side rails bridging the short gap between them.
+        */}
+        <div className="mx-auto w-full max-w-[920px]">
+          <div
+            className="relative w-full rounded-t-2xl border border-b-0 bg-transparent px-6 py-8 text-center sm:px-8 sm:py-10"
+            style={{
+              borderColor: "var(--faq-border)",
+            }}
+          >
+            <HeroShareButton
+              message={shareMessage}
+              xMessage={xShareMessage}
+              shareUrl={job.applicationUrl}
+              emailSubject={`Apply: ${job.title} | Zcash Names Careers`}
+            />
+            <h1
+              className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
+              style={{ color: "var(--color-accent-interactive)" }}
+            >
+              {job.title}
             </h1>
-            <p className="mt-4 text-base leading-8" style={{ color: "var(--fg-body)" }}>
-              Use this page to apply. You can review the full role details before submitting if needed.
+            {heroPills.length > 0 ? (
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                {heroPills.map((label) => (
+                  <span
+                    key={label}
+                    className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+                    style={{
+                      background: "transparent",
+                      color: "var(--fg-heading)",
+                      border:
+                        "1px solid color-mix(in srgb, var(--fg-heading) 12%, var(--faq-border))",
+                    }}
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <p
+              className="mx-auto mt-4 max-w-2xl text-lg leading-8"
+              style={{ color: "var(--fg-body)" }}
+            >
+              {job.summary}
+            </p>
+            <p className="mt-4">
+              <Link
+                href={`/careers/${job.slug}`}
+                className="text-base font-semibold text-fg-heading underline underline-offset-2 transition-colors hover:text-[var(--color-accent-interactive)]"
+              >
+                View job description
+              </Link>
             </p>
           </div>
 
-          <div className="mt-8">
+          <div className="relative">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-0 top-[-1rem] z-10 block h-8 w-px"
+              style={{ background: "var(--faq-border)" }}
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-[calc(100%-1px)] top-[-1rem] z-10 block h-8 w-px"
+              style={{ background: "var(--faq-border)" }}
+            />
             {isExternal ? (
-              <div
-                className="rounded-[26px] border p-8"
-                style={{
-                  background: "var(--feature-card-bg)",
-                  borderColor: "color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-                }}
-              >
+              <div className="rounded-2xl border px-5 py-8 text-center sm:px-6 sm:py-10" style={formPaneStyle}>
                 <p className="text-sm leading-7" style={{ color: "var(--fg-body)" }}>
                   This role uses an external application flow. Continue below to apply.
                 </p>
@@ -130,44 +170,6 @@ export default async function CareerApplyPage(
           </div>
         </div>
 
-        <aside
-          className="h-fit rounded-[30px] border p-6"
-          style={{
-            background: "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 78%, transparent), color-mix(in srgb, var(--faq-border) 18%, transparent))",
-            borderColor: "color-mix(in srgb, var(--fg-heading) 16%, var(--faq-border))",
-          }}
-        >
-          <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
-            Role summary
-          </p>
-          <h2 className="mt-3 text-xl font-semibold tracking-tight" style={{ color: "var(--fg-heading)" }}>
-            {job.title}
-          </h2>
-          <p className="mt-3 text-sm leading-7" style={{ color: "var(--fg-body)" }}>
-            {job.summary}
-          </p>
-
-          <div className="mt-5 flex flex-col gap-2 text-sm" style={{ color: "var(--fg-muted)" }}>
-            <span>{job.team}</span>
-            <span>{job.employmentType}</span>
-            <span>{job.location}</span>
-            {job.compensation ? <span>{job.compensation}</span> : null}
-          </div>
-
-          <Link
-            href={`/careers/${job.slug}`}
-            className="mt-6 inline-flex w-full items-center justify-center rounded-full border px-5 py-3 text-sm font-semibold transition-colors"
-            style={{
-              color: "var(--fg-heading)",
-              borderColor: "color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-            }}
-          >
-            Read the full job
-          </Link>
-        </aside>
-        <div className="lg:col-span-2">
-          <CareersPageControls showBackToCareers />
-        </div>
       </section>
     </main>
   );

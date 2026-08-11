@@ -68,7 +68,7 @@ export default function FaqPage() {
             />
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute left-[calc(100%-2px)] top-[-1rem] z-10 block h-8 w-px"
+              className="pointer-events-none absolute left-[calc(100%-1px)] top-[-1rem] z-10 block h-8 w-px"
               style={{ background: "var(--faq-border)" }}
             />
             <div

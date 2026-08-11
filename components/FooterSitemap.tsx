@@ -27,6 +27,21 @@ function ChevronIcon({ className }: { className?: string }) {
   );
 }
 
+/** Same stroke style as ChevronIcon, pointing left (←). */
+function ChevronLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M10 4l-4 4 4 4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function FooterSitemap() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -39,6 +54,13 @@ export default function FooterSitemap() {
     setOpen(false);
   }, [pathname]);
 
+  // Career job + apply pages: show Careers straddle control (and keep Top available).
+  const showCareersBack =
+    /^\/careers\/[^/]+(?:\/apply)?\/?$/.test(pathname) && pathname !== "/careers";
+  // Job detail only (not /apply): tighter gap under Application URL → straddle.
+  const isCareerJobPage =
+    /^\/careers\/[^/]+\/?$/.test(pathname) && pathname !== "/careers";
+
   useEffect(() => {
     function recompute() {
       const doc = document.documentElement;
@@ -46,7 +68,8 @@ export default function FooterSitemap() {
       const expandable = expandableRef.current?.offsetHeight ?? 0;
       const longEnough =
         doc.scrollHeight - expandable > window.innerHeight * LONG_PAGE_MIN_RATIO;
-      setShowBackToTop(longEnough);
+      // Career job/apply pages always get Top so it is not lost when page height dips.
+      setShowBackToTop(longEnough || showCareersBack);
     }
 
     recompute();
@@ -59,7 +82,7 @@ export default function FooterSitemap() {
       window.removeEventListener("resize", recompute);
       observer.disconnect();
     };
-  }, [pathname]);
+  }, [pathname, showCareersBack]);
 
   function scrollToTop() {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -94,20 +117,48 @@ export default function FooterSitemap() {
     </button>
   ) : null;
 
+  const careersBackButton = showCareersBack ? (
+    <Link href="/careers" className={straddleButtonClassName} aria-label="Back to Careers">
+      <ChevronLeftIcon className="h-3.5 w-3.5" />
+      <span>Careers</span>
+    </Link>
+  ) : null;
+
   return (
-    // mt: body → Top/Sitemap.
+    // mt: body → Top/Sitemap (tighter on career job pages under Application URL).
     // pb: button bottom → brand bar (clears straddle half-height + stack gap).
-    <div className="mt-14 pb-12 sm:mt-16 sm:pb-14">
+    <div
+      className={
+        isCareerJobPage
+          ? "mt-8 pb-12 sm:mt-10 sm:pb-14"
+          : "mt-14 pb-12 sm:mt-16 sm:pb-14"
+      }
+    >
       {/*
         Controls always straddle the original top line (Top? + Sitemap).
         When open, the map expands under that line; a plain bottom border
         closes the panel — Sitemap does not move to a second straddle line.
+
+        Top + Sitemap remain the only in-flow straddle controls (same centering
+        as always). Careers is out-of-flow to the left so it never shifts them.
       */}
       <div className="relative w-full">
         <div className="w-full border-t border-border" aria-hidden="true" />
-        <div className="absolute left-1/2 top-0 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-3">
-          {backToTopButton}
-          {sitemapButton}
+        <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2">
+          {/*
+            Width of this box = Top + Sitemap only (Careers is absolute).
+            That keeps the Top/Sitemap center at page midpoint, identical to
+            the pre-Careers layout.
+          */}
+          <div className="relative flex items-center gap-3">
+            {careersBackButton ? (
+              <div className="absolute right-full top-1/2 mr-3 -translate-y-1/2">
+                {careersBackButton}
+              </div>
+            ) : null}
+            {backToTopButton}
+            {sitemapButton}
+          </div>
         </div>
       </div>
 

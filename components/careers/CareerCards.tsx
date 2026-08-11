@@ -21,21 +21,16 @@ export function CareerCard({ job }: { job: CareerJob }) {
   const applyHref = job.applicationMode === "external" ? job.applicationUrl : `/careers/${job.slug}/apply`;
 
   return (
-    <article
-      className="flex h-full flex-col rounded-[26px] border p-6"
-      style={{
-        borderColor: "color-mix(in srgb, var(--fg-heading) 16%, var(--faq-border))",
-        background:
-          "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 78%, transparent), color-mix(in srgb, var(--faq-border) 18%, transparent))",
-        boxShadow: "0 16px 40px color-mix(in srgb, #000 8%, transparent)",
-      }}
-    >
+    <article className="flex flex-col border-0 border-b border-border-muted bg-transparent py-6 last:border-b-0">
       <div className="flex flex-wrap gap-2">
         {metaPill(job.employmentType)}
       </div>
 
-      <h2 className="mt-5 text-2xl font-semibold tracking-tight" style={{ color: "var(--fg-heading)" }}>
-        <Link href={`/careers/${job.slug}`} className="hover:opacity-80 transition-opacity">
+      <h2 className="mt-4 text-2xl font-semibold tracking-tight" style={{ color: "var(--fg-heading)" }}>
+        <Link
+          href={`/careers/${job.slug}`}
+          className="transition-colors hover:text-[var(--color-accent-interactive)]"
+        >
           {job.title}
         </Link>
       </h2>
@@ -83,5 +78,47 @@ export function CareerCard({ job }: { job: CareerJob }) {
         )}
       </div>
     </article>
+  );
+}
+
+/** Single column on small screens; two columns with a vertical rule from lg up when 2+ roles. */
+export function CareerJobList({ jobs }: { jobs: CareerJob[] }) {
+  if (jobs.length === 0) return null;
+
+  if (jobs.length === 1) {
+    return (
+      <div className="flex flex-col">
+        <CareerCard job={jobs[0]} />
+      </div>
+    );
+  }
+
+  const mid = Math.ceil(jobs.length / 2);
+  const leftJobs = jobs.slice(0, mid);
+  const rightJobs = jobs.slice(mid);
+
+  return (
+    <>
+      {/* Narrow: one stack, original order */}
+      <div className="flex flex-col lg:hidden">
+        {jobs.map((job) => (
+          <CareerCard key={job.slug} job={job} />
+        ))}
+      </div>
+
+      {/* Wide: side-by-side columns with a full-height vertical separator */}
+      <div className="hidden lg:grid lg:grid-cols-2">
+        <div className="flex flex-col border-r border-border-muted pr-8 xl:pr-10">
+          {leftJobs.map((job) => (
+            <CareerCard key={job.slug} job={job} />
+          ))}
+        </div>
+        <div className="flex flex-col pl-8 xl:pl-10">
+          {rightJobs.map((job) => (
+            <CareerCard key={job.slug} job={job} />
+          ))}
+        </div>
+      </div>
+    </>
   );
 }

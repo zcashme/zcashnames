@@ -210,33 +210,25 @@ export default async function BrandKitPage({
               Brand{" "}
               <span style={{ color: "var(--color-accent-interactive)" }}>Kit</span>
             </h1>
-            <div className="mt-8 grid gap-3 sm:mt-9">
-              <div className="rounded-2xl border border-border-muted bg-transparent p-4 text-center">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">
-                  Typography
+            <div className="mt-8 rounded-2xl border border-border-muted bg-transparent p-4 text-center sm:mt-9">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">
+                Typography
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-3 sm:mx-auto sm:max-w-xs sm:gap-6 md:max-w-[18rem]">
+                <p
+                  className="text-center text-sm font-semibold leading-6 text-fg-heading"
+                  style={{ fontFamily: "var(--font-brand), Inter, sans-serif", fontWeight: 400 }}
+                >
+                  Wordmark: Inter
                 </p>
-                <div className="mt-2 grid grid-cols-2 gap-3 sm:gap-4">
-                  <div className="text-center">
-                    <p className="text-sm font-semibold leading-6 text-fg-heading">Brand Wordmark</p>
-                    <p
-                      className="mt-1 text-sm font-normal leading-6 text-fg-heading"
-                      style={{ fontFamily: "var(--font-brand), Inter, sans-serif", fontWeight: 400 }}
-                    >
-                      Inter
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-semibold leading-6 text-fg-heading">Product UI</p>
-                    <p
-                      className="mt-1 text-sm font-normal leading-6 text-fg-heading"
-                      style={{ fontFamily: "var(--font-ui), Manrope, sans-serif", fontWeight: 400 }}
-                    >
-                      Manrope
-                    </p>
-                  </div>
-                </div>
+                <p
+                  className="text-center text-sm font-semibold leading-6 text-fg-heading"
+                  style={{ fontFamily: "var(--font-ui), Manrope, sans-serif", fontWeight: 400 }}
+                >
+                  UI: Manrope
+                </p>
               </div>
-              <div className="rounded-2xl border border-border-muted bg-transparent p-4 text-center">
+              <div className="mt-5 border-t border-border-muted pt-5">
                 <ColorModeNote />
               </div>
             </div>
@@ -255,7 +247,7 @@ export default async function BrandKitPage({
             />
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute left-[calc(100%-2px)] top-[-1rem] z-10 block h-8 w-px"
+              className="pointer-events-none absolute left-[calc(100%-1px)] top-[-1rem] z-10 block h-8 w-px"
               style={{ background: "var(--faq-border)" }}
             />
             <FilterPanel filters={filters} visibleCount={visibleCount} totalCount={totalCount} />
@@ -503,21 +495,20 @@ function UsageNote({
 function ColorModeNote({ separated }: { separated?: boolean }) {
   return (
     <div className={`${metadataItemClass(separated)} text-center`}>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Color Modes</p>
-      {/* Three equal columns, no dividers — Dark | Light | Monochrome */}
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Colors</p>
+      {/* Three equal columns, no mode labels — palette swatches only */}
       <div className="mt-2 grid grid-cols-3 gap-3 text-sm font-semibold leading-6 text-fg-heading sm:gap-4">
-        <ColorLine label="Dark" colors={["#0a0a0a", "#f0f0f0", "#f4b728"]} />
-        <ColorLine label="Light" colors={["#fefcf7", "#111318", "#1d4ed8"]} />
-        <ColorLine label="Monochrome" colors={["#0f380f", "#9bbc0f", "#8bac0f"]} />
+        <ColorLine colors={["#0a0a0a", "#f0f0f0", "#f4b728"]} />
+        <ColorLine colors={["#fefcf7", "#111318", "#1d4ed8"]} />
+        <ColorLine colors={["#0f380f", "#9bbc0f", "#8bac0f"]} />
       </div>
     </div>
   );
 }
 
-function ColorLine({ label, colors }: { label: string; colors: string[] }) {
+function ColorLine({ colors }: { colors: string[] }) {
   return (
     <div className="flex flex-col items-center gap-1.5 text-center">
-      <span>{label}</span>
       {colors.map((color) => (
         <span key={color} className="inline-flex items-center justify-center gap-1.5">
           <span

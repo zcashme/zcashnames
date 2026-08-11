@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import ShareDropdown from "@/components/ShareDropdown";
+import HeroShareButton from "@/components/HeroShareButton";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
-import { CareerCard } from "@/components/careers/CareerCards";
+import { CareerJobList } from "@/components/careers/CareerCards";
 import { listOpenCareerJobs } from "@/lib/careers";
 
 const CAREERS_OG_IMAGE = {
@@ -34,61 +34,56 @@ export const metadata: Metadata = {
 export default async function CareersPage() {
   const jobs = await listOpenCareerJobs();
   const shareUrl = "https://www.zcashnames.com/careers";
-  const shareMessage = "We're preparing to launch and hiring across a few focused roles at Zcash Names.";
-  const xShareMessage = "We're preparing to launch and hiring across a few focused roles at @ZcashNames.";
+  const shareMessage =
+    "We're preparing to launch and hiring across a few focused roles at Zcash Names.";
+  const xShareMessage =
+    "We're preparing to launch and hiring across a few focused roles at @ZcashNames.";
 
   return (
     <main className="w-full">
       <SiteRouteTitle title="Careers" href="/careers" />
-      <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
-        <div className="max-w-3xl">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span
-              className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
-              style={{
-                background: "transparent",
-                color: "var(--fg-heading)",
-                border: "1px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-              }}
-            >
-              Applications Open
-            </span>
-            <ShareDropdown
-              label="Share"
-              message={shareMessage}
-              xMessage={xShareMessage}
-              shareUrl={shareUrl}
-              emailSubject="Zcash Names Careers"
-              menuAlign="right"
-              buttonClassName="inline-flex min-h-10 items-center gap-2 rounded-md border border-border-muted bg-transparent px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-            />
-          </div>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl" style={{ color: "var(--fg-heading)" }}>
-            We&apos;re preparing to launch.
+      <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 sm:pt-14 lg:px-8">
+        <div
+          className="relative w-full border-0 border-b px-6 py-8 text-center sm:px-8 sm:py-10"
+          style={{
+            borderColor: "var(--faq-border)",
+            background:
+              "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
+          }}
+        >
+          <HeroShareButton
+            message={shareMessage}
+            xMessage={xShareMessage}
+            shareUrl={shareUrl}
+            emailSubject="Zcash Names Careers"
+          />
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.14em]"
+            style={{ color: "var(--fg-muted)" }}
+          >
+            Applications Open
+          </p>
+          <h1
+            className="mt-3 text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
+            style={{ color: "var(--fg-heading)" }}
+          >
+            We&apos;re preparing to{" "}
+            <span style={{ color: "var(--color-accent-interactive)" }}>launch.</span>
           </h1>
-          <p className="mt-4 text-base leading-8" style={{ color: "var(--fg-body)" }}>
+          <p
+            className="mx-auto mt-4 max-w-2xl text-lg leading-8"
+            style={{ color: "var(--fg-body)" }}
+          >
             We&apos;re hiring for a small set of focused roles as we move toward launch.
           </p>
         </div>
 
         {jobs.length === 0 ? (
-          <div
-            className="rounded-[26px] border p-8"
-            style={{
-              background: "var(--feature-card-bg)",
-              borderColor: "color-mix(in srgb, var(--fg-heading) 16%, var(--faq-border))",
-            }}
-          >
-            <p className="text-sm leading-7" style={{ color: "var(--fg-body)" }}>
-              There are no public openings right now.
-            </p>
-          </div>
+          <p className="text-sm leading-7" style={{ color: "var(--fg-body)" }}>
+            There are no public openings right now.
+          </p>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {jobs.map((job) => (
-              <CareerCard key={job.slug} job={job} />
-            ))}
-          </div>
+          <CareerJobList jobs={jobs} />
         )}
       </section>
     </main>

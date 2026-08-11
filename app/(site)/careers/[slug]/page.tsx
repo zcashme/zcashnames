@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import ShareDropdown from "@/components/ShareDropdown";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import CareerMarkdown from "@/components/careers/CareerMarkdown";
-import CareersPageControls from "@/components/careers/CareersPageControls";
 import { getOpenCareerJobBySlug, listCareerJobs } from "@/lib/careers";
 
 export async function generateStaticParams() {
@@ -67,15 +66,15 @@ export default async function CareerJobPage(
   return (
     <main className="w-full">
       <SiteRouteTitle title="Careers" href="/careers" />
-      <section className="mx-auto grid w-full max-w-[1320px] gap-8 px-4 pb-20 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
-        <article
-          className="rounded-[30px] border bg-[var(--feature-card-bg)] p-6 md:p-8 [[data-theme=monochrome]_&]:bg-transparent"
-          style={{
-            borderColor: "color-mix(in srgb, var(--fg-heading) 16%, var(--faq-border))",
-          }}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-2">
+      {/*
+        Single column: Application URL under the job body.
+        Larger gap above the Application URL box; tight bottom padding so the
+        Careers/Top/Sitemap straddle sits closer to the box bottom border.
+      */}
+      <section className="mx-auto flex w-full max-w-[1320px] flex-col px-4 pb-0 pt-10 sm:px-6 lg:px-8">
+        <article className="min-w-0">
+          {metaLabels.length > 0 ? (
+            <div className="mb-4 flex flex-wrap gap-2">
               {metaLabels.map((label) => (
                 <span
                   key={label}
@@ -90,31 +89,35 @@ export default async function CareerJobPage(
                 </span>
               ))}
             </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="min-w-0 text-4xl font-semibold tracking-tight" style={{ color: "var(--fg-heading)" }}>
+              {job.title}
+            </h1>
             <ShareDropdown
               label="Share"
               message={shareMessage}
               xMessage={xShareMessage}
               shareUrl={job.jobUrl}
               emailSubject={`${job.title} | Zcash Names Careers`}
-              menuAlign="right"
-              buttonClassName="inline-flex min-h-10 items-center gap-2 rounded-md border border-border-muted bg-transparent px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
+              menuAlign="left"
+              rootClassName="relative shrink-0"
+              buttonClassName="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-transparent text-fg-heading transition-colors duration-200 hover:text-[var(--color-accent-interactive)] [&>span]:hidden"
             />
           </div>
-
-          <h1 className="mt-5 text-4xl font-semibold tracking-tight" style={{ color: "var(--fg-heading)" }}>
-            {job.title}
-          </h1>
           <p className="mt-4 text-base leading-8" style={{ color: "var(--fg-body)" }}>
             {job.summary}
           </p>
 
-          <div className="mt-8">
+          {/* Separates intro (title/summary) from Responsibilities and the rest of the description. */}
+          <div className="mt-8 border-t border-border-muted pt-8">
             <CareerMarkdown markdown={job.descriptionMarkdown} />
           </div>
         </article>
 
         <aside
-          className="h-fit rounded-[30px] border p-6"
+          className="mt-20 h-fit rounded-2xl border p-6 sm:mt-24"
           style={{
             background:
               "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 78%, transparent), color-mix(in srgb, var(--faq-border) 18%, transparent))",
@@ -166,9 +169,6 @@ export default async function CareerJobPage(
             {job.applicationUrl}
           </p>
         </aside>
-        <div className="lg:col-span-2">
-          <CareersPageControls showBackToCareers />
-        </div>
       </section>
     </main>
   );

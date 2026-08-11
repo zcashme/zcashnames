@@ -108,15 +108,17 @@ export default function JobApplicationForm({ job }: { job: CareerJob }) {
     }
   }
 
+  // Match /protected/suggest form pane (filled surface + soft elevation).
+  const paneStyle: CSSProperties = {
+    borderColor: "var(--faq-border)",
+    background:
+      "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 76%, transparent), color-mix(in srgb, var(--faq-border) 10%, transparent))",
+    boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
+  };
+
   if (success) {
     return (
-      <div
-        className="rounded-[26px] border p-8 text-center"
-        style={{
-          background: "var(--feature-card-bg)",
-          borderColor: "color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-        }}
-      >
+      <div className="rounded-2xl border px-5 py-8 text-center sm:px-6 sm:py-10" style={paneStyle}>
         <h2 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--fg-heading)" }}>
           Application received
         </h2>
@@ -141,11 +143,8 @@ export default function JobApplicationForm({ job }: { job: CareerJob }) {
       />
       <form
         onSubmit={handleSubmit}
-        className="rounded-[26px] border p-6 md:p-8"
-        style={{
-          background: "var(--feature-card-bg)",
-          borderColor: "color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-        }}
+        className="rounded-2xl border px-5 py-5 sm:px-6 sm:py-6"
+        style={paneStyle}
       >
         <div className="grid gap-5 md:grid-cols-2">
           <div>
