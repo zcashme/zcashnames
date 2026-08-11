@@ -7,6 +7,7 @@
  */
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
+import HeroShareButton from "@/components/HeroShareButton";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 
 export const metadata: Metadata = {
@@ -183,20 +184,83 @@ export default async function BrandKitPage({
   return (
     <main className="w-full">
       <SiteRouteTitle title="Brand Kit" />
-      <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
-        <div className="flex max-w-3xl flex-col gap-4">
-          <p className="type-section-subtitle text-fg-body">
-            Download logo marks, banners, and stacked brand lockups for Zcash Names.
-          </p>
-        </div>
+      <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 sm:pt-14 lg:px-8">
+        {/*
+          Same join as /protected/suggest: open-bottom hero, fully rounded filter card,
+          vertical side rails bridging the short gap between them.
+        */}
+        <div className="w-full">
+          <div
+            className="relative w-full rounded-t-2xl border border-b-0 px-6 py-8 text-center sm:px-8 sm:py-10"
+            style={{
+              borderColor: "var(--faq-border)",
+              background:
+                "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
+            }}
+          >
+            <HeroShareButton
+              message="Official Zcash Names brand assets — logos, banners, and lockups for partners and press:"
+              shareUrl="https://www.zcashnames.com/brandkit"
+              emailSubject="Zcash Names Brand Kit"
+            />
+            <h1
+              className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
+              style={{ color: "var(--fg-heading)" }}
+            >
+              Brand{" "}
+              <span style={{ color: "var(--color-accent-interactive)" }}>Kit</span>
+            </h1>
+            <div className="mt-8 grid gap-3 sm:mt-9">
+              <div className="rounded-2xl border border-border-muted bg-transparent p-4 text-center">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">
+                  Typography
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="text-center">
+                    <p className="text-sm font-semibold leading-6 text-fg-heading">Brand Wordmark</p>
+                    <p
+                      className="mt-1 text-sm font-normal leading-6 text-fg-heading"
+                      style={{ fontFamily: "var(--font-brand), Inter, sans-serif", fontWeight: 400 }}
+                    >
+                      Inter
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold leading-6 text-fg-heading">Product UI</p>
+                    <p
+                      className="mt-1 text-sm font-normal leading-6 text-fg-heading"
+                      style={{ fontFamily: "var(--font-ui), Manrope, sans-serif", fontWeight: 400 }}
+                    >
+                      Manrope
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-border-muted bg-transparent p-4 text-center">
+                <ColorModeNote />
+              </div>
+            </div>
+          </div>
 
-        <div className="grid gap-4 rounded-lg border border-border-muted bg-[var(--color-raised)] p-5 sm:grid-cols-3">
-          <UsageNote label="Format" value="PNG; SVG for logos and banners" />
-          <ColorModeNote separated />
-          <UsageNote label="Typography" value="Inter, 400 weight" separated />
+          <div className="relative">
+            {/*
+              Same rail geometry as /protected/suggest. Both rails are left-based so the
+              right rail shares the same 1px inset as the left (right-0 can sit a hair
+              outside the rounded border on some DPRs).
+            */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-0 top-[-1rem] z-10 block h-8 w-px"
+              style={{ background: "var(--faq-border)" }}
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-[calc(100%-2px)] top-[-1rem] z-10 block h-8 w-px"
+              style={{ background: "var(--faq-border)" }}
+            />
+            <FilterPanel filters={filters} visibleCount={visibleCount} totalCount={totalCount} />
+          </div>
         </div>
-
-        <FilterPanel filters={filters} visibleCount={visibleCount} totalCount={totalCount} />
 
         {filteredGroups.map((group) => (
           <section key={group.title} className="flex flex-col gap-5">
@@ -242,10 +306,33 @@ function assetBackground(asset: Asset): string {
   return asset.transparent ? "transparent" : "with-background";
 }
 
+/**
+ * Mode filter is one-way inclusive:
+ * - Dark also matches White (marks for dark surfaces) — White alone does not pull Dark
+ * - Light also matches Monochrome — Monochrome alone does not pull Light
+ */
+function modeMatchesFilter(assetMode: Asset["mode"], filterMode: string): boolean {
+  if (filterMode === "all") return true;
+  const mode = assetMode.toLowerCase();
+  if (mode === filterMode) return true;
+  if (filterMode === "dark" && mode === "white") return true;
+  if (filterMode === "light" && mode === "monochrome") return true;
+  return false;
+}
+
+/** Mode chips that should appear selected for the current filter (includes one-way pairings). */
+function modeChipActive(filterMode: string, chipValue: string): boolean {
+  if (chipValue === "all") return filterMode === "all";
+  if (filterMode === chipValue) return true;
+  if (filterMode === "dark" && chipValue === "white") return true;
+  if (filterMode === "light" && chipValue === "monochrome") return true;
+  return false;
+}
+
 function matchesFilters(group: AssetGroup, asset: Asset, filters: Filters): boolean {
   if (filters.type !== "all" && groupType(group) !== filters.type) return false;
   if (filters.variation !== "all" && assetVariation(asset) !== filters.variation) return false;
-  if (filters.mode !== "all" && asset.mode.toLowerCase() !== filters.mode) return false;
+  if (!modeMatchesFilter(asset.mode, filters.mode)) return false;
   if (filters.background !== "all" && assetBackground(asset) !== filters.background) return false;
   return true;
 }
@@ -270,7 +357,14 @@ function FilterPanel({
   totalCount: number;
 }) {
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-border-muted bg-[var(--color-raised)] p-5">
+    <section
+      className="flex flex-col gap-4 rounded-2xl border px-5 py-5 sm:px-6 sm:py-6"
+      style={{
+        borderColor: "var(--faq-border)",
+        background:
+          "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 76%, transparent), color-mix(in srgb, var(--faq-border) 10%, transparent))",
+      }}
+    >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-bold text-fg-heading">Filter assets</h2>
@@ -351,7 +445,10 @@ function FilterRow({
       </p>
       <div className="flex flex-wrap gap-2">
         {options.map(([value, text]) => {
-          const active = filters[filterKey] === value;
+          const active =
+            filterKey === "mode"
+              ? modeChipActive(filters.mode, value)
+              : filters[filterKey] === value;
           return (
             <a
               key={value}
@@ -405,11 +502,12 @@ function UsageNote({
 
 function ColorModeNote({ separated }: { separated?: boolean }) {
   return (
-    <div className={metadataItemClass(separated)}>
+    <div className={`${metadataItemClass(separated)} text-center`}>
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Color Modes</p>
-      <div className="mt-1 space-y-1 text-sm font-semibold leading-6 text-fg-heading">
-        <ColorLine label="Dark" colors={["#0a0a0a", "#f0f0f0"]} />
-        <ColorLine label="Light" colors={["#fefcf7", "#111318"]} />
+      {/* Three equal columns, no dividers — Dark | Light | Monochrome */}
+      <div className="mt-2 grid grid-cols-3 gap-3 text-sm font-semibold leading-6 text-fg-heading sm:gap-4">
+        <ColorLine label="Dark" colors={["#0a0a0a", "#f0f0f0", "#f4b728"]} />
+        <ColorLine label="Light" colors={["#fefcf7", "#111318", "#1d4ed8"]} />
         <ColorLine label="Monochrome" colors={["#0f380f", "#9bbc0f", "#8bac0f"]} />
       </div>
     </div>
@@ -418,12 +516,12 @@ function ColorModeNote({ separated }: { separated?: boolean }) {
 
 function ColorLine({ label, colors }: { label: string; colors: string[] }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <span>{label}:</span>
+    <div className="flex flex-col items-center gap-1.5 text-center">
+      <span>{label}</span>
       {colors.map((color) => (
-        <span key={color} className="inline-flex items-center gap-1.5">
+        <span key={color} className="inline-flex items-center justify-center gap-1.5">
           <span
-            className="inline-block h-3 w-3 rounded-[2px] border border-border-muted"
+            className="inline-block h-3 w-3 shrink-0 rounded-[2px] border border-border-muted"
             style={{ backgroundColor: color }}
             aria-hidden="true"
           />

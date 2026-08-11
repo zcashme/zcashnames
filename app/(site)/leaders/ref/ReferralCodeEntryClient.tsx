@@ -6,6 +6,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { useTheme } from "next-themes";
+import HeroShareButton from "@/components/HeroShareButton";
 import ReferralCodeRecovery from "@/components/ReferralCodeRecovery";
 import { extractReferralCode } from "@/lib/referral-code";
 
@@ -13,6 +15,7 @@ const ACTION_INSET_PX = 4;
 
 export default function ReferralCodeEntryPage() {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
   const hasInput = input.trim().length > 0;
@@ -30,24 +33,46 @@ export default function ReferralCodeEntryPage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 pb-20 pt-4 sm:px-6">
-      <section
-        className="mx-auto max-w-2xl rounded-2xl border p-5 sm:p-6"
-        style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)" }}
+    <main className="mx-auto w-full max-w-[1320px] px-4 pb-20 pt-10 sm:px-6 sm:pt-14">
+      <div
+        className="relative mx-auto w-full max-w-[920px] rounded-2xl border px-6 py-8 text-center sm:px-8 sm:py-10"
+        style={{
+          borderColor: "var(--faq-border)",
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
+        }}
       >
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-fg-heading">
-            Enter your referral code to see your dashboard.
-          </h1>
-          <p className="mt-3 text-sm text-fg-muted">
-            Check your inbox - we sent you a referral link after you signed up for early access.
-          </p>
+        <HeroShareButton
+          message="Open your Zcash Names referral dashboard with your referral code:"
+          shareUrl="https://www.zcashnames.com/leaders/ref"
+          emailSubject="Zcash Names referral dashboard"
+        />
+        <h1
+          className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
+          style={{ color: "var(--fg-heading)" }}
+        >
+          Enter referral code to{" "}
+          <span style={{ color: "var(--color-accent-interactive)" }}>view dashboard</span>
+        </h1>
+        <p
+          className="mx-auto mt-4 max-w-2xl text-center text-lg leading-8"
+          style={{ color: "var(--fg-body)" }}
+        >
+          Check your inbox - we sent you a referral link after
+          <br />
+          you signed up for early access.
+        </p>
 
-          <form onSubmit={submitReferralCode} className="mt-6">
-            <label className="block text-sm font-semibold text-fg-heading" htmlFor="referral-code">
+        <div className="mx-auto mt-8 w-full max-w-[36rem] text-left sm:mt-9">
+          <form onSubmit={submitReferralCode} className="flex flex-col gap-3">
+            <label
+              className="text-center text-base font-semibold"
+              style={{ color: "var(--fg-heading)" }}
+              htmlFor="referral-code"
+            >
               Referral code or link
             </label>
-            <div className="relative mt-2 flex items-center">
+            <div className="relative flex items-center">
               <input
                 id="referral-code"
                 type="text"
@@ -57,8 +82,9 @@ export default function ReferralCodeEntryPage() {
                   setError("");
                 }}
                 placeholder="zcashnames.com/?ref=your-code"
-                className="w-full min-w-0 rounded-2xl border bg-transparent py-3 pl-4 pr-[5.5rem] text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted"
-                style={{ borderColor: "var(--leaders-card-border)" }}
+                className={`w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
+                  resolvedTheme === "light" ? "bg-[var(--color-card)]" : "bg-[var(--input-fill)]"
+                } pr-[5.5rem]`}
               />
               <span
                 className="absolute flex items-center"
@@ -87,25 +113,32 @@ export default function ReferralCodeEntryPage() {
                 </button>
               </span>
             </div>
-            <div className="mt-3">
-              <ReferralCodeRecovery
-                className="w-full"
-                triggerClassName="w-full cursor-pointer rounded-lg border px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-muted disabled:cursor-not-allowed disabled:opacity-60"
-                formClassName="mt-4 flex flex-col gap-3 border-t pt-4"
-                controlsId="leaders-ref-forgot-code"
-              />
-            </div>
-            {error && <p className="mt-2 text-sm text-fg-muted">{error}</p>}
+            <ReferralCodeRecovery
+              className="text-center"
+              controlsId="leaders-ref-forgot-code"
+            />
+            {error ? (
+              <p className="text-sm" style={{ color: "var(--fg-muted)" }}>
+                {error}
+              </p>
+            ) : null}
           </form>
-          <p className="mt-4 text-center text-xs text-fg-muted">
-            Referral rewards are subject to{" "}
-            <Link href="/leaders/terms" className="underline underline-offset-2">
-              terms
-            </Link>
-            .
-          </p>
         </div>
-      </section>
+      </div>
+
+      <p
+        className="mx-auto mt-8 max-w-[920px] text-center text-xs sm:mt-10"
+        style={{ color: "var(--fg-muted)" }}
+      >
+        Referral rewards are subject to{" "}
+        <Link
+          href="/leaders/terms"
+          className="underline underline-offset-2 transition-colors hover:text-[var(--color-accent-interactive)]"
+        >
+          terms
+        </Link>
+        .
+      </p>
     </main>
   );
 }

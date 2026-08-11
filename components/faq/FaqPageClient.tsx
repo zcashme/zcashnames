@@ -172,11 +172,11 @@ function FAQGroupAccordion({ group, groupIndex }: { group: FAQGroup; groupIndex:
   );
 }
 
-function FaqSectionPills() {
+export function FaqSectionPills() {
   return (
-    <nav className="flex flex-col gap-3" aria-label="FAQ sections">
+    <nav className="flex flex-col items-center gap-3 text-center" aria-label="FAQ sections">
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Jump to section</p>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap justify-center gap-2">
         {groups.map((group) => (
           <a
             key={group.id}
@@ -193,16 +193,11 @@ function FaqSectionPills() {
 
 export default function FaqPageClient() {
   return (
-    <section className="mx-auto mt-10 w-full max-w-3xl px-0 pb-4 sm:mt-12">
-      <div className="flex flex-col gap-5">
-        <div className="border-t border-border-muted" aria-hidden="true" />
-        <FaqSectionPills />
-        <div className="border-t border-border-muted" aria-hidden="true" />
-        <div className="flex flex-col gap-10">
-          {groups.map((group, groupIndex) => (
-            <FAQGroupAccordion key={group.id} group={group} groupIndex={groupIndex} />
-          ))}
-        </div>
+    <section className="mx-auto w-full max-w-3xl px-0 pb-4">
+      <div className="flex flex-col gap-10">
+        {groups.map((group, groupIndex) => (
+          <FAQGroupAccordion key={group.id} group={group} groupIndex={groupIndex} />
+        ))}
       </div>
     </section>
   );

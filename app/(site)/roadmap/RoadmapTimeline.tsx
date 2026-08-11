@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTheme } from "next-themes";
-import ShareDropdown from "@/components/ShareDropdown";
+import HeroShareButton from "@/components/HeroShareButton";
 import { parseIsoDateUtc, type RoadmapPeriod } from "@/lib/roadmap";
 import {
   buildRoadmapLayouts,
@@ -84,8 +84,6 @@ function buildSectionGroups(periods: RoadmapPeriodLayout[]): RoadmapSectionGroup
 export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] }) {
   const { resolvedTheme } = useTheme();
   const monochrome = resolvedTheme === "monochrome";
-  const light = resolvedTheme === "light";
-  const flattenedSurfaceMode = monochrome || light;
   const today = toLocalUtcDate(new Date());
   const timelineStart = periodsStart(periods);
   const timelineEnd = periodsLastStart(periods);
@@ -140,46 +138,35 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
 
   return (
     <div className="flex flex-col gap-14 sm:gap-16">
-      <section>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-4xl font-bold leading-tight text-fg-heading sm:text-5xl">
-              Launch Sequence
-            </h1>
-          </div>
-          <ShareDropdown
-            label="Share"
-            message={shareMessage}
-            shareUrl={ROADMAP_SHARE_URL}
-            emailSubject="ZcashNames Roadmap"
-            menuAlign="right"
-            buttonClassName="inline-flex min-h-11 items-center gap-2 rounded-md border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading"
-          />
-        </div>
+      <div
+        className="relative mx-auto w-full max-w-[920px] rounded-2xl border px-6 py-8 text-center sm:px-8 sm:py-10"
+        style={{
+          borderColor: "var(--faq-border)",
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
+        }}
+      >
+        <HeroShareButton
+          message={shareMessage}
+          shareUrl={ROADMAP_SHARE_URL}
+          emailSubject="ZcashNames Roadmap"
+        />
+        <h1
+          className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
+          style={{ color: "var(--fg-heading)" }}
+        >
+          Launch{" "}
+          <span style={{ color: "var(--color-accent-interactive)" }}>Sequence</span>
+        </h1>
 
-        {showCurrentPhaseButton ? (
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={expandCurrentPeriods}
-              className={`inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading ${
-                flattenedSurfaceMode ? "bg-transparent" : "bg-[var(--color-raised)]"
-              }`}
-            >
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-green)]" aria-hidden="true" />
-              Current phase
-            </button>
-          </div>
-        ) : null}
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className={`rounded-lg border border-border-muted p-4 ${flattenedSurfaceMode ? "bg-transparent" : "bg-[var(--color-raised)]"}`}>
+        <div className="mt-8 grid gap-3 text-left sm:mt-9 sm:grid-cols-3">
+          <div className="rounded-2xl border border-border-muted bg-transparent p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Outlook</p>
             <p className="mt-2 text-base font-semibold text-fg-heading">
               {monthFormatter.format(timelineStart)} to {monthFormatter.format(timelineEnd)}
             </p>
           </div>
-          <div className={`rounded-lg border border-border-muted p-4 ${flattenedSurfaceMode ? "bg-transparent" : "bg-[var(--color-raised)]"}`}>
+          <div className="rounded-2xl border border-border-muted bg-transparent p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Current focus</p>
             <button
               type="button"
@@ -195,20 +182,36 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
               {currentPeriod.title}
             </button>
           </div>
-          <div className={`rounded-lg border border-border-muted p-4 ${flattenedSurfaceMode ? "bg-transparent" : "bg-[var(--color-raised)]"}`}>
+          <div className="rounded-2xl border border-border-muted bg-transparent p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Phases</p>
             <p className="mt-2 text-base font-semibold text-fg-heading">
               {completedCount} of {periods.length} complete
             </p>
           </div>
         </div>
-      </section>
+
+        {showCurrentPhaseButton ? (
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={expandCurrentPeriods}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+            >
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-green)]"
+                aria-hidden="true"
+              />
+              Current phase
+            </button>
+          </div>
+        ) : null}
+      </div>
 
       <div className="flex flex-col gap-14 sm:gap-16">
         {sectionGroups.map((group) => (
           <section key={group.title ?? group.periods[0].id} className="flex flex-col gap-5 sm:gap-6">
             {group.title ? (
-              <p className="text-3xl font-bold leading-tight text-fg-heading sm:text-[2rem]">
+              <p className="text-center text-3xl font-bold leading-tight text-fg-heading sm:text-[2rem]">
                 {group.title}
               </p>
             ) : null}
@@ -221,7 +224,6 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
                   expanded={expandedIds.includes(period.id)}
                   onExpand={() => togglePeriod(period.id)}
                   monochrome={monochrome}
-                  light={light}
                 />
               ))}
             </div>
@@ -238,28 +240,17 @@ function ListRoadmapCard({
   onExpand,
   currentMarkerRef,
   monochrome,
-  light,
 }: {
   period: RoadmapPeriodLayout;
   expanded: boolean;
   onExpand: () => void;
   currentMarkerRef?: RefObject<HTMLElement | null>;
   monochrome: boolean;
-  light: boolean;
 }) {
   const panelId = `${period.id}-tasks`;
   const buttonId = `${period.id}-toggle`;
-  const flattenedSurfaceMode = monochrome || light;
   const isHighlighted = period.isCurrent || period.isUpcoming;
   const highlightColor = period.isCurrent ? "var(--color-accent-green)" : "var(--color-accent-yellow)";
-  const highlightBackground = flattenedSurfaceMode
-    ? "transparent"
-    : period.isCurrent
-      ? "color-mix(in srgb, var(--color-card) 92%, var(--color-accent-green-light))"
-      : "color-mix(in srgb, var(--color-card) 90%, var(--color-accent-yellow-light))";
-  const highlightBoxShadow = period.isCurrent
-    ? "0 0 0 1px color-mix(in srgb, var(--color-accent-green) 28%, transparent), 0 18px 40px rgba(0,0,0,0.14)"
-    : "0 0 0 1px color-mix(in srgb, var(--color-accent-yellow) 28%, transparent), 0 18px 40px rgba(0,0,0,0.14)";
   const statusLabel = period.isCurrent ? "Active now" : null;
   const normalizedBadge = period.badgeLabel?.trim().toLowerCase();
   const isCompleteBadge = normalizedBadge === "complete";
@@ -267,12 +258,12 @@ function ListRoadmapCard({
   const isTbaBadge = normalizedBadge === "tba";
   const badgeClassName =
     isCompleteBadge || isApplyBadge
-      ? "border-[color-mix(in_srgb,var(--color-accent-green)_40%,transparent)] bg-[var(--color-accent-green-light)] text-[var(--color-accent-green)]"
+      ? "border-[color-mix(in_srgb,var(--color-accent-green)_40%,transparent)] bg-transparent text-[var(--color-accent-green)]"
       : isTbaBadge
         ? monochrome
-          ? "border-[color-mix(in_srgb,var(--color-accent-green)_40%,transparent)] bg-[var(--color-accent-green-light)] text-[var(--color-accent-green)]"
-          : "border-[color-mix(in_srgb,#dc2626_36%,transparent)] bg-[rgba(220,38,38,0.12)] text-[#dc2626] [[data-theme=monochrome]_&]:border-border-muted [[data-theme=monochrome]_&]:bg-[var(--color-raised)] [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
-        : "border-border-muted bg-[var(--color-raised)] text-fg-heading";
+          ? "border-[color-mix(in_srgb,var(--color-accent-green)_40%,transparent)] bg-transparent text-[var(--color-accent-green)]"
+          : "border-[color-mix(in_srgb,#dc2626_36%,transparent)] bg-transparent text-[#dc2626] [[data-theme=monochrome]_&]:border-border-muted [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
+        : "border-border-muted bg-transparent text-fg-heading";
   const applyBadgeClassName =
     "border-[color-mix(in_srgb,var(--color-accent-green)_40%,transparent)] bg-transparent text-[var(--color-accent-green)]";
   const taskMarkerClassName = isCompleteBadge
@@ -292,15 +283,11 @@ function ListRoadmapCard({
       ref={(node) => {
         if (currentMarkerRef) currentMarkerRef.current = node;
       }}
-      className={`rounded-lg border p-4 transition-colors sm:p-5 ${
-        isHighlighted ? "" : flattenedSurfaceMode ? "border-border-muted bg-transparent" : "border-border-muted bg-[var(--color-card)]"
+      className={`border-0 border-b bg-transparent py-4 transition-colors sm:py-5 ${
+        isHighlighted ? "" : "border-border-muted"
       }`}
       style={{
         borderColor: isHighlighted ? highlightColor : undefined,
-        background: isHighlighted ? highlightBackground : undefined,
-        boxShadow: isHighlighted
-          ? highlightBoxShadow
-          : "0 18px 40px rgba(0,0,0,0.14)",
       }}
     >
       <button
@@ -339,13 +326,10 @@ function ListRoadmapCard({
             ) : null}
             {statusLabel && (
               <span
-                className="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em]"
+                className="inline-flex rounded-full bg-transparent px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em]"
                 style={{
                   color: highlightColor,
                   border: `1px solid color-mix(in srgb, ${highlightColor} 40%, transparent)`,
-                  background: period.isCurrent
-                    ? "var(--color-accent-green-light)"
-                    : "var(--color-accent-yellow-light)",
                 }}
               >
                 <span aria-hidden="true">→</span>
@@ -355,28 +339,19 @@ function ListRoadmapCard({
           </div>
           <p className="mt-3 text-sm leading-6 text-fg-body sm:text-base">{period.summary}</p>
           <div className="mt-4 flex flex-wrap gap-2 text-sm text-fg-body">
-            <span className="inline-flex rounded-full border border-border-muted px-3 py-1.5 font-semibold">
+            <span className="inline-flex rounded-full border border-border-muted bg-transparent px-3 py-1.5 font-semibold">
               {formatRange(period.startDate, period.endDate)}
             </span>
-            <span
-              className={`inline-flex rounded-full border border-border-muted px-3 py-1.5 font-semibold ${
-                flattenedSurfaceMode ? "bg-transparent" : "bg-[var(--color-raised)]"
-              }`}
-            >
+            <span className="inline-flex rounded-full border border-border-muted bg-transparent px-3 py-1.5 font-semibold">
               {period.tasks.length} tasks
             </span>
           </div>
         </div>
         <span
-          className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border-muted text-lg font-black text-fg-heading ${
-            flattenedSurfaceMode ? "bg-transparent" : "bg-[var(--color-raised)]"
-          } transition-colors duration-200 ease-out`}
-          style={{
-            boxShadow: "none",
-          }}
+          className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl font-bold leading-none text-fg-heading transition-colors duration-200 ease-out hover:text-[var(--color-accent-interactive)]"
           aria-hidden="true"
         >
-          {expanded ? "-" : "+"}
+          {expanded ? "−" : "+"}
         </span>
       </button>
 
@@ -399,7 +374,7 @@ function ListRoadmapCard({
               {period.tasks.map((task) => (
                 <li
                   key={task}
-                  className="flex items-start gap-3 rounded-2xl border border-border-muted bg-transparent px-3 py-3 text-sm leading-6 text-fg-body"
+                  className="flex items-start gap-3 bg-transparent py-1 text-sm leading-6 text-fg-body"
                 >
                   <span className={taskMarkerClassName} aria-hidden="true" />
                   <span>{task}</span>

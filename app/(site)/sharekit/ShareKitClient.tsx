@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import HeroShareButton from "@/components/HeroShareButton";
 import ReferralCodeRecovery from "@/components/ReferralCodeRecovery";
 import { useCopy } from "@/components/hooks/useCopy";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
@@ -143,77 +144,100 @@ export default function ShareKitClient({
 
   return (
     <>
-      <div className="flex max-w-3xl flex-col gap-4">
-        <p className="type-section-title text-fg-body">
-          Ready-made posts
-        </p>
-      </div>
+      <div
+        className="relative mx-auto w-full max-w-[920px] rounded-2xl border px-6 py-8 text-center sm:px-8 sm:py-10"
+        style={{
+          borderColor: "var(--faq-border)",
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
+        }}
+      >
+        <HeroShareButton
+          message="Share ready-made Zcash Names posts with your referral link:"
+          shareUrl="https://www.zcashnames.com/sharekit"
+          emailSubject="Zcash Names Share Kit"
+        />
+        <h1
+          className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
+          style={{ color: "var(--fg-heading)" }}
+        >
+          Ready-made{" "}
+          <span style={{ color: "var(--color-accent-interactive)" }}>posts</span>
+        </h1>
 
-      <section className="w-full max-w-[36rem]">
-        <form onSubmit={applyReferralCode} className="flex flex-col gap-3">
-          <label htmlFor="sharekit-referral-input" className="text-sm font-semibold text-fg-heading">
-            {referralCode && referralName
-              ? `Posts will be populated with ${referralName}'s referral link`
-              : "Populate posts with your referral link:"}
-          </label>
-          <div className="relative flex w-full items-center">
-            <input
-              id="sharekit-referral-input"
-              type="text"
-              value={input}
-              onChange={(event) => {
-                setInput(event.target.value);
-                setError("");
-              }}
-              placeholder="zcashnames.com/?ref=your-code"
-              className={`w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
-                resolvedTheme === "light" ? "bg-[var(--color-card)]" : "bg-transparent"
-              } ${hasInput ? "pr-[9.5rem]" : "pr-[5.5rem]"}`}
-            />
-            <span
-              className="absolute flex items-center gap-1.5"
-              style={{
-                top: ACTION_INSET_PX,
-                right: ACTION_INSET_PX,
-                bottom: ACTION_INSET_PX,
-              }}
+        <div className="mx-auto mt-8 w-full max-w-[36rem] text-left sm:mt-9">
+          <form onSubmit={applyReferralCode} className="flex flex-col gap-3">
+            <label
+              htmlFor="sharekit-referral-input"
+              className="text-center text-base font-semibold"
+              style={{ color: "var(--fg-heading)" }}
             >
-              {hasInput ? (
-                <button
-                  type="button"
-                  onClick={clearReferralCode}
-                  className="inline-flex h-[calc(100%-2px)] items-center justify-center rounded-[13px] px-3 text-sm font-semibold leading-none text-fg-muted transition-colors hover:text-fg-heading"
-                >
-                  Clear
-                </button>
-              ) : null}
-              <button
-                type="submit"
-                disabled={!submitReady}
-                className="inline-flex h-[calc(100%-2px)] shrink-0 items-center justify-center rounded-[13px] px-4 text-sm font-semibold leading-none transition"
+              {referralCode && referralName
+                ? `Posts will be populated with ${referralName}'s referral link`
+                : "Populate the drafts below with your referral link:"}
+            </label>
+            <div className="relative flex w-full items-center">
+              <input
+                id="sharekit-referral-input"
+                type="text"
+                value={input}
+                onChange={(event) => {
+                  setInput(event.target.value);
+                  setError("");
+                }}
+                placeholder="zcashnames.com/?ref=your-code"
+                className={`w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted focus:border-fg-muted ${
+                  resolvedTheme === "light" ? "bg-[var(--color-card)]" : "bg-[var(--input-fill)]"
+                } ${hasInput ? "pr-[9.5rem]" : "pr-[5.5rem]"}`}
+              />
+              <span
+                className="absolute flex items-center gap-1.5"
                 style={{
-                  background: submitReady
-                    ? "var(--home-result-primary-bg)"
-                    : "color-mix(in srgb, var(--leaders-card-border, var(--border-muted)) 22%, transparent)",
-                  color: submitReady
-                    ? "var(--home-result-primary-fg)"
-                    : "var(--fg-muted)",
-                  boxShadow: submitReady ? "var(--home-result-primary-shadow)" : "none",
-                  cursor: submitting ? "progress" : submitReady ? "pointer" : "not-allowed",
-                  opacity: submitting ? 0.7 : 1,
+                  top: ACTION_INSET_PX,
+                  right: ACTION_INSET_PX,
+                  bottom: ACTION_INSET_PX,
                 }}
               >
-                {submitting ? <AnimatedLoadingLabel label="Checking" active /> : "Apply"}
-              </button>
-            </span>
-          </div>
-          <ReferralCodeRecovery variant="sharekit" controlsId="sharekit-forgot-code" />
-          {error && <p className="text-sm text-fg-muted">{error}</p>}
-        </form>
-      </section>
+                {hasInput ? (
+                  <button
+                    type="button"
+                    onClick={clearReferralCode}
+                    className="inline-flex h-[calc(100%-2px)] items-center justify-center rounded-[13px] px-3 text-sm font-semibold leading-none text-fg-muted transition-colors hover:text-fg-heading"
+                  >
+                    Clear
+                  </button>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={!submitReady}
+                  className="inline-flex h-[calc(100%-2px)] shrink-0 items-center justify-center rounded-[13px] px-4 text-sm font-semibold leading-none transition"
+                  style={{
+                    background: submitReady
+                      ? "var(--home-result-primary-bg)"
+                      : "color-mix(in srgb, var(--leaders-card-border, var(--border-muted)) 22%, transparent)",
+                    color: submitReady
+                      ? "var(--home-result-primary-fg)"
+                      : "var(--fg-muted)",
+                    boxShadow: submitReady ? "var(--home-result-primary-shadow)" : "none",
+                    cursor: submitting ? "progress" : submitReady ? "pointer" : "not-allowed",
+                    opacity: submitting ? 0.7 : 1,
+                  }}
+                >
+                  {submitting ? <AnimatedLoadingLabel label="Checking" active /> : "Apply"}
+                </button>
+              </span>
+            </div>
+            <ReferralCodeRecovery variant="sharekit" controlsId="sharekit-forgot-code" />
+            {error ? (
+              <p className="text-sm" style={{ color: "var(--fg-muted)" }}>
+                {error}
+              </p>
+            ) : null}
+          </form>
+        </div>
+      </div>
 
       <section className="flex flex-col gap-5">
-        <div className="border-t border-border-muted" aria-hidden="true" />
         <SectionPills sections={sections} />
         <div className="border-t border-border-muted" aria-hidden="true" />
         <div className="flex flex-col gap-10">
@@ -226,7 +250,6 @@ export default function ShareKitClient({
                 aria-labelledby={`${section.id}-title`}
               >
                 <div className="max-w-3xl">
-                  <br />
                   <h3 id={`${section.id}-title`} className="text-2xl font-bold text-fg-heading">
                     {section.title}
                   </h3>

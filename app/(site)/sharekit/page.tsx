@@ -68,7 +68,7 @@ export default async function ShareKitPage({
   return (
     <main className="w-full">
       <SiteRouteTitle title="Share Kit" />
-      <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
+      <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 sm:pt-14 lg:px-8">
         <ShareKitClient
           sections={sections}
           initialReferralCode={initialReferralCode}
