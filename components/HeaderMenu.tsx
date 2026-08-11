@@ -21,9 +21,9 @@ const HEADER_MENU_LINKS: MenuLink[] = [
     children: [
       { label: "Join Waitlist", href: "/waitlist#waitlist-name-entry" },
       { label: "View Waitlist", href: "/waitlist/view" },
-      { label: "Reserve Position", href: "/reserve" },
-      { label: "Referral Leaderboard", href: "/leaders" },
-      { label: "Referral Dashboard", href: "/leaders/ref" },
+      { label: "Reserve Your Position", href: "/reserve" },
+      { label: "Your Referral Dashboard", href: "/leaders/ref" },
+      { label: "View Referral Leaderboard", href: "/leaders" },
     ],
   },
   {
