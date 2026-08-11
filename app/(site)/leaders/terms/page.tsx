@@ -2,6 +2,8 @@
 // Content is defined inline (no external data fetch). Links back to /leaders.
 import type { Metadata } from "next";
 import Link from "next/link";
+import HeroShareButton from "@/components/HeroShareButton";
+import SiteRouteTitle from "@/components/SiteRouteTitle";
 
 export const metadata: Metadata = {
   title: "Leaderboard Terms | Zcash Names",
@@ -63,34 +65,68 @@ const terms = [
 
 export default function ReferralTermsPage() {
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-4 sm:px-6">
-      <section
-        className="rounded-2xl border p-5 sm:p-6"
-        style={{ background: "var(--leaders-card-bg)", borderColor: "var(--leaders-card-border)" }}
-      >
-        <p className="text-sm font-semibold uppercase tracking-wide text-fg-muted">
-          Zcash Names
-        </p>
-        <p className="mt-1 text-sm font-semibold text-fg-heading">Referral Rewards and Early Access</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-fg-heading">Terms and Conditions</h1>
-        <p className="mt-4 max-w-2xl text-sm leading-6 text-fg-muted">
-          These terms apply to Zcash Names referral rewards and early access waitlist. They are intended to
-          support fair distribution of access and rewards.
-        </p>
-
-        <div className="mt-8 space-y-6">
-          {terms.map((term) => (
-            <section key={term.title}>
-              <h2 className="text-lg font-semibold text-fg-heading">{term.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-fg-muted">{term.body}</p>
-            </section>
-          ))}
+    <main className="w-full">
+      <SiteRouteTitle title="Leaderboard" href="/leaders" />
+      <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 sm:pt-14 lg:px-8">
+        <div
+          className="relative mx-auto w-full max-w-[920px] rounded-2xl border px-6 py-8 text-center sm:px-8 sm:py-10"
+          style={{
+            borderColor: "var(--faq-border)",
+            background:
+              "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
+          }}
+        >
+          <HeroShareButton
+            message="Terms for Zcash Names referral rewards and early access waitlist participation:"
+            shareUrl="https://www.zcashnames.com/leaders/terms"
+            emailSubject="Zcash Names Leaderboard Terms"
+          />
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.14em]"
+            style={{ color: "var(--fg-muted)" }}
+          >
+            Referral Rewards and Early Access
+          </p>
+          <h1
+            className="mt-3 text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
+            style={{ color: "var(--fg-heading)" }}
+          >
+            Terms and{" "}
+            <span style={{ color: "var(--color-accent-interactive)" }}>Conditions</span>
+          </h1>
+          <p
+            className="mx-auto mt-4 max-w-2xl text-lg leading-8"
+            style={{ color: "var(--fg-body)" }}
+          >
+            These terms are intended to support fair distribution of access and rewards.
+          </p>
         </div>
 
-        <div className="mt-8 border-t pt-5" style={{ borderColor: "var(--leaders-card-border)" }}>
-          <Link href="/leaders" className="text-sm font-semibold text-fg-heading underline-offset-2 hover:underline">
-            Back to leaderboard
-          </Link>
+        <div className="mx-auto w-full max-w-[920px]">
+          <div className="flex flex-col gap-8">
+            {terms.map((term) => (
+              <section key={term.title}>
+                <h2
+                  className="text-xl font-semibold tracking-tight sm:text-[1.35rem]"
+                  style={{ color: "var(--fg-heading)" }}
+                >
+                  {term.title}
+                </h2>
+                <p className="mt-2 text-base leading-8" style={{ color: "var(--fg-body)" }}>
+                  {term.body}
+                </p>
+              </section>
+            ))}
+          </div>
+
+          <div className="mt-10 border-t border-border-muted pt-6">
+            <Link
+              href="/leaders"
+              className="text-sm font-semibold text-fg-heading underline-offset-2 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline"
+            >
+              Back to leaderboard
+            </Link>
+          </div>
         </div>
       </section>
     </main>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTheme } from "next-themes";
+import HeroShareButton from "@/components/HeroShareButton";
 import {
   ActionDropdown,
   DownloadTriggerIcon,
@@ -113,20 +114,63 @@ function formatCommunityCardHref(href: string) {
 export default function CommunityPageClient() {
   return (
     <main className="w-full">
-      <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-16 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
-        <div className="flex max-w-3xl flex-col gap-4">
-          <h1 className="text-4xl font-bold leading-tight text-fg-heading sm:text-5xl">
-            Join the movement
-          </h1>
-          <p className="type-section-subtitle text-fg-body">
-            Find community pages, partner resources, and ways to help Zcash Names reach more Zcash users.
-          </p>
-        </div>
+      <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 sm:pt-14 lg:px-8">
+        {/*
+          Same join as /faq + /brandkit: open-bottom hero, fully rounded jump card,
+          vertical side rails bridging the short gap between them.
+        */}
+        <div className="w-full">
+          <div
+            className="relative w-full rounded-t-2xl border border-b-0 px-6 py-8 text-center sm:px-8 sm:py-10"
+            style={{
+              borderColor: "var(--faq-border)",
+              background:
+                "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
+            }}
+          >
+            <HeroShareButton
+              message="Join the Zcash Names community — partner resources, beta testing, and ways to help more Zcash users find their name:"
+              shareUrl="https://www.zcashnames.com/community"
+              emailSubject="Zcash Names Community"
+            />
+            <h1
+              className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
+              style={{ color: "var(--fg-heading)" }}
+            >
+              Join the{" "}
+              <span style={{ color: "var(--color-accent-interactive)" }}>movement</span>
+            </h1>
+            <p
+              className="mx-auto mt-4 max-w-2xl text-lg leading-8"
+              style={{ color: "var(--fg-body)" }}
+            >
+              Find community pages, partner resources, and ways to help Zcash Names reach more Zcash
+              users.
+            </p>
+          </div>
 
-        <div className="flex flex-col gap-5">
-          <div className="border-t border-border-muted" aria-hidden="true" />
-          <SectionPills />
-          <div className="border-t border-border-muted" aria-hidden="true" />
+          <div className="relative">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-0 top-[-1rem] z-10 block h-8 w-px"
+              style={{ background: "var(--faq-border)" }}
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-[calc(100%-1px)] top-[-1rem] z-10 block h-8 w-px"
+              style={{ background: "var(--faq-border)" }}
+            />
+            <div
+              className="rounded-2xl border px-5 py-5 sm:px-6 sm:py-6"
+              style={{
+                borderColor: "var(--faq-border)",
+                background:
+                  "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 76%, transparent), color-mix(in srgb, var(--faq-border) 10%, transparent))",
+              }}
+            >
+              <SectionPills />
+            </div>
+          </div>
         </div>
 
         {COMMUNITY_SECTIONS.map((section) => (
@@ -139,9 +183,9 @@ export default function CommunityPageClient() {
 
 function SectionPills() {
   return (
-    <nav className="flex flex-col gap-3" aria-label="Community sections">
+    <nav className="flex flex-col items-center gap-3 text-center" aria-label="Community sections">
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Jump to section</p>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap justify-center gap-2">
         {COMMUNITY_SECTIONS.map((section) => (
           <a
             key={section.slug}

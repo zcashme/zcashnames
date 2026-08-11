@@ -68,8 +68,9 @@ export default async function CareerJobPage(
       <SiteRouteTitle title="Careers" href="/careers" />
       {/*
         Single column: Application URL under the job body.
-        Larger gap above the Application URL box; tight bottom padding so the
-        Careers/Top/Sitemap straddle sits closer to the box bottom border.
+        Symmetric vertical margin centers the box between the last description
+        block and the Careers/Top/Sitemap straddle (footer top margin is 0 on
+        this route so spacing is owned here).
       */}
       <section className="mx-auto flex w-full max-w-[1320px] flex-col px-4 pb-0 pt-10 sm:px-6 lg:px-8">
         <article className="min-w-0">
@@ -116,8 +117,12 @@ export default async function CareerJobPage(
           </div>
         </article>
 
+        {/*
+          Extra bottom margin offsets the straddle controls (-translate-y-1/2)
+          so the visual gap above the box matches the gap to the button tops.
+        */}
         <aside
-          className="mt-20 h-fit rounded-2xl border p-6 sm:mt-24"
+          className="mt-14 mb-[4.75rem] h-fit rounded-2xl border p-6 sm:mt-16 sm:mb-[5.25rem]"
           style={{
             background:
               "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 78%, transparent), color-mix(in srgb, var(--faq-border) 18%, transparent))",

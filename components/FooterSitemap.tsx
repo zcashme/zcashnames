@@ -57,7 +57,8 @@ export default function FooterSitemap() {
   // Career job + apply pages: show Careers straddle control (and keep Top available).
   const showCareersBack =
     /^\/careers\/[^/]+(?:\/apply)?\/?$/.test(pathname) && pathname !== "/careers";
-  // Job detail only (not /apply): tighter gap under Application URL → straddle.
+  // Job detail only (not /apply): spacing above/below Application URL is owned
+  // by the page (symmetric margins), so footer top margin collapses to 0.
   const isCareerJobPage =
     /^\/careers\/[^/]+\/?$/.test(pathname) && pathname !== "/careers";
 
@@ -125,12 +126,12 @@ export default function FooterSitemap() {
   ) : null;
 
   return (
-    // mt: body → Top/Sitemap (tighter on career job pages under Application URL).
+    // mt: body → Top/Sitemap (0 on career job pages; Application URL owns gaps).
     // pb: button bottom → brand bar (clears straddle half-height + stack gap).
     <div
       className={
         isCareerJobPage
-          ? "mt-8 pb-12 sm:mt-10 sm:pb-14"
+          ? "mt-0 pb-12 sm:pb-14"
           : "mt-14 pb-12 sm:mt-16 sm:pb-14"
       }
     >
