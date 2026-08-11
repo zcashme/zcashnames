@@ -52,7 +52,7 @@ export default function FaqPage() {
               emailSubject="Zcash Names FAQ"
             />
             <h1
-              className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
+              className="mx-auto max-w-[calc(100%-3.25rem)] text-balance text-4xl font-black tracking-[-0.05em] sm:max-w-[calc(100%-3.75rem)] sm:text-5xl md:text-6xl"
               style={{ color: "var(--fg-heading)" }}
             >
               Frequently asked{" "}

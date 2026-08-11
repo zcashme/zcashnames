@@ -48,7 +48,7 @@ function Dropdown({
         onClick={() => setOpen((current) => !current)}
         className={
           iconOnly
-            ? "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition hover:opacity-80"
+            ? "zns-hover-accent inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition"
             : "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border py-2 pl-3 pr-2.5 text-[0.78rem] font-semibold transition-colors whitespace-nowrap"
         }
         style={{
@@ -99,7 +99,7 @@ function Dropdown({
               onChange(option.value);
               setOpen(false);
             }}
-            className="flex w-full cursor-pointer items-center px-4 py-2 text-[0.78rem] font-semibold transition-colors whitespace-nowrap"
+            className="zns-menu-hover flex w-full cursor-pointer items-center px-4 py-2 text-[0.78rem] font-semibold transition-colors whitespace-nowrap"
             style={{
               color: value === option.value ? "var(--fg-heading)" : "var(--fg-muted)",
               background:

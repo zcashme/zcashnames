@@ -3618,6 +3618,90 @@ body.app-shell-standalone {
   min-width: 0;
 }
 
+.zns-hover-accent {
+  transition:
+    color 180ms ease,
+    opacity 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.zns-hover-accent:hover,
+.zns-hover-accent:focus-visible {
+  color: var(--color-accent-interactive);
+}
+
+.zns-menu-hover {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.zns-menu-hover:hover,
+.zns-menu-hover:focus-visible {
+  background: var(
+    --zns-menu-hover-fill,
+    color-mix(in srgb, var(--color-accent-interactive) 14%, transparent)
+  );
+  color: var(--color-accent-interactive);
+}
+
+.zns-modal-close {
+  color: var(--fg-muted);
+  transition:
+    color 180ms ease,
+    opacity 180ms ease,
+    background-color 180ms ease;
+}
+
+.zns-modal-close:hover,
+.zns-modal-close:focus-visible {
+  color: var(--color-accent-interactive);
+}
+
+.zns-themed-select {
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 1rem) calc(50% - 0.13rem),
+    calc(100% - 0.68rem) calc(50% - 0.13rem);
+  background-repeat: no-repeat;
+  background-size: 0.42rem 0.42rem;
+}
+
+.zns-themed-select::-ms-expand {
+  display: none;
+}
+
+.zns-themed-select option,
+.zns-themed-select optgroup {
+  background: var(--feature-card-bg, var(--color-raised));
+  color: var(--fg-heading);
+}
+
+.zns-themed-select option:checked,
+.zns-themed-select option:hover,
+.zns-themed-select option:focus {
+  background: color-mix(
+    in srgb,
+    var(--color-accent-interactive) 16%,
+    var(--feature-card-bg, var(--color-raised))
+  );
+  color: var(--fg-heading);
+}
+
+[data-theme="light"] .zns-themed-select {
+  color-scheme: light;
+}
+
+[data-theme="dark"] .zns-themed-select,
+[data-theme="monochrome"] .zns-themed-select {
+  color-scheme: dark;
+}
+
 .influencer-progress-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

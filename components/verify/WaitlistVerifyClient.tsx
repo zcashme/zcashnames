@@ -367,8 +367,7 @@ function VerifyInfoModal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:opacity-80"
-          style={{ color: "var(--fg-muted)" }}
+          className="zns-modal-close absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full"
           aria-label="Close reserved name popup"
         >
           <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -662,9 +661,9 @@ function VerifyCardActionMenu({
         menuDirection="down"
         showTriggerIcon={false}
         triggerAriaLabel="Card actions"
-        buttonClassName="inline-flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2"
+        buttonClassName="inline-flex h-10 w-10 items-center justify-center rounded-full text-fg-muted transition-colors duration-200 hover:text-[var(--color-accent-interactive)] focus-visible:outline-none focus-visible:ring-2"
         renderTriggerContent={() => (
-          <span style={{ color: "var(--fg-muted)" }}>
+          <span className="text-current">
             <EllipsisIcon />
           </span>
         )}
@@ -1029,6 +1028,140 @@ function relationshipLabel(value: ProtectedRequestRelationship | null): string {
   );
 }
 
+type InlineDropdownOption = {
+  value: string;
+  label: string;
+};
+
+function ChevronDownIcon({
+  className = "h-4 w-4",
+  open = false,
+}: {
+  className?: string;
+  open?: boolean;
+}) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      className={`${className} transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+      aria-hidden="true"
+    >
+      <path
+        d="M4 6l4 4 4-4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function InlineDropdown({
+  value,
+  options,
+  onChange,
+  placeholder,
+  fullWidth = false,
+  minWidthPx,
+}: {
+  value: string;
+  options: InlineDropdownOption[];
+  onChange: (next: string) => void;
+  placeholder: string;
+  fullWidth?: boolean;
+  minWidthPx?: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const activeLabel = options.find((option) => option.value === value)?.label ?? placeholder;
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div
+      ref={rootRef}
+      className={fullWidth ? "relative w-full" : "relative shrink-0"}
+      style={fullWidth ? undefined : { minWidth: minWidthPx }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex min-h-[46px] w-full items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold outline-none transition-[border-color,box-shadow,color]"
+        style={{
+          background: "var(--verify-input-fill)",
+          border: "1.5px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
+          color: "var(--fg-heading)",
+        }}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="truncate">{activeLabel}</span>
+        <span className="pointer-events-none shrink-0 text-fg-muted" aria-hidden="true">
+          <ChevronDownIcon open={open} />
+        </span>
+      </button>
+      {open ? (
+        <div
+          role="listbox"
+          className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-20 overflow-hidden rounded-2xl border p-1.5 shadow-2xl"
+          style={{
+            background: "var(--color-raised)",
+            borderColor: "var(--border-muted)",
+          }}
+        >
+          {options.map((option) => {
+            const selected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className="zns-menu-hover flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-colors"
+                style={{
+                  color: selected ? "var(--color-accent-interactive)" : "var(--fg-body)",
+                  background: selected
+                    ? "color-mix(in srgb, var(--color-accent-interactive) 14%, transparent)"
+                    : "transparent",
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function formatProtectedRequestTimestamp(value: string | null): string {
   if (!value) {
     return "Not available";
@@ -1268,6 +1401,101 @@ function HeroCountdownCard({
     );
   }
 
+function StepsChevronIcon({ className, pointingUp }: { className?: string; pointingUp?: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden="true">
+      <path
+        d={pointingUp ? "M4 10l4-4 4 4" : "M4 6l4 4 4-4"}
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Reserve hero: title + collapsible steps. When steps hide, the card height
+ * shrinks with them; the title/share and Show/Hide control stay, split by the HR.
+ */
+function ReserveClaimHero({
+  shareMessage,
+  shareUrl,
+  emailSubject,
+}: {
+  shareMessage: string;
+  shareUrl: string;
+  emailSubject: string;
+}) {
+  const [stepsOpen, setStepsOpen] = useState(true);
+
+  return (
+    <div
+      className={`relative w-full rounded-2xl border px-6 text-center transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-8 ${
+        stepsOpen ? "pt-8 pb-10 sm:pt-10 sm:pb-10" : "pt-8 pb-5 sm:pt-10 sm:pb-6"
+      }`}
+      style={{
+        borderColor: "var(--faq-border)",
+        background:
+          "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
+      }}
+    >
+      <HeroShareButton
+        message={shareMessage}
+        shareUrl={shareUrl}
+        emailSubject={emailSubject}
+      />
+      <h1
+        className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
+        style={{ color: "var(--hero-headline-primary)" }}
+      >
+        Get ready to
+        <br />
+        <span style={{ color: "var(--color-accent-interactive)" }}>claim your name!</span>
+      </h1>
+
+      <div
+        className="mt-8 border-t sm:mt-10"
+        style={{ borderColor: "var(--faq-border)" }}
+      >
+        {/*
+          Grid 0fr/1fr collapse so steps + outer hero height animate together.
+        */}
+        <div
+          className="grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+          style={{ gridTemplateRows: stepsOpen ? "1fr" : "0fr" }}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div
+              className={`pt-8 transition-opacity duration-300 sm:pt-10 ${
+                stepsOpen ? "opacity-100 delay-75" : "opacity-0"
+              }`}
+            >
+              <HeroHowReservationsWork />
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setStepsOpen((open) => !open)}
+          aria-expanded={stepsOpen}
+          className={`inline-flex items-center gap-2 text-sm font-semibold text-fg-heading transition-colors duration-200 hover:text-[var(--color-accent-interactive)] ${
+            stepsOpen ? "mt-6 sm:mt-8" : "mt-5 sm:mt-6"
+          }`}
+        >
+          <span>{stepsOpen ? "Hide steps" : "Show steps"}</span>
+          <StepsChevronIcon
+            className="h-3.5 w-3.5"
+            pointingUp={stepsOpen}
+          />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Three-step row matching landing "Get yours", with step-1 title strike/check animation. */
 export function HeroHowReservationsWork() {
   const [firstStepTitleStruck, setFirstStepTitleStruck] = useState(false);
@@ -1323,7 +1551,7 @@ export function HeroHowReservationsWork() {
   ];
 
   return (
-    <div className="grid w-full grid-cols-1 gap-0 lg:grid-cols-3">
+    <div className="grid w-full grid-cols-1 gap-0 lg:grid-cols-3 lg:items-start">
       {steps.map((item, index) => {
         const showChevron = index < steps.length - 1;
         const isFirst = index === 0;
@@ -1337,15 +1565,15 @@ export function HeroHowReservationsWork() {
           >
             <div className="px-1 pt-1 lg:px-5">
               {/*
-                Stacked: title is page-centered; badge hangs to the left of the title
-                so icon+title are not centered as a single unit.
-                lg: normal left-aligned flex row with gap.
-                Description uses lg:pl-11 (= badge w-8 + gap-3) so it lines up with the title.
+                Stacked: title centered; badge hangs left of title.
+                Side-by-side (lg): badge + title share one row with items-start so
+                all three badges align to the same top edge and the first title line.
+                Description uses lg:pl-11 (= badge w-8 + gap-3) under the title text.
               */}
               <div className="mb-2 text-center lg:text-left">
-                <div className="relative inline-flex items-center gap-3">
+                <div className="relative inline-flex items-start gap-3 lg:flex lg:w-full">
                   <span
-                    className="absolute right-full top-1/2 z-[1] mr-3 inline-flex h-8 w-8 shrink-0 -translate-y-1/2 rounded-full text-sm font-semibold lg:static lg:right-auto lg:top-auto lg:mr-0 lg:translate-y-0"
+                    className="absolute right-full top-0 z-[1] mr-3 inline-flex h-8 w-8 shrink-0 rounded-full text-sm font-semibold lg:static lg:right-auto lg:top-auto lg:mr-0"
                     style={{
                       background: "var(--color-accent-interactive-soft)",
                       color: "var(--color-accent-interactive)",
@@ -1385,7 +1613,7 @@ export function HeroHowReservationsWork() {
                       </span>
                     </span>
                   </span>
-                  <h3 className="type-section-subtitle font-semibold text-[var(--fg-heading)]">
+                  <h3 className="type-section-subtitle min-w-0 flex-1 font-semibold leading-8 text-[var(--fg-heading)]">
                     {isFirst ? (
                       <span className="relative inline-block">
                         <span>{item.title}</span>
@@ -1518,41 +1746,59 @@ function SummaryStrip({
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center justify-center gap-2">
-          {[
-            {
-              key: "all" as const,
-              label: `All (${totalCount})`,
-              borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
-            },
-            {
-              key: "pending" as const,
-              label: `Pending (${pendingCount})`,
-              borderColor: "color-mix(in srgb, var(--color-accent-interactive) 32%, var(--faq-border))",
-            },
-            {
-              key: "protected" as const,
-              label: `Protected (${protectedCount})`,
-              borderColor: "color-mix(in srgb, var(--accent-red, #e05252) 38%, var(--faq-border))",
-            },
-            {
-              key: "reserved" as const,
-              label: `Reserved (${reservedCount})`,
-              borderColor: "color-mix(in srgb, var(--color-accent-green) 44%, var(--faq-border))",
-            },
-          ].map((option) => {
+          {(
+            [
+              {
+                key: "all" as const,
+                label: `All (${totalCount})`,
+                borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
+                inactiveBorderClass:
+                  "border-[color-mix(in_srgb,var(--faq-border)_84%,transparent)]",
+              },
+              {
+                key: "pending" as const,
+                label: `Pending (${pendingCount})`,
+                borderColor: "color-mix(in srgb, var(--color-accent-interactive) 32%, var(--faq-border))",
+                inactiveBorderClass:
+                  "border-[color-mix(in_srgb,var(--color-accent-interactive)_32%,var(--faq-border))]",
+              },
+              {
+                key: "protected" as const,
+                label: `Protected (${protectedCount})`,
+                borderColor: "color-mix(in srgb, var(--accent-red, #e05252) 38%, var(--faq-border))",
+                inactiveBorderClass:
+                  "border-[color-mix(in_srgb,var(--accent-red,#e05252)_38%,var(--faq-border))]",
+              },
+              {
+                key: "reserved" as const,
+                label: `Reserved (${reservedCount})`,
+                borderColor: "color-mix(in srgb, var(--color-accent-green) 44%, var(--faq-border))",
+                inactiveBorderClass:
+                  "border-[color-mix(in_srgb,var(--color-accent-green)_44%,var(--faq-border))]",
+              },
+            ] as const
+          ).map((option) => {
             const active = activeFilter === option.key;
             return (
               <button
                 key={option.key}
                 type="button"
                 onClick={() => onFilterChange(option.key)}
-                className="inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold transition-opacity hover:opacity-85"
-                style={{
-                  background: active ? "var(--home-result-primary-bg)" : "transparent",
-                  color: active ? "var(--home-result-primary-fg)" : "var(--fg-body)",
-                  border: `1.5px solid ${option.borderColor}`,
-                  boxShadow: active ? "var(--home-result-primary-shadow)" : "none",
-                }}
+                className={
+                  active
+                    ? "inline-flex h-10 items-center justify-center rounded-full border-[1.5px] px-4 text-sm font-semibold"
+                    : `inline-flex h-10 items-center justify-center rounded-full border-[1.5px] bg-transparent px-4 text-sm font-semibold text-fg-body transition-colors duration-200 ${option.inactiveBorderClass} hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]`
+                }
+                style={
+                  active
+                    ? {
+                        background: "var(--home-result-primary-bg)",
+                        color: "var(--home-result-primary-fg)",
+                        borderColor: option.borderColor,
+                        boxShadow: "var(--home-result-primary-shadow)",
+                      }
+                    : undefined
+                }
               >
                 {option.label}
               </button>
@@ -1561,13 +1807,7 @@ function SummaryStrip({
           <button
             type="button"
             onClick={onAddMoreNames}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-85"
-            style={{
-              background: "transparent",
-              color: "var(--fg-body)",
-              border: "1.5px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
-              boxShadow: "none",
-            }}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--faq-border)_84%,transparent)] bg-transparent text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             aria-label="Add more names"
             title="Add more names"
           >
@@ -1595,18 +1835,11 @@ function ReservationMetaBox({
   onClick?: (() => void) | null;
 }) {
   const content = (
-    <div
-      className="relative min-w-0 rounded-[18px] border px-4 py-2.5 text-center transition hover:opacity-85"
-      style={{
-        borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
-        background: "transparent",
-      }}
-    >
+    <div className="group relative min-w-0 rounded-2xl border border-[color-mix(in_srgb,var(--faq-border)_84%,transparent)] bg-transparent px-4 py-2.5 text-center transition-colors duration-200 hover:border-[var(--color-accent-interactive)]">
       {href || onClick ? (
         <span
           aria-hidden="true"
-          className="absolute right-3 top-3"
-          style={{ color: "var(--fg-muted)" }}
+          className="absolute right-3 top-3 text-fg-muted transition-colors duration-200 group-hover:text-[var(--color-accent-interactive)]"
         >
           {onClick ? (
             <InfoIcon />
@@ -1671,7 +1904,7 @@ function ExactAmountCallout({
 }) {
   return (
     <div
-      className="rounded-[22px] border px-4 py-4 text-left sm:px-5"
+      className="rounded-2xl border px-4 py-4 text-left sm:px-5"
       style={{
         borderColor: "color-mix(in srgb, var(--color-brand-blue) 18%, var(--faq-border))",
         background: "var(--verify-accent-panel-fill)",
@@ -1705,12 +1938,7 @@ function SummaryModalActionRow({
   }
 
   const actionButtonClassName =
-    "flex h-16 w-full items-center justify-between rounded-[1.15rem] border px-4 py-4 text-left transition hover:opacity-85";
-  const actionButtonStyle = {
-    borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
-    background: "var(--verify-panel-soft-fill)",
-    color: "var(--fg-heading)",
-  } satisfies React.CSSProperties;
+    "group flex h-16 w-full items-center justify-between rounded-[1.15rem] border border-[color-mix(in_srgb,var(--faq-border)_84%,transparent)] bg-[var(--verify-panel-soft-fill)] px-4 py-4 text-left text-fg-heading transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]";
 
   return (
     <div className="mx-auto grid w-full max-w-sm gap-3">
@@ -1718,10 +1946,14 @@ function SummaryModalActionRow({
         const content = (
           <>
             <span className="flex min-w-0 items-center gap-3">
-              {action.icon ? <span style={{ color: "var(--fg-muted)" }}>{action.icon}</span> : null}
+              {action.icon ? (
+                <span className="text-fg-muted transition-colors duration-200 group-hover:text-[var(--color-accent-interactive)]">
+                  {action.icon}
+                </span>
+              ) : null}
               <span className="text-base font-semibold sm:text-lg">{action.label}</span>
             </span>
-            <span style={{ color: "var(--fg-muted)" }}>
+            <span className="text-fg-muted transition-colors duration-200 group-hover:text-[var(--color-accent-interactive)]">
               <ExternalArrowIcon />
             </span>
           </>
@@ -1734,17 +1966,11 @@ function SummaryModalActionRow({
             target="_blank"
             rel="noopener noreferrer"
             className={actionButtonClassName}
-            style={actionButtonStyle}
           >
             {content}
           </a>
         ) : (
-          <Link
-            key={action.label}
-            href={action.href}
-            className={actionButtonClassName}
-            style={actionButtonStyle}
-          >
+          <Link key={action.label} href={action.href} className={actionButtonClassName}>
             {content}
           </Link>
         );
@@ -1803,8 +2029,7 @@ function SummaryDetailModal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:opacity-80"
-          style={{ color: "var(--fg-muted)" }}
+          className="zns-modal-close absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full"
           aria-label="Close summary popup"
         >
           <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -1897,8 +2122,7 @@ function DeleteNameModal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:opacity-80"
-          style={{ color: "var(--fg-muted)" }}
+          className="zns-modal-close absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full"
           aria-label="Close delete confirmation"
         >
           <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -1997,8 +2221,7 @@ function DeleteSuccessModal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:opacity-80"
-          style={{ color: "var(--fg-muted)" }}
+          className="zns-modal-close absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full"
           aria-label="Close removal confirmation"
         >
           <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -2088,8 +2311,7 @@ function ReservationCelebrationModal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:opacity-80"
-          style={{ color: "var(--fg-muted)" }}
+          className="zns-modal-close absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full"
           aria-label="Close reservation success"
         >
           <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -2162,12 +2384,7 @@ function RenderSummaryModal({
     ? `${typeof window !== "undefined" ? window.location.origin : "https://www.zcashnames.com"}/?ref=${encodeURIComponent(card.referralCode.trim())}`
     : null;
   const summaryActionButtonClassName =
-    "flex h-16 w-full items-center justify-between rounded-[1.15rem] border px-4 py-4 text-left transition hover:opacity-85";
-  const summaryActionButtonStyle = {
-    borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
-    background: "var(--verify-panel-soft-fill)",
-    color: "var(--fg-heading)",
-  } satisfies React.CSSProperties;
+    "group flex h-16 w-full items-center justify-between rounded-[1.15rem] border border-[color-mix(in_srgb,var(--faq-border)_84%,transparent)] bg-[var(--verify-panel-soft-fill)] px-4 py-4 text-left text-fg-heading transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]";
   const shareReferralAction = shareUrl ? (
     <div className="mx-auto grid w-full max-w-sm gap-3">
       <div className="w-full">
@@ -2250,21 +2467,18 @@ function RenderSummaryModal({
           menuClassName="w-full rounded-[1.15rem] border border-[color:var(--faq-border)] bg-[color:var(--verify-menu-fill)] p-2 shadow-[0_18px_40px_rgba(22,35,66,0.14)]"
           itemClassName="rounded-[1.15rem] px-4 py-4 text-base font-semibold"
           renderTriggerContent={(open) => (
-            <div
-              className={summaryActionButtonClassName}
-              style={summaryActionButtonStyle}
-            >
+            <div className={summaryActionButtonClassName}>
               <span className="flex min-w-0 items-center gap-3">
-                <span style={{ color: "var(--fg-muted)" }}>
+                <span className="text-fg-muted transition-colors duration-200 group-hover:text-[var(--color-accent-interactive)]">
                   <ChainLinkIcon className="h-4 w-4" />
                 </span>
                 <span className="text-base font-semibold sm:text-lg">Referral Link</span>
               </span>
               <span
+                className="text-fg-muted transition-colors duration-200 group-hover:text-[var(--color-accent-interactive)]"
                 style={{
-                  color: "var(--fg-muted)",
                   transform: open ? "rotate(90deg)" : "rotate(0deg)",
-                  transition: "transform 180ms ease",
+                  transition: "transform 180ms ease, color 200ms ease",
                 }}
               >
                 <ExternalArrowIcon />
@@ -2424,14 +2638,11 @@ function PaymentTabButton({
     <button
       type="button"
       onClick={onClick}
-      className="relative -mb-px px-3 py-2.5 text-sm font-semibold transition"
-      style={{
-        background: "transparent",
-        color: active ? "var(--color-accent-interactive)" : "var(--fg-body)",
-        borderBottom: active
-          ? "4px solid var(--color-accent-interactive)"
-          : "2px solid transparent",
-      }}
+      className={`relative -mb-px bg-transparent px-3 py-2.5 text-sm font-semibold transition-colors duration-200 ${
+        active
+          ? "border-b-4 border-[var(--color-accent-interactive)] text-[var(--color-accent-interactive)]"
+          : "border-b-2 border-transparent text-fg-body hover:text-[var(--color-accent-interactive)]"
+      }`}
     >
       {label}
     </button>
@@ -2537,7 +2748,7 @@ function ReservationStatusPane({
   return (
     <div className="space-y-5">
       <div
-        className="rounded-[24px] border px-4 py-4 text-left sm:px-5"
+        className="rounded-2xl border px-4 py-4 text-left sm:px-5"
         style={{
           borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
           background: "var(--verify-panel-fill)",
@@ -2576,7 +2787,7 @@ function ReservationStatusPane({
       </div>
 
       <div
-        className="rounded-[24px] border px-4 py-4 text-left sm:px-5"
+        className="rounded-2xl border px-4 py-4 text-left sm:px-5"
         style={{
           borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
           background: "var(--verify-panel-fill)",
@@ -2630,12 +2841,7 @@ function AccessCodeField({
           type="button"
           onClick={() => void copy(copyValue)}
           disabled={!canCopy}
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-          style={{
-            background: "transparent",
-            border: "1.5px solid var(--border-muted)",
-            color: "var(--fg-body)",
-          }}
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-[1.5px] border-border-muted bg-transparent text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-muted disabled:hover:text-fg-body"
           aria-label="Copy access code"
           title={canCopy ? (copied ? "Copied!" : "Copy access code") : "Access code unavailable"}
         >
@@ -2752,20 +2958,17 @@ function ProtectedRequestAction({
   onClick?: () => void;
 }) {
   const className =
-    "flex h-16 w-full items-center justify-between rounded-[1.15rem] border px-4 py-4 text-left transition hover:opacity-85";
-  const style = {
-    borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
-    background: "var(--verify-panel-soft-fill)",
-    color: "var(--fg-heading)",
-  } satisfies React.CSSProperties;
+    "group flex h-16 w-full items-center justify-between rounded-[1.15rem] border border-[color-mix(in_srgb,var(--faq-border)_84%,transparent)] bg-[var(--verify-panel-soft-fill)] px-4 py-4 text-left text-fg-heading transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]";
 
   const content = (
     <>
       <span className="flex min-w-0 items-center gap-3">
-        <span style={{ color: "var(--fg-muted)" }}>{icon}</span>
+        <span className="text-fg-muted transition-colors duration-200 group-hover:text-[var(--color-accent-interactive)]">
+          {icon}
+        </span>
         <span className="text-sm font-semibold">{label}</span>
       </span>
-      <span style={{ color: "var(--fg-muted)" }}>
+      <span className="text-fg-muted transition-colors duration-200 group-hover:text-[var(--color-accent-interactive)]">
         <ExternalArrowIcon />
       </span>
     </>
@@ -2774,21 +2977,21 @@ function ProtectedRequestAction({
   if (href) {
     if (external) {
       return (
-        <a href={href} target="_blank" rel="noreferrer" className={className} style={style}>
+        <a href={href} target="_blank" rel="noreferrer" className={className}>
           {content}
         </a>
       );
     }
 
     return (
-      <Link href={href} className={className} style={style}>
+      <Link href={href} className={className}>
         {content}
       </Link>
     );
   }
 
   return (
-    <button type="button" onClick={onClick} className={className} style={style}>
+    <button type="button" onClick={onClick} className={className}>
       {content}
     </button>
   );
@@ -3053,7 +3256,7 @@ function ProtectedAccessRequestPanel({
     return (
       <div
         ref={statusRef}
-        className="rounded-[24px] border px-4 py-4 text-left sm:px-5"
+        className="rounded-2xl border px-4 py-4 text-left sm:px-5"
         style={{
           borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
           background: "var(--verify-panel-fill)",
@@ -3067,7 +3270,7 @@ function ProtectedAccessRequestPanel({
         </p>
         <div className="mt-5 grid gap-3">
           <div
-            className="rounded-[18px] border px-4 py-3"
+            className="rounded-2xl border px-4 py-3"
             style={{
               borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
               background: "var(--verify-panel-soft-fill)",
@@ -3101,7 +3304,7 @@ function ProtectedAccessRequestPanel({
     return (
       <div
         ref={statusRef}
-        className="rounded-[24px] border px-4 py-4 text-left sm:px-5"
+        className="rounded-2xl border px-4 py-4 text-left sm:px-5"
         style={{
           borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
           background: "var(--verify-panel-fill)",
@@ -3114,7 +3317,7 @@ function ProtectedAccessRequestPanel({
           {formatProtectedRequestTimestamp(card.protectedRequestSubmittedAt)}
         </p>
         <div className="mt-5 grid gap-3">
-          <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
+          <div className="rounded-2xl border px-4 py-3" style={detailFieldStyle}>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
               Preferred contact method
             </p>
@@ -3124,7 +3327,7 @@ function ProtectedAccessRequestPanel({
                 : "Not provided"}
             </p>
           </div>
-          <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
+          <div className="rounded-2xl border px-4 py-3" style={detailFieldStyle}>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
               Status
             </p>
@@ -3132,7 +3335,7 @@ function ProtectedAccessRequestPanel({
               Under review
             </p>
           </div>
-          <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
+          <div className="rounded-2xl border px-4 py-3" style={detailFieldStyle}>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
               Reference number
             </p>
@@ -3144,14 +3347,13 @@ function ProtectedAccessRequestPanel({
         <button
           type="button"
           onClick={() => setShowSubmittedDetails((current) => !current)}
-          className="mt-5 inline-flex text-sm font-semibold transition-opacity hover:opacity-80"
-          style={{ color: "var(--fg-body)" }}
+          className="mt-5 inline-flex text-sm font-semibold text-fg-body transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
         >
           {showSubmittedDetails ? "Hide details" : "Show details"}
         </button>
         {showSubmittedDetails ? (
           <div className="mt-5 grid gap-3">
-            <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
+            <div className="rounded-2xl border px-4 py-3" style={detailFieldStyle}>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
                 Contact methods
               </p>
@@ -3159,7 +3361,7 @@ function ProtectedAccessRequestPanel({
                 {contactMethods}
               </p>
             </div>
-            <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
+            <div className="rounded-2xl border px-4 py-3" style={detailFieldStyle}>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
                 Relationship to this name
               </p>
@@ -3169,7 +3371,7 @@ function ProtectedAccessRequestPanel({
                   : "Not provided"}
               </p>
             </div>
-            <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
+            <div className="rounded-2xl border px-4 py-3" style={detailFieldStyle}>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
                 Supporting link
               </p>
@@ -3177,7 +3379,7 @@ function ProtectedAccessRequestPanel({
                 {card.protectedRequestSupportingLink ?? "Not provided"}
               </p>
             </div>
-            <div className="rounded-[18px] border px-4 py-3" style={detailFieldStyle}>
+            <div className="rounded-2xl border px-4 py-3" style={detailFieldStyle}>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
                 Additional context
               </p>
@@ -3202,7 +3404,7 @@ function ProtectedAccessRequestPanel({
     return (
       <div
         ref={statusRef}
-        className="rounded-[24px] border px-4 py-4 text-left sm:px-5"
+        className="rounded-2xl border px-4 py-4 text-left sm:px-5"
         style={{
           borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
           background: "var(--verify-panel-fill)",
@@ -3243,7 +3445,7 @@ function ProtectedAccessRequestPanel({
         onConfirm={completeSubmitAfterCaptcha}
       />
     <div
-      className="rounded-[24px] border px-4 py-4 text-left sm:px-5"
+      className="rounded-2xl border px-4 py-4 text-left sm:px-5"
       style={{
         borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
       }}
@@ -3295,30 +3497,16 @@ function ProtectedAccessRequestPanel({
                       }}
                     />
                   </label>
-                  <select
+                  <InlineDropdown
                     value={contact.kind}
-                    onChange={(event) => updateContactKind(contact.uid, event.target.value as ContactKind)}
-                    className="cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none"
-                      style={{
-                        background: "var(--verify-input-fill)",
-                        border: "1.5px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-                        color: "var(--fg-heading)",
-                      appearance: "none",
-                      paddingRight: "2rem",
-                      backgroundImage:
-                        "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='gray' stroke-width='2'><polyline points='3 5 6 8 9 5'/></svg>\")",
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "right 0.6rem center",
-                      backgroundSize: "0.8rem",
-                      minWidth: 130,
-                    }}
-                  >
-                    {CONTACT_KINDS.map((kind) => (
-                      <option key={kind} value={kind}>
-                        {CONTACT_LABEL[kind]}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(next) => updateContactKind(contact.uid, next as ContactKind)}
+                    placeholder="Select contact method"
+                    minWidthPx={130}
+                    options={CONTACT_KINDS.map((kind) => ({
+                      value: kind,
+                      label: CONTACT_LABEL[kind],
+                    }))}
+                  />
                   <input
                     type={contact.kind === "email" ? "email" : "text"}
                     value={contact.value}
@@ -3337,8 +3525,7 @@ function ProtectedAccessRequestPanel({
                       type="button"
                       onClick={() => removeContact(contact.uid)}
                       aria-label="Remove this contact method"
-                      className="cursor-pointer px-1 text-2xl leading-none opacity-60 hover:opacity-100"
-                      style={{ color: "var(--fg-body)" }}
+                      className="zns-hover-accent cursor-pointer px-1 text-2xl leading-none text-fg-body"
                     >
                       &times;
                     </button>
@@ -3351,11 +3538,11 @@ function ProtectedAccessRequestPanel({
             <button
               type="button"
               onClick={addContact}
-              className="mt-3 inline-flex items-center gap-1 text-sm font-semibold"
-              style={{ color: "var(--fg-body)", marginLeft: "2rem" }}
+              className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-fg-body transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
+              style={{ marginLeft: "2rem" }}
             >
               <span>+</span>
-              <span className="underline">Add another contact method</span>
+              <span>Add another contact method</span>
             </button>
           ) : null}
         </div>
@@ -3364,29 +3551,16 @@ function ProtectedAccessRequestPanel({
           <label className="mb-1 block text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--fg-muted)" }}>
             Your relationship to this name
           </label>
-          <select
+          <InlineDropdown
             value={relationship}
-            onChange={(event) => setRelationship(event.target.value as ProtectedRequestRelationship)}
-            className="w-full cursor-pointer rounded-xl px-4 py-2.5 text-sm outline-none"
-            style={{
-              background: "var(--verify-input-fill)",
-              border: "1.5px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-              color: "var(--fg-heading)",
-              appearance: "none",
-              paddingRight: "2rem",
-              backgroundImage:
-                "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='gray' stroke-width='2'><polyline points='3 5 6 8 9 5'/></svg>\")",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 0.6rem center",
-              backgroundSize: "0.8rem",
-            }}
-          >
-            {PROTECTED_RELATIONSHIP_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            onChange={(next) => setRelationship(next as ProtectedRequestRelationship)}
+            placeholder="Select your relationship to this name"
+            fullWidth
+            options={PROTECTED_RELATIONSHIP_OPTIONS.map((option) => ({
+              value: option.value,
+              label: option.label,
+            }))}
+          />
         </div>
 
         <div>
@@ -3446,10 +3620,9 @@ function ProtectedAccessRequestPanel({
           <button
             type="button"
             onClick={() => setIsEditing(false)}
-            className="inline-flex h-[46px] w-full items-center justify-center rounded-full px-5 text-sm font-semibold transition-opacity hover:opacity-80"
+            className="inline-flex h-[46px] w-full items-center justify-center rounded-full px-5 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
             style={{
               background: "transparent",
-              color: "var(--fg-body)",
               border: "1.5px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
             }}
           >
@@ -3549,9 +3722,10 @@ function VerifyPaymentCard({
   const isSupporting = selectedAmount > baseAmountValue;
   const firstSupportAmount = firstSupportStepAboveBase(baseAmountValue);
   const deletePending = card.deleteRequestStatus === "pending";
+  // Match hero corner radius (rounded-2xl) on expanded and collapsed name cards.
   const compactCardClassName = card.collapsed
-    ? "max-w-full rounded-[32px] border shadow-[0_28px_80px_rgba(22,35,66,0.10)]"
-    : "rounded-[32px] border shadow-[0_28px_80px_rgba(22,35,66,0.10)]";
+    ? "max-w-full rounded-2xl border shadow-[0_28px_80px_rgba(22,35,66,0.10)]"
+    : "rounded-2xl border shadow-[0_28px_80px_rgba(22,35,66,0.10)]";
 
   function handleViewDetails() {
     if (card.protectedName && !card.reserved) {
@@ -3921,12 +4095,7 @@ function VerifyPaymentCard({
                       onPointerUp={clearAmountRepeat}
                       onPointerLeave={clearAmountRepeat}
                       onPointerCancel={clearAmountRepeat}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border text-lg font-semibold transition-opacity hover:opacity-80"
-                      style={{
-                        background: "transparent",
-                        borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
-                        color: "var(--fg-body)",
-                      }}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--faq-border)_84%,transparent)] bg-transparent text-lg font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                       aria-label="Decrease amount"
                       title="Decrease amount"
                     >
@@ -3971,12 +4140,7 @@ function VerifyPaymentCard({
                     onPointerUp={clearAmountRepeat}
                     onPointerLeave={clearAmountRepeat}
                     onPointerCancel={clearAmountRepeat}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border text-lg font-semibold transition-opacity hover:opacity-80"
-                    style={{
-                      background: "transparent",
-                      borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)",
-                      color: "var(--fg-body)",
-                    }}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--faq-border)_84%,transparent)] bg-transparent text-lg font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
                     aria-label="Increase amount"
                     title="Increase amount"
                   >
@@ -3992,7 +4156,7 @@ function VerifyPaymentCard({
         {!card.collapsed ? (
           <section className="px-5 py-5 sm:px-6 sm:py-6">
             <div
-              className="flex h-full flex-col rounded-[24px] border px-4 py-4 sm:px-5"
+              className="flex h-full flex-col rounded-2xl border px-4 py-4 sm:px-5"
               style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}
             >
               <div
@@ -4367,36 +4531,16 @@ export default function WaitlistVerifyClient({
         earlyAccessStartAt={earlyAccessStartAt}
         bandInsetClassName="-mt-5 pt-5 sm:-mt-6 sm:pt-6"
         hero={
-          <section className="mx-auto max-w-[63rem] xl:max-w-[65rem]">
+          <section className="w-full">
             {/*
-              Authenticated /reserve only: one bordered hero wraps title + 3 steps.
-              Share sits top-right without reflowing content.
+              Authenticated /reserve only: bordered hero with collapsible steps.
+              Width matches name cards (page max-w-6xl body).
             */}
-            <div
-              className="relative mx-auto w-full max-w-[920px] rounded-2xl border px-6 py-8 text-center sm:px-8 sm:py-10"
-              style={{
-                borderColor: "var(--faq-border)",
-                background:
-                  "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
-              }}
-            >
-              <HeroShareButton
-                message="Get ready to claim your Zcash name — reserve your waitlist position at ZcashNames:"
-                shareUrl="https://www.zcashnames.com/reserve"
-                emailSubject="Reserve your Zcash name"
-              />
-              <h1
-                className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
-                style={{ color: "var(--hero-headline-primary)" }}
-              >
-                Get ready to
-                <br />
-                <span style={{ color: "var(--color-accent-interactive)" }}>claim your name!</span>
-              </h1>
-              <div className="mt-10 w-full sm:mt-12">
-                <HeroHowReservationsWork />
-              </div>
-            </div>
+            <ReserveClaimHero
+              shareMessage="Get ready to claim your Zcash name — reserve your waitlist position at ZcashNames:"
+              shareUrl="https://www.zcashnames.com/reserve"
+              emailSubject="Reserve your Zcash name"
+            />
           </section>
         }
       />
@@ -4451,7 +4595,10 @@ export default function WaitlistVerifyClient({
             </p>
           </div>
           <div className="mt-6 flex justify-center">
-            <WaitlistEntryForm showNewsletter={false} />
+            <WaitlistEntryForm
+              showNewsletter={false}
+              initialEmail={displayEmail || normalizedEmail}
+            />
           </div>
         </div>
       </section>

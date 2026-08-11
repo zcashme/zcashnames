@@ -150,13 +150,15 @@ function MenuItem({
   monochrome?: boolean;
   className?: string;
 }) {
-  const baseClassName = `flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold text-fg-heading transition-colors ${
+  const baseClassName = `group flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold text-fg-heading transition-colors ${
     monochrome
       // --verify-menu-hover-fill is transparent in monochrome; use surface green on solid menus.
-      ? "hover:bg-[var(--mono-1)] hover:text-[var(--mono-3)]"
-      : "hover:bg-[var(--verify-menu-hover-fill)]"
+      ? "hover:bg-[var(--mono-1)] hover:text-[var(--color-accent-interactive)]"
+      : "zns-menu-hover"
   } ${className ?? ""}`.trim();
-  const iconClassName = monochrome ? "shrink-0 text-fg-heading" : "shrink-0 text-fg-muted";
+  const iconClassName = monochrome
+    ? "shrink-0 text-current opacity-80 transition-opacity group-hover:opacity-100"
+    : "shrink-0 text-current opacity-70 transition-opacity group-hover:opacity-100";
   const content = iconPosition === "right"
     ? (
       <>

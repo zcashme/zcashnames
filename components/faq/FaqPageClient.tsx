@@ -193,7 +193,7 @@ export function FaqSectionPills() {
 
 export default function FaqPageClient() {
   return (
-    <section className="mx-auto w-full max-w-3xl px-0 pb-4">
+    <section className="mx-auto w-full max-w-[920px] px-0 pb-4">
       <div className="flex flex-col gap-10">
         {groups.map((group, groupIndex) => (
           <FAQGroupAccordion key={group.id} group={group} groupIndex={groupIndex} />

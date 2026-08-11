@@ -70,7 +70,7 @@ const MORE_BUTTON_CLASS =
 const MENU_ITEM_ACTIVE =
   "flex w-full cursor-pointer items-center justify-between whitespace-nowrap px-4 py-2 text-[0.82rem] font-semibold text-[var(--fg-heading)] transition-colors";
 const MENU_ITEM_INACTIVE =
-  "flex w-full cursor-pointer items-center justify-between whitespace-nowrap px-4 py-2 text-[0.82rem] font-semibold text-[var(--fg-muted)] transition-colors hover:text-[var(--color-accent-interactive)]";
+  "zns-menu-hover flex w-full cursor-pointer items-center justify-between whitespace-nowrap px-4 py-2 text-[0.82rem] font-semibold text-[var(--fg-muted)] transition-colors";
 
 function isGroupTab(tab: DataViewTabItem): boolean {
   return Array.isArray(tab.children) && tab.children.length > 0;

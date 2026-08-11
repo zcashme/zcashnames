@@ -208,7 +208,7 @@ function TableIconMenu<T extends string | number>({
                 className={
                   selected
                     ? "flex w-full cursor-pointer items-center justify-between gap-4 px-4 py-2 text-left text-sm text-[var(--color-accent-interactive)] transition-colors"
-                    : "flex w-full cursor-pointer items-center justify-between gap-4 px-4 py-2 text-left text-sm text-[var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)]"
+                    : "zns-menu-hover flex w-full cursor-pointer items-center justify-between gap-4 px-4 py-2 text-left text-sm text-[var(--fg-body)] transition-colors"
                 }
                 style={{
                   background: selected ? activeBackground : "transparent",

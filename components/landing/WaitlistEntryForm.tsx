@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { normalizeUsername } from "@/lib/zns/utils";
+import AnimatedSuffix from "@/components/search/AnimatedSuffix";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import {
   getWaitlistCaptcha,
@@ -64,6 +65,7 @@ const COMMUNITY_LINKS = [
 type ModalView = "confirm" | "community" | "survey" | "thankyou";
 
 const TRANSITION = "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)";
+const RESULT_CARD_TRANSITION_MS = 280;
 
 function viewTransform(
   view: ModalView,
@@ -106,19 +108,21 @@ interface WaitlistEntryFormProps {
   onConfirm?: () => void;
   onReset?: () => void;
   showNewsletter?: boolean;
+  initialEmail?: string;
 }
 
 export default function WaitlistEntryForm({
   onConfirm,
   onReset,
   showNewsletter = true,
+  initialEmail = "",
 }: WaitlistEntryFormProps = {}) {
   const [mounted, setMounted] = useState(false);
   // ── Form state ──
   const [nameInput, setNameInput] = useState("");
   const [confirmedName, setConfirmedName] = useState("");
   const [focused, setFocused] = useState(false);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [newsletter, setNewsletter] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -136,6 +140,10 @@ export default function WaitlistEntryForm({
 
   const [surveyContactMsg, setSurveyContactMsg] = useState(false);
   const [waitlistCount, setWaitlistCount] = useState(0);
+  const [renderResultCard, setRenderResultCard] = useState(false);
+  const [resultCardOpen, setResultCardOpen] = useState(false);
+  const [displayedConfirmedName, setDisplayedConfirmedName] = useState("");
+  const [displayedWaitlistCount, setDisplayedWaitlistCount] = useState(0);
 
   const referredByRef = useRef<string>("");
   const nameFieldTopRef = useRef<HTMLDivElement>(null);
@@ -151,6 +159,10 @@ export default function WaitlistEntryForm({
     const ref = params.get("ref");
     if (ref) referredByRef.current = ref;
   }, []);
+
+  useEffect(() => {
+    setEmail(initialEmail);
+  }, [initialEmail]);
 
   // Header "Join Waitlist" → /waitlist#waitlist-name-entry: put the name field
   // near the top of the viewport (Next.js client nav often skips native hash scroll).
@@ -223,6 +235,30 @@ export default function WaitlistEntryForm({
     else onReset?.();
   }, [showResult, onConfirm, onReset]);
 
+  useEffect(() => {
+    if (!confirmedName) return;
+    setDisplayedConfirmedName(confirmedName);
+    setDisplayedWaitlistCount(0);
+  }, [confirmedName]);
+
+  useEffect(() => {
+    if (!showResult) {
+      setResultCardOpen(false);
+      const timeoutId = window.setTimeout(() => {
+        setRenderResultCard(false);
+        setDisplayedConfirmedName("");
+        setDisplayedWaitlistCount(0);
+      }, RESULT_CARD_TRANSITION_MS);
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    setRenderResultCard(true);
+    const frameId = window.requestAnimationFrame(() => {
+      setResultCardOpen(true);
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [showResult]);
+
   const confirmName = () => {
     if (name.length > 0) {
       setConfirmedName(name);
@@ -248,6 +284,11 @@ export default function WaitlistEntryForm({
       cancelled = true;
     };
   }, [confirmedName]);
+
+  useEffect(() => {
+    if (!confirmedName) return;
+    setDisplayedWaitlistCount(waitlistCount);
+  }, [confirmedName, waitlistCount]);
 
   useEffect(() => {
     if (!confirmedName) return;
@@ -386,7 +427,7 @@ export default function WaitlistEntryForm({
     setSubmitted(false);
     setNameInput("");
     setConfirmedName("");
-    setEmail("");
+    setEmail(initialEmail);
     setNewsletter(true);
     setMyReferralCode("");
     setSubmitError("");
@@ -650,7 +691,7 @@ export default function WaitlistEntryForm({
                 >
                   {nameInput || "yourname"}
                 </span>
-                <span className="searchform-input-overlay-suffix">.zcash</span>
+                <AnimatedSuffix />
               </span>
               <input
                 ref={nameInputRef}
@@ -711,63 +752,77 @@ export default function WaitlistEntryForm({
         </div>
 
         {/* Result card */}
-        {showResult && (
-          <section className="home-result-card" aria-live="polite">
-            <div className="home-result-top">
-              <div
-                className="home-result-heading"
-                style={{ minWidth: 0, flex: "1 1 0" }}
+        {renderResultCard && (
+          <div
+            className="grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none"
+            style={{
+              gridTemplateRows: resultCardOpen ? "1fr" : "0fr",
+              opacity: resultCardOpen ? 1 : 0,
+            }}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <section
+                className="home-result-card transition-transform duration-300 ease-out motion-reduce:transition-none"
+                style={{
+                  transform: resultCardOpen ? "translateY(0)" : "translateY(-10px)",
+                }}
+                aria-live="polite"
               >
-                <p className="home-result-name">{confirmedName}.zcash</p>
-                <span className="home-result-status is-positive">
-                  <svg
-                    viewBox="0 0 16 16"
-                    className="h-3.5 w-3.5"
-                    aria-hidden="true"
+                <div className="home-result-top">
+                  <div
+                    className="home-result-heading"
+                    style={{ minWidth: 0, flex: "1 1 0" }}
                   >
-                    <circle
-                      cx="8"
-                      cy="8"
-                      r="7"
-                      fill="currentColor"
-                      opacity="0.16"
-                    />
-                    <path
-                      d="M4.6 8.1 7 10.4l4.5-4.8"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  Available
-                </span>
-                {waitlistCount > 0 && (
-                  <span
-                    className="inline-flex min-h-[26px] items-center rounded-[10px] border px-2.5 text-[0.78rem] font-extrabold leading-none"
-                    style={{
-                      borderColor: "var(--feature-chip-border-color)",
-                      background: "var(--feature-chip-bg)",
-                      color: "var(--home-result-link-fg)",
-                      marginLeft: "0.5rem",
-                    }}
-                  >
-                    {waitlistCount} waiting
-                  </span>
-                )}
-              </div>
-            </div>
+                    <p className="home-result-name">{displayedConfirmedName}.zcash</p>
+                    <span className="home-result-status is-positive">
+                      <svg
+                        viewBox="0 0 16 16"
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      >
+                        <circle
+                          cx="8"
+                          cy="8"
+                          r="7"
+                          fill="currentColor"
+                          opacity="0.16"
+                        />
+                        <path
+                          d="M4.6 8.1 7 10.4l4.5-4.8"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      Available
+                    </span>
+                    {displayedWaitlistCount > 0 && (
+                      <span
+                        className="inline-flex min-h-[26px] items-center rounded-[10px] border px-2.5 text-[0.78rem] font-extrabold leading-none"
+                        style={{
+                          borderColor: "var(--feature-chip-border-color)",
+                          background: "var(--feature-chip-bg)",
+                          color: "var(--home-result-link-fg)",
+                          marginLeft: "0.5rem",
+                        }}
+                      >
+                        {displayedWaitlistCount} waiting
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-            {/* Form fields */}
-            <div
-              className="flex flex-col gap-3 px-1 pb-1"
-              style={{
-                borderTop: "1px solid var(--home-result-trust-border)",
-                paddingTop: "1rem",
-                marginTop: "0.25rem",
-              }}
-            >
+                {/* Form fields */}
+                <div
+                  className="flex flex-col gap-3 px-1 pb-1"
+                  style={{
+                    borderTop: "1px solid var(--home-result-trust-border)",
+                    paddingTop: "1rem",
+                    marginTop: "0.25rem",
+                  }}
+                >
               {/* Email */}
               <div className="relative w-full">
                 <input
@@ -952,23 +1007,25 @@ export default function WaitlistEntryForm({
               >
                 {submitting ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit"}
               </button>
-            </div>
+                </div>
 
-            {/* Fine print */}
-            <div className="home-result-trust">
-              <p
-                className="text-xs w-full"
-                style={{
-                  color: "var(--fg-muted)",
-                  lineHeight: 1.5,
-                  textAlign: "center",
-                }}
-              >
-                The waitlist only gives early notice and access. It does not
-                reserve or guarantee names.
-              </p>
+                {/* Fine print */}
+                <div className="home-result-trust">
+                  <p
+                    className="text-xs w-full"
+                    style={{
+                      color: "var(--fg-muted)",
+                      lineHeight: 1.5,
+                      textAlign: "center",
+                    }}
+                  >
+                    The waitlist only gives early notice and access. It does not
+                    reserve or guarantee names.
+                  </p>
+                </div>
+              </section>
             </div>
-          </section>
+          </div>
         )}
       </form>
     </>

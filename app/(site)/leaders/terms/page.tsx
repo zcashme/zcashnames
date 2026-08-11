@@ -69,7 +69,7 @@ export default function ReferralTermsPage() {
       <SiteRouteTitle title="Leaderboard" href="/leaders" />
       <section className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 px-4 pb-20 pt-10 sm:px-6 sm:pt-14 lg:px-8">
         <div
-          className="relative mx-auto w-full max-w-[920px] rounded-2xl border px-6 py-8 text-center sm:px-8 sm:py-10"
+          className="relative mx-auto w-full max-w-[920px] border-0 border-b px-6 py-8 text-center sm:px-8 sm:py-10"
           style={{
             borderColor: "var(--faq-border)",
             background:

@@ -148,8 +148,7 @@ export function QrBlock({
                     <button
                       type="button"
                       onClick={() => setExpanded(true)}
-                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                      style={{ background: "transparent", border: "none", color: "var(--fg-body)" }}
+                      className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-xs font-semibold text-fg-body transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
                       aria-label="Expand QR"
                       title="Expand QR"
                     >
@@ -158,8 +157,7 @@ export function QrBlock({
                     <button
                       type="button"
                       onClick={handleSavePng}
-                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                      style={{ background: "transparent", border: "none", color: "var(--fg-body)" }}
+                      className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-xs font-semibold text-fg-body transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
                       aria-label="Save QR"
                       title="Save QR"
                     >
@@ -230,8 +228,7 @@ export function QrBlock({
               <button
                 type="button"
                 onClick={() => setExpanded(true)}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                style={{ background: "transparent", border: "none", color: "var(--fg-body)" }}
+                className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-xs font-semibold text-fg-body transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
                 aria-label="Expand QR"
                 title="Expand QR"
               >
@@ -240,8 +237,7 @@ export function QrBlock({
               <button
                 type="button"
                 onClick={handleSavePng}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-                style={{ background: "transparent", border: "none", color: "var(--fg-body)" }}
+                className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-xs font-semibold text-fg-body transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
                 aria-label="Save QR"
                 title="Save QR"
               >
@@ -254,8 +250,7 @@ export function QrBlock({
         <button
           type="button"
           onClick={() => setShowHelp((v) => !v)}
-          className="self-center px-1 py-1 text-xs font-semibold cursor-pointer transition-opacity hover:opacity-80"
-          style={{ color: "var(--fg-body)" }}
+          className="self-center cursor-pointer px-1 py-1 text-xs font-semibold text-fg-body transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
         >
           {showHelp ? "Hide Help" : "Trouble scanning?"}
         </button>
@@ -367,11 +362,11 @@ function CopyRow({ label, value, copied, onCopy, variant = "default" }: CopyRowP
           disabled={!value}
           className={[
             "inline-flex shrink-0 items-center justify-center self-stretch",
-            "cursor-pointer border-0 bg-transparent transition-opacity hover:opacity-80",
-            "disabled:cursor-not-allowed disabled:opacity-50",
+            "cursor-pointer border-0 bg-transparent text-fg-body transition-colors duration-200",
+            "hover:text-[var(--color-accent-interactive)]",
+            "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-fg-body",
             isVerify ? "w-10 pr-2" : "w-7 pr-1.5",
           ].join(" ")}
-          style={{ color: "var(--fg-body)" }}
           aria-label={`Copy ${label.toLowerCase()}`}
           title={copied ? "Copied!" : `Copy ${label.toLowerCase()}`}
         >

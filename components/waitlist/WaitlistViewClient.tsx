@@ -959,7 +959,7 @@ export default function WaitlistViewClient({
                   <span className="mt-1 block text-center text-base">
                     <Link
                       href="/reserve"
-                      className="font-normal underline"
+                      className="font-normal transition-opacity hover:opacity-80"
                       style={{ color: "var(--color-accent-interactive)" }}
                     >
                       Get started

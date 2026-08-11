@@ -1190,7 +1190,7 @@ export default function ProtectedDisputeForm({
                         type="button"
                         onClick={() => removeEvidenceLink(index)}
                         aria-label="Remove evidence link"
-                        className="cursor-pointer px-1 text-2xl leading-none opacity-60 hover:opacity-100"
+                        className="zns-hover-accent cursor-pointer px-1 text-2xl leading-none opacity-60 hover:opacity-100"
                         style={{ color: "var(--fg-body)" }}
                       >
                         &times;
@@ -1264,7 +1264,7 @@ export default function ProtectedDisputeForm({
                           onChange={(event) =>
                             updateContactKind(contact.uid, event.target.value as ContactKind)
                           }
-                          className="cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none"
+                          className="zns-themed-select cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none"
                           style={{ ...fieldStyle(!!contactError), minWidth: 130 }}
                         >
                           {CONTACT_KINDS.map((kind) => (
@@ -1287,7 +1287,7 @@ export default function ProtectedDisputeForm({
                             type="button"
                             onClick={() => removeContact(contact.uid)}
                             aria-label="Remove this contact method"
-                            className="cursor-pointer px-1 text-2xl leading-none opacity-60 hover:opacity-100"
+                            className="zns-hover-accent cursor-pointer px-1 text-2xl leading-none opacity-60 hover:opacity-100"
                             style={{ color: "var(--fg-body)" }}
                           >
                             &times;

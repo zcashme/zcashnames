@@ -81,6 +81,14 @@ function buildSectionGroups(periods: RoadmapPeriodLayout[]): RoadmapSectionGroup
   return groups;
 }
 
+function sectionAnchorId(title: string): string {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[`"'.,!?()[\]{}:;/\\]+/g, "")
+    .replace(/\s+/g, "-");
+}
+
 export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] }) {
   const { resolvedTheme } = useTheme();
   const monochrome = resolvedTheme === "monochrome";
@@ -107,6 +115,9 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
   });
   const showCurrentPhaseButton = activePeriods.length > 0;
   const sectionGroups = buildSectionGroups(layouts);
+  const jumpSections = sectionGroups
+    .map((group) => group.title?.trim())
+    .filter((title): title is string => Boolean(title));
 
   function centerCurrentPeriod(behavior: ScrollBehavior) {
     currentPeriodRef.current?.scrollIntoView({ behavior, block: "center" });
@@ -138,97 +149,153 @@ export default function RoadmapTimeline({ periods }: { periods: RoadmapPeriod[] 
 
   return (
     <div className="flex flex-col gap-14 sm:gap-16">
-      <div
-        className="relative mx-auto w-full max-w-[920px] rounded-2xl border px-6 py-8 text-center sm:px-8 sm:py-10"
-        style={{
-          borderColor: "var(--faq-border)",
-          background:
-            "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
-        }}
-      >
-        <HeroShareButton
-          message={shareMessage}
-          shareUrl={ROADMAP_SHARE_URL}
-          emailSubject="ZcashNames Roadmap"
-        />
-        <h1
-          className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
-          style={{ color: "var(--fg-heading)" }}
+      {/*
+        Same join as /faq + /brandkit: open-bottom hero (full body width), fully
+        rounded jump card, vertical side rails bridging the short gap.
+      */}
+      <div className="w-full">
+        <div
+          className="relative w-full rounded-t-2xl border border-b-0 px-6 py-8 text-center sm:px-8 sm:py-10"
+          style={{
+            borderColor: "var(--faq-border)",
+            background:
+              "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 74%, transparent), color-mix(in srgb, var(--faq-border) 9%, transparent))",
+          }}
         >
-          Launch{" "}
-          <span style={{ color: "var(--color-accent-interactive)" }}>Sequence</span>
-        </h1>
+          <HeroShareButton
+            message={shareMessage}
+            shareUrl={ROADMAP_SHARE_URL}
+            emailSubject="ZcashNames Roadmap"
+          />
+          <h1
+            className="text-balance text-4xl font-black tracking-[-0.05em] sm:text-5xl md:text-6xl"
+            style={{ color: "var(--fg-heading)" }}
+          >
+            Launch{" "}
+            <span style={{ color: "var(--color-accent-interactive)" }}>Sequence</span>
+          </h1>
 
-        <div className="mt-8 grid gap-3 text-left sm:mt-9 sm:grid-cols-3">
-          <div className="rounded-2xl border border-border-muted bg-transparent p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Outlook</p>
-            <p className="mt-2 text-base font-semibold text-fg-heading">
-              {monthFormatter.format(timelineStart)} to {monthFormatter.format(timelineEnd)}
-            </p>
+          <div className="mt-8 grid gap-3 text-left sm:mt-9 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border-muted bg-transparent p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Outlook</p>
+              <p className="mt-2 text-base font-semibold text-fg-heading">
+                {monthFormatter.format(timelineStart)} to {monthFormatter.format(timelineEnd)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border-muted bg-transparent p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Current focus</p>
+              <button
+                type="button"
+                onClick={focusCurrentPeriod}
+                className="mt-2 inline-flex items-center gap-2 text-left text-base font-semibold text-fg-heading transition-colors hover:text-[var(--color-accent-interactive)]"
+              >
+                {!activePeriods.length && upcomingPeriod ? (
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-yellow)]"
+                    aria-hidden="true"
+                  />
+                ) : null}
+                {currentPeriod.title}
+              </button>
+            </div>
+            <div className="rounded-2xl border border-border-muted bg-transparent p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Phases</p>
+              <p className="mt-2 text-base font-semibold text-fg-heading">
+                {completedCount} of {periods.length} complete
+              </p>
+            </div>
           </div>
-          <div className="rounded-2xl border border-border-muted bg-transparent p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Current focus</p>
-            <button
-              type="button"
-              onClick={focusCurrentPeriod}
-              className="mt-2 inline-flex items-center gap-2 text-left text-base font-semibold text-fg-heading transition-colors hover:text-[var(--color-accent-interactive)]"
-            >
-              {!activePeriods.length && upcomingPeriod ? (
+
+          {showCurrentPhaseButton ? (
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={expandCurrentPeriods}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+              >
                 <span
-                  className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-yellow)]"
+                  className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-green)]"
                   aria-hidden="true"
                 />
-              ) : null}
-              {currentPeriod.title}
-            </button>
-          </div>
-          <div className="rounded-2xl border border-border-muted bg-transparent p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Phases</p>
-            <p className="mt-2 text-base font-semibold text-fg-heading">
-              {completedCount} of {periods.length} complete
-            </p>
-          </div>
+                Current phase
+              </button>
+            </div>
+          ) : null}
         </div>
 
-        {showCurrentPhaseButton ? (
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={expandCurrentPeriods}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-muted bg-transparent px-4 py-2 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+        {jumpSections.length > 0 ? (
+          <div className="relative">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-0 top-[-1rem] z-10 block h-8 w-px"
+              style={{ background: "var(--faq-border)" }}
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-[calc(100%-1px)] top-[-1rem] z-10 block h-8 w-px"
+              style={{ background: "var(--faq-border)" }}
+            />
+            <div
+              className="rounded-2xl border px-5 py-5 sm:px-6 sm:py-6"
+              style={{
+                borderColor: "var(--faq-border)",
+                background:
+                  "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 76%, transparent), color-mix(in srgb, var(--faq-border) 10%, transparent))",
+              }}
             >
-              <span
-                className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-accent-green)]"
-                aria-hidden="true"
-              />
-              Current phase
-            </button>
+              <nav
+                className="flex flex-col items-center gap-3 text-center"
+                aria-label="Roadmap sections"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">
+                  Jump to section
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {jumpSections.map((title) => (
+                    <a
+                      key={title}
+                      href={`#${sectionAnchorId(title)}`}
+                      className="rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+                    >
+                      {title}
+                    </a>
+                  ))}
+                </div>
+              </nav>
+            </div>
           </div>
         ) : null}
       </div>
 
       <div className="flex flex-col gap-14 sm:gap-16">
-        {sectionGroups.map((group) => (
-          <section key={group.title ?? group.periods[0].id} className="flex flex-col gap-5 sm:gap-6">
-            {group.title ? (
-              <p className="text-center text-3xl font-bold leading-tight text-fg-heading sm:text-[2rem]">
-                {group.title}
-              </p>
-            ) : null}
-            <div className="flex flex-col gap-4">
-              {group.periods.map((period) => (
-                <ListRoadmapCard
-                  key={period.id}
-                  currentMarkerRef={period.id === statusTargetId ? currentPeriodRef : undefined}
-                  period={period}
-                  expanded={expandedIds.includes(period.id)}
-                  onExpand={() => togglePeriod(period.id)}
-                  monochrome={monochrome}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
+        {sectionGroups.map((group) => {
+          const sectionId = group.title ? sectionAnchorId(group.title) : undefined;
+          return (
+            <section
+              key={group.title ?? group.periods[0].id}
+              id={sectionId}
+              className="flex scroll-mt-24 flex-col gap-5 sm:gap-6"
+            >
+              {group.title ? (
+                <p className="text-center text-3xl font-bold leading-tight text-fg-heading sm:text-[2rem]">
+                  {group.title}
+                </p>
+              ) : null}
+              <div className="flex flex-col gap-4">
+                {group.periods.map((period) => (
+                  <ListRoadmapCard
+                    key={period.id}
+                    currentMarkerRef={period.id === statusTargetId ? currentPeriodRef : undefined}
+                    period={period}
+                    expanded={expandedIds.includes(period.id)}
+                    onExpand={() => togglePeriod(period.id)}
+                    monochrome={monochrome}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </div>
   );

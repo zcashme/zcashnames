@@ -34,9 +34,14 @@ const HEADER_MENU_LINKS: MenuLink[] = [
       { label: "Dispute a Protected Name", href: "/protected/dispute" },
     ],
   },
-  { label: "Blog", href: "/blogs" },
-  { label: "Docs", href: "/docs" },
-  { label: "FAQ", href: "/faq" },
+  {
+    label: "Read Me",
+    children: [
+      { label: "Blog", href: "/blogs" },
+      { label: "Developer Docs", href: "/docs" },
+      { label: "FAQs", href: "/faq" },
+    ],
+  },
 ];
 
 const PANEL_ID = "site-header-menu";

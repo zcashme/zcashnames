@@ -551,7 +551,7 @@ export default function ProtectedViewClient({
               <span className="mt-1 block text-center text-base">
                 <Link
                   href="/protected/suggest"
-                  className="font-normal underline"
+                  className="font-normal transition-opacity hover:opacity-80"
                   style={{ color: "var(--color-accent-interactive)" }}
                 >
                   Suggest one

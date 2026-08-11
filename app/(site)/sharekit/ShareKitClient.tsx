@@ -148,7 +148,7 @@ export default function ShareKitClient({
         Same join as /faq + /brandkit: open-bottom hero, fully rounded jump card,
         vertical side rails bridging the short gap between them.
       */}
-      <div className="mx-auto w-full max-w-[920px]">
+      <div className="w-full">
         <div
           className="relative w-full rounded-t-2xl border border-b-0 px-6 py-8 text-center sm:px-8 sm:py-10"
           style={{
@@ -352,13 +352,8 @@ function DraftCard({
   const textareaClassName = monochrome
     ? "border-[rgba(155,188,15,0.42)] bg-transparent text-[var(--mono-3)] placeholder:text-[color:rgba(155,188,15,0.7)] focus:border-[rgba(155,188,15,0.72)]"
     : "border-border-muted bg-transparent text-fg-body focus:border-fg-muted";
-  const actionsClassName = monochrome
-    ? "bg-transparent"
-    : light
-      ? "rounded-lg border border-border-muted bg-[var(--color-raised)] p-3"
-      : "";
   const actionButtonClassName = light
-    ? "rounded-md border border-border-muted bg-[var(--color-card)] px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
+    ? "cursor-pointer rounded-md border border-border-muted bg-transparent px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-fg-heading hover:text-fg-heading"
     : "cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-fg-heading";
 
   return (
@@ -373,7 +368,7 @@ function DraftCard({
           onChange={(event) => onChange(event.target.value)}
           className={`min-h-[320px] w-full flex-1 resize-y rounded-lg border px-3 py-3 text-sm leading-6 outline-none transition-colors ${textareaClassName}`}
         />
-        <div className={`flex flex-wrap items-center gap-2 ${actionsClassName}`}>
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             type="button"
             onClick={() => void copyState.copy(value)}
