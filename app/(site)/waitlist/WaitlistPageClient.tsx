@@ -6,6 +6,7 @@ import { VerifiedModal } from "@/components/landing/VerifiedModal";
 import { useWaitlistVerification } from "@/components/hooks/useWaitlistVerification";
 import HomePage from "@/components/landing/HomePage";
 import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
+import type { LandingBlogPostCard } from "@/components/landing/LandingRecentBlogs";
 import type { NetworkStats as Stats } from "@/lib/network-stats";
 
 function LeaderboardLink() {
@@ -49,7 +50,13 @@ function DashboardLink() {
   );
 }
 
-export default function WaitlistPageClient({ stats }: { stats: Stats }) {
+export default function WaitlistPageClient({
+  stats,
+  recentBlogPosts = [],
+}: {
+  stats: Stats;
+  recentBlogPosts?: LandingBlogPostCard[];
+}) {
   const { status, banner, clearBanner, closeSuccessModal } = useWaitlistVerification();
   const [waitlistConfirmed, setWaitlistConfirmed] = useState(false);
 
@@ -110,6 +117,7 @@ export default function WaitlistPageClient({ stats }: { stats: Stats }) {
         stats={stats}
         subtitle="Be first to claim a name you can use, hold, or sell."
         collapsed={waitlistConfirmed}
+        recentBlogPosts={recentBlogPosts}
       />
 
       <VerifiedModal

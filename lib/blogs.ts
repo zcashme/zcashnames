@@ -236,6 +236,23 @@ export async function listAllBlogPosts(limit?: number): Promise<BlogPostSummary[
   return sliced.map(({ modifiedAt: _modifiedAt, ...post }) => post);
 }
 
+export async function listLandingBlogPosts(limit = 4): Promise<BlogPostSummary[]> {
+  const recentPosts = await listAllBlogPosts(limit);
+  if (recentPosts.length > 0) return recentPosts;
+
+  const fallbackPosts = await Promise.all([
+    readSeriesPosts("updates"),
+    readSeriesPosts("launch"),
+    readSeriesPosts("builders"),
+  ]);
+
+  return fallbackPosts
+    .flat()
+    .sort((a, b) => b.modifiedAt - a.modifiedAt)
+    .slice(0, limit)
+    .map(({ modifiedAt: _modifiedAt, ...post }) => post);
+}
+
 export async function listRecentBlogPostsAcrossAllSeries(limit = 8): Promise<BlogPostSummary[]> {
   return listAllBlogPosts(limit);
 }

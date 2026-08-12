@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import WaitlistPageClient from "./WaitlistPageClient";
+import { listLandingBlogPosts } from "@/lib/blogs";
 import { getNetworkStats } from "@/lib/network-stats";
 import { resolveReferralIdentity } from "@/lib/referrals";
 
@@ -83,6 +84,19 @@ export async function generateMetadata({ searchParams }: WaitlistPageProps): Pro
 }
 
 export default async function WaitlistPage() {
-  const stats = await getNetworkStats("waitlist");
-  return <WaitlistPageClient stats={stats} />;
+  const [stats, homepagePosts] = await Promise.all([
+    getNetworkStats("waitlist"),
+    listLandingBlogPosts(4),
+  ]);
+
+  const recentBlogPosts = homepagePosts.map((post) => ({
+    slug: post.slug,
+    title: post.title,
+    href: post.href,
+    seriesLabel: post.seriesLabel,
+    publishedLabel: post.publishedLabel,
+    excerpt: post.excerpt,
+  }));
+
+  return <WaitlistPageClient stats={stats} recentBlogPosts={recentBlogPosts} />;
 }

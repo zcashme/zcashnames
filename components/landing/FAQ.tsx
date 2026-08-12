@@ -1,7 +1,6 @@
-// FAQ accordion with grouped questions (basics, privacy, access, community).
+// FAQ accordion with grouped questions and item-level answers.
 // Questions/answers are static data defined as a constant array - no API calls.
-// Single openKey state enforces one-open-at-a-time.
-// Expand/collapse uses max-height + opacity transitions; active item gets a left border accent.
+// Group and item expand/collapse both use max-height + opacity transitions.
 "use client";
 
 import Link from "next/link";
@@ -148,9 +147,14 @@ const groups: FAQGroup[] = [
 
 export default function FAQ() {
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [openGroupIndex, setOpenGroupIndex] = useState<number | null>(null);
 
   const toggle = (key: string) => {
     setOpenKey((prev) => (prev === key ? null : key));
+  };
+
+  const toggleGroup = (groupIndex: number) => {
+    setOpenGroupIndex((prev) => (prev === groupIndex ? null : groupIndex));
   };
 
   return (
@@ -160,65 +164,90 @@ export default function FAQ() {
       </div>
 
       <div className="flex flex-col gap-10">
-        {groups.map((group, groupIndex) => (
-          <div key={groupIndex}>
-            <div className="mb-2">
-              <h3
-                className="type-kicker"
-                style={{ color: "var(--section-title-accent)" }}
+        {groups.map((group, groupIndex) => {
+          const isGroupOpen = openGroupIndex === groupIndex;
+
+          return (
+            <div key={groupIndex}>
+              <button
+                type="button"
+                onClick={() => toggleGroup(groupIndex)}
+                className="group mb-2 flex w-full cursor-pointer items-center justify-between text-left"
               >
-                {group.title}
-              </h3>
-            </div>
-            <div>
-              {group.items.map((item, index) => {
-                const key = `${groupIndex}-${index}`;
-                const isOpen = openKey === key;
+                <h3
+                  className="type-kicker"
+                  style={{ color: "var(--section-title-accent)" }}
+                >
+                  {group.title}
+                </h3>
+                <span
+                  className="shrink-0 text-xl leading-none transition-transform duration-200"
+                  style={{
+                    color: "var(--fg-muted)",
+                    transform: isGroupOpen ? "rotate(45deg)" : "rotate(0deg)",
+                  }}
+                >
+                  +
+                </span>
+              </button>
+              <div
+                className="overflow-hidden transition-all duration-300 ease-in-out"
+                style={{
+                  maxHeight: isGroupOpen ? "2000px" : "0px",
+                  opacity: isGroupOpen ? 1 : 0,
+                }}
+              >
+                <div>
+                  {group.items.map((item, index) => {
+                    const key = `${groupIndex}-${index}`;
+                    const isOpen = openKey === key;
 
-                return (
-                  <div key={key} className="border-b border-border-muted">
-                    <button
-                      type="button"
-                      onClick={() => toggle(key)}
-                      className="group flex w-full cursor-pointer items-center justify-between py-5 text-left"
-                    >
-                      <span
-                        className={
-                          isOpen
-                            ? "type-body pr-4 text-[var(--color-accent-interactive,var(--fg-heading))] transition-colors duration-[140ms] ease-out"
-                            : "type-body pr-4 text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]"
-                        }
-                      >
-                        {item.question}
-                      </span>
-                      <span
-                        className="shrink-0 text-xl leading-none transition-transform duration-200"
-                        style={{
-                          color: "var(--fg-muted)",
-                          transform: isOpen ? "rotate(45deg)" : "rotate(0deg)",
-                        }}
-                      >
-                        +
-                      </span>
-                    </button>
+                    return (
+                      <div key={key} className="border-b border-border-muted">
+                        <button
+                          type="button"
+                          onClick={() => toggle(key)}
+                          className="group flex w-full cursor-pointer items-center justify-between py-5 text-left"
+                        >
+                          <span
+                            className={
+                              isOpen
+                                ? "type-body pr-4 text-[var(--color-accent-interactive,var(--fg-heading))] transition-colors duration-[140ms] ease-out"
+                                : "type-body pr-4 text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]"
+                            }
+                          >
+                            {item.question}
+                          </span>
+                          <span
+                            className="shrink-0 text-xl leading-none transition-transform duration-200"
+                            style={{
+                              color: "var(--fg-muted)",
+                              transform: isOpen ? "rotate(45deg)" : "rotate(0deg)",
+                            }}
+                          >
+                            +
+                          </span>
+                        </button>
 
-                    <div
-                      className="overflow-hidden transition-all duration-300 ease-in-out"
-                      style={{
-                        maxHeight: isOpen ? "600px" : "0px",
-                        opacity: isOpen ? 1 : 0,
-                      }}
-                    >
-                      <p className="pb-5 type-body" style={{ color: "var(--fg-muted)" }}>
-                        {item.answer}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+                        <div
+                          className="overflow-hidden transition-all duration-300 ease-in-out"
+                          style={{
+                            maxHeight: isOpen ? "600px" : "0px",
+                            opacity: isOpen ? 1 : 0,
+                          }}
+                        >
+                          <p className="pb-5 type-body" style={{ color: "var(--fg-muted)" }}>
+                            {item.answer}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-5 flex justify-end">
