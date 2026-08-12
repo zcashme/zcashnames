@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useState } from "react";
 import type { NetworkStats } from "@/lib/network-stats";
 
 type StatKey = "claimed" | "forSale" | "syncedHeight" | "waitlist" | "referred" | "rewardsPot";
@@ -14,8 +14,6 @@ type StatItem = {
   deltaWeekValue?: string | null;
   deltaMonthValue?: string | null;
 };
-
-const PROXIMITY_RADIUS = 170;
 
 function formatSignedCount(value: number | null): string {
   if (value === null) return "--";
@@ -79,7 +77,6 @@ export default function MarketStats({
 }) {
   const [activeKey, setActiveKey] = useState<StatKey | null>(null);
   const [hoverKey, setHoverKey] = useState<StatKey | null>(null);
-  const itemRefs = useRef(new Map<StatKey, HTMLButtonElement>());
 
   const items = buildItems(stats);
   const isWaitlistMode = stats.mode === "waitlist";
@@ -97,43 +94,10 @@ export default function MarketStats({
   const activeItem = items.find((item) => item.key === activeKey);
   const isHelpVisible = Boolean(activeItem);
 
-  const register = (key: StatKey, node: HTMLButtonElement | null) => {
-    if (node) {
-      itemRefs.current.set(key, node);
-      return;
-    }
-    itemRefs.current.delete(key);
-  };
-
-  const resetItems = () => {
-    for (const node of itemRefs.current.values()) {
-      node.style.setProperty("--stats-scale", "1");
-      node.style.setProperty("--stats-shadow-opacity", "0");
-    }
-  };
-
-  const handlePointerMove = (event: ReactPointerEvent<HTMLElement>) => {
-    if (event.pointerType === "touch") return;
-
-    for (const node of itemRefs.current.values()) {
-      const rect = node.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
-      const influence = Math.max(0, 1 - distance / PROXIMITY_RADIUS);
-      const eased = influence * influence;
-
-      node.style.setProperty("--stats-scale", `${1 + eased * 0.08}`);
-      node.style.setProperty("--stats-shadow-opacity", `${eased * 0.22}`);
-    }
-  };
-
   return (
     <section
       id={sectionId}
       className="relative z-[2] w-full px-4 pb-10 sm:px-6 sm:pb-12 max-[700px]:pb-8"
-      onPointerMove={handlePointerMove}
-      onPointerLeave={resetItems}
     >
       <div className="mx-auto w-full max-w-2xl rounded-[24px] p-3 sm:max-w-3xl sm:p-4 xl:max-w-4xl">
         <div className="relative grid grid-cols-3">
@@ -151,7 +115,6 @@ export default function MarketStats({
             const isHighlighted = hoverKey === item.key || activeKey === item.key;
             return (
               <button
-                ref={(node) => register(item.key, node)}
                 key={item.key}
                 type="button"
                 aria-pressed={activeKey === item.key}
@@ -161,25 +124,29 @@ export default function MarketStats({
                 onMouseLeave={() => setHoverKey((curr) => curr === item.key ? null : curr)}
                 onFocus={() => setHoverKey(item.key)}
                 onBlur={() => setHoverKey((curr) => curr === item.key ? null : curr)}
-                className="cursor-pointer px-3 py-2 text-center transition-[transform,box-shadow,border-color] duration-200 ease-out will-change-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)] sm:px-5 sm:py-3"
-                style={{
-                  transform: "translateZ(0) scale(var(--stats-scale, 1))",
-                  boxShadow: "0 18px 36px rgba(0, 0, 0, var(--stats-shadow-opacity, 0))",
-                }}
+                className="cursor-pointer px-3 py-2 text-center transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)] sm:px-5 sm:py-3"
               >
                 <div
                   className={`mx-1 rounded-[0.8rem] px-2 transition-colors duration-200 ease-out sm:px-3 ${isWaitlistMode ? "py-3 sm:py-3.5" : "py-2 sm:py-2.5"}`}
-                  style={{ background: isHighlighted ? "var(--market-stats-segment-active-bg)" : "transparent" }}
                 >
                   {isWaitlistMode ? (
                     <div className="flex min-h-[8.75rem] flex-col items-center justify-center gap-3 text-center">
-                      <div className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-dim sm:text-[0.78rem]">
+                      <div
+                        className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] sm:text-[0.78rem]"
+                        style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-dim)" }}
+                      >
                         {item.label}
                       </div>
-                      <div className="tabular-nums text-[clamp(1.4rem,2.8vw,2rem)] font-semibold leading-none tracking-[-0.015em] text-fg-heading">
+                      <div
+                        className="tabular-nums text-[clamp(1.4rem,2.8vw,2rem)] font-semibold leading-none tracking-[-0.015em] transition-colors"
+                        style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-heading)" }}
+                      >
                         {item.value}
                       </div>
-                      <div className="flex flex-col items-center gap-1 tabular-nums text-[0.68rem] font-medium leading-none text-fg-muted sm:text-[0.72rem]">
+                      <div
+                        className="flex flex-col items-center gap-1 tabular-nums text-[0.68rem] font-medium leading-none transition-colors sm:text-[0.72rem]"
+                        style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-muted)" }}
+                      >
                         {[
                           { value: item.deltaDayValue ?? "--", label: "1d" },
                           { value: item.deltaWeekValue ?? "--", label: "7d" },
@@ -201,10 +168,16 @@ export default function MarketStats({
                     </div>
                   ) : (
                     <>
-                      <div className="tabular-nums text-[clamp(1.25rem,2.5vw,1.85rem)] font-semibold leading-none tracking-[-0.015em] text-fg-heading">
+                      <div
+                        className="tabular-nums text-[clamp(1.25rem,2.5vw,1.85rem)] font-semibold leading-none tracking-[-0.015em] transition-colors"
+                        style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-heading)" }}
+                      >
                         {item.value}
                       </div>
-                      <div className="mt-1 text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-dim sm:mt-1.5 sm:text-[0.78rem]">
+                      <div
+                        className="mt-1 text-[0.74rem] font-semibold uppercase tracking-[0.08em] transition-colors sm:mt-1.5 sm:text-[0.78rem]"
+                        style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-dim)" }}
+                      >
                         {item.label}
                       </div>
                     </>
@@ -220,8 +193,8 @@ export default function MarketStats({
           className={`overflow-hidden transition-all duration-300 ease-out ${isHelpVisible ? "mt-3 max-h-32 translate-y-0 opacity-100" : "max-h-0 -translate-y-1 opacity-0 pointer-events-none"}`}
         >
           <p
-            className="rounded-xl border px-4 py-2 text-[0.78rem] font-medium leading-relaxed sm:text-sm"
-            style={{ background: "var(--market-stats-help-bg)", borderColor: "var(--market-stats-help-border)", color: "var(--market-stats-help-text)" }}
+            className="px-4 py-2 text-center text-[0.78rem] font-medium leading-relaxed sm:text-sm"
+            style={{ color: "var(--market-stats-help-text)" }}
           >
             {activeItem?.helpText}
           </p>

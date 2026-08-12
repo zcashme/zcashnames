@@ -1,12 +1,10 @@
 "use client";
 
 import {
-  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import LandingActionLink from "@/components/landing/LandingActionLink";
@@ -91,53 +89,42 @@ function WalletsLink() {
 }
 
 function PartnerIcon({ item }: { item: PartnerReelItem }) {
-  const cardRef = useRef<HTMLAnchorElement | HTMLDivElement | null>(null);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [isHovering, setIsHovering] = useState(false);
-
-  const handleMouseMove = useCallback((event: ReactMouseEvent<HTMLAnchorElement | HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    setTilt({
-      x: ((event.clientY - rect.top - rect.height / 2) / (rect.height / 2)) * -10,
-      y: ((event.clientX - rect.left - rect.width / 2) / (rect.width / 2)) * 10,
-    });
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    setIsHovering(false);
-    setTilt({ x: 0, y: 0 });
-  }, []);
+  const [isHighlighted, setIsHighlighted] = useState(false);
+  const verticalAccents = isHighlighted ? (
+    <>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 left-0 w-px"
+        style={{ background: "var(--color-accent-interactive)" }}
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 right-0 w-px"
+        style={{ background: "var(--color-accent-interactive)" }}
+      />
+    </>
+  ) : null;
 
   if (item.kind === "cta" && item.href) {
     return (
       <a
-        ref={(node) => {
-          cardRef.current = node;
-        }}
         href={item.href}
-        className="group flex min-w-[10rem] flex-col items-center gap-2 px-7 py-4 text-center transition-[transform,color] duration-300 ease-out"
-        onMouseMove={handleMouseMove}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          transform: `perspective(860px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${isHovering ? 1.08 : 1})`,
-          transformStyle: "preserve-3d",
-          boxShadow: isHovering ? "0 22px 36px rgba(0, 0, 0, 0.14)" : "none",
-        }}
+        className="group relative flex min-w-[10rem] flex-col items-center gap-2 px-7 py-4 text-center transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--partner-card-border-hover)]"
+        onMouseEnter={() => setIsHighlighted(true)}
+        onMouseLeave={() => setIsHighlighted(false)}
+        onFocus={() => setIsHighlighted(true)}
+        onBlur={() => setIsHighlighted(false)}
       >
+        {verticalAccents}
         <div
-          className="flex h-16 w-16 items-center justify-center text-[2rem] font-semibold leading-none transition-transform duration-300 group-hover:scale-110 sm:h-20 sm:w-20 sm:text-[2.4rem]"
-          style={{
-            color: isHovering ? "var(--fg-heading)" : "var(--fg-body)",
-            transform: "translateZ(22px)",
-          }}
+          className="flex h-16 w-16 items-center justify-center text-[2rem] font-semibold leading-none sm:h-20 sm:w-20 sm:text-[2.4rem]"
+          style={{ color: "var(--fg-body)" }}
         >
           +
         </div>
         <span
-          className="text-xs font-semibold leading-tight transition-colors duration-300 group-hover:text-[var(--color-accent-interactive)] sm:text-sm"
-          style={{ color: "var(--fg-muted)", transform: "translateZ(16px)" }}
+          className="text-xs font-semibold leading-tight transition-colors duration-200 sm:text-sm"
+          style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-muted)" }}
         >
           {item.displayName}
         </span>
@@ -155,15 +142,15 @@ function PartnerIcon({ item }: { item: PartnerReelItem }) {
           src={item.iconSrc ?? ""}
           alt=""
           aria-hidden="true"
-          className="h-16 w-16 object-contain transition-transform duration-300 sm:h-20 sm:w-20"
-          style={{ transform: `${iconTransform} translateZ(22px)` }}
+          className="h-16 w-16 object-contain sm:h-20 sm:w-20"
+          style={{ transform: iconTransform }}
           loading="lazy"
           decoding="async"
         />
       </div>
       <span
-        className="text-xs font-semibold leading-tight transition-colors duration-300 group-hover:text-[var(--color-accent-interactive)] sm:text-sm"
-        style={{ color: "var(--fg-muted)", transform: "translateZ(16px)" }}
+        className="text-xs font-semibold leading-tight transition-colors duration-200 sm:text-sm"
+        style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-muted)" }}
       >
         {item.displayName}
       </span>
@@ -173,20 +160,14 @@ function PartnerIcon({ item }: { item: PartnerReelItem }) {
   if (item.href) {
     return (
       <a
-        ref={(node) => {
-          cardRef.current = node;
-        }}
         href={item.href}
-        className="group flex min-w-[10rem] flex-col items-center gap-2 px-7 py-4 text-center transition-[transform,color] duration-300 ease-out"
-        onMouseMove={handleMouseMove}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          transform: `perspective(860px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${isHovering ? 1.08 : 1})`,
-          transformStyle: "preserve-3d",
-          boxShadow: isHovering ? "0 22px 36px rgba(0, 0, 0, 0.14)" : "none",
-        }}
+        className="group relative flex min-w-[10rem] flex-col items-center gap-2 px-7 py-4 text-center transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--partner-card-border-hover)]"
+        onMouseEnter={() => setIsHighlighted(true)}
+        onMouseLeave={() => setIsHighlighted(false)}
+        onFocus={() => setIsHighlighted(true)}
+        onBlur={() => setIsHighlighted(false)}
       >
+        {verticalAccents}
         {content}
       </a>
     );
@@ -194,19 +175,11 @@ function PartnerIcon({ item }: { item: PartnerReelItem }) {
 
   return (
     <div
-      ref={(node) => {
-        cardRef.current = node;
-      }}
-      className="group flex min-w-[10rem] flex-col items-center gap-2 px-7 py-4 text-center transition-[transform,color] duration-300 ease-out"
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        transform: `perspective(860px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${isHovering ? 1.08 : 1})`,
-        transformStyle: "preserve-3d",
-        boxShadow: isHovering ? "0 22px 36px rgba(0, 0, 0, 0.14)" : "none",
-      }}
+      className="group relative flex min-w-[10rem] flex-col items-center gap-2 px-7 py-4 text-center transition-colors duration-200 ease-out"
+      onMouseEnter={() => setIsHighlighted(true)}
+      onMouseLeave={() => setIsHighlighted(false)}
     >
+      {verticalAccents}
       {content}
     </div>
   );

@@ -6,6 +6,7 @@ import CaptchaChallengeModal, {
   type CaptchaSolution,
 } from "@/components/captcha/CaptchaChallengeModal";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
+import { defaultTextFieldStyle } from "@/components/ui/formFieldStyles";
 import { submitIndexerLaunchAlert } from "@/lib/indexer-launch-alert/actions";
 import {
   CONTACT_KINDS,
@@ -28,11 +29,7 @@ function buildUid() {
   return `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-const inputStyle: CSSProperties = {
-  background: "var(--input-fill)",
-  border: "1.5px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-  color: "var(--fg-heading)",
-};
+const inputStyle: CSSProperties = defaultTextFieldStyle;
 
 const selectStyle: CSSProperties = {
   ...inputStyle,

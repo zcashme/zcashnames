@@ -6,6 +6,7 @@ import CaptchaChallengeModal, {
 } from "@/components/captcha/CaptchaChallengeModal";
 import ProtectedDisputeSuccessModal from "@/components/protected/ProtectedDisputeSuccessModal";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
+import { buildVerifyTextFieldStyle } from "@/components/ui/formFieldStyles";
 import { getEmailAddressValidationMessage } from "@/lib/email-address";
 import {
   PROTECTED_NAME_CATEGORIES,
@@ -218,16 +219,6 @@ function ErrorText({ message }: { message: string | null }) {
   );
 }
 
-function fieldStyle(invalid: boolean) {
-  return {
-    background: "var(--verify-input-fill)",
-    border: invalid
-      ? "1.5px solid var(--accent-red, #e05252)"
-      : "1.5px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-    color: "var(--fg-heading)",
-  };
-}
-
 function SearchableNameInput({
   id,
   label,
@@ -309,7 +300,7 @@ function SearchableNameInput({
           placeholder={placeholder}
           autoComplete="off"
           className="w-full rounded-2xl px-4 py-2.5 pr-11 text-sm outline-none"
-          style={fieldStyle(invalid)}
+          style={buildVerifyTextFieldStyle(invalid)}
           aria-autocomplete="list"
           aria-expanded={shouldShowMenu}
           aria-haspopup="listbox"
@@ -437,7 +428,7 @@ function DropdownField({
           type="button"
           onClick={() => setOpen((current) => !current)}
           className="zns-focus-field flex min-h-[46px] w-full items-center justify-between gap-4 rounded-2xl px-4 py-2.5 text-left text-sm font-semibold outline-none transition-[border-color,box-shadow]"
-          style={fieldStyle(invalid)}
+          style={buildVerifyTextFieldStyle(invalid)}
           aria-haspopup="listbox"
           aria-expanded={open}
         >
@@ -1155,7 +1146,7 @@ export default function ProtectedDisputeForm({
                 rows={4}
                 className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
                 style={{
-                  ...fieldStyle(false),
+                  ...buildVerifyTextFieldStyle(false),
                   resize: "vertical",
                 }}
               />
@@ -1183,7 +1174,7 @@ export default function ProtectedDisputeForm({
                       onChange={(event) => updateEvidenceLink(index, event.target.value)}
                       placeholder="https://"
                       className="min-w-0 flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
-                      style={fieldStyle(false)}
+                      style={buildVerifyTextFieldStyle(false)}
                     />
                     {evidenceLinks.length > 1 ? (
                       <button
@@ -1265,7 +1256,7 @@ export default function ProtectedDisputeForm({
                             updateContactKind(contact.uid, event.target.value as ContactKind)
                           }
                           className="zns-themed-select cursor-pointer rounded-xl px-3 py-2.5 text-sm outline-none"
-                          style={{ ...fieldStyle(!!contactError), minWidth: 130 }}
+                          style={{ ...buildVerifyTextFieldStyle(!!contactError), minWidth: 130 }}
                         >
                           {CONTACT_KINDS.map((kind) => (
                             <option key={kind} value={kind}>
@@ -1280,7 +1271,7 @@ export default function ProtectedDisputeForm({
                           placeholder={CONTACT_PLACEHOLDER[contact.kind]}
                           maxLength={200}
                           className="min-w-0 flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
-                          style={fieldStyle(!!contactError)}
+                          style={buildVerifyTextFieldStyle(!!contactError)}
                         />
                         {contacts.length > 1 ? (
                           <button
@@ -1332,7 +1323,7 @@ export default function ProtectedDisputeForm({
                   }}
                   placeholder="u1..."
                   className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
-                  style={fieldStyle(!!unifiedAddressError)}
+                  style={buildVerifyTextFieldStyle(!!unifiedAddressError)}
                   autoComplete="off"
                 />
                 <ErrorText message={unifiedAddressError} />

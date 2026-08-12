@@ -109,8 +109,12 @@ export default function NetworkToggle() {
       >
         <button
           type="button"
-          className="relative flex h-8 items-center justify-center gap-1 rounded-full px-3 text-sm font-bold tracking-tight leading-none cursor-pointer transition-opacity duration-200"
-          style={{ background: "var(--color-raised)", color: "var(--fg-heading)" }}
+          className={`relative flex h-8 items-center justify-center gap-1 rounded-full px-3 text-sm font-bold leading-none tracking-tight transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)] ${
+            menuOpen
+              ? "text-[var(--color-accent-interactive)]"
+              : "text-fg-heading hover:text-[var(--color-accent-interactive)]"
+          }`}
+          style={{ background: "var(--color-raised)" }}
           aria-expanded={menuOpen}
           aria-haspopup="menu"
           onClick={() => setMenuOpen((current) => !current)}
@@ -145,17 +149,19 @@ export default function NetworkToggle() {
                   aria-checked={selected}
                   aria-disabled={disabled}
                   disabled={disabled}
-                  className="flex w-full items-center justify-between rounded-md px-4 py-2 text-left transition-colors duration-150 disabled:cursor-not-allowed"
+                  className={`flex w-full items-center justify-between rounded-md px-4 py-2 text-left transition-colors duration-150 disabled:cursor-not-allowed ${
+                    disabled ? "" : "zns-menu-hover"
+                  }`}
                   style={{
                     color: disabled
                       ? "color-mix(in srgb, var(--fg-body) 48%, transparent)"
                       : selected
-                        ? "var(--fg-heading)"
+                        ? "var(--color-accent-interactive)"
                         : "var(--fg-body)",
                     background: selected
                       ? monochrome
                         ? "rgba(155,188,15,0.16)"
-                        : "color-mix(in srgb, var(--fg-heading) 14%, transparent)"
+                        : "color-mix(in srgb, var(--color-accent-interactive) 14%, transparent)"
                       : "transparent",
                     opacity: disabled ? 0.65 : 1,
                   }}
@@ -165,7 +171,7 @@ export default function NetworkToggle() {
                   {selected ? (
                     <span
                       className="h-2 w-2 rounded-full"
-                      style={{ background: "var(--fg-heading)" }}
+                      style={{ background: "var(--color-accent-interactive)" }}
                       aria-hidden="true"
                     />
                   ) : null}

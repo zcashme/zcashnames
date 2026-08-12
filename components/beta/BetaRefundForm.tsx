@@ -539,8 +539,8 @@ function RefundSelectField({
           disabled
             ? "cursor-not-allowed border-border-muted text-fg-muted opacity-80"
             : open
-              ? "border-fg-heading text-fg-heading [box-shadow:0_0_0_1px_var(--fg-heading)]"
-              : "border-border-muted text-fg-heading hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] focus:border-[var(--color-accent-interactive)] focus:[box-shadow:0_0_0_1px_var(--color-accent-interactive)]"
+              ? "border-[var(--color-accent-interactive)] text-[var(--color-accent-interactive)] [box-shadow:0_0_0_1px_var(--color-accent-interactive)]"
+              : "border-border-muted text-fg-heading hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
         }`}
       >
         <span>{activeOption?.label ?? placeholder}</span>

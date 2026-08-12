@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { usePurchaseFlow } from "@/components/hooks/usePurchaseFlow";
 import ShareDropdown from "@/components/ShareDropdown";
+import { buildFaqTextFieldStyle } from "@/components/ui/formFieldStyles";
 import { ACTION_LABELS, getNetworkConstants } from "@/lib/types";
 import type { Action, Network, Phase, ResolveName } from "@/lib/types";
 import { validateAddress } from "@/lib/zns/utils";
@@ -81,14 +82,6 @@ type NameActionFormProps = {
   /** Fired when the form enters/leaves the success confirmation state. */
   onSuccessChange?: (success: boolean) => void;
 };
-
-function fieldStyle(hasError: boolean): CSSProperties {
-  return {
-    background: "var(--input-fill)",
-    border: `1.5px solid ${hasError ? "var(--accent-red, #e05252)" : "var(--faq-border)"}`,
-    color: "var(--fg-heading)",
-  };
-}
 
 function InlineStepButton({
   onClick,
@@ -497,7 +490,7 @@ export default function NameActionForm({
             }}
             placeholder="XXXX-XXXX-XXXX"
             className="w-full rounded-2xl px-4 py-2.5 text-center font-mono text-sm tracking-[0.15em] outline-none disabled:opacity-70"
-            style={fieldStyle(!!s.unlockError && active)}
+            style={buildFaqTextFieldStyle(!!s.unlockError && active)}
             autoComplete="off"
           />
           {active && s.unlockError ? (
@@ -540,7 +533,7 @@ export default function NameActionForm({
                 }}
                 placeholder="u1…"
                 className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none disabled:opacity-70"
-                style={fieldStyle(!!s.inputError && active && needsAddress)}
+                style={buildFaqTextFieldStyle(!!s.inputError && active && needsAddress)}
                 autoComplete="off"
               />
               {active && isMatchedBuyer && (
@@ -573,7 +566,7 @@ export default function NameActionForm({
                 }}
                 placeholder="0.00"
                 className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none disabled:opacity-70"
-                style={fieldStyle(false)}
+                style={buildFaqTextFieldStyle(false)}
                 autoComplete="off"
               />
             </div>
@@ -595,7 +588,7 @@ export default function NameActionForm({
                 }}
                 placeholder={network === "testnet" ? "tm…" : "t1…"}
                 className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none disabled:opacity-70"
-                style={fieldStyle(
+                style={buildFaqTextFieldStyle(
                   !!s.inputError &&
                     active &&
                     needsPayTaddr &&

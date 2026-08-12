@@ -11,6 +11,7 @@ import CaptchaChallengeModal, {
   type CaptchaSolution,
 } from "@/components/captcha/CaptchaChallengeModal";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
+import { defaultTextFieldStyle } from "@/components/ui/formFieldStyles";
 import { submitBetaV2Application } from "@/lib/beta-v2/actions";
 import {
   CONTACT_KINDS,
@@ -68,11 +69,7 @@ function walletWarning(choice: WalletChoice | "other"): string | null {
   return getWalletVariant(choice)?.warning ?? null;
 }
 
-const inputStyle: React.CSSProperties = {
-  background: "var(--input-fill)",
-  border: "1.5px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-  color: "var(--fg-heading)",
-};
+const inputStyle: React.CSSProperties = defaultTextFieldStyle;
 
 const selectStyle: React.CSSProperties = {
   ...inputStyle,

@@ -6,14 +6,11 @@ import CaptchaChallengeModal, {
   type CaptchaSolution,
 } from "@/components/captcha/CaptchaChallengeModal";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
+import { defaultTextFieldStyle } from "@/components/ui/formFieldStyles";
 import type { CareerJob } from "@/lib/careers";
 import { submitCareerApplication } from "@/lib/careers/actions";
 
-const inputStyle: CSSProperties = {
-  background: "var(--input-fill)",
-  border: "1.5px solid color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))",
-  color: "var(--fg-heading)",
-};
+const inputStyle: CSSProperties = defaultTextFieldStyle;
 
 const labelStyle: CSSProperties = {
   color: "var(--fg-muted)",
