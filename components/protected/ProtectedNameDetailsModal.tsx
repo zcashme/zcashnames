@@ -10,8 +10,26 @@ type ProtectedNameDetailsModalProps = {
   row: ProtectedViewRow | null;
   isOpen: boolean;
   onClose: () => void;
+  onRequest: (row: ProtectedViewRow) => void;
   onDispute: (row: ProtectedViewRow) => void;
 };
+
+function CloseIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className ?? "h-8 w-8"}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M6 6l12 12" />
+      <path d="M18 6 6 18" />
+    </svg>
+  );
+}
 
 function EllipsisIcon({ className }: { className?: string }) {
   return (
@@ -275,6 +293,7 @@ export default function ProtectedNameDetailsModal({
   row,
   isOpen,
   onClose,
+  onRequest,
   onDispute,
 }: ProtectedNameDetailsModalProps) {
   useEffect(() => {
@@ -298,9 +317,9 @@ export default function ProtectedNameDetailsModal({
 
   if (!isOpen || !row || typeof document === "undefined") return null;
 
-  const canDispute =
-    !row.redeemed
-    && (row.status.toLowerCase() === "protected" || row.status.toLowerCase() === "rejected");
+  const status = row.status.toLowerCase();
+  const canRequest = !row.redeemed && status === "protected";
+  const canDispute = !row.redeemed && (status === "protected" || status === "rejected");
 
   return createPortal(
     <div
@@ -353,19 +372,27 @@ export default function ProtectedNameDetailsModal({
               }}
             >
               <div className="flex items-center justify-between gap-3">
-                <h2
-                  id="protected-name-details-title"
-                  className="min-w-0 flex-1 text-left text-xl font-bold leading-none"
-                  style={{ color: "var(--fg-heading)" }}
-                >
-                  {row.normalized_name}
-                </h2>
-                <div className="shrink-0">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                  <h2
+                    id="protected-name-details-title"
+                    className="min-w-0 text-left text-xl font-bold leading-none"
+                    style={{ color: "var(--fg-heading)" }}
+                  >
+                    {row.normalized_name}
+                  </h2>
                   <StatusBadge
                     label={getNameStatusLabel(row.status)}
                     style={getNameStatusStyle(row.status)}
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="zns-modal-close inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                  aria-label="Close"
+                >
+                  <CloseIcon />
+                </button>
               </div>
             </div>
 
@@ -464,6 +491,24 @@ export default function ProtectedNameDetailsModal({
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
+                onClick={() => onRequest(row)}
+                disabled={!canRequest}
+                title={
+                  canRequest
+                    ? "Open the access request form with this name selected"
+                    : "Only non-redeemed protected names can be requested"
+                }
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:brightness-100"
+                style={{
+                  background: "var(--home-result-primary-bg)",
+                  color: "var(--home-result-primary-fg)",
+                  boxShadow: canRequest ? "var(--home-result-primary-shadow)" : "none",
+                }}
+              >
+                Request
+              </button>
+              <button
+                type="button"
                 onClick={() => onDispute(row)}
                 disabled={!canDispute}
                 title={
@@ -471,21 +516,9 @@ export default function ProtectedNameDetailsModal({
                     ? "Open the dispute form with this name selected"
                     : "Only non-redeemed protected or rejected names can be disputed"
                 }
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:brightness-100"
-                style={{
-                  background: "var(--home-result-primary-bg)",
-                  color: "var(--home-result-primary-fg)",
-                  boxShadow: canDispute ? "var(--home-result-primary-shadow)" : "none",
-                }}
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-border-muted bg-transparent px-5 py-2 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Dispute
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-border-muted bg-transparent px-5 py-2 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
-              >
-                Close
               </button>
             </div>
           </div>

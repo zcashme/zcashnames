@@ -356,6 +356,7 @@ export async function submitBetaV2Application(
     x: "",
     telegram: "",
     forum: "",
+    other: "",
   };
 
   for (const kind of CONTACT_KINDS) {

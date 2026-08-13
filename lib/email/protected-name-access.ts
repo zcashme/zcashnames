@@ -1,23 +1,13 @@
 import "server-only";
 
-import type {
-  WaitlistProtectedAccessRelationship,
-  WaitlistProtectedAccessRequest,
-} from "@/lib/campaigns/waitlist-protected-access";
+import type { WaitlistProtectedAccessRequest } from "@/lib/campaigns/waitlist-protected-access";
 import { FROM_EMAIL, TO_EMAIL } from "@/lib/email/constants";
 import { sendEmail } from "@/lib/email/client";
+import { PROTECTED_ACCESS_RELATIONSHIP_LABEL } from "@/lib/protected/shared";
 
 type ProtectedNameAccessRequestNotice = {
   event: "submitted" | "updated";
   request: WaitlistProtectedAccessRequest;
-};
-
-const RELATIONSHIP_LABEL: Record<WaitlistProtectedAccessRelationship, string> = {
-  personal_or_public_name: "This is my personal or public name",
-  represent_person: "I represent this person",
-  represent_organization: "I represent this organization",
-  manage_brand_or_project: "I manage this brand or project",
-  other: "Other",
 };
 
 function row(label: string, value: string | null | undefined): string {
@@ -48,13 +38,15 @@ export async function sendProtectedNameAccessRequestNotice(
     `Event:              ${notice.event}`,
     `Status:             ${notice.request.status}`,
     `Requested name:     ${requestedName}`,
-    `Waitlist row id:    ${notice.request.waitlistRowId}`,
+    `Waitlist row id:    ${notice.request.waitlistRowId ?? "(none — public /protected/request)"}`,
     `Normalized email:   ${notice.request.normalizedEmail}`,
     `Submitted at:       ${notice.request.submittedAt}`,
     `Updated at:         ${notice.request.updatedAt}`,
     row(
       "Relationship",
-      notice.request.relationship ? RELATIONSHIP_LABEL[notice.request.relationship] : null,
+      notice.request.relationship
+        ? PROTECTED_ACCESS_RELATIONSHIP_LABEL[notice.request.relationship]
+        : null,
     ).trimEnd(),
     row(
       "Preferred contact",

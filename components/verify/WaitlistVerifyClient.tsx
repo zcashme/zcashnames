@@ -20,6 +20,11 @@ import { QrBlock } from "@/components/ui/QrBlock";
 import HeroShareButton from "@/components/HeroShareButton";
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import {
+  PROTECTED_ACCESS_RELATIONSHIP_LABEL as PROTECTED_RELATIONSHIP_LABEL,
+  PROTECTED_ACCESS_RELATIONSHIP_OPTIONS as PROTECTED_RELATIONSHIP_OPTIONS,
+  type ProtectedAccessRelationship as ProtectedRequestRelationship,
+} from "@/lib/protected/shared";
+import {
   CONTACT_KINDS,
   CONTACT_LABEL,
   CONTACT_PLACEHOLDER,
@@ -33,13 +38,6 @@ import {
 } from "@/lib/share";
 
 type ProtectedRequestStatus = "not_submitted" | "submitted" | "approved" | "denied";
-
-type ProtectedRequestRelationship =
-  | "personal_or_public_name"
-  | "represent_person"
-  | "represent_organization"
-  | "manage_brand_or_project"
-  | "other";
 
 type ProtectedContactMethod = {
   kind: ContactKind;
@@ -128,14 +126,6 @@ type SummaryCardKind = "reserved" | "referrals" | "position" | "rewards";
 
 const STATUS_REFRESH_COOLDOWN_MS = 75_000;
 const MINUTE_MS = 60_000;
-
-const PROTECTED_RELATIONSHIP_LABEL: Record<ProtectedRequestRelationship, string> = {
-  personal_or_public_name: "This is my personal or public name",
-  represent_person: "I represent this person",
-  represent_organization: "I represent this organization",
-  manage_brand_or_project: "I manage this brand or project",
-  other: "Other",
-};
 
 function ClockIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
@@ -995,17 +985,6 @@ function formatCooldownCountdown(remainingMs: number): string {
 function pluralizeNames(count: number): string {
   return count === 1 ? "name" : "names";
 }
-
-const PROTECTED_RELATIONSHIP_OPTIONS: Array<{
-  value: ProtectedRequestRelationship;
-  label: string;
-}> = [
-  { value: "personal_or_public_name", label: "This is my personal or public name" },
-  { value: "represent_person", label: "I represent this person" },
-  { value: "represent_organization", label: "I represent this organization" },
-  { value: "manage_brand_or_project", label: "I manage this brand or project" },
-  { value: "other", label: "Other" },
-];
 
 type ProtectedContactRow = {
   uid: string;

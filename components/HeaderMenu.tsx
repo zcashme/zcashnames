@@ -31,6 +31,7 @@ const HEADER_MENU_LINKS: MenuLink[] = [
     children: [
       { label: "View Protected Names", href: "/protected" },
       { label: "Suggest a Protected Name", href: "/protected/suggest" },
+      { label: "Request a Protected Name", href: "/protected/request" },
       { label: "Dispute a Protected Name", href: "/protected/dispute" },
     ],
   },

@@ -70,6 +70,7 @@ export async function submitIndexerLaunchAlert(
     x: "",
     telegram: "",
     forum: "",
+    other: "",
   };
 
   for (const kind of CONTACT_KINDS) {

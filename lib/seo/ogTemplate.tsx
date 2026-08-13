@@ -150,6 +150,13 @@ export const OG_VARIANTS: Record<string, Omit<OgRenderOptions, "pillText"> & { p
     pillFontSize: 28,
     ...PILL_ON_LIGHT_OR_DARK,
   },
+  "protected-request": {
+    backgroundImage: BG.dark,
+    overlay: DARK_TEAL_OVERLAY,
+    pillText: "Request Protected Names",
+    pillFontSize: 28,
+    ...PILL_ON_LIGHT_OR_DARK,
+  },
   "waitlist-view": {
     backgroundImage: BG.light,
     overlay: LIGHT_OVERLAY,

@@ -75,6 +75,7 @@ export const SITEMAP_SECTIONS: SiteNavLink[] = [
       { label: "Explorer", href: "/explorer" },
       { label: "Protected names", href: "/protected" },
       { label: "Suggest a name", href: "/protected/suggest" },
+      { label: "Request a name", href: "/protected/request" },
     ],
   },
   {

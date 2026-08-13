@@ -928,6 +928,14 @@ export default function ProtectedViewClient({
         row={detailsRow}
         isOpen={!!detailsRow}
         onClose={() => setDetailsRow(null)}
+        onRequest={(row) => {
+          setDetailsRow(null);
+          router.push(
+            `/protected/request?${new URLSearchParams({
+              name: row.name,
+            }).toString()}`,
+          );
+        }}
         onDispute={(row) => {
           setDetailsRow(null);
           router.push(

@@ -299,7 +299,7 @@ export function getNetworkConstants(network: Network = "testnet"): NetworkConsta
 
 /* ── Contact Methods ──────────────────────────────────────────────────── */
 
-export const CONTACT_KINDS = ["email", "signal", "discord", "x", "telegram", "forum"] as const;
+export const CONTACT_KINDS = ["email", "signal", "discord", "x", "telegram", "forum", "other"] as const;
 export type ContactKind = (typeof CONTACT_KINDS)[number];
 
 export const CONTACT_LABEL: Record<ContactKind, string> = {
@@ -309,6 +309,7 @@ export const CONTACT_LABEL: Record<ContactKind, string> = {
   x:        "X / Twitter",
   telegram: "Telegram",
   forum:    "Zcash Community Forum",
+  other:    "Other",
 };
 
 export const CONTACT_PLACEHOLDER: Record<ContactKind, string> = {
@@ -318,4 +319,5 @@ export const CONTACT_PLACEHOLDER: Record<ContactKind, string> = {
   x:        "@yourhandle",
   telegram: "@yourhandle",
   forum:    "@username on forum.zcashcommunity.com",
+  other:    "How should we reach you?",
 };

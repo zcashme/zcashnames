@@ -1,16 +1,12 @@
 import "server-only";
 
 import { db } from "@/lib/db";
+import type { ProtectedAccessRelationship } from "@/lib/protected/shared";
 import type { ContactKind } from "@/lib/types";
 
 export type WaitlistProtectedAccessStatus = "submitted" | "approved" | "denied";
 
-export type WaitlistProtectedAccessRelationship =
-  | "personal_or_public_name"
-  | "represent_person"
-  | "represent_organization"
-  | "manage_brand_or_project"
-  | "other";
+export type WaitlistProtectedAccessRelationship = ProtectedAccessRelationship;
 
 export type WaitlistProtectedContactMethod = {
   kind: ContactKind;
@@ -26,7 +22,7 @@ type ProtectedNameLookupRow = {
 
 type WaitlistProtectedAccessRequestRow = {
   id: string;
-  waitlist_row_id: string;
+  waitlist_row_id: string | null;
   normalized_email: string;
   requested_name: string;
   status: WaitlistProtectedAccessStatus;
@@ -52,7 +48,7 @@ export type ProtectedNameInfo = {
 
 export type WaitlistProtectedAccessRequest = {
   id: string;
-  waitlistRowId: string;
+  waitlistRowId: string | null;
   normalizedEmail: string;
   requestedName: string;
   status: WaitlistProtectedAccessStatus;
@@ -194,13 +190,40 @@ export async function getLatestProtectedAccessRequestsByRowId(
   }
 
   for (const row of (data ?? []) as WaitlistProtectedAccessRequestRow[]) {
-    if (requestByRowId.has(row.waitlist_row_id)) {
+    if (!row.waitlist_row_id || requestByRowId.has(row.waitlist_row_id)) {
       continue;
     }
     requestByRowId.set(row.waitlist_row_id, mapRequestRow(row));
   }
 
   return requestByRowId;
+}
+
+export async function getLatestProtectedAccessRequestForEmailAndName(args: {
+  normalizedEmail: string;
+  requestedName: string;
+}): Promise<WaitlistProtectedAccessRequest | null> {
+  const requestedName = normalizeNameValue(args.requestedName);
+  if (!requestedName) return null;
+
+  const { data, error } = await db
+    .from("waitlist_protected_name_access_requests")
+    .select(
+      "id, waitlist_row_id, normalized_email, requested_name, status, contact_methods, preferred_contact_kind, preferred_contact_value, relationship, supporting_link, additional_context, reference_number, submitted_at, updated_at, approved_at, denied_at",
+    )
+    .eq("normalized_email", args.normalizedEmail)
+    .order("submitted_at", { ascending: false })
+    .limit(40);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const match = ((data ?? []) as WaitlistProtectedAccessRequestRow[]).find(
+    (row) => normalizeNameValue(row.requested_name) === requestedName,
+  );
+
+  return match ? mapRequestRow(match) : null;
 }
 
 export async function getLatestProtectedAccessRequestForRow(args: {
@@ -226,7 +249,7 @@ export async function getLatestProtectedAccessRequestForRow(args: {
 }
 
 export async function submitOrUpdateProtectedAccessRequest(args: {
-  rowId: string;
+  rowId: string | null;
   normalizedEmail: string;
   requestedName: string;
   contactMethods: WaitlistProtectedContactMethod[];
@@ -236,10 +259,17 @@ export async function submitOrUpdateProtectedAccessRequest(args: {
   supportingLink: string | null;
   additionalContext: string | null;
 }): Promise<WaitlistProtectedAccessRequest> {
-  const existing = await getLatestProtectedAccessRequestForRow({
-    rowId: args.rowId,
+  const existingByRow = args.rowId
+    ? await getLatestProtectedAccessRequestForRow({
+        rowId: args.rowId,
+        normalizedEmail: args.normalizedEmail,
+      })
+    : null;
+  const existingByName = await getLatestProtectedAccessRequestForEmailAndName({
     normalizedEmail: args.normalizedEmail,
+    requestedName: args.requestedName,
   });
+  const existing = existingByRow ?? existingByName;
 
   if (existing && (existing.status === "submitted" || existing.status === "approved")) {
     if (existing.status === "approved") {
@@ -249,6 +279,7 @@ export async function submitOrUpdateProtectedAccessRequest(args: {
     const { data, error } = await db
       .from("waitlist_protected_name_access_requests")
       .update({
+        waitlist_row_id: args.rowId ?? existing.waitlistRowId,
         requested_name: args.requestedName,
         contact_methods: args.contactMethods,
         preferred_contact_kind: args.preferredContactKind,
