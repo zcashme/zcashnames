@@ -4,7 +4,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
 import { useState, type FormEvent } from "react";
 import { useTheme } from "next-themes";
 import HeroShareButton from "@/components/HeroShareButton";
@@ -14,7 +14,7 @@ import { extractReferralCode } from "@/lib/referral-code";
 const ACTION_INSET_PX = 4;
 
 export default function ReferralCodeEntryPage() {
-  const router = useRouter();
+  const router = useAppRouter();
   const { resolvedTheme } = useTheme();
   const [input, setInput] = useState("");
   const [error, setError] = useState("");

@@ -13,7 +13,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import ExplorerNameDetail from "@/app/(site)/explorer/ExplorerNameDetail";
 import CopyIconButton from "@/components/CopyIconButton";
@@ -45,7 +46,7 @@ export default function CollectionsView({
   nameResult: ResolveName | null;
   nameEvents: ZnsEvent[];
 }) {
-  const router = useRouter();
+  const router = useAppRouter();
   const searchParams = useSearchParams();
   const usdPerZec = useUsdPrice();
   const [isPending, startTransition] = useTransition();

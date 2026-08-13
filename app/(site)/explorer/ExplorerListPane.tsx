@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
 import PaginationControls from "@/components/PaginationControls";
 import ActionBadge from "@/components/ActionBadge";
 import DataViewTabs from "@/components/table/DataViewTabs";
@@ -48,7 +49,7 @@ export default function ExplorerListPane({
   onDataChange,
   onLoadingChange,
 }: ExplorerListPaneProps) {
-  const router = useRouter();
+  const router = useAppRouter();
   const searchParams = useSearchParams();
   const tableShellRef = useRef<HTMLDivElement | null>(null);
 

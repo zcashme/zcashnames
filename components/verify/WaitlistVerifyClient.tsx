@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
 import CaptchaChallengeModal, {
   type CaptchaSolution,
 } from "@/components/captcha/CaptchaChallengeModal";
@@ -4196,7 +4197,7 @@ export default function WaitlistVerifyClient({
   earlyAccessLabel,
   shareDraftPosts,
 }: WaitlistVerifyClientProps) {
-  const router = useRouter();
+  const router = useAppRouter();
   const searchParams = useSearchParams();
   const reducedMotion = usePrefersReducedMotion();
   const addMoreNamesRef = useRef<HTMLDivElement | null>(null);

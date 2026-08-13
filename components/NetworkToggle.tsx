@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
 import { useTheme } from "next-themes";
 import { useZns, type ZnsMode } from "@/components/hooks/useZns";
 import { verifyBetaPassword } from "@/lib/beta/actions";
@@ -18,7 +19,7 @@ const NETWORK_OPTIONS: Array<{ mode: NetworkOption; label: string; disabled?: bo
 
 export default function NetworkToggle() {
   const pathname = usePathname();
-  const router = useRouter();
+  const router = useAppRouter();
   const { resolvedTheme } = useTheme();
   const { zns, hasBeta, setMode } = useZns();
   const [pendingTarget, setPendingTarget] = useState<BetaMode | null>(null);

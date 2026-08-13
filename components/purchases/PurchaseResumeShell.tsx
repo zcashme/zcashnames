@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
 import { usePurchaseResume } from "@/components/hooks/usePurchaseResume";
 import ResumeBanner from "@/components/purchases/ResumeBanner";
 import { nameActionHref } from "@/lib/purchases/nameActionHref";
@@ -10,7 +11,7 @@ import { PURCHASE_MODAL_VISIBILITY_EVENT } from "@/lib/purchases/resume";
 type VisibilityEvent = CustomEvent<{ open?: boolean }>;
 
 export default function PurchaseResumeShell() {
-  const router = useRouter();
+  const router = useAppRouter();
   const pathname = usePathname();
   const { snapshot, visible, dismiss } = usePurchaseResume();
   const [externalModalOpen, setExternalModalOpen] = useState(false);

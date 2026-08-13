@@ -1,18 +1,49 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 import { HeaderMenuPanel, HeaderMenuToggle } from "@/components/HeaderMenu";
 import { useRouteNavigationProgress } from "@/components/hooks/useRouteNavigationProgress";
 import NetworkToggle from "@/components/NetworkToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
 
+function HeaderProgressBar() {
+  const { isLoading, progress, direction } = useRouteNavigationProgress();
+  if (!isLoading) return null;
+
+  const progressStyle =
+    direction === "rtl"
+      ? { right: 0, left: "auto" as const, width: `${progress}%` }
+      : { left: 0, right: "auto" as const, width: `${progress}%` };
+
+  return (
+    <>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 z-0"
+        style={{
+          ...progressStyle,
+          background:
+            "color-mix(in srgb, var(--color-accent-interactive) 20%, transparent)",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-0 z-10 h-[2px]"
+        style={{
+          ...progressStyle,
+          background: "var(--color-accent-interactive)",
+        }}
+      />
+    </>
+  );
+}
+
 export default function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { isLoading, progress, direction } = useRouteNavigationProgress();
   const onOpenChange = useCallback((open: boolean) => {
     setMenuOpen(open);
   }, []);
@@ -21,34 +52,11 @@ export default function Header() {
     setMenuOpen(false);
   }, [pathname]);
 
-  const progressStyle =
-    direction === "rtl"
-      ? { right: 0, left: "auto" as const, width: `${progress}%` }
-      : { left: 0, right: "auto" as const, width: `${progress}%` };
-
   return (
     <header className="relative z-50 bg-transparent">
-      {isLoading && (
-        <>
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 z-0"
-            style={{
-              ...progressStyle,
-              background:
-                "color-mix(in srgb, var(--color-accent-interactive) 20%, transparent)",
-            }}
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute bottom-0 z-10 h-[2px]"
-            style={{
-              ...progressStyle,
-              background: "var(--color-accent-interactive)",
-            }}
-          />
-        </>
-      )}
+      <Suspense fallback={null}>
+        <HeaderProgressBar />
+      </Suspense>
 
       <div className="relative z-[1] mx-auto max-w-[1320px] px-4">
         <div className="grid min-h-[60px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 sm:gap-4 sm:px-4">

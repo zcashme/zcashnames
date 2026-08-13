@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
 import Link from "next/link";
 import { redeemBetaInviteCode } from "@/lib/beta-v2/actions";
 
 export default function JoinClient({ code }: { code: string }) {
-  const router = useRouter();
+  const router = useAppRouter();
   const [state, setState] = useState<"loading" | "success" | "error">("loading");
   const [displayName, setDisplayName] = useState("");
   const [errorMsg, setErrorMsg] = useState("");

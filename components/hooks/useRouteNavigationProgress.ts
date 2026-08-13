@@ -1,8 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
-import { NAVIGATION_PROGRESS_START_EVENT } from "@/lib/navigation/navigationProgress";
+import { usePathname, useSearchParams } from "next/navigation";
+import {
+  NAVIGATION_PROGRESS_START_EVENT,
+  getLocationKey,
+  locationKeyFromHref,
+  locationKeyFromWindow,
+} from "@/lib/navigation/navigationProgress";
 
 export type NavigationProgressDirection = "ltr" | "rtl";
 
@@ -14,10 +19,13 @@ export type RouteNavigationProgress = {
 
 /**
  * Tracks in-flight client navigations and exposes a 0–100 progress value for a
- * header fill bar. Completes when `usePathname()` changes; falls back after 15s.
+ * header fill bar. Completes when pathname or search changes; falls back after 15s.
  */
 export function useRouteNavigationProgress(): RouteNavigationProgress {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const locationKey = getLocationKey(pathname ?? "/", searchParams.toString() ? `?${searchParams.toString()}` : "");
+
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [direction, setDirection] = useState<NavigationProgressDirection>("ltr");
@@ -26,24 +34,9 @@ export function useRouteNavigationProgress(): RouteNavigationProgress {
   const animationStartRef = useRef(0);
   const resetTimeoutRef = useRef<number | null>(null);
   const fallbackTimeoutRef = useRef<number | null>(null);
-  const startPathnameRef = useRef<string>("/");
-  const lastResolvedPathnameRef = useRef(pathname ?? "/");
+  const startLocationKeyRef = useRef<string>("/");
+  const lastResolvedLocationKeyRef = useRef(locationKey);
   const isLoadingRef = useRef(false);
-
-  const resolveInternalPathname = useCallback(
-    (candidate: string | URL | null | undefined): string | null => {
-      if (!candidate) return null;
-      try {
-        const nextUrl =
-          candidate instanceof URL ? candidate : new URL(String(candidate), window.location.href);
-        if (nextUrl.origin !== window.location.origin) return null;
-        return nextUrl.pathname;
-      } catch {
-        return null;
-      }
-    },
-    []
-  );
 
   const clearAnimation = useCallback(() => {
     if (animationFrameRef.current !== null) {
@@ -61,12 +54,12 @@ export function useRouteNavigationProgress(): RouteNavigationProgress {
   }, []);
 
   const startProgress = useCallback(
-    (startPathname: string, nextDirection: NavigationProgressDirection = "ltr") => {
-      if (isLoadingRef.current && startPathnameRef.current === startPathname) {
+    (startLocationKey: string, nextDirection: NavigationProgressDirection = "ltr") => {
+      if (isLoadingRef.current && startLocationKeyRef.current === startLocationKey) {
         return;
       }
       clearAnimation();
-      startPathnameRef.current = startPathname;
+      startLocationKeyRef.current = startLocationKey;
       setDirection(nextDirection);
       setIsLoading(true);
       setProgress(0);
@@ -85,14 +78,14 @@ export function useRouteNavigationProgress(): RouteNavigationProgress {
         setProgress(0);
         setDirection("ltr");
         fallbackTimeoutRef.current = null;
-        startPathnameRef.current = window.location.pathname;
+        startLocationKeyRef.current = locationKeyFromWindow();
         if (animationFrameRef.current !== null) {
           window.cancelAnimationFrame(animationFrameRef.current);
           animationFrameRef.current = null;
         }
       }, 15000);
     },
-    [clearAnimation]
+    [clearAnimation],
   );
 
   const finishProgress = useCallback(() => {
@@ -103,22 +96,22 @@ export function useRouteNavigationProgress(): RouteNavigationProgress {
       setProgress(0);
       setDirection("ltr");
       resetTimeoutRef.current = null;
-      startPathnameRef.current = window.location.pathname;
+      startLocationKeyRef.current = locationKeyFromWindow();
     }, 180);
   }, [clearAnimation]);
 
   const startForTarget = useCallback(
-    (candidate: string | URL, startPathname: string) => {
-      const nextPathname = resolveInternalPathname(candidate);
-      if (!nextPathname || nextPathname === startPathname) return;
-      startProgress(startPathname);
+    (candidate: string | URL, startLocationKey: string) => {
+      const nextKey = locationKeyFromHref(candidate);
+      if (!nextKey || nextKey === startLocationKey) return;
+      startProgress(startLocationKey);
     },
-    [resolveInternalPathname, startProgress]
+    [startProgress],
   );
 
   useEffect(() => {
-    lastResolvedPathnameRef.current = pathname ?? "/";
-  }, [pathname]);
+    lastResolvedLocationKeyRef.current = locationKey;
+  }, [locationKey]);
 
   useEffect(() => {
     isLoadingRef.current = isLoading;
@@ -126,7 +119,7 @@ export function useRouteNavigationProgress(): RouteNavigationProgress {
 
   useEffect(() => {
     const handleNavigationProgressStart = () => {
-      startProgress(lastResolvedPathnameRef.current);
+      startProgress(lastResolvedLocationKeyRef.current);
     };
 
     window.addEventListener(NAVIGATION_PROGRESS_START_EVENT, handleNavigationProgressStart);
@@ -153,8 +146,7 @@ export function useRouteNavigationProgress(): RouteNavigationProgress {
         return;
       }
 
-      const currentPathname = window.location.pathname;
-      startForTarget(anchor.href, currentPathname);
+      startForTarget(anchor.href, locationKeyFromWindow());
     };
 
     document.addEventListener("click", handleDocumentClick, true);
@@ -167,33 +159,36 @@ export function useRouteNavigationProgress(): RouteNavigationProgress {
     const originalPushState = window.history.pushState;
     const originalReplaceState = window.history.replaceState;
 
-    const patchedPushState: History["pushState"] = function (data, unused, url) {
-      const currentPathname = window.location.pathname;
-      if (url) {
-        const nextPathname = resolveInternalPathname(url);
-        if (nextPathname && nextPathname !== currentPathname) {
-          startProgress(currentPathname);
-        }
+    const startIfLocationChanges = (url: string | URL | null | undefined) => {
+      if (!url) return;
+      const currentKey = locationKeyFromWindow();
+      const nextKey = locationKeyFromHref(url);
+      // Pathname changes are enough to start here. Search-only history writes
+      // are often instant client filters (no RSC); those start via Link clicks
+      // or useAppRouter instead, so the bar can finish on React search updates.
+      if (!nextKey) return;
+      const currentPath = currentKey.split("?")[0] ?? currentKey;
+      const nextPath = nextKey.split("?")[0] ?? nextKey;
+      if (nextPath !== currentPath) {
+        startProgress(currentKey);
       }
+    };
+
+    const patchedPushState: History["pushState"] = function (data, unused, url) {
+      startIfLocationChanges(url);
       originalPushState.call(window.history, data, unused, url);
     };
 
     const patchedReplaceState: History["replaceState"] = function (data, unused, url) {
-      const currentPathname = window.location.pathname;
-      if (url) {
-        const nextPathname = resolveInternalPathname(url);
-        if (nextPathname && nextPathname !== currentPathname) {
-          startProgress(currentPathname);
-        }
-      }
+      startIfLocationChanges(url);
       originalReplaceState.call(window.history, data, unused, url);
     };
 
     const handlePopState = () => {
-      const previousPathname = lastResolvedPathnameRef.current;
-      const nextPathname = window.location.pathname;
-      if (nextPathname !== previousPathname) {
-        startProgress(previousPathname);
+      const previousKey = lastResolvedLocationKeyRef.current;
+      const nextKey = locationKeyFromWindow();
+      if (nextKey !== previousKey) {
+        startProgress(previousKey);
       }
     };
 
@@ -206,20 +201,20 @@ export function useRouteNavigationProgress(): RouteNavigationProgress {
       window.history.replaceState = originalReplaceState;
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [resolveInternalPathname, startProgress]);
+  }, [startProgress]);
 
   useEffect(() => {
     if (!isLoading) return;
-    if (pathname && pathname !== startPathnameRef.current) {
+    if (locationKey && locationKey !== startLocationKeyRef.current) {
       finishProgress();
     }
-  }, [finishProgress, isLoading, pathname]);
+  }, [finishProgress, isLoading, locationKey]);
 
   useEffect(
     () => () => {
       clearAnimation();
     },
-    [clearAnimation]
+    [clearAnimation],
   );
 
   return { isLoading, progress, direction };

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
 import { useTheme } from "next-themes";
 import HeroShareButton from "@/components/HeroShareButton";
 import ReferralCodeRecovery from "@/components/ReferralCodeRecovery";
@@ -40,7 +41,7 @@ export default function ShareKitClient({
   initialWarning: string;
 }) {
   const { resolvedTheme } = useTheme();
-  const router = useRouter();
+  const router = useAppRouter();
   const pathname = usePathname();
   const [referralCode, setReferralCode] = useState(initialReferralCode);
   const [input, setInput] = useState(initialReferralCode);

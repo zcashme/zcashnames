@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
 import { useEffect, useRef, useState } from "react";
 import HeroShareButton from "@/components/HeroShareButton";
 import PaginationControls from "@/components/PaginationControls";
@@ -335,7 +335,7 @@ export default function ProtectedViewClient({
   const [zmOnly, setZmOnly] = useState(initialData.zmOnly);
   const [detailsRow, setDetailsRow] = useState<ProtectedViewRow | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const router = useRouter();
+  const router = useAppRouter();
   const initialDataRef = useRef(initialData);
   const tableShellRef = useRef<HTMLDivElement | null>(null);
   const stableInitialData = initialDataRef.current;
@@ -708,7 +708,9 @@ export default function ProtectedViewClient({
               ariaLabel="Suggest a protected name"
               borderColor="var(--faq-border)"
               icon={<PlusIcon />}
-              onClick={() => router.push("/protected/suggest")}
+              onClick={() => {
+                router.push("/protected/suggest");
+              }}
             />
             <TableSortMenu
               value={activeSortOptionKey}

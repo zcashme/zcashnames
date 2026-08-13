@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
 import { usePurchaseFlow } from "@/components/hooks/usePurchaseFlow";
 import ShareDropdown from "@/components/ShareDropdown";
 import { buildFaqTextFieldStyle } from "@/components/ui/formFieldStyles";
@@ -264,7 +264,7 @@ export default function NameActionForm({
   returnHref,
   onSuccessChange,
 }: NameActionFormProps) {
-  const router = useRouter();
+  const router = useAppRouter();
   const [otpBackOpen, setOtpBackOpen] = useState(false);
   const flow = usePurchaseFlow({
     action,

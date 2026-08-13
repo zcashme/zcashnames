@@ -6,7 +6,8 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
 import ExplorerToolbar from "./ExplorerToolbar";
 import ExplorerNameDetail from "./ExplorerNameDetail";
 import ExplorerListPane from "./ExplorerListPane";
@@ -92,7 +93,7 @@ export default function ExplorerView({
   nameResult: ResolveName | null;
   nameEvents: ZnsEvent[];
 }) {
-  const router = useRouter();
+  const router = useAppRouter();
   const searchParams = useSearchParams();
   const usdPerZec = useUsdPrice();
   const [isPending, startTransition] = useTransition();

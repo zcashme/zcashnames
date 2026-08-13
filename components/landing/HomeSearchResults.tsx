@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
 import { useSearchState } from "@/components/hooks/useSearchState";
 import { buildCardProps } from "@/lib/zns/utils";
 import HomeResultCard from "./HomeResultCard";
@@ -14,7 +14,7 @@ import type { Action, ResolveName } from "@/lib/types";
 import { isPopularName } from "@/lib/zns/popular-names";
 
 export default function HomeSearchResults({ network }: { network: "mainnet" | "testnet" }) {
-  const router = useRouter();
+  const router = useAppRouter();
   const { input, results, searching, searchError, setInput, handleSearch, removeResult } = useSearchState();
   const [pendingReplacement, setPendingReplacement] = useState<{
     action: Action;
