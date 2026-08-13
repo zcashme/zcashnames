@@ -5,6 +5,12 @@ import path from "node:path";
 import { promises as fs } from "node:fs";
 import { promisify } from "node:util";
 import {
+  BLOG_LIST_VISIBILITY,
+  filterVisibleBlogPosts,
+  isValidIsoDateString,
+  type BlogVisibilityFilter,
+} from "@/lib/blog-visibility";
+import {
   type BlogSeriesSlug,
   BLOG_SERIES,
   getBlogSeries,
@@ -22,6 +28,16 @@ export type BlogPostSummary = {
   /** Omitted only when frontmatter date and git history are both unavailable. */
   publishedLabel?: string;
   excerpt?: string;
+};
+
+export type BlogListOptions = {
+  limit?: number;
+  visibility?: BlogVisibilityFilter;
+};
+
+type InternalBlogPostSummary = BlogPostSummary & {
+  frontmatterDate: string | null;
+  modifiedAt: number;
 };
 
 export async function blogSeriesDirectoryExists(series: BlogSeriesSlug): Promise<boolean> {
@@ -90,6 +106,15 @@ function firstParagraph(markdown: string): string | undefined {
   return text.length > 180 ? `${text.slice(0, 177).trimEnd()}…` : text;
 }
 
+function frontmatterDateFromMarkdown(markdown: string): string | null {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(markdown);
+  if (!match) return null;
+  const dateLine = /^date:\s*['"]?(\d{4}-\d{2}-\d{2})['"]?\s*$/m.exec(match[1] ?? "");
+  const value = dateLine?.[1];
+  if (!value || !isValidIsoDateString(value)) return null;
+  return value;
+}
+
 /**
  * Optional YAML frontmatter date, e.g.
  * ---
@@ -97,11 +122,9 @@ function firstParagraph(markdown: string): string | undefined {
  * ---
  */
 function dateFromFrontmatter(markdown: string): number | null {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(markdown);
-  if (!match) return null;
-  const dateLine = /^date:\s*['"]?(\d{4}-\d{2}-\d{2})['"]?\s*$/m.exec(match[1] ?? "");
-  if (!dateLine?.[1]) return null;
-  const ms = Date.parse(`${dateLine[1]}T12:00:00.000Z`);
+  const value = frontmatterDateFromMarkdown(markdown);
+  if (!value) return null;
+  const ms = Date.parse(`${value}T12:00:00.000Z`);
   return Number.isFinite(ms) ? ms : null;
 }
 
@@ -177,7 +200,7 @@ async function getGitFileTimestampMs(filePath: string): Promise<number | null> {
 
 async function readSeriesPosts(
   series: BlogSeriesSlug,
-): Promise<Array<BlogPostSummary & { modifiedAt: number }>> {
+): Promise<InternalBlogPostSummary[]> {
   const dir = path.join(BLOGS_CONTENT_ROOT, series);
   try {
     const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -190,6 +213,7 @@ async function readSeriesPosts(
           const slug = entry.name.replace(/\.mdx$/, "");
           const filePath = path.join(dir, entry.name);
           const markdown = await fs.readFile(filePath, "utf8");
+          const frontmatterDate = frontmatterDateFromMarkdown(markdown);
           const timestampMs = await resolvePostTimestampMs(filePath, markdown);
           // Sort key: real publish time when known; unknown dates sink to the bottom.
           const modifiedAt = timestampMs ?? 0;
@@ -201,6 +225,7 @@ async function readSeriesPosts(
             series,
             seriesLabel: seriesMeta.label,
             excerpt: firstParagraph(markdown),
+            frontmatterDate,
             modifiedAt,
             publishedLabel:
               timestampMs != null ? formatPublishedLabel(timestampMs) : undefined,
@@ -212,49 +237,53 @@ async function readSeriesPosts(
   }
 }
 
+function finalizeBlogPosts(
+  posts: InternalBlogPostSummary[],
+  { limit, visibility = BLOG_LIST_VISIBILITY }: BlogListOptions = {},
+): BlogPostSummary[] {
+  const visiblePosts = filterVisibleBlogPosts(posts, visibility);
+  const sorted = visiblePosts.sort((a, b) => b.modifiedAt - a.modifiedAt);
+  const sliced = typeof limit === "number" ? sorted.slice(0, limit) : sorted;
+  return sliced.map(({ frontmatterDate: _frontmatterDate, modifiedAt: _modifiedAt, ...post }) => post);
+}
+
 export async function listBlogPosts(
   series: BlogSeriesSlug,
-  limit?: number,
+  options: BlogListOptions = {},
 ): Promise<BlogPostSummary[]> {
   const posts = await readSeriesPosts(series);
-  const sorted = posts.sort((a, b) => b.modifiedAt - a.modifiedAt);
-  const sliced = typeof limit === "number" ? sorted.slice(0, limit) : sorted;
-  return sliced.map(({ modifiedAt: _modifiedAt, ...post }) => post);
+  return finalizeBlogPosts(posts, options);
 }
 
 export async function listRecentBlogPosts(
   series: BlogSeriesSlug,
-  limit = 5,
+  options: BlogListOptions = {},
 ): Promise<BlogPostSummary[]> {
-  return listBlogPosts(series, limit);
+  return listBlogPosts(series, {
+    ...options,
+    limit: options.limit ?? 5,
+  });
 }
 
-export async function listAllBlogPosts(limit?: number): Promise<BlogPostSummary[]> {
+export async function listAllBlogPosts(options: BlogListOptions = {}): Promise<BlogPostSummary[]> {
   const postsBySeries = await Promise.all(BLOG_SERIES.map((series) => readSeriesPosts(series)));
-  const sorted = postsBySeries.flat().sort((a, b) => b.modifiedAt - a.modifiedAt);
-  const sliced = typeof limit === "number" ? sorted.slice(0, limit) : sorted;
-  return sliced.map(({ modifiedAt: _modifiedAt, ...post }) => post);
+  return finalizeBlogPosts(postsBySeries.flat(), options);
 }
 
-export async function listLandingBlogPosts(limit = 4): Promise<BlogPostSummary[]> {
-  const recentPosts = await listAllBlogPosts(limit);
-  if (recentPosts.length > 0) return recentPosts;
-
-  const fallbackPosts = await Promise.all([
-    readSeriesPosts("updates"),
-    readSeriesPosts("launch"),
-    readSeriesPosts("builders"),
-  ]);
-
-  return fallbackPosts
-    .flat()
-    .sort((a, b) => b.modifiedAt - a.modifiedAt)
-    .slice(0, limit)
-    .map(({ modifiedAt: _modifiedAt, ...post }) => post);
+export async function listLandingBlogPosts(options: BlogListOptions = {}): Promise<BlogPostSummary[]> {
+  return listAllBlogPosts({
+    ...options,
+    limit: options.limit ?? 4,
+  });
 }
 
-export async function listRecentBlogPostsAcrossAllSeries(limit = 8): Promise<BlogPostSummary[]> {
-  return listAllBlogPosts(limit);
+export async function listRecentBlogPostsAcrossAllSeries(
+  options: BlogListOptions = {},
+): Promise<BlogPostSummary[]> {
+  return listAllBlogPosts({
+    ...options,
+    limit: options.limit ?? 8,
+  });
 }
 
 export async function getBlogPostMeta(

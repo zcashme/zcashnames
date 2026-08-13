@@ -59,7 +59,7 @@ export default async function BlogPostPage({
   if (!isBlogSeriesSlug(series)) notFound();
 
   const seriesMeta = getBlogSeries(series);
-  const relatedPosts = await listBlogPosts(series, 5);
+  const relatedPosts = await listBlogPosts(series, { limit: 5 });
   const published = await blogPostExists(series, postSlug);
 
   if (!published) {

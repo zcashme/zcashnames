@@ -35,7 +35,7 @@ export default async function HomePage() {
   const [stats, session, homepagePosts] = await Promise.all([
     getChainStats(network),
     readCurrentBetaAccessSession(),
-    listLandingBlogPosts(4),
+    listLandingBlogPosts({ limit: 4 }),
   ]);
 
   const recentBlogPosts = homepagePosts.map((post) => ({

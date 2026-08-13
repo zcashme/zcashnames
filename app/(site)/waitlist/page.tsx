@@ -86,7 +86,7 @@ export async function generateMetadata({ searchParams }: WaitlistPageProps): Pro
 export default async function WaitlistPage() {
   const [stats, homepagePosts] = await Promise.all([
     getNetworkStats("waitlist"),
-    listLandingBlogPosts(4),
+    listLandingBlogPosts({ limit: 4 }),
   ]);
 
   const recentBlogPosts = homepagePosts.map((post) => ({
