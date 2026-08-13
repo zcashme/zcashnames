@@ -156,6 +156,13 @@ export const OG_VARIANTS: Record<string, Omit<OgRenderOptions, "pillText"> & { p
     pillText: "Waitlist",
     ...PILL_ON_LIGHT_OR_DARK,
   },
+  reserve: {
+    backgroundImage: BG.light,
+    overlay: LIGHT_OVERLAY,
+    pillText: "Reserve your position",
+    pillFontSize: 28,
+    ...PILL_ON_LIGHT_OR_DARK,
+  },
   namepost: {
     backgroundImage: BG.dark,
     overlay: DARK_OVERLAY,

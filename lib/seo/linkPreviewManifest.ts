@@ -313,6 +313,21 @@ export const LINK_PREVIEW_MANIFEST: LinkPreviewManifestItem[] = [
     },
   },
   {
+    id: "reserve",
+    label: "Reserve your position",
+    kind: "static",
+    group: "product",
+    url: "https://www.zcashnames.com/reserve",
+    image: "/og/reserve.png",
+    title: "Reserve Waitlist Spot - Zcash Names",
+    description:
+      "Open your Zcash Names reservation dashboard and prepare one ZIP-321 payment request per name.",
+    source: {
+      productionRoute: "/reserve",
+      ogSlug: "reserve",
+    },
+  },
+  {
     id: "collections",
     label: "Collections",
     kind: "static",
