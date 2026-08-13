@@ -7,10 +7,10 @@ const RESERVE_DESCRIPTION =
 const RESERVE_CANONICAL = "https://www.zcashnames.com/reserve";
 
 const previewImage = {
-  url: BRAND.previewImage,
+  url: "/og/reserve.png",
   width: 1200,
   height: 630,
-  alt: RESERVE_TITLE,
+  alt: "Reserve your position | Zcash Names",
 };
 
 /** Shared SEO/OG for `/reserve` and the `/waitlist/reserve` alias. */
@@ -32,6 +32,6 @@ export const RESERVE_METADATA: Metadata = {
     site: BRAND.twitter,
     title: RESERVE_TITLE,
     description: RESERVE_DESCRIPTION,
-    images: [previewImage],
+    images: [previewImage.url],
   },
 };
