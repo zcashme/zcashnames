@@ -898,9 +898,7 @@ export default function ProtectedRequestForm({
                 ?? `https://zcash.me/${selectedName.normalizedName}`
               }
             />
-          ) : null}
-
-          {!prefilledName || hasAppliedPrefill ? (
+          ) : !prefilledName || hasAppliedPrefill ? (
             <>
           <div>
             <label
@@ -1051,7 +1049,6 @@ export default function ProtectedRequestForm({
             </p>
           ) : null}
 
-          {selectedName?.zmPriorityClaim ? null : (
           <button
             type="submit"
             disabled={isSubmitting || captchaOpen}
@@ -1070,7 +1067,6 @@ export default function ProtectedRequestForm({
               "Submit access request"
             )}
           </button>
-          )}
             </>
           ) : (
             <AnimatedLoadingLabel label="Loading name" active />
