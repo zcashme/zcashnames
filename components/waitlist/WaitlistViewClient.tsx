@@ -44,6 +44,7 @@ type WaitlistViewClientProps = {
   earlyAccessLabel: string;
   adminWalletUivk: string;
   referralsPerSpot: number;
+  openMatchingDetails?: boolean;
 };
 
 type WaitlistFaqItem = {
@@ -611,9 +612,11 @@ export default function WaitlistViewClient({
   earlyAccessLabel,
   adminWalletUivk,
   referralsPerSpot,
+  openMatchingDetails = false,
 }: WaitlistViewClientProps) {
   const router = useAppRouter();
   const [detailsRow, setDetailsRow] = useState<PublicWaitlistViewRow | null>(null);
+  const autoOpenedDetailsRef = useRef(false);
   const [draftSearch, setDraftSearch] = useState(initialSearchQuery);
   const [appliedSearch, setAppliedSearch] = useState(initialSearchQuery);
   const [searchMode, setSearchMode] = useState<WaitlistViewSearchMode>(
@@ -700,6 +703,20 @@ export default function WaitlistViewClient({
       return (await response.json()) as PublicWaitlistViewData;
     },
   });
+
+  useEffect(() => {
+    if (!openMatchingDetails || autoOpenedDetailsRef.current) return;
+    const query = (appliedSearch || initialSearchQuery).trim().toLowerCase();
+    if (!query) return;
+    const rows = viewData.rows.length > 0 ? viewData.rows : initialRows;
+    const match =
+      rows.find((row) => row.name.toLowerCase() === query)
+      ?? rows.find((row) => row.name.toLowerCase().includes(query))
+      ?? null;
+    if (!match) return;
+    setDetailsRow(match);
+    autoOpenedDetailsRef.current = true;
+  }, [appliedSearch, initialRows, initialSearchQuery, openMatchingDetails, viewData.rows]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setNowMs(Date.now()), 1000);
@@ -796,7 +813,7 @@ export default function WaitlistViewClient({
               <strong>Name</strong> — the waitlisted name and its referral code.
             </li>
             <li>
-              <strong>Rank</strong> — place among everyone waitlisting the same name (or N/A until reserved).
+              <strong>Position</strong> — place among everyone waitlisting the same name (or N/A until reserved).
             </li>
             <li>
               <strong>Status</strong> —{" "}
@@ -1078,7 +1095,7 @@ export default function WaitlistViewClient({
                     { label: "#", info: "The verified waitlist line number in join order." },
                     { label: "Adj#", info: "Referral-adjusted waitlist line number. This is the original line number minus one spot for each 3 direct reserved referrals and minus one spot for each 9 indirect reserved referrals." },
                     { label: "Name", info: "The waitlisted name and its referral code." },
-                    { label: "Rank", info: "Rank among all entries with the same name, ordered by referral-adjusted line number and then original line number as the tie-breaker." },
+                    { label: "Position", info: "Position among all entries with the same name, ordered by referral-adjusted line number and then original line number as the tie-breaker." },
                     { label: "Status", info: "Protected names are held back, reserved names have paid, pending names are waiting on reservation, and available names have no current conflict or hold." },
                     { label: "Refs", info: "Reserved referral totals. When both direct and indirect counts exist, both are shown together." },
                   ].map((column, index) => (

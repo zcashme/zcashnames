@@ -1,9 +1,10 @@
 // Server component: renders static referral rewards and early access terms.
-// Content is defined inline (no external data fetch). Links back to /leaders.
+// Content is defined inline (no external data fetch).
 import type { Metadata } from "next";
-import Link from "next/link";
+import type { ReactNode } from "react";
 import HeroShareButton from "@/components/HeroShareButton";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
+import { WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL } from "@/lib/waitlist/early-access";
 
 export const metadata: Metadata = {
   title: "Leaderboard Terms | Zcash Names",
@@ -32,22 +33,39 @@ export const metadata: Metadata = {
   },
 };
 
-const terms = [
+const terms: Array<{ title: string; body: ReactNode }> = [
   {
-    title: "Eligibility and Referrals",
-    body: "Referral rewards are available to eligible early access participants who receive a Zcash Names referral link and share it with users who sign up through that link. A referral qualifies only after the referred user signs up through the link and completes a valid name purchase during the early access period.",
+    title: "Eligibility",
+    body: (
+      <>
+        <p>To get a position on the Early Access waitlist and receive an access code, you need to:</p>
+        <ol className="mt-3 list-decimal space-y-1 pl-6">
+          <li>Verify your email</li>
+          <li>Complete an on-chain reservation</li>
+        </ol>
+        <p className="mt-3">Until both are complete, your position will show as Not Applicable (N/A).</p>
+        <p className="mt-3">
+          A reservation gives you the option to buy the name during Early Access. It does not mean you
+          own the name yet. Reservations make it more costly to spam the waitlist.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: "Referrals",
+    body: "A referral qualifies for a reward only after the invited person joins through your link and claims their name. Position improves when referrals complete a reservation: every 3 direct reserved referrals improves your adjusted line by 1, and every 9 indirect reserved referrals improves it by 1. Partial counts do not apply until the full threshold is reached. Sharing a link alone does not change Position. The reward is distributed when referrals claim their name, regardless of whether they reserved.",
   },
   {
     title: "Reward Basis",
-    body: "During early access, direct referral rewards may earn up to 0.05 ZEC for each referred signup that completes a qualifying purchase. Indirect referral rewards may apply when referred users invite others. The 0.05 ZEC value is based on the lowest name claim price at the time of purchase and may vary.",
+    body: "During Early Access, direct referral rewards may earn up to 0.05 ZEC for each referred signup that completes a qualifying claim. Indirect referral rewards may apply when referred users invite others. The 0.05 ZEC value is based on the lowest name claim price at the time of purchase and may vary. Payouts are delivered to the referrer's Zcash Name after that name has been reserved.",
   },
   {
     title: "Early Access Order",
-    body: "Early access notifications are sent in the order waitlist signups are received. Referral activity may improve queue position based on active early access rules.",
+    body: `Early Access codes are sent to reserved participants when Early Access begins, currently scheduled for ${WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL}. Order is the name-specific Position: your adjusted line among people waiting to claim the same name. Position can change until codes go out. When adjusted lines tie, the earlier original waitlist line number wins.`,
   },
   {
     title: "Name Availability",
-    body: "Joining the waitlist or entering a preferred name does not reserve or guarantee that name. Each invite includes a limited claim window. If a name is not claimed within that window, eligibility may pass to others or to public registration. Some names may be reserved or offered through auction instead of direct claim. If a selected name is unavailable, the early access code may be used to claim one other eligible name during the assigned turn.",
+    body: "Joining the waitlist or entering a preferred name does not reserve or guarantee that name. A completed reservation gives you the option to purchase during Early Access, but it does not guarantee the string is still claimable. Each invite includes a limited claim window. If a name is not claimed within that window, eligibility may pass to others or to public registration. Some names may be protected and cannot be claimed without approval.",
   },
   {
     title: "Fair Use and Review",
@@ -112,20 +130,11 @@ export default function ReferralTermsPage() {
                 >
                   {term.title}
                 </h2>
-                <p className="mt-2 text-base leading-8" style={{ color: "var(--fg-body)" }}>
-                  {term.body}
-                </p>
+                <div className="mt-2 text-base leading-8" style={{ color: "var(--fg-body)" }}>
+                  {typeof term.body === "string" ? <p>{term.body}</p> : term.body}
+                </div>
               </section>
             ))}
-          </div>
-
-          <div className="mt-10 border-t border-border-muted pt-6">
-            <Link
-              href="/leaders"
-              className="text-sm font-semibold text-fg-heading underline-offset-2 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline"
-            >
-              Back to leaderboard
-            </Link>
           </div>
         </div>
       </section>

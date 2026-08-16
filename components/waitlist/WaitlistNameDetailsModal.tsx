@@ -435,7 +435,18 @@ export default function WaitlistNameDetailsModal({
                 </p>
                 <p>{othersInterestedSentence(row.interestCount)}</p>
                 {row.reserved ? (
-                  <p>This name is reserved and ready to receive an Early Access code.</p>
+                  <p>
+                    This name is reserved and ready to receive an Early Access code and referral
+                    rewards.{" "}
+                    <Link
+                      href="/leaders/terms"
+                      className={inlineLinkClassName}
+                      style={{ color: "var(--color-accent-interactive)" }}
+                    >
+                      View terms
+                    </Link>
+                    .
+                  </p>
                 ) : isPriorityClaim ? (
                   <p>
                     {priorityClaimCopy({

@@ -34,6 +34,7 @@ type WaitlistViewPageProps = {
   searchParams?: Promise<{
     search?: string;
     searchMode?: string;
+    details?: string;
   }>;
 };
 
@@ -68,6 +69,11 @@ export default async function WaitlistViewPage({ searchParams }: WaitlistViewPag
         earlyAccessLabel={data.earlyAccessLabel}
         adminWalletUivk={data.adminWalletUivk}
         referralsPerSpot={data.referralsPerSpot}
+        openMatchingDetails={
+          params.details === "1"
+          || params.details === "true"
+          || (typeof params.details === "string" && params.details.trim().length > 0)
+        }
       />
     </div>
   );
