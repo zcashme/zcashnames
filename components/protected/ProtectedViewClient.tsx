@@ -310,8 +310,10 @@ function RedeemedCheckIcon() {
 
 export default function ProtectedViewClient({
   initialData,
+  openMatchingDetails = false,
 }: {
   initialData: ProtectedViewData;
+  openMatchingDetails?: boolean;
 }) {
   const [draftSearch, setDraftSearch] = useState(initialData.searchQuery);
   const [appliedSearch, setAppliedSearch] = useState(initialData.searchQuery);
@@ -337,6 +339,7 @@ export default function ProtectedViewClient({
   const [nowMs, setNowMs] = useState(() => Date.now());
   const router = useAppRouter();
   const initialDataRef = useRef(initialData);
+  const autoOpenedDetailsRef = useRef(false);
   const tableShellRef = useRef<HTMLDivElement | null>(null);
   const stableInitialData = initialDataRef.current;
 
@@ -414,6 +417,21 @@ export default function ProtectedViewClient({
       return (await response.json()) as ProtectedViewData;
     },
   });
+
+  useEffect(() => {
+    if (!openMatchingDetails || autoOpenedDetailsRef.current) return;
+    const query = (appliedSearch || stableInitialData.searchQuery).trim().toLowerCase();
+    if (!query) return;
+    const rows = data.rows.length > 0 ? data.rows : stableInitialData.rows;
+    const match =
+      rows.find((row) => row.normalized_name.toLowerCase() === query)
+      ?? rows.find((row) => row.name.toLowerCase() === query)
+      ?? null;
+    if (!match) return;
+    setDetailsRow(match);
+    autoOpenedDetailsRef.current = true;
+  }, [appliedSearch, data.rows, openMatchingDetails, stableInitialData.rows, stableInitialData.searchQuery]);
+
   const hasSearchInput = !!draftSearch.trim();
   const totalPages = Math.max(1, Math.ceil(data.totalCount / pageSize));
   const activeSortOptionKey =
@@ -427,8 +445,7 @@ export default function ProtectedViewClient({
     !disputedOnly &&
     !categoryOnly &&
     !ensOnly &&
-    !zmOnly &&
-    appliedSearch.trim() === "";
+    !zmOnly;
 
   function clearTabFilters() {
     setRedeemedOnly(false);
@@ -605,9 +622,6 @@ export default function ProtectedViewClient({
             label: `All (${data.allCount})`,
             active: allActive,
             onClick: () => {
-              setDraftSearch("");
-              setAppliedSearch("");
-              setSearchMode("contains");
               setPage(1);
               clearTabFilters();
             },

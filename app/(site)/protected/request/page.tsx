@@ -4,6 +4,10 @@ import HeroShareButton from "@/components/HeroShareButton";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import ProtectedRequestForm from "@/components/protected/ProtectedRequestForm";
 import { getRequestableProtectedNameByName } from "@/lib/protected/requests";
+import {
+  PROTECTED_REQUEST_CONTACT_KINDS,
+  type ProtectedRequestContactKind,
+} from "@/lib/protected/shared";
 
 const DEFAULT_TITLE = "Access a Protected Name";
 const DEFAULT_DESCRIPTION =
@@ -12,6 +16,8 @@ const DEFAULT_DESCRIPTION =
 type ProtectedRequestPageProps = {
   searchParams?: Promise<{
     name?: string;
+    contactKind?: string;
+    contactValue?: string;
   }>;
 };
 
@@ -82,6 +88,14 @@ export default async function ProtectedRequestPage({
 }: ProtectedRequestPageProps) {
   const params = (await searchParams) ?? {};
   const initialName = typeof params.name === "string" ? params.name.trim() : null;
+  const rawContactKind = typeof params.contactKind === "string" ? params.contactKind.trim() : "";
+  const initialContactKind = (PROTECTED_REQUEST_CONTACT_KINDS as readonly string[]).includes(
+    rawContactKind,
+  )
+    ? (rawContactKind as ProtectedRequestContactKind)
+    : null;
+  const initialContactValue =
+    typeof params.contactValue === "string" ? params.contactValue.trim() : null;
   const lookedUp = initialName ? await getRequestableProtectedNameByName(initialName) : null;
   const titleName = lookedUp?.value ?? initialName;
   const heading = headingForName(titleName);
@@ -150,7 +164,12 @@ export default async function ProtectedRequestPage({
             className="pointer-events-none absolute right-0 top-[-1rem] z-10 block h-8 w-px"
             style={{ background: "var(--faq-border)" }}
           />
-          <ProtectedRequestForm returnHref="/protected" initialName={initialName} />
+          <ProtectedRequestForm
+            returnHref="/protected"
+            initialName={initialName}
+            initialContactKind={initialContactKind}
+            initialContactValue={initialContactValue}
+          />
         </div>
       </div>
     </div>

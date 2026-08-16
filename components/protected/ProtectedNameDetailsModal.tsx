@@ -66,15 +66,18 @@ function EthereumIcon({ className }: { className?: string }) {
 
 function ZcashMeIcon() {
   // Circle badge is h-16 w-16 (64px); fill nearly the full disc with a thin margin.
+  // Favicon artwork sits high in the PNG, so nudge it down for optical centering.
   return (
-    <Image
-      src="/assets/icons/zcashme-favicon-64.png"
-      alt=""
-      width={56}
-      height={56}
-      className="h-14 w-14 object-contain"
-      aria-hidden="true"
-    />
+    <span className="relative block h-14 w-14 overflow-hidden rounded-full">
+      <Image
+        src="/assets/icons/zcashme-favicon-64.png"
+        alt=""
+        width={56}
+        height={56}
+        className="block h-14 w-14 translate-y-[3px] object-cover"
+        aria-hidden="true"
+      />
+    </span>
   );
 }
 

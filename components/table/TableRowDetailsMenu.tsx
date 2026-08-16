@@ -47,7 +47,7 @@ export default function TableRowDetailsMenu({
       rootClassName="relative inline-flex flex-col items-center"
       menuClassName="w-[min(24rem,calc(100vw-1.5rem))]"
       menuStyle={{ maxWidth: "min(24rem, calc(100vw - 1.5rem))" }}
-      buttonClassName="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[color:var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)]"
+      buttonClassName="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[var(--faq-border)] bg-[color-mix(in_srgb,var(--color-bg-elevated,transparent)_78%,transparent)] text-[color:var(--fg-body)] transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
       renderTriggerContent={() => <EllipsisIcon />}
       itemClassName="!cursor-default whitespace-normal break-words !font-medium leading-5 hover:bg-transparent hover:text-inherit"
     />

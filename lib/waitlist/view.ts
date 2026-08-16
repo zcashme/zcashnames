@@ -89,6 +89,8 @@ export interface PublicWaitlistViewRow {
   displayReferralCode: string | null;
   leaderHref: string | null;
   adjustedPosition: number;
+  ensPriorityClaim: boolean;
+  zmPriorityClaim: boolean;
 }
 
 export interface PublicWaitlistViewData {
@@ -215,6 +217,40 @@ async function fetchAllSnapshotIds(): Promise<string[]> {
   });
 
   return rows.map((row) => row.source_waitlist_id);
+}
+
+async function fetchProtectedPriorityFlags(
+  normalizedNames: string[],
+): Promise<Map<string, { ensPriorityClaim: boolean; zmPriorityClaim: boolean }>> {
+  const uniqueNames = [...new Set(normalizedNames.filter(Boolean))];
+  const flags = new Map<string, { ensPriorityClaim: boolean; zmPriorityClaim: boolean }>();
+  if (uniqueNames.length === 0) return flags;
+
+  const { data, error } = await db
+    .from("zn_protected_names")
+    .select("normalized_name, name, ens_priority_claim, zm_priority_claim")
+    .eq("status", "protected")
+    .in("normalized_name", uniqueNames);
+
+  if (error) {
+    return flags;
+  }
+
+  for (const row of data ?? []) {
+    const normalized =
+      typeof row.normalized_name === "string" && row.normalized_name.trim()
+        ? row.normalized_name.trim().toLowerCase()
+        : typeof row.name === "string"
+          ? row.name.trim().toLowerCase()
+          : "";
+    if (!normalized) continue;
+    flags.set(normalized, {
+      ensPriorityClaim: row.ens_priority_claim === true,
+      zmPriorityClaim: row.zm_priority_claim === true,
+    });
+  }
+
+  return flags;
 }
 
 async function fetchRankPeerRows(normalizedNames: string[]): Promise<RankPeerSnapshotRow[]> {
@@ -628,7 +664,10 @@ export async function getPublicWaitlistViewData(args?: {
   if (heroProtectedCountError) throw new Error(heroProtectedCountError.message);
 
   const snapshotRows = (data ?? []) as PublicWaitlistViewSnapshotRow[];
-  const rankPeers = await fetchRankPeerRows(snapshotRows.map((row) => row.normalized_name));
+  const [rankPeers, priorityByName] = await Promise.all([
+    fetchRankPeerRows(snapshotRows.map((row) => row.normalized_name)),
+    fetchProtectedPriorityFlags(snapshotRows.map((row) => row.normalized_name)),
+  ]);
   const rankById = new Map<string, { position: number; total: number }>();
   const peersByName = new Map<string, RankPeerSnapshotRow[]>();
 
@@ -684,6 +723,8 @@ export async function getPublicWaitlistViewData(args?: {
         ? `/leaders/ref/${encodeURIComponent(row.canonical_referral_code)}`
         : null,
       adjustedPosition: row.adjusted_position,
+      ensPriorityClaim: priorityByName.get(row.normalized_name)?.ensPriorityClaim === true,
+      zmPriorityClaim: priorityByName.get(row.normalized_name)?.zmPriorityClaim === true,
     };
   });
 

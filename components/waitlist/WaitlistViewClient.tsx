@@ -13,6 +13,8 @@ import { TableRowsMenu, TableSortMenu } from "@/components/table/TableIconMenus"
 import TableLoadingOverlay from "@/components/table/TableLoadingOverlay";
 import useCachedRemoteTableData from "@/components/table/useCachedRemoteTableData";
 import HeroShareButton from "@/components/HeroShareButton";
+import { useAppRouter } from "@/components/hooks/useAppRouter";
+import WaitlistNameDetailsModal from "@/components/waitlist/WaitlistNameDetailsModal";
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import type {
   PublicWaitlistViewData,
@@ -610,6 +612,8 @@ export default function WaitlistViewClient({
   adminWalletUivk,
   referralsPerSpot,
 }: WaitlistViewClientProps) {
+  const router = useAppRouter();
+  const [detailsRow, setDetailsRow] = useState<PublicWaitlistViewRow | null>(null);
   const [draftSearch, setDraftSearch] = useState(initialSearchQuery);
   const [appliedSearch, setAppliedSearch] = useState(initialSearchQuery);
   const [searchMode, setSearchMode] = useState<WaitlistViewSearchMode>(
@@ -703,7 +707,7 @@ export default function WaitlistViewClient({
   }, []);
 
   const countdownText = formatRemaining(new Date(earlyAccessStartAt).getTime(), nowMs);
-  const allActive = !reservedOnly && !protectedOnly && appliedSearch.trim() === "";
+  const allActive = !reservedOnly && !protectedOnly;
   const visibleRows = viewData.rows;
   const maskedQueueViewKey = maskQueueViewKey(adminWalletUivk);
   const hasSearchInput = !!draftSearch.trim();
@@ -1007,9 +1011,6 @@ export default function WaitlistViewClient({
               label: `All (${viewData.allCount})`,
               active: allActive,
               onClick: () => {
-                setDraftSearch("");
-                setAppliedSearch("");
-                setSearchMode("contains");
                 setPage(1);
                 setReservedOnly(false);
                 setProtectedOnly(false);
@@ -1133,7 +1134,20 @@ export default function WaitlistViewClient({
                     const status = getStatusLabel(row);
                     const statusStyle = getStatusStyle(status);
                     return (
-                      <tr key={row.id}>
+                      <tr
+                        key={row.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Details for ${row.name}`}
+                        onClick={() => setDetailsRow(row)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setDetailsRow(row);
+                          }
+                        }}
+                        className="cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--fg-heading)_5%,transparent)]"
+                      >
                         <td
                           className="px-5 py-4 text-sm sm:px-6"
                           style={{
@@ -1166,29 +1180,14 @@ export default function WaitlistViewClient({
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {row.leaderHref ? (
-                            <Link href={row.leaderHref} className="group block" title={row.name}>
-                              <span className="block text-fg-body transition-colors group-hover:text-[var(--color-accent-interactive)]">
-                                {row.name}
-                              </span>
-                              {row.displayReferralCode ? (
-                                <span className="mt-1 block text-xs" style={{ color: "var(--fg-muted)" }} title={row.displayReferralCode}>
-                                  {row.displayReferralCode}
-                                </span>
-                              ) : null}
-                            </Link>
-                          ) : (
-                            <>
-                              <span className="block" style={{ color: "var(--fg-body)" }} title={row.name}>
-                                {row.name}
-                              </span>
-                              {row.displayReferralCode ? (
-                                <span className="mt-1 block text-xs" style={{ color: "var(--fg-muted)" }} title={row.displayReferralCode}>
-                                  {row.displayReferralCode}
-                                </span>
-                              ) : null}
-                            </>
-                          )}
+                          <span className="block" style={{ color: "var(--fg-body)" }} title={row.name}>
+                            {row.name}
+                          </span>
+                          {row.displayReferralCode ? (
+                            <span className="mt-1 block text-xs" style={{ color: "var(--fg-muted)" }} title={row.displayReferralCode}>
+                              {row.displayReferralCode}
+                            </span>
+                          ) : null}
                         </td>
                         <td
                           className="px-5 py-4 text-sm sm:px-6"
@@ -1198,20 +1197,9 @@ export default function WaitlistViewClient({
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {row.interestCount > 1 ? (
-                            <Link
-                              href={`/waitlist/view?search=${encodeURIComponent(row.name)}&searchMode=exact`}
-                              className="font-mono font-semibold underline decoration-transparent underline-offset-4 transition hover:decoration-current"
-                              style={{ color: "var(--fg-heading)" }}
-                              title={`Show all waitlist entries for ${row.name}`}
-                            >
-                              {row.reserved ? `${row.rankPosition} of ${row.rankTotal}` : `N/A of ${row.interestCount}`}
-                            </Link>
-                          ) : (
-                            <span className="font-mono font-semibold" style={{ color: "var(--fg-heading)" }}>
-                              {row.reserved ? `${row.rankPosition} of ${row.rankTotal}` : `N/A of ${row.interestCount}`}
-                            </span>
-                          )}
+                          <span className="font-mono font-semibold" style={{ color: "var(--fg-heading)" }}>
+                            {row.reserved ? `${row.rankPosition} of ${row.rankTotal}` : `N/A of ${row.interestCount}`}
+                          </span>
                         </td>
                         <td
                           className="px-5 py-4 text-sm sm:px-6"
@@ -1276,6 +1264,19 @@ export default function WaitlistViewClient({
       {headerInfo ? (
         <HeaderInfoModal title={headerInfo.title} body={headerInfo.body} onClose={() => setHeaderInfo(null)} />
       ) : null}
+      <WaitlistNameDetailsModal
+        row={detailsRow}
+        isOpen={!!detailsRow}
+        onClose={() => setDetailsRow(null)}
+        onProtect={(row) => {
+          setDetailsRow(null);
+          router.push(
+            `/protected/suggest?${new URLSearchParams({
+              name: row.name,
+            }).toString()}`,
+          );
+        }}
+      />
     </>
   );
 }

@@ -96,16 +96,12 @@ function RowsIcon() {
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
-      strokeLinejoin="round"
       className="h-4 w-4"
       aria-hidden="true"
     >
-      <path d="M5 6h14" />
+      <path d="M5 7h14" />
       <path d="M5 12h14" />
-      <path d="M5 18h14" />
-      <circle cx="8" cy="6" r="1" fill="currentColor" stroke="none" />
-      <circle cx="8" cy="12" r="1" fill="currentColor" stroke="none" />
-      <circle cx="8" cy="18" r="1" fill="currentColor" stroke="none" />
+      <path d="M5 17h10" />
     </svg>
   );
 }
@@ -126,11 +122,12 @@ export function TableIconButton({
       onClick={onClick}
       className={
         accent
-          ? "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--color-accent-interactive)] transition-colors hover:text-[var(--color-accent-interactive)]"
-          : "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[color:var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)]"
+          ? "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[color:var(--table-control-border)] text-[var(--color-accent-interactive)] transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
+          : "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[color:var(--table-control-border)] text-[color:var(--fg-body)] transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
       }
       style={{
-        border: `1px solid ${accent ? ACCENT_INTERACTIVE : borderColor}`,
+        // Resting border color via CSS var (class-based) so hover:border can override.
+        ["--table-control-border" as string]: accent ? ACCENT_INTERACTIVE : borderColor,
         background: triggerBackground,
       }}
       aria-label={ariaLabel}

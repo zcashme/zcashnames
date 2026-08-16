@@ -98,13 +98,11 @@ export function SearchModeDropdown({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--fg-muted)] transition-colors hover:text-[var(--color-accent-interactive)]"
-        style={{
-          background: borderless
-            ? "transparent"
-            : "color-mix(in srgb, var(--color-bg-elevated, transparent) 82%, transparent)",
-          border: borderless ? "none" : "1px solid var(--faq-border)",
-        }}
+        className={
+          borderless
+            ? "inline-flex h-8 w-8 items-center justify-center rounded-full border-0 bg-transparent text-[color:var(--fg-muted)] transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
+            : "inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--faq-border)] bg-[color-mix(in_srgb,var(--color-bg-elevated,transparent)_82%,transparent)] text-[color:var(--fg-muted)] transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
+        }
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Search mode: ${activeLabel}`}

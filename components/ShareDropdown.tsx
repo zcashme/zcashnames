@@ -56,6 +56,9 @@ type ShareDropdownProps = {
   showTriggerIcon?: boolean;
   /** Passed through to ActionDropdown — use to avoid full-width chip layout. */
   rootClassName?: string;
+  renderTriggerContent?: (open: boolean) => ReactNode;
+  portalMenu?: boolean;
+  menuStyle?: CSSProperties;
 };
 
 export function ShareTriggerIcon() {
@@ -338,13 +341,14 @@ export function ActionDropdown({
     />
   ));
   const orderedMenuItems = menuDirection === "up" ? [...menuItems].reverse() : menuItems;
-  const visibilityClassName = open
+  const portalReady = !portalMenu || portalStyle != null;
+  const visibilityClassName = open && portalReady
     ? "visible translate-y-0 opacity-100"
     : `pointer-events-none invisible ${hiddenOffsetClassName} opacity-0`;
   const menuNode = (
     <div
       ref={menuRef}
-      className={`flex min-w-[220px] flex-col rounded-lg border p-2 transition-all duration-200 ease-out ${defaultMenuClassName} ${customMenuClassName ?? ""} ${visibilityClassName} ${portalMenu ? "" : `absolute z-20 ${menuPositionClassName} ${menuDirectionClassName}`}`}
+      className={`flex min-w-[220px] flex-col rounded-lg border p-2 transition-[opacity,transform,visibility] duration-200 ease-out ${defaultMenuClassName} ${customMenuClassName ?? ""} ${visibilityClassName} ${portalMenu ? "" : `absolute z-20 ${menuPositionClassName} ${menuDirectionClassName}`}`}
       style={portalMenu ? portalStyle ?? { position: "fixed", left: -9999, top: -9999, zIndex: 120, ...menuStyle } : menuStyle}
       role="menu"
       aria-hidden={!open}
@@ -433,6 +437,9 @@ export default function ShareDropdown({
   menuDirection = "down",
   showTriggerIcon = true,
   rootClassName,
+  renderTriggerContent,
+  portalMenu = false,
+  menuStyle,
 }: ShareDropdownProps) {
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyState = useCopy();
@@ -527,6 +534,9 @@ export default function ShareDropdown({
       rootClassName={rootClassName}
       showTriggerIcon={showTriggerIcon}
       triggerIcon={<ShareTriggerIcon />}
+      renderTriggerContent={renderTriggerContent}
+      portalMenu={portalMenu}
+      menuStyle={menuStyle}
     />
   );
 }

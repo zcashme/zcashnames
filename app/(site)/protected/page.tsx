@@ -45,6 +45,7 @@ type ProtectedPageProps = {
     categoryOnly?: string;
     ensOnly?: string;
     zmOnly?: string;
+    details?: string;
   }>;
 };
 
@@ -72,7 +73,14 @@ export default async function ProtectedPage({ searchParams }: ProtectedPageProps
     <div className="mx-auto w-full min-w-0 max-w-6xl px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
       <SiteRouteTitle title="Protected Names" href="/protected" />
 
-      <ProtectedViewClient initialData={data} />
+      <ProtectedViewClient
+        initialData={data}
+        openMatchingDetails={
+          params.details === "1"
+          || params.details === "true"
+          || (typeof params.details === "string" && params.details.trim().length > 0)
+        }
+      />
     </div>
   );
 }

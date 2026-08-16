@@ -6,9 +6,12 @@ Current canonical references:
 
 - `/explorer`
 - `/waitlist/view`
+- `/protected`
 - `/reserve`
 - `/reserve?token=...`
 - `/faq`
+
+Row-tap details on `/waitlist/view` reuse the `/protected` modal chrome (centered disc, name + status badge, header X) but use a stacked three-section body: Summary, Referrals, and Protection. Do not use the protected two-column field grid, sticky footer actions, or the reserve summary popups for that table.
 
 ## Rule Zero
 

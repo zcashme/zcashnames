@@ -24,6 +24,8 @@ import {
 type ProtectedRequestFormProps = {
   returnHref?: string;
   initialName?: string | null;
+  initialContactKind?: ProtectedRequestContactKind | null;
+  initialContactValue?: string | null;
 };
 
 type ContactRow = {
@@ -509,12 +511,25 @@ function useRequestNameOptions(query: string) {
 export default function ProtectedRequestForm({
   returnHref = "/protected",
   initialName = null,
+  initialContactKind = null,
+  initialContactValue = null,
 }: ProtectedRequestFormProps) {
   void returnHref;
   const prefilledName = (initialName ?? "").trim();
+  const prefilledContactKind = initialContactKind;
+  const prefilledContactValue = (initialContactValue ?? "").trim();
   const initialContact = useMemo(
-    () => ({ uid: crypto.randomUUID(), kind: "email" as const, value: "" }),
-    [],
+    () => {
+      if (prefilledContactKind && prefilledContactValue) {
+        return {
+          uid: crypto.randomUUID(),
+          kind: prefilledContactKind,
+          value: prefilledContactValue,
+        };
+      }
+      return { uid: crypto.randomUUID(), kind: "email" as const, value: "" };
+    },
+    [prefilledContactKind, prefilledContactValue],
   );
   const [nameInput, setNameInput] = useState(prefilledName);
   const [selectedName, setSelectedName] = useState<ProtectedRequestNameOption | null>(null);
@@ -546,6 +561,22 @@ export default function ProtectedRequestForm({
   );
 
   function applyContactsForName(next: ProtectedRequestNameOption) {
+    if (next.zmPriorityClaim) {
+      const profileHref =
+        extractZcashMeProfileHref(next.evidence)
+        ?? (prefilledContactKind === "other" && prefilledContactValue
+          ? prefilledContactValue
+          : `https://zcash.me/${next.normalizedName}`);
+      const otherUid = crypto.randomUUID();
+      const emailUid = crypto.randomUUID();
+      setContacts([
+        { uid: otherUid, kind: "other", value: profileHref },
+        { uid: emailUid, kind: "email", value: "" },
+      ]);
+      setPreferredContactUid(otherUid);
+      return;
+    }
+
     const ensHandle =
       next.ensPriorityClaim ? extractXUsernameFromEvidence(next.evidence) : null;
 
@@ -557,6 +588,21 @@ export default function ProtectedRequestForm({
         { uid: emailUid, kind: "email", value: "" },
       ]);
       setPreferredContactUid(xUid);
+      return;
+    }
+
+    if (prefilledContactKind && prefilledContactValue) {
+      const prefillUid = crypto.randomUUID();
+      const emailUid = crypto.randomUUID();
+      setContacts(
+        prefilledContactKind === "email"
+          ? [{ uid: prefillUid, kind: "email", value: prefilledContactValue }]
+          : [
+              { uid: prefillUid, kind: prefilledContactKind, value: prefilledContactValue },
+              { uid: emailUid, kind: "email", value: "" },
+            ],
+      );
+      setPreferredContactUid(prefillUid);
       return;
     }
 
@@ -852,7 +898,9 @@ export default function ProtectedRequestForm({
                 ?? `https://zcash.me/${selectedName.normalizedName}`
               }
             />
-          ) : !prefilledName || hasAppliedPrefill ? (
+          ) : null}
+
+          {!prefilledName || hasAppliedPrefill ? (
             <>
           <div>
             <label
@@ -1003,6 +1051,7 @@ export default function ProtectedRequestForm({
             </p>
           ) : null}
 
+          {selectedName?.zmPriorityClaim ? null : (
           <button
             type="submit"
             disabled={isSubmitting || captchaOpen}
@@ -1021,6 +1070,7 @@ export default function ProtectedRequestForm({
               "Submit access request"
             )}
           </button>
+          )}
             </>
           ) : (
             <AnimatedLoadingLabel label="Loading name" active />

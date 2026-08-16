@@ -99,17 +99,11 @@ export default function PaginationControls({
 
   const inactiveChromeStyle: CSSProperties = {
     background: "color-mix(in srgb, var(--color-bg-elevated, transparent) 78%, transparent)",
-    border: "1px solid var(--faq-border)",
     boxShadow: "none",
-  };
-
-  const inactivePillStyle: CSSProperties = {
-    ...inactiveChromeStyle,
   };
 
   const activePillStyle: CSSProperties = {
     background: "color-mix(in srgb, var(--color-accent-interactive) 14%, transparent)",
-    border: "1px solid color-mix(in srgb, var(--color-accent-interactive) 24%, transparent)",
     color: "var(--color-accent-interactive)",
     boxShadow: "none",
   };
@@ -118,13 +112,17 @@ export default function PaginationControls({
     .filter(Boolean)
     .join(" ");
 
+  // Class-based borders so hover:border can override resting faq-border.
+  const inactiveHoverClass =
+    "border border-[var(--faq-border)] transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] disabled:hover:border-[var(--faq-border)] disabled:hover:text-[color:var(--fg-body)]";
+
   return (
     <div className={containerClassName} style={style} data-testid={testId}>
       <button
         type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={!canGoPrev}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)] disabled:cursor-not-allowed disabled:opacity-45"
+        className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--fg-body)] disabled:cursor-not-allowed disabled:opacity-45 ${inactiveHoverClass}`}
         style={inactiveChromeStyle}
         aria-label="Previous page"
       >
@@ -140,11 +138,11 @@ export default function PaginationControls({
             disabled={disabled}
             className={[
               item === page
-                ? "inline-flex h-9 items-center justify-center rounded-full text-sm font-semibold text-[var(--color-accent-interactive)] transition-colors disabled:cursor-not-allowed"
-                : "inline-flex h-9 items-center justify-center rounded-full text-sm font-semibold text-[var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)] disabled:cursor-not-allowed",
+                ? "inline-flex h-9 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--color-accent-interactive)_24%,transparent)] text-sm font-semibold text-[var(--color-accent-interactive)] transition-colors disabled:cursor-not-allowed"
+                : `inline-flex h-9 items-center justify-center rounded-full text-sm font-semibold text-[var(--fg-body)] disabled:cursor-not-allowed ${inactiveHoverClass}`,
               item < 10 ? "w-9" : "min-w-[2.25rem] px-3",
             ].join(" ")}
-            style={item === page ? activePillStyle : inactivePillStyle}
+            style={item === page ? activePillStyle : inactiveChromeStyle}
             aria-current={item === page ? "page" : undefined}
           >
             {item}
@@ -165,7 +163,7 @@ export default function PaginationControls({
         type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={!canGoNext}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--fg-body)] transition-colors hover:text-[var(--color-accent-interactive)] disabled:cursor-not-allowed disabled:opacity-45"
+        className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--fg-body)] disabled:cursor-not-allowed disabled:opacity-45 ${inactiveHoverClass}`}
         style={inactiveChromeStyle}
         aria-label="Next page"
       >

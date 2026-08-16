@@ -22,6 +22,7 @@ import { validateAddress } from "@/lib/zns/address-validation";
 
 type ProtectedSuggestionFormProps = {
   returnHref?: string;
+  initialName?: string | null;
 };
 
 type ContactRow = {
@@ -556,12 +557,13 @@ function useSuggestionOptions(
 
 export default function ProtectedSuggestionForm({
   returnHref = "/protected",
+  initialName = null,
 }: ProtectedSuggestionFormProps) {
   const initialContact = useMemo(
     () => ({ uid: crypto.randomUUID(), kind: "email" as const, value: "" }),
     [],
   );
-  const [name, setName] = useState("");
+  const [name, setName] = useState(() => sanitizeNameInput((initialName ?? "").trim()));
   const [suggestionType, setSuggestionType] = useState<ProtectedSuggestionType>("canonical");
   const [canonicalInput, setCanonicalInput] = useState("");
   const [selectedCanonicalName, setSelectedCanonicalName] = useState<string | null>(null);
