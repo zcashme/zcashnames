@@ -1,16 +1,20 @@
 import type { Metadata } from "next";
 import HeroShareButton from "@/components/HeroShareButton";
-import FaqPageClient, { FaqSectionPills } from "@/components/faq/FaqPageClient";
+import FaqPageClient from "@/components/faq/FaqPageClient";
+import { compactPlainText, getFaqSections } from "@/lib/faq";
+
+const FAQ_DESCRIPTION =
+  "Authoritative answers for every Zcash Names page: waitlist, reserve, leaders, protected names, explorer, beta, docs, and more.";
 
 export const metadata: Metadata = {
   title: "FAQ - Zcash Names",
-  description: "Frequently asked questions about Zcash Names waitlist reservations and Early Access.",
+  description: FAQ_DESCRIPTION,
   alternates: {
     canonical: "https://www.zcashnames.com/faq",
   },
   openGraph: {
     title: "FAQ | Zcash Names",
-    description: "Frequently asked questions about Zcash Names waitlist reservations and Early Access.",
+    description: FAQ_DESCRIPTION,
     url: "https://www.zcashnames.com/faq",
     images: [
       {
@@ -24,14 +28,41 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "FAQ | Zcash Names",
-    description: "Frequently asked questions about Zcash Names waitlist reservations and Early Access.",
+    description: FAQ_DESCRIPTION,
     images: ["/og/faq.png"],
   },
 };
 
+function FaqJsonLd() {
+  const mainEntity = getFaqSections().flatMap((section) =>
+    section.items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: compactPlainText(item.answer),
+      },
+    })),
+  );
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity,
+        }),
+      }}
+    />
+  );
+}
+
 export default function FaqPage() {
   return (
     <>
+      <FaqJsonLd />
       <div className="mx-auto w-full max-w-[1320px] px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-14">
         {/*
           Same join as /protected/suggest: open-bottom hero, fully rounded jump card,
@@ -47,7 +78,7 @@ export default function FaqPage() {
             }}
           >
             <HeroShareButton
-              message="Frequently asked questions about Zcash Names reservations, queue ordering, payments, Early Access, and recovery:"
+              message="The complete Zcash Names FAQ — waitlist, reserve, leaders, protected names, explorer, beta, and more:"
               shareUrl="https://www.zcashnames.com/faq"
               emailSubject="Zcash Names FAQ"
             />
@@ -60,31 +91,6 @@ export default function FaqPage() {
             </h1>
           </div>
 
-          <div className="relative">
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute left-0 top-[-1rem] z-10 block h-8 w-px"
-              style={{ background: "var(--faq-border)" }}
-            />
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute left-[calc(100%-1px)] top-[-1rem] z-10 block h-8 w-px"
-              style={{ background: "var(--faq-border)" }}
-            />
-            <div
-              className="rounded-2xl border px-5 py-5 sm:px-6 sm:py-6"
-              style={{
-                borderColor: "var(--faq-border)",
-                background:
-                  "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 76%, transparent), color-mix(in srgb, var(--faq-border) 10%, transparent))",
-              }}
-            >
-              <FaqSectionPills />
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-10 sm:mt-12">
           <FaqPageClient />
         </div>
       </div>

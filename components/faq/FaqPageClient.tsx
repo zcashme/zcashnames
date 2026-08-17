@@ -1,204 +1,160 @@
 "use client";
 
-import { useState } from "react";
-import type { ReactNode } from "react";
-import { WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL } from "@/lib/waitlist/early-access";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import {
+  compactPlainText,
+  findFaqTarget,
+  getFaqSections,
+  type FaqSection,
+} from "@/lib/faq";
+import { FaqAccordion } from "./FaqAccordion";
 
-type FAQItem = {
-  question: string;
-  answer: ReactNode;
-};
+const sections = getFaqSections();
 
-type FAQGroup = {
-  id: string;
-  title: string;
-  items: FAQItem[];
-};
-
-const groups: FAQGroup[] = [
-  {
-    id: "reservations",
-    title: "Reservations",
-    items: [
-      {
-        question: "Why do I need to reserve a name after joining the waitlist?",
-        answer:
-          "Email confirmations alone are not sybil resistant in this system because one person can create many inboxes and occupy multiple waitlist positions. Reservation adds an on-chain payment requirement that makes queue participation more costly to spam and gives us a stronger signal that each spot represents a real participant.",
-      },
-      {
-        question: "What does a reservation actually give me?",
-        answer:
-          "A reservation does not purchase the name today. It gives you the option to purchase that name during Early Access before broader registration opens. If your reservation is confirmed, your Early Access Code will be sent to your email when Early Access begins.",
-      },
-      {
-        question: "When does Early Access begin?",
-        answer: `Early Access is currently scheduled to begin on ${WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL}. Reservations close when that period begins, and access codes will be sent in queue order to participants who completed reservation.`,
-      },
-    ],
-  },
-  {
-    id: "queue-ranking",
-    title: "Queue & ranking",
-    items: [
-      {
-        question: "How do referrals improve my position?",
-        answer:
-          "Only completed reservation referrals count. Your adjusted waitlist line improves by 1 for every 3 direct referrals who reserve and by 1 for every 9 indirect referrals who reserve. Partial thresholds do not count until the full threshold is reached.",
-      },
-      {
-        question: "What is the difference between #, Adj#, and Rank?",
-        answer:
-          "# is your original waitlist line number. Adj# is your adjusted line number after referral-based jumps are applied. Rank compares your adjusted line number against everyone else waiting for the same name and is shown as a value like 1 of 4.",
-      },
-      {
-        question: "Why can my queue position still change?",
-        answer:
-          "Queue order is name-specific. If other people are waiting for the same name, their completed referral thresholds can improve their adjusted position too. When adjusted values tie, the earlier original waitlist line wins the tie-breaker.",
-      },
-    ],
-  },
-  {
-    id: "payments-confirmation",
-    title: "Payments & confirmation",
-    items: [
-      {
-        question: "What must match exactly when I send payment?",
-        answer:
-          "Do not change the address or memo. Send at least the minimum amount shown on the reservation page. Payments below the required amount will not be accepted, and changing the memo can prevent the payment from being attributed to your reservation.",
-      },
-      {
-        question: "How is a reservation marked complete?",
-        answer:
-          "Once a qualifying transaction is mined and matched to your waitlist UUID, the reservation is recorded on your waitlist entry. The reserved state then appears on your tokenized /reserve page and in the public waitlist view.",
-      },
-      {
-        question: "What do Reserved, Protected, Pending, and Available mean on the waitlist view?",
-        answer:
-          "Reserved means the waitlist entry has a confirmed qualifying reservation payment. Protected means the name is specially protected. Pending means the name is not protected and not reserved. Available means the entry is neither reserved nor protected and does not currently have competing interest driving a pending queue state.",
-      },
-    ],
-  },
-  {
-    id: "recovery-support",
-    title: "Recovery & support",
-    items: [
-      {
-        question: "How do I request another reservation link?",
-        answer:
-          "Use /reserve and enter the email address you used on the waitlist. If that address is on the waitlist and has not received a reservation email in the last 48 hours, a fresh reservation link will be sent.",
-      },
-      {
-        question: "Will the resend form tell me whether my email is on the waitlist?",
-        answer:
-          "No. The public response stays neutral so the form does not reveal whether an address exists in the database. If your reservation is already complete, the tokenized link will still show that completed state after you follow it.",
-      },
-      {
-        question: "Where do I get help?",
-        answer: (
-          <>
-            Contact{" "}
-            <a href="mailto:support@zcashnames.com" className="underline">
-              support@zcashnames.com
-            </a>{" "}
-            if you need help with reservation emails, payment attribution, or waitlist status.
-          </>
-        ),
-      },
-    ],
-  },
-];
-
-function FAQGroupAccordion({ group, groupIndex }: { group: FAQGroup; groupIndex: number }) {
-  const [openKey, setOpenKey] = useState<string | null>(groupIndex === 0 ? "0" : null);
-
-  return (
-    <div id={group.id} className="scroll-mt-24">
-      <div className="mb-2 px-0">
-        <h3 className="type-kicker" style={{ color: "var(--section-title-accent)" }}>
-          {group.title}
-        </h3>
-      </div>
-      <div>
-        {group.items.map((item, index) => {
-          const key = `${index}`;
-          const isOpen = openKey === key;
-
-          return (
-            <div
-              key={`${group.title}-${item.question}`}
-              className="border-b border-border-muted"
-            >
-              <button
-                type="button"
-                onClick={() => setOpenKey((current) => (current === key ? null : key))}
-                className="group flex w-full cursor-pointer items-center justify-between py-5 text-left"
-              >
-                <span
-                  className={
-                    isOpen
-                      ? "type-body pr-4 text-[var(--color-accent-interactive,var(--fg-heading))] transition-colors duration-[140ms] ease-out"
-                      : "type-body pr-4 text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]"
-                  }
-                >
-                  {item.question}
-                </span>
-                <span
-                  className="shrink-0 text-xl leading-none transition-transform duration-200"
-                  style={{
-                    color: "var(--fg-muted)",
-                    transform: isOpen ? "rotate(45deg)" : "rotate(0deg)",
-                  }}
-                >
-                  +
-                </span>
-              </button>
-
-              <div
-                className="overflow-hidden transition-all duration-300 ease-in-out"
-                style={{
-                  maxHeight: isOpen ? "720px" : "0px",
-                  opacity: isOpen ? 1 : 0,
-                }}
-              >
-                <div className="pb-5 type-body" style={{ color: "var(--fg-muted)" }}>
-                  {item.answer}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-export function FaqSectionPills() {
-  return (
-    <nav className="flex flex-col items-center gap-3 text-center" aria-label="FAQ sections">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">Jump to section</p>
-      <div className="flex flex-wrap justify-center gap-2">
-        {groups.map((group) => (
-          <a
-            key={group.id}
-            href={`#${group.id}`}
-            className="rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
-          >
-            {group.title}
-          </a>
-        ))}
-      </div>
-    </nav>
-  );
+function itemMatchesQuery(section: FaqSection, itemId: string, query: string): boolean {
+  if (!query) return true;
+  const item = section.items.find((entry) => entry.id === itemId);
+  if (!item) return false;
+  const haystack = `${section.title} ${section.href} ${item.question} ${compactPlainText(item.answer)}`.toLowerCase();
+  return haystack.includes(query);
 }
 
 export default function FaqPageClient() {
+  const [query, setQuery] = useState("");
+  const [openId, setOpenId] = useState<string | null>(sections[0]?.items[0]?.id ?? null);
+
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const visibleSections = useMemo(() => {
+    return sections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => itemMatchesQuery(section, item.id, normalizedQuery)),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [normalizedQuery]);
+
+  const visibleCount = visibleSections.reduce((sum, section) => sum + section.items.length, 0);
+
+  useEffect(() => {
+    function applyHash(hash: string) {
+      const target = findFaqTarget(hash);
+      if (!target) return;
+      setOpenId(target.itemId);
+      const raw = hash.replace(/^#/, "").trim();
+      const el = document.getElementById(raw) ?? document.getElementById(target.sectionId);
+      el?.scrollIntoView({ block: "start" });
+    }
+
+    applyHash(window.location.hash);
+
+    function onHashChange() {
+      applyHash(window.location.hash);
+    }
+
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  function toggle(id: string) {
+    setOpenId((current) => (current === id ? null : id));
+  }
+
   return (
-    <section className="mx-auto w-full max-w-[920px] px-0 pb-4">
-      <div className="flex flex-col gap-10">
-        {groups.map((group, groupIndex) => (
-          <FAQGroupAccordion key={group.id} group={group} groupIndex={groupIndex} />
-        ))}
+    <>
+      <div className="relative">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-0 top-[-1rem] z-10 block h-8 w-px"
+          style={{ background: "var(--faq-border)" }}
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-[calc(100%-1px)] top-[-1rem] z-10 block h-8 w-px"
+          style={{ background: "var(--faq-border)" }}
+        />
+        <div
+          className="rounded-2xl border px-5 py-5 sm:px-6 sm:py-6"
+          style={{
+            borderColor: "var(--faq-border)",
+            background:
+              "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 76%, transparent), color-mix(in srgb, var(--faq-border) 10%, transparent))",
+          }}
+        >
+          <nav className="flex flex-col items-center gap-3 text-center" aria-label="FAQ sections">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">
+              Jump to page
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {sections.map((section) => (
+                <a
+                  key={section.id}
+                  href={`#${section.id}`}
+                  className="rounded-md border border-border-muted px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
+                >
+                  {section.title}
+                </a>
+              ))}
+            </div>
+          </nav>
+
+          <div className="mx-auto mt-5 w-full max-w-xl">
+            <label className="sr-only" htmlFor="faq-filter">
+              Search questions
+            </label>
+            <input
+              id="faq-filter"
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search questions"
+              className="w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-colors placeholder:text-fg-muted focus:border-[var(--color-accent-interactive)]"
+              style={{
+                borderColor: "var(--faq-border)",
+                background: "color-mix(in srgb, var(--color-bg-elevated, transparent) 70%, transparent)",
+                color: "var(--fg-heading)",
+              }}
+            />
+            <p className="mt-2 text-center text-xs text-fg-muted">
+              {normalizedQuery
+                ? `${visibleCount} ${visibleCount === 1 ? "question" : "questions"} match`
+                : `${visibleCount} questions across ${sections.length} pages`}
+            </p>
+          </div>
+        </div>
       </div>
-    </section>
+
+      <section className="mx-auto mt-10 w-full max-w-[920px] px-0 pb-4 sm:mt-12">
+        {visibleSections.length === 0 ? (
+          <p className="text-center type-body" style={{ color: "var(--fg-muted)" }}>
+            No questions match that search.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-10">
+            {visibleSections.map((section) => (
+              <div key={section.id} id={section.id} className="scroll-mt-24">
+                <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <h2 className="type-kicker" style={{ color: "var(--section-title-accent)" }}>
+                    {section.title}
+                  </h2>
+                  <Link
+                    href={section.href}
+                    className="text-sm font-semibold transition-colors hover:text-[var(--color-accent-interactive)]"
+                    style={{ color: "var(--color-accent-interactive, var(--fg-heading))" }}
+                  >
+                    {section.pill ?? section.href}
+                  </Link>
+                </div>
+                <p className="mb-3 text-sm leading-6" style={{ color: "var(--fg-muted)" }}>
+                  {section.blurb}
+                </p>
+                <FaqAccordion items={section.items} openId={openId} onToggle={toggle} />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   );
 }

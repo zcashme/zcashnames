@@ -1,8 +1,9 @@
 ﻿"use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { FaqAccordion } from "@/components/faq/FaqAccordion";
+import { getFaqItemsForSurface } from "@/lib/faq";
 import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { useCopy } from "@/components/hooks/useCopy";
 import PaginationControls from "@/components/PaginationControls";
@@ -47,11 +48,6 @@ type WaitlistViewClientProps = {
   openMatchingDetails?: boolean;
 };
 
-type WaitlistFaqItem = {
-  question: string;
-  answer: ReactNode;
-};
-
 const WAITLIST_VIEW_CACHE_LIMIT = 25;
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
@@ -71,16 +67,6 @@ const SORT_OPTIONS: Array<{
   { key: "direct-desc", label: "Direct referrals (high to low)", sortKey: "directReferrals", sortDirection: "desc" },
   { key: "indirect-desc", label: "Indirect referrals (high to low)", sortKey: "indirectReferrals", sortDirection: "desc" },
 ];
-
-function formatRemaining(targetMs: number, nowMs: number): string {
-  const diff = Math.max(0, targetMs - nowMs);
-  const totalSeconds = Math.floor(diff / 1000);
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
-}
 
 function formatHeroCountdown(targetMs: number, nowMs: number) {
   const diff = Math.max(0, targetMs - nowMs);
@@ -180,12 +166,35 @@ function HeaderInfoModal({
   );
 }
 
+const WAITLIST_VIEW_FAQ_ITEMS = getFaqItemsForSurface("waitlist-view");
+
 function WaitlistFaq({
-  items,
+  maskedViewKey,
+  onOpenViewKey,
 }: {
-  items: WaitlistFaqItem[];
+  maskedViewKey: string;
+  onOpenViewKey: () => void;
 }) {
-  const [openKey, setOpenKey] = useState<string | null>("0");
+  const [openId, setOpenId] = useState<string | null>(WAITLIST_VIEW_FAQ_ITEMS[0]?.id ?? null);
+  const items = WAITLIST_VIEW_FAQ_ITEMS.map((item) => {
+    if (item.id !== "waitlist-view-queue-key") return item;
+    return {
+      ...item,
+      answer: (
+        <>
+          {item.answer}{" "}
+          <button
+            type="button"
+            onClick={onOpenViewKey}
+            className="cursor-pointer underline underline-offset-4 transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
+            style={{ color: "var(--fg-body)" }}
+          >
+            <strong>{maskedViewKey}</strong>
+          </button>
+        </>
+      ),
+    };
+  });
 
   return (
     <section className="mx-auto mt-12 w-full max-w-3xl px-0 pb-4">
@@ -199,74 +208,21 @@ function WaitlistFaq({
         />
       </div>
 
-      <div
-        className="overflow-hidden rounded-xl"
-        style={{ border: "1px solid var(--faq-border)", backgroundColor: "transparent" }}
-      >
-        {items.map((item, index) => {
-          const key = `${index}`;
-          const isOpen = openKey === key;
-          const isLast = index === items.length - 1;
+      <FaqAccordion
+        items={items}
+        openId={openId}
+        onToggle={(id) => setOpenId((current) => (current === id ? null : id))}
+        variant="card"
+      />
 
-          return (
-            <div
-              key={key}
-              style={{ borderBottom: isLast ? "none" : "1px solid var(--faq-border)" }}
-            >
-              <button
-                type="button"
-                onClick={() => setOpenKey((current) => (current === key ? null : key))}
-                className="flex w-full cursor-pointer items-center justify-between px-6 py-5 text-left transition-colors duration-200"
-                style={{
-                  backgroundColor: "transparent",
-                  borderLeft: isOpen ? "3px solid var(--faq-active-border)" : "3px solid transparent",
-                }}
-                onMouseEnter={(event) => {
-                  if (!isOpen) {
-                    event.currentTarget.style.borderLeftColor = "var(--faq-active-border)";
-                  }
-                }}
-                onMouseLeave={(event) => {
-                  if (!isOpen) {
-                    event.currentTarget.style.borderLeftColor = "transparent";
-                  }
-                }}
-              >
-                <span className="type-body pr-4" style={{ color: "var(--fg-heading)" }}>
-                  {item.question}
-                </span>
-                <span
-                  className="shrink-0 text-xl leading-none transition-transform duration-200"
-                  style={{
-                    color: "var(--fg-muted)",
-                    transform: isOpen ? "rotate(45deg)" : "rotate(0deg)",
-                  }}
-                >
-                  +
-                </span>
-              </button>
-
-              <div
-                className="overflow-hidden transition-all duration-300 ease-in-out"
-                style={{
-                  maxHeight: isOpen ? "720px" : "0px",
-                  opacity: isOpen ? 1 : 0,
-                  backgroundColor: "transparent",
-                }}
-              >
-                <div
-                  className="px-6 pb-5 type-body"
-                  style={{
-                    color: "var(--fg-muted)",
-                    paddingLeft: "calc(1.5rem + 3px)",
-                  }}
-                >
-                  {item.answer}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="mt-4 flex justify-end">
+        <Link
+          href="/faq#waitlist-view"
+          className="text-sm font-semibold transition-colors hover:text-[var(--color-accent-interactive)]"
+          style={{ color: "var(--color-accent-interactive, var(--fg-heading))" }}
+        >
+          See all waitlist questions →
+        </Link>
       </div>
     </section>
   );
@@ -628,7 +584,6 @@ export default function WaitlistViewClient({
   const [sortKey, setSortKey] = useState<WaitlistViewSortKey>(initialSortKey);
   const [sortDirection, setSortDirection] = useState<WaitlistViewSortDirection>(initialSortDirection);
   const [page, setPage] = useState(initialPage);
-  const [nowMs, setNowMs] = useState(() => Date.now());
   const [showViewKeyModal, setShowViewKeyModal] = useState(false);
   const [headerInfo, setHeaderInfo] = useState<{ title: string; body: string } | null>(null);
   const initialDataRef = useRef<PublicWaitlistViewData>({
@@ -711,19 +666,15 @@ export default function WaitlistViewClient({
     const rows = viewData.rows.length > 0 ? viewData.rows : initialRows;
     const match =
       rows.find((row) => row.name.toLowerCase() === query)
+      ?? rows.find((row) => (row.displayReferralCode ?? "").toLowerCase() === query)
       ?? rows.find((row) => row.name.toLowerCase().includes(query))
+      ?? rows.find((row) => (row.displayReferralCode ?? "").toLowerCase().includes(query))
       ?? null;
     if (!match) return;
     setDetailsRow(match);
     autoOpenedDetailsRef.current = true;
   }, [appliedSearch, initialRows, initialSearchQuery, openMatchingDetails, viewData.rows]);
 
-  useEffect(() => {
-    const intervalId = window.setInterval(() => setNowMs(Date.now()), 1000);
-    return () => window.clearInterval(intervalId);
-  }, []);
-
-  const countdownText = formatRemaining(new Date(earlyAccessStartAt).getTime(), nowMs);
   const allActive = !reservedOnly && !protectedOnly;
   const visibleRows = viewData.rows;
   const maskedQueueViewKey = maskQueueViewKey(adminWalletUivk);
@@ -793,109 +744,6 @@ export default function WaitlistViewClient({
     if (row.indirectReferrals <= 0) return `${row.directReferrals} direct`;
     return `${row.directReferrals} direct Â· ${row.indirectReferrals} indirect`;
   }
-
-  const faqItems: WaitlistFaqItem[] = [
-    {
-      question: "How do I read the waitlist table?",
-      answer: (
-        <div className="space-y-3">
-          <p>
-            Each row is one waitlisted name. Read the columns left to right:
-          </p>
-          <ul className="list-disc space-y-1.5 pl-5">
-            <li>
-              <strong>#</strong> — verified join order (original line number).
-            </li>
-            <li>
-              <strong>Adj#</strong> — referral-adjusted line number (better ranks move closer to the front).
-            </li>
-            <li>
-              <strong>Name</strong> — the waitlisted name and its referral code.
-            </li>
-            <li>
-              <strong>Position</strong> — place among everyone waitlisting the same name (or N/A until reserved).
-            </li>
-            <li>
-              <strong>Status</strong> —{" "}
-              <strong>Protected</strong> names are held back; <strong>Reserved</strong> names have completed payment;{" "}
-              <strong>Pending</strong> names are waiting on reservation; <strong>Available</strong> names have no current
-              conflict or hold.
-            </li>
-            <li>
-              <strong>Refs</strong> — reserved referral totals (direct and/or indirect when both apply).
-            </li>
-          </ul>
-          <p>
-            Tap any column header for a short explanation of that column.
-          </p>
-        </div>
-      ),
-    },
-    {
-      question: "Why are reservations required after email confirmation?",
-      answer: (
-        <p>
-          Email confirmation alone is not sybil resistant in this system. A single person can create many email
-          addresses, confirm them cheaply, and occupy many positions in the queue without showing meaningful commitment.
-          The reservation flow on <code>/reserve</code> raises the cost of spam and duplicate queue abuse by requiring an
-          on-chain Zcash transaction tied to a real wallet action for each reserved name. That does not solve every abuse
-          case, but it is much harder to fake at scale than email clicks alone, and it gives the queue a stronger signal
-          that a participant intends to actually claim the name.
-        </p>
-      ),
-    },
-    {
-      question: "How do I reserve my place and how do referrals affect it?",
-      answer: (
-        <p>
-          Open the reservation link sent to your email and send the Zcash transaction shown on the page. This records
-          your reservation on-chain. You can also earn ZEC when a referral claims their name, and rewards are sent to
-          your Zcash name after you reserve it.
-        </p>
-      ),
-    },
-    {
-      question: "What does “adjusted by referrals who also completed reservations” mean?",
-      answer: (
-        <p>
-          Only referrals who also finish their own reservations count toward your queue position. The{" "}
-          <strong>Adj#</strong> column shows the referral-adjusted line number. Within the reserved queue, every{" "}
-          {referralsPerSpot} direct reserved referrals moves your position up 1 spot, and every 9 indirect reserved
-          referrals moves it up 1 additional spot. Referrals who joined by email but did not complete a reservation do
-          not improve your queue position.
-        </p>
-      ),
-    },
-    {
-      question: "Why would I want to use the queue viewing key?",
-      answer: (
-        <p>
-          The queue viewing key gives participants and observers a way to inspect incoming reservation payments without
-          exposing spending authority. It helps the community verify that reservations are reaching the expected wallet
-          and adds transparency to queue activity. You can open the queue viewing key here:{" "}
-          <button
-            type="button"
-            onClick={() => setShowViewKeyModal(true)}
-            className="cursor-pointer underline underline-offset-4 transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
-            style={{ color: "var(--fg-body)" }}
-          >
-            <strong>{maskedQueueViewKey}</strong>
-          </button>
-          .
-        </p>
-      ),
-    },
-    {
-      question: "When do reservations close and when are access codes sent?",
-      answer: (
-        <p>
-          Reservations close when the early access period begins, which is <strong>{earlyAccessLabel}</strong>. That is
-          when access codes will be sent in the order presented in the queue to participants who completed reservations,
-          adjusted by referrals who also completed reservations. The current time remaining is <strong>{countdownText}</strong>.
-        </p>
-      ),
-    },
-  ];
 
   return (
     <>
@@ -993,8 +841,8 @@ export default function WaitlistViewClient({
               onChange={setDraftSearch}
               onSubmit={applySearch}
               variant="table"
-              placeholder="Names"
-              ariaLabel="Search waitlist names"
+              placeholder="Names or referral codes"
+              ariaLabel="Search waitlist names or referral codes"
               searchMode={searchMode}
               onSearchModeChange={(value) => setSearchMode(value as WaitlistViewSearchMode)}
               onClear={() => {
@@ -1273,7 +1121,10 @@ export default function WaitlistViewClient({
         </div>
       </div>
 
-      <WaitlistFaq items={faqItems} />
+      <WaitlistFaq
+        maskedViewKey={maskedQueueViewKey}
+        onOpenViewKey={() => setShowViewKeyModal(true)}
+      />
 
       {showViewKeyModal ? (
         <QueueViewKeyModal value={adminWalletUivk} onClose={() => setShowViewKeyModal(false)} />

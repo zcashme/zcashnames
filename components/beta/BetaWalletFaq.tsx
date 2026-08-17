@@ -58,7 +58,11 @@ export default function BetaWalletFaq({ brandSlug }: { brandSlug: WalletBrandSlu
           <Link href={`/beta/${brand.slug}`} style={linkStyle}>
             /beta/{brand.slug}
           </Link>
-          .
+          . For product-wide questions, see the{" "}
+          <Link href="/faq#beta" style={linkStyle}>
+            /faq
+          </Link>{" "}
+          beta section.
         </p>
       </section>
 

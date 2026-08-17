@@ -114,6 +114,9 @@ function InlineStepButton({
   );
 }
 
+const footerSecondaryButtonClassName =
+  "inline-flex h-9 items-center justify-center rounded-[13px] border-[1.5px] border-border-muted bg-transparent px-4 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]";
+
 function RequiredAsterisk() {
   return (
     <span aria-hidden="true" className="ml-1" style={{ color: "var(--accent-red, #e05252)" }}>
@@ -409,12 +412,7 @@ export default function NameActionForm({
           <button
             type="button"
             onClick={handleDone}
-            className="inline-flex h-9 items-center justify-center rounded-[13px] px-4 text-sm font-semibold"
-            style={{
-              background: "transparent",
-              border: "1.5px solid var(--border-muted)",
-              color: "var(--fg-body)",
-            }}
+            className={footerSecondaryButtonClassName}
           >
             Close
           </button>
@@ -430,12 +428,7 @@ export default function NameActionForm({
         <button
           type="button"
           onClick={() => setOtpBackOpen(true)}
-          className="inline-flex h-9 items-center justify-center rounded-[13px] px-4 text-sm font-semibold"
-          style={{
-            background: "transparent",
-            border: "1.5px solid var(--border-muted)",
-            color: "var(--fg-body)",
-          }}
+          className={footerSecondaryButtonClassName}
         >
           Previous
         </button>
@@ -446,12 +439,7 @@ export default function NameActionForm({
         <button
           type="button"
           onClick={() => goto(s.step - 1)}
-          className="inline-flex h-9 items-center justify-center rounded-[13px] px-4 text-sm font-semibold"
-          style={{
-            background: "transparent",
-            border: "1.5px solid var(--border-muted)",
-            color: "var(--fg-body)",
-          }}
+          className={footerSecondaryButtonClassName}
         >
           Previous
         </button>

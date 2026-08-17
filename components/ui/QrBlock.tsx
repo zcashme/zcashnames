@@ -148,7 +148,7 @@ export function QrBlock({
                     <button
                       type="button"
                       onClick={() => setExpanded(true)}
-                      className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-xs font-semibold text-fg-body transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
+                      className="zns-hover-accent inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-xs font-semibold text-fg-body"
                       aria-label="Expand QR"
                       title="Expand QR"
                     >
@@ -157,7 +157,7 @@ export function QrBlock({
                     <button
                       type="button"
                       onClick={handleSavePng}
-                      className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-xs font-semibold text-fg-body transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
+                      className="zns-hover-accent inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-xs font-semibold text-fg-body"
                       aria-label="Save QR"
                       title="Save QR"
                     >
@@ -228,7 +228,7 @@ export function QrBlock({
               <button
                 type="button"
                 onClick={() => setExpanded(true)}
-                className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-xs font-semibold text-fg-body transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
+                className="zns-hover-accent inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-xs font-semibold text-fg-body"
                 aria-label="Expand QR"
                 title="Expand QR"
               >
@@ -237,7 +237,7 @@ export function QrBlock({
               <button
                 type="button"
                 onClick={handleSavePng}
-                className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-xs font-semibold text-fg-body transition-colors duration-200 hover:text-[var(--color-accent-interactive)]"
+                className="zns-hover-accent inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-xs font-semibold text-fg-body"
                 aria-label="Save QR"
                 title="Save QR"
               >
@@ -337,40 +337,42 @@ function CopyRow({ label, value, copied, onCopy, variant = "default" }: CopyRowP
       }`}
     >
       <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>{label}</span>
-      {/* Value scrolls in its own column; copy control is a sibling so they never overlap. */}
-      <div
-        className={`flex min-w-0 items-center ${isVerify ? "rounded-xl" : "rounded-md"}`}
-        style={{ background: "var(--color-raised)", border: "1px solid var(--border-muted)" }}
+      <button
+        type="button"
+        onClick={onCopy}
+        disabled={!value}
+        className={[
+          "flex min-w-0 items-center text-left text-fg-body",
+          "border border-border-muted bg-[var(--color-raised)]",
+          "transition-colors duration-200",
+          "hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          "disabled:hover:border-border-muted disabled:hover:text-fg-body",
+          isVerify ? "rounded-xl" : "rounded-md",
+        ].join(" ")}
+        aria-label={`Copy ${label.toLowerCase()}`}
+        title={copied ? "Copied!" : `Copy ${label.toLowerCase()}`}
       >
         <code
           className={[
             "min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono",
-            // Hide scrollbar; trackpad/touch/shift-wheel still scroll.
             "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
             isVerify ? "py-3 pl-3 pr-2 text-[0.78rem]" : "py-1 pl-2 pr-1.5 text-xs",
           ].join(" ")}
-          style={{ color: "var(--fg-body)" }}
           title={value}
         >
           {value || "Not set"}
         </code>
-        <button
-          type="button"
-          onClick={onCopy}
-          disabled={!value}
+        <span
           className={[
             "inline-flex shrink-0 items-center justify-center self-stretch",
-            "cursor-pointer border-0 bg-transparent text-fg-body transition-colors duration-200",
-            "hover:text-[var(--color-accent-interactive)]",
-            "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-fg-body",
             isVerify ? "w-10 pr-2" : "w-7 pr-1.5",
           ].join(" ")}
-          aria-label={`Copy ${label.toLowerCase()}`}
-          title={copied ? "Copied!" : `Copy ${label.toLowerCase()}`}
+          aria-hidden="true"
         >
           {copied ? <CheckIcon /> : <CopyIcon />}
-        </button>
-      </div>
+        </span>
+      </button>
     </div>
   );
 }

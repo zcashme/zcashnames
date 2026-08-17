@@ -323,7 +323,7 @@ export default function ExplorerView({
           aria-hidden="true"
         >
           <div className="flex w-max items-center gap-3 opacity-0">
-            <span ref={headerDescMeasureRef} className="blog-shell-title whitespace-nowrap">
+            <span ref={headerDescMeasureRef} className="whitespace-nowrap text-[1.35rem] font-semibold leading-none tracking-tight sm:text-2xl">
               Explorer
             </span>
             <div ref={headerPillsFullMeasureRef} className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -350,7 +350,12 @@ export default function ExplorerView({
           </div>
         </div>
 
-        <h1 className="blog-shell-title min-w-0 flex-1 truncate">Explorer</h1>
+        <h1
+          className="m-0 min-w-0 flex-1 truncate text-[1.35rem] font-semibold leading-none tracking-tight sm:text-2xl"
+          style={{ color: "var(--fg-heading)" }}
+        >
+          Explorer
+        </h1>
         <div className="flex shrink-0 flex-nowrap items-center justify-end gap-1.5 sm:gap-2 self-center">
           <button
             type="button"

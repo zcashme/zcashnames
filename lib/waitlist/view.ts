@@ -159,6 +159,40 @@ function sanitizeSortDirection(value: string | null | undefined): WaitlistViewSo
   return value === "desc" ? "desc" : "asc";
 }
 
+function quotePostgrestValue(value: string): string {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function applyWaitlistSearch<T>(
+  query: T,
+  searchQuery: string,
+  searchMode: WaitlistViewSearchMode,
+): T {
+  if (!searchQuery) return query;
+  const filterable = query as { or: (filters: string) => T };
+
+  if (searchMode === "exact") {
+    const exact = quotePostgrestValue(searchQuery);
+    return filterable.or(
+      [
+        `normalized_name.eq.${searchQuery}`,
+        `display_referral_code.ilike.${exact}`,
+        `canonical_referral_code.ilike.${exact}`,
+      ].join(","),
+    );
+  }
+
+  const likeNeedle = searchQuery.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+  const pattern = quotePostgrestValue(`%${likeNeedle}%`);
+  return filterable.or(
+    [
+      `normalized_name.ilike.${pattern}`,
+      `display_referral_code.ilike.${pattern}`,
+      `canonical_referral_code.ilike.${pattern}`,
+    ].join(","),
+  );
+}
+
 function sanitizeSearchMode(value: string | null | undefined): WaitlistViewSearchMode {
   return value === "exact" ? "exact" : "contains";
 }
@@ -572,17 +606,10 @@ export async function getPublicWaitlistViewData(args?: {
     .eq("is_protected", true);
 
   if (searchQuery) {
-    if (searchMode === "exact") {
-      query = query.eq("normalized_name", searchQuery);
-      allCountQuery = allCountQuery.eq("normalized_name", searchQuery);
-      reservedCountQuery = reservedCountQuery.eq("normalized_name", searchQuery);
-      protectedCountQuery = protectedCountQuery.eq("normalized_name", searchQuery);
-    } else {
-      query = query.like("normalized_name", `%${searchQuery}%`);
-      allCountQuery = allCountQuery.like("normalized_name", `%${searchQuery}%`);
-      reservedCountQuery = reservedCountQuery.like("normalized_name", `%${searchQuery}%`);
-      protectedCountQuery = protectedCountQuery.like("normalized_name", `%${searchQuery}%`);
-    }
+    query = applyWaitlistSearch(query, searchQuery, searchMode);
+    allCountQuery = applyWaitlistSearch(allCountQuery, searchQuery, searchMode);
+    reservedCountQuery = applyWaitlistSearch(reservedCountQuery, searchQuery, searchMode);
+    protectedCountQuery = applyWaitlistSearch(protectedCountQuery, searchQuery, searchMode);
   }
 
   if (reservedOnly) {

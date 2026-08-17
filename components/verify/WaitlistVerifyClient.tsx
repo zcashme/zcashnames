@@ -4587,7 +4587,7 @@ export default function WaitlistVerifyClient({
             "You’ll have the option to purchase this name during Early Access. Pricing to be announced.",
           ]}
           actions={[
-            { label: "Frequently Asked Questions", href: "/faq", icon: <DocumentIcon className="h-4 w-4" /> },
+            { label: "Frequently Asked Questions", href: "/faq#reserve", icon: <DocumentIcon className="h-4 w-4" /> },
             { label: "Discord", href: "https://discord.gg/z2H23QgAGf", external: true, icon: <DiscordIcon className="h-4 w-4" /> },
           ]}
           onClose={() => setShowReservedInfo(false)}
@@ -4600,7 +4600,7 @@ export default function WaitlistVerifyClient({
             "This name has not been reserved yet. Complete the transaction to receive an access code before Early Access begins.",
           ]}
           actions={[
-            { label: "Frequently Asked Questions", href: "/faq", icon: <DocumentIcon className="h-4 w-4" /> },
+            { label: "Frequently Asked Questions", href: "/faq#reserve", icon: <DocumentIcon className="h-4 w-4" /> },
             { label: "Discord", href: "https://discord.gg/z2H23QgAGf", external: true, icon: <DiscordIcon className="h-4 w-4" /> },
           ]}
           onClose={() => setShowPendingInfo(false)}
@@ -4614,7 +4614,7 @@ export default function WaitlistVerifyClient({
             "Some names are protected because they are strongly associated with a person, organization, brand, or public identity. This review helps reduce impersonation and misleading claims.",
           ]}
           actions={[
-            { label: "Frequently Asked Questions", href: "/faq", icon: <DocumentIcon className="h-4 w-4" /> },
+            { label: "Frequently Asked Questions", href: "/faq#protected", icon: <DocumentIcon className="h-4 w-4" /> },
             { label: "Discord", href: "https://discord.gg/z2H23QgAGf", external: true, icon: <DiscordIcon className="h-4 w-4" /> },
           ]}
           customActions={<AccessCodeField />}

@@ -1,161 +1,17 @@
-// FAQ accordion with grouped questions and item-level answers.
-// Questions/answers are static data defined as a constant array - no API calls.
-// Group and item expand/collapse both use max-height + opacity transitions.
+// Homepage FAQ: a short "start here" subset from the shared /faq catalog.
 "use client";
 
 import Link from "next/link";
 import { useState } from "react";
-import type { ReactNode } from "react";
 import SectionHeaderPill from "@/components/landing/SectionHeaderPill";
+import { FaqAccordion } from "@/components/faq/FaqAccordion";
+import { getHomeFaqGroups } from "@/lib/faq";
 
-type FAQItem = {
-  question: string;
-  answer: ReactNode;
-};
-
-type FAQGroup = {
-  title: string;
-  items: FAQItem[];
-};
-
-const groups: FAQGroup[] = [
-  {
-    title: "The basics",
-    items: [
-      {
-        question: "What is a Zcash name?",
-        answer:
-          "Zcash names are a human-readable names that maps to a Zcash address and profile links. Instead of sharing a long cryptographic address, you share something like yourname.zcash.",
-      },
-      {
-        question: "What can I do with my Zcash name?",
-        answer: (
-          <>
-            Your Zcash name replaces long wallet addresses with a simple, human-readable name for sending and receiving payments.
-            Each name can be linked to a{" "}
-            <a href="https://zcash.me" target="_blank" rel="noopener noreferrer" className="underline">Zcash.me</a>{" "}
-            profile so others can verify who they&rsquo;re transacting with.
-            You can claim a name to use it, hold it as a digital asset, or sell it later as demand grows.
-          </>
-        ),
-      },
-      {
-        question: "Do I really own my name?",
-        answer:
-          "Yes. Your name is registered on an on-chain registry linked to your address. There are no renewal fees - stay active once every 180 days to maintain it. You can sell, transfer, or buy additional names at any time.",
-      },
-      {
-        question: "How do I keep my Zcash name active?",
-        answer:
-          "There are no renewal fees - you just need to sign in at least once every 6 months. Any activity counts: updating your Zcash.me profile, changing the address your name points to, or simply starting the verification process without making any changes. As long as you check in within the window, your name stays yours.",
-      },
-    ],
-  },
-  {
-    title: "Privacy & payments",
-    items: [
-      {
-        question: "How do payments stay private?",
-        answer:
-          "Payments made using Zcash shielded transactions do not publicly expose amounts and balances on the public ledger.",
-      },
-      {
-        question: "Does linking my name to an address hurt my privacy?",
-        answer:
-          "No. Zcash shielded transactions keep amounts and addresses off the public ledger, so even someone who knows your Zcash name can't see your balance or activity. It's like sharing your email - people can reach you, but they can't read your inbox.",
-      },
-      {
-        question: "Can people pay me with other cryptocurrencies?",
-        answer:
-          "Yes. Cross-pay flows let senders use popular assets while settlement can still arrive in Zcash to the address associated with your ZcashName.",
-      },
-      {
-        question: "How does Log in with Zcash work?",
-        answer:
-          "Your Zcash name resolves to an address. That address receives a one-time passcode. Replying with the one-time passcode proves you own that address. No passwords or third-party accounts are required - just your name.",
-      },
-    ],
-  },
-  {
-    title: "Getting access",
-    items: [
-      {
-        question: "What is testnet mode?",
-        answer:
-          "Testnet mode lets you explore Zcash Names without using real ZEC. All transactions on testnet use TAZ (testnet ZEC), which has no monetary value. It's a safe way to try registering names, updating addresses, and listing names for sale before going live on mainnet.",
-      },
-      {
-        question: "How do waitlist referrals work?",
-        answer: (
-          <>
-            When you join the waitlist you receive a unique referral link. Sharing it moves you up the queue - the more
-            people you refer, the earlier you get access when Zcash Names launches. Plus, if they purchase a name after
-            our launch, direct referral rewards are set at 1/5 of the lowest name claim price at purchase time.{" "}
-            <a href="/leaders/terms" className="underline">
-              View terms
-            </a>
-            .
-          </>
-        ),
-      },
-      {
-        question: "I joined the waitlist - is my name reserved?",
-        answer:
-          "Joining the waitlist doesn't lock a specific name - it reserves your spot in line. When it's your turn, you'll receive an email and can register any name that's still unclaimed at that moment. Spots are first-come-first-served, with referrals moving you up (1 spot per 3 referrals). If you're verified on Zcash.me, you'll get access to the namespace even before the general waitlist opens.",
-      },
-    ],
-  },
-  {
-    title: "Community, builders & team",
-    items: [
-      {
-        question: "How do I join the beta?",
-        answer: (
-          <>
-            Visit{" "}
-            <a href="/beta" className="underline">/beta</a>{" "}
-            to review the current beta details, supported wallets, and testing expectations. If you want access, apply at{" "}
-            <a href="/beta/apply" className="underline">/beta/apply</a>.
-          </>
-        ),
-      },
-      {
-        question: "How do I build on Zcash Names?",
-        answer: (
-          <>
-            The{" "}
-            <a href="/docs" className="underline">Developer&rsquo;s Guide</a>{" "}
-            has implementation guides and references for building apps, integrations, and identity flows on top of Zcash Names.
-          </>
-        ),
-      },
-      {
-        question: "How do I partner with Zcash Names?",
-        answer: (
-          <>
-            We collaborate with wallets, platforms, and products to expand the Zcash ecosystem.{" "}
-            <a href="https://cal.com/zcash" target="_blank" rel="noopener noreferrer" className="underline">Book a meeting</a>{" "}
-            or{" "}
-            <a href="mailto:partner@zcash.me" className="underline">email us</a>{" "}
-            to start the conversation.
-          </>
-        ),
-      },
-    ],
-  },
-];
+const groups = getHomeFaqGroups();
 
 export default function FAQ() {
-  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [openGroupIndex, setOpenGroupIndex] = useState<number | null>(null);
-
-  const toggle = (key: string) => {
-    setOpenKey((prev) => (prev === key ? null : key));
-  };
-
-  const toggleGroup = (groupIndex: number) => {
-    setOpenGroupIndex((prev) => (prev === groupIndex ? null : groupIndex));
-  };
 
   return (
     <section className="w-full max-w-3xl mx-auto px-6 pt-0 pb-24">
@@ -168,16 +24,13 @@ export default function FAQ() {
           const isGroupOpen = openGroupIndex === groupIndex;
 
           return (
-            <div key={groupIndex}>
+            <div key={group.title}>
               <button
                 type="button"
-                onClick={() => toggleGroup(groupIndex)}
+                onClick={() => setOpenGroupIndex((prev) => (prev === groupIndex ? null : groupIndex))}
                 className="group mb-2 flex w-full cursor-pointer items-center justify-between text-left"
               >
-                <h3
-                  className="type-kicker"
-                  style={{ color: "var(--section-title-accent)" }}
-                >
+                <h3 className="type-kicker" style={{ color: "var(--section-title-accent)" }}>
                   {group.title}
                 </h3>
                 <span
@@ -193,57 +46,15 @@ export default function FAQ() {
               <div
                 className="overflow-hidden transition-all duration-300 ease-in-out"
                 style={{
-                  maxHeight: isGroupOpen ? "2000px" : "0px",
+                  maxHeight: isGroupOpen ? "2400px" : "0px",
                   opacity: isGroupOpen ? 1 : 0,
                 }}
               >
-                <div>
-                  {group.items.map((item, index) => {
-                    const key = `${groupIndex}-${index}`;
-                    const isOpen = openKey === key;
-
-                    return (
-                      <div key={key} className="border-b border-border-muted">
-                        <button
-                          type="button"
-                          onClick={() => toggle(key)}
-                          className="group flex w-full cursor-pointer items-center justify-between py-5 text-left"
-                        >
-                          <span
-                            className={
-                              isOpen
-                                ? "type-body pr-4 text-[var(--color-accent-interactive,var(--fg-heading))] transition-colors duration-[140ms] ease-out"
-                                : "type-body pr-4 text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]"
-                            }
-                          >
-                            {item.question}
-                          </span>
-                          <span
-                            className="shrink-0 text-xl leading-none transition-transform duration-200"
-                            style={{
-                              color: "var(--fg-muted)",
-                              transform: isOpen ? "rotate(45deg)" : "rotate(0deg)",
-                            }}
-                          >
-                            +
-                          </span>
-                        </button>
-
-                        <div
-                          className="overflow-hidden transition-all duration-300 ease-in-out"
-                          style={{
-                            maxHeight: isOpen ? "600px" : "0px",
-                            opacity: isOpen ? 1 : 0,
-                          }}
-                        >
-                          <p className="pb-5 type-body" style={{ color: "var(--fg-muted)" }}>
-                            {item.answer}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <FaqAccordion
+                  items={group.items}
+                  openId={openId}
+                  onToggle={(id) => setOpenId((current) => (current === id ? null : id))}
+                />
               </div>
             </div>
           );
