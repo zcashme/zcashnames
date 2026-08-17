@@ -10,6 +10,7 @@ import {
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET?.trim();

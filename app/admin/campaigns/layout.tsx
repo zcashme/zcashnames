@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listDraftCampaigns, listSentCampaigns } from "@/lib/campaigns/repository";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 export default async function CampaignAdminLayout({
   children,

@@ -108,25 +108,36 @@ export async function listActiveSuppressions(
   }
 }
 
+const SUPPRESSION_PAGE_SIZE = 1000;
+
 export async function listActiveSuppressedEmailSet(
   emails: string[],
 ): Promise<Set<string>> {
-  const normalizedEmails = [...new Set(emails.map(normalizeSuppressionEmail).filter(Boolean))];
-  if (normalizedEmails.length === 0) return new Set<string>();
+  const wanted = new Set(emails.map(normalizeSuppressionEmail).filter(Boolean));
+  if (wanted.size === 0) return new Set<string>();
 
   try {
-    const { data, error } = await db
-      .from("campaign_suppressions")
-      .select("normalized_email")
-      .eq("active", true)
-      .in("normalized_email", normalizedEmails);
-    if (error) throw error;
-
-    return new Set(
-      ((data ?? []) as Array<{ normalized_email?: string | null }>)
-        .map((row) => row.normalized_email?.trim().toLowerCase())
-        .filter((value): value is string => Boolean(value)),
-    );
+    // Load the small suppression table and intersect in memory.
+    // A huge `.in(normalized_email, …)` filter becomes a GET URL that
+    // PostgREST rejects with 400 Bad Request around a few hundred emails.
+    const suppressed = new Set<string>();
+    let from = 0;
+    while (true) {
+      const { data, error } = await db
+        .from("campaign_suppressions")
+        .select("normalized_email")
+        .eq("active", true)
+        .range(from, from + SUPPRESSION_PAGE_SIZE - 1);
+      if (error) throw error;
+      const rows = (data ?? []) as Array<{ normalized_email?: string | null }>;
+      for (const row of rows) {
+        const email = row.normalized_email?.trim().toLowerCase();
+        if (email && wanted.has(email)) suppressed.add(email);
+      }
+      if (rows.length < SUPPRESSION_PAGE_SIZE) break;
+      from += SUPPRESSION_PAGE_SIZE;
+    }
+    return suppressed;
   } catch (error) {
     if (isCampaignSuppressionMigrationError(error)) return new Set<string>();
     throw normalizeSuppressionError(error);

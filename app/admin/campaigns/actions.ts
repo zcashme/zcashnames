@@ -574,7 +574,8 @@ export async function queueCampaignAction(
       delivery: await getCampaignDeliveryState(campaignId),
     };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: message || "Failed to queue paced send." };
   }
 }
 

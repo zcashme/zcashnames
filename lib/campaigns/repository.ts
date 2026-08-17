@@ -56,6 +56,8 @@ import type {
 export const LARGE_CAMPAIGN_THRESHOLD = 500;
 export const DEFAULT_DELIVERY_BATCH_SIZE = 100;
 export const DEFAULT_DELIVERY_BATCH_INTERVAL_MINUTES = 2;
+const POSTGREST_PAGE_SIZE = 1000;
+const IN_FILTER_CHUNK_SIZE = 100;
 const CAMPAIGN_DELIVERY_MIGRATION_PATH = "sql/2026-06-21-campaign-paced-delivery.sql";
 const SUBSCRIBER_PAGE_SIZE = 1000;
 
@@ -1130,24 +1132,46 @@ export async function getCampaignPreviewRecipient(
   return resolveCampaignPreviewRecipient(campaign);
 }
 
-async function removeSuppressedPendingSnapshots(campaignId: string): Promise<void> {
-  const snapshots = await listCampaignRecipientSnapshots(campaignId);
-  const pendingSnapshots = snapshots.filter((snapshot) => snapshot.send_status === "pending");
-  if (pendingSnapshots.length === 0) return;
+async function listPendingSnapshotEmails(campaignId: string): Promise<string[]> {
+  const emails: string[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await db
+      .from("campaign_recipient_snapshots")
+      .select("normalized_email")
+      .eq("campaign_id", campaignId)
+      .eq("send_status", "pending")
+      .range(from, from + POSTGREST_PAGE_SIZE - 1);
+    if (error) throw new Error(extractErrorMessage(error));
+    const rows = (data ?? []) as Array<{ normalized_email?: string | null }>;
+    for (const row of rows) {
+      const email = row.normalized_email?.trim().toLowerCase();
+      if (email) emails.push(email);
+    }
+    if (rows.length < POSTGREST_PAGE_SIZE) break;
+    from += POSTGREST_PAGE_SIZE;
+  }
+  return emails;
+}
 
-  const suppressedEmails = await listActiveSuppressedEmailSet(
-    pendingSnapshots.map((snapshot) => snapshot.normalized_email),
-  );
+async function removeSuppressedPendingSnapshots(campaignId: string): Promise<void> {
+  const pendingEmails = await listPendingSnapshotEmails(campaignId);
+  if (pendingEmails.length === 0) return;
+
+  const suppressedEmails = await listActiveSuppressedEmailSet(pendingEmails);
   if (suppressedEmails.size === 0) return;
 
   const normalizedEmails = [...suppressedEmails];
-  const { error: deleteError } = await db
-    .from("campaign_recipient_snapshots")
-    .delete()
-    .eq("campaign_id", campaignId)
-    .eq("send_status", "pending")
-    .in("normalized_email", normalizedEmails);
-  if (deleteError) throw new Error(deleteError.message);
+  for (let index = 0; index < normalizedEmails.length; index += IN_FILTER_CHUNK_SIZE) {
+    const chunk = normalizedEmails.slice(index, index + IN_FILTER_CHUNK_SIZE);
+    const { error: deleteError } = await db
+      .from("campaign_recipient_snapshots")
+      .delete()
+      .eq("campaign_id", campaignId)
+      .eq("send_status", "pending")
+      .in("normalized_email", chunk);
+    if (deleteError) throw new Error(extractErrorMessage(deleteError));
+  }
 
   const { count, error: countError } = await db
     .from("campaign_recipient_snapshots")
@@ -1165,7 +1189,7 @@ async function removeSuppressedPendingSnapshots(campaignId: string): Promise<voi
   if (campaignError) throw new Error(campaignError.message);
 }
 
-export async function snapshotCampaignRecipients(campaignId: string): Promise<CampaignRecipientSnapshotRecord[]> {
+export async function snapshotCampaignRecipients(campaignId: string): Promise<void> {
   const campaign = await getCampaign(campaignId);
   if (!campaign) throw new Error("Campaign not found.");
   const draft = await getCampaignDraft(campaignId);
@@ -1177,20 +1201,16 @@ export async function snapshotCampaignRecipients(campaignId: string): Promise<Ca
       dedupeMode: campaign.dedupe_mode,
       selectedEmailsText: draft?.custom_emails_text,
     });
-    await enrichPendingSnapshotPersonalization(campaignId, draft);
-    await removeSuppressedPendingSnapshots(campaignId);
-    return listCampaignRecipientSnapshots(campaignId);
+  } else {
+    await snapshotNonWaitlistCampaignRecipientsViaRpc({
+      campaignId,
+      sourceKind: campaign.source_kind,
+      series: campaign.series,
+      customEmailsText: draft?.custom_emails_text,
+    });
   }
-
-  await snapshotNonWaitlistCampaignRecipientsViaRpc({
-    campaignId,
-    sourceKind: campaign.source_kind,
-    series: campaign.series,
-    customEmailsText: draft?.custom_emails_text,
-  });
   await enrichPendingSnapshotPersonalization(campaignId, draft);
   await removeSuppressedPendingSnapshots(campaignId);
-  return listCampaignRecipientSnapshots(campaignId);
 }
 
 export async function listCampaignDeliveryBatches(
@@ -1969,13 +1989,22 @@ export async function drainEligibleCampaignBatches(
 export async function listCampaignRecipientSnapshots(
   campaignId: string,
 ): Promise<CampaignRecipientSnapshotRecord[]> {
-  const { data, error } = await db
-    .from("campaign_recipient_snapshots")
-    .select("*")
-    .eq("campaign_id", campaignId)
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
-  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+  const rows: Array<Record<string, unknown>> = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await db
+      .from("campaign_recipient_snapshots")
+      .select("*")
+      .eq("campaign_id", campaignId)
+      .order("created_at", { ascending: true })
+      .range(from, from + POSTGREST_PAGE_SIZE - 1);
+    if (error) throw new Error(extractErrorMessage(error));
+    const page = (data ?? []) as Array<Record<string, unknown>>;
+    rows.push(...page);
+    if (page.length < POSTGREST_PAGE_SIZE) break;
+    from += POSTGREST_PAGE_SIZE;
+  }
+  return rows.map((row) => ({
     id: String(row.id),
     campaign_id: String(row.campaign_id),
     campaign_delivery_batch_id: row.campaign_delivery_batch_id

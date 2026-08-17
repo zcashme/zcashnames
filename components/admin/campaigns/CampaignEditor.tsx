@@ -781,6 +781,12 @@ export default function CampaignEditor(props: CampaignEditorProps) {
       applyDeliveryState(result.delivery);
       await refreshDeliveryDiagnostics();
       scheduleRefreshes();
+    } catch (error) {
+      setDeliveryNotice({
+        tone: "error",
+        title: "Paced send was not queued.",
+        detail: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       if (mountedRef.current) setDeliveryActionBusy(null);
     }
