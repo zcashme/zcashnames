@@ -323,7 +323,15 @@ export default function DraftEditor(props: DraftEditorProps) {
               </code>
               ,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">
-                [text](url)
+                [text](https://...)
+              </code>
+              ,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">
+                [text](mailto:...)
+              </code>
+              ,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">
+                :::empty
               </code>
               ,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">
@@ -353,7 +361,9 @@ export default function DraftEditor(props: DraftEditorProps) {
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">center:</code>, and{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">justify:</code>. Put{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">---</code>{" "}
-              on its own line for a divider.
+              on its own line for a divider. Put{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::empty</code>{" "}
+              on its own line to keep a blank line.
             </span>
           </label>
 

@@ -27,6 +27,7 @@ export type EmailContentBlock =
       align: EmailBlockAlignment;
     }
   | { type: "divider"; align: EmailBlockAlignment }
+  | { type: "empty"; align: EmailBlockAlignment }
   | { type: "box"; blocks: EmailContentBlock[]; align: EmailBlockAlignment }
   | { type: "codebox"; text: string; align: EmailBlockAlignment };
 
@@ -235,12 +236,23 @@ export function splitCampaignParagraphs(bodyText: string): string[] {
     .filter(Boolean);
 }
 
+const MARKDOWN_HREF_PATTERN = "(?:https?:\\/\\/|mailto:)[^\\s)]+";
+const BARE_MAILTO_PATTERN = "mailto:[^\\s<>)\\]]+";
+const INLINE_CONTENT_PATTERN = new RegExp(
+  `\\[([^\\]]+)\\]\\((${MARKDOWN_HREF_PATTERN})\\)|\\*\\*([^*\\n]+)\\*\\*|__([^_\\n]+)__|\\*([^*\\n]+)\\*|(${BARE_MAILTO_PATTERN})`,
+  "g",
+);
+
+function mailtoLinkLabel(href: string): string {
+  const withoutScheme = href.slice("mailto:".length);
+  const address = withoutScheme.split("?")[0]?.trim() ?? "";
+  return address || href;
+}
+
 export function parseEmailInlineContent(value: string): EmailInlineNode[] {
   const result: EmailInlineNode[] = [];
-  const pattern =
-    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*\n]+)\*\*|__([^_\n]+)__|\*([^*\n]+)\*/g;
   let lastIndex = 0;
-  for (const match of value.matchAll(pattern)) {
+  for (const match of value.matchAll(INLINE_CONTENT_PATTERN)) {
     const index = match.index ?? 0;
     if (index > lastIndex) {
       result.push({ type: "text", text: value.slice(lastIndex, index) });
@@ -253,6 +265,8 @@ export function parseEmailInlineContent(value: string): EmailInlineNode[] {
       result.push({ type: "underline", text: match[4] });
     } else if (match[5]) {
       result.push({ type: "italic", text: match[5] });
+    } else if (match[6]) {
+      result.push({ type: "link", text: mailtoLinkLabel(match[6]), href: match[6] });
     }
     lastIndex = index + match[0].length;
   }
@@ -383,6 +397,12 @@ function parseEmailContentInternal(
       continue;
     }
 
+    if (trimmed === ":::empty" || trimmed === ":::br") {
+      flushParagraph();
+      blocks.push({ type: "empty", align: defaultAlign });
+      continue;
+    }
+
     if (!trimmed) {
       flushParagraph();
       continue;
@@ -409,10 +429,12 @@ export function flattenToPlainText(bodyText: string): string {
   return parseEmailContent(bodyText)
     .map((block) => {
       if (block.type === "divider") return "---";
+      if (block.type === "empty") return " ";
       if (block.type === "box") {
         return block.blocks
           .map((child) => {
             if (child.type === "divider") return "---";
+            if (child.type === "empty") return " ";
             if (child.type === "image") {
               const label = child.alt || "Image";
               return child.href ? `${label}: ${child.href}` : `${label}: ${child.src}`;

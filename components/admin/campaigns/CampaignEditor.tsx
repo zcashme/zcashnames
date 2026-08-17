@@ -135,7 +135,6 @@ interface CampaignEditorProps {
 }
 
 const AUTOSAVE_MS = 800;
-const PREVIEW_MS = 350;
 const LARGE_AUDIENCE_THRESHOLD = 500;
 const PACED_BATCH_SIZE = 100;
 const WORKER_LOOP_SLEEP_MS = 1500;
@@ -284,6 +283,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
   const [sendError, setSendError] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewRefreshing, setPreviewRefreshing] = useState(false);
+  const [previewStale, setPreviewStale] = useState(false);
   const [deliveryNotice, setDeliveryNotice] = useState<DeliveryNotice | null>(null);
   const [deliveryActionBusy, setDeliveryActionBusy] = useState<null | "send" | "queue" | "worker">(null);
   const [estimateError, setEstimateError] = useState<string | null>(props.initialEstimateError);
@@ -319,7 +319,6 @@ export default function CampaignEditor(props: CampaignEditorProps) {
     bodyText,
   });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   latestRef.current = {
     title,
     sourceKind,
@@ -380,6 +379,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
       bodyText: latestRef.current.bodyText,
     }, options);
     setPreviewHtml(html);
+    setPreviewStale(false);
   }, [headingEnabled, props.campaignId]);
 
   const queueAutosave = () => {
@@ -391,11 +391,8 @@ export default function CampaignEditor(props: CampaignEditorProps) {
     }, AUTOSAVE_MS);
   };
 
-  const queuePreview = () => {
-    if (previewTimer.current) clearTimeout(previewTimer.current);
-    previewTimer.current = setTimeout(() => {
-      void refreshPreview();
-    }, PREVIEW_MS);
+  const markPreviewStale = () => {
+    setPreviewStale(true);
   };
 
   const onRefreshPreview = async () => {
@@ -960,7 +957,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
               onChange={(event) => {
                 setPersonalizationMode(event.target.value as CampaignPersonalizationMode);
                 queueAutosave();
-                queuePreview();
+                markPreviewStale();
               }}
               className="max-w-xs rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-amber-500"
             >
@@ -985,7 +982,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                 onChange={(event) => {
                   setIncludeUnsubscribe(event.target.checked);
                   queueAutosave();
-                  queuePreview();
+                  markPreviewStale();
                 }}
                 className="accent-amber-500 disabled:cursor-not-allowed"
               />
@@ -1092,7 +1089,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
               onChange={(event) => {
                 setSubject(event.target.value);
                 queueAutosave();
-                queuePreview();
+                markPreviewStale();
               }}
               className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-amber-500"
             />
@@ -1113,7 +1110,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                     setHeadingText(subject);
                   }
                   queueAutosave();
-                  queuePreview();
+                  markPreviewStale();
                 }}
                 className="accent-amber-500"
               />
@@ -1130,7 +1127,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                   onChange={(event) => {
                     setHeadingText(event.target.value);
                     queueAutosave();
-                    queuePreview();
+                    markPreviewStale();
                   }}
                   className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-amber-500"
                 />
@@ -1150,7 +1147,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                 onChange={(event) => {
                   setShowRelatedNamesFooter(event.target.checked);
                   queueAutosave();
-                  queuePreview();
+                  markPreviewStale();
                 }}
                 className="accent-amber-500"
               />
@@ -1171,8 +1168,10 @@ export default function CampaignEditor(props: CampaignEditorProps) {
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">## center: Heading</code>,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">![alt](https://...)</code>,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">[![alt](https://...)](https://...)</code>,{" "}
-              <code className="rounded bg-zinc-800 px-1 text-zinc-300">[text](url)</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">[text](https://...)</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">[text](mailto:...)</code>,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">---</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::empty</code>,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::box</code>,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::codebox</code>
             </span>
@@ -1181,7 +1180,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
               onChange={(event) => {
                 setBodyText(event.target.value);
                 queueAutosave();
-                queuePreview();
+                markPreviewStale();
               }}
               rows={22}
               className="min-h-[420px] resize-y rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 font-mono text-[13px] leading-relaxed text-zinc-100 outline-none focus:border-amber-500"
@@ -1194,12 +1193,18 @@ export default function CampaignEditor(props: CampaignEditorProps) {
               {" "}
               or
               {" "}
-              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::codebox left</code>. Headers support{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::codebox left</code>.{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::box center</code>{" "}
+              centers contents horizontally and vertically in the callout. Headers support{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">left:</code>,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">center:</code>, and{" "}
-              <code className="rounded bg-zinc-800 px-1 text-zinc-300">justify:</code>. Put{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">justify:</code>. Links accept{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">https://</code> and{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">mailto:</code>. Put{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">---</code>{" "}
-              on its own line for a divider.
+              on its own line for a divider. Put{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::empty</code>{" "}
+              on its own line to keep a blank line. Repeat it for more space.
             </span>
           </label>
 
@@ -1221,7 +1226,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
               <button
                 type="button"
                 onClick={onRefreshPreview}
-                disabled={previewPending}
+                disabled={previewPending || !previewStale}
                 className={SECONDARY_BUTTON_CLASS}
               >
                 {previewRefreshing ? "Refreshing preview..." : "Refresh preview"}
@@ -1237,7 +1242,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
               <button
                 type="button"
                 onClick={onDownloadPreviewHtml}
-                disabled={previewPending}
+                disabled={previewPending || previewStale}
                 className={SECONDARY_BUTTON_CLASS}
               >
                 Download HTML
@@ -1590,8 +1595,21 @@ export default function CampaignEditor(props: CampaignEditorProps) {
           </section>
 
           <section className="overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/40">
-            <div className="border-b border-zinc-800 px-4 py-3 text-xs uppercase tracking-wide text-zinc-500">
-              Preview
+            <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-zinc-500">Preview</div>
+              <div className="flex items-center gap-2">
+                {previewStale ? (
+                  <span className="text-[11px] text-amber-300">Draft changed. Refresh to update.</span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={onRefreshPreview}
+                  disabled={previewPending || !previewStale}
+                  className={SECONDARY_BUTTON_CLASS}
+                >
+                  {previewRefreshing ? "Refreshing preview..." : "Refresh preview"}
+                </button>
+              </div>
             </div>
             <iframe
               title="campaign email preview"
