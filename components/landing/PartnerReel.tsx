@@ -38,6 +38,12 @@ const EXTRA_PARTNERS: readonly PartnerReelItem[] = [
     iconSrc: "/icons/cipherscan.png",
   },
   {
+    id: "cyze",
+    displayName: "Cyze",
+    iconSrc: "/icons/cyze.svg",
+    href: "https://github.com/USCMig/Cyze",
+  },
+  {
     id: "developer-guide",
     displayName: "Developer Guide",
     href: "/docs/zns-developer-guide",
@@ -45,7 +51,7 @@ const EXTRA_PARTNERS: readonly PartnerReelItem[] = [
   },
 ];
 
-const PARTNER_ORDER = ["zingo", "cipherscan", "unstoppable", "edge", "zipher", "noir", "cake", "developer-guide"] as const;
+const PARTNER_ORDER = ["zingo", "cipherscan", "cyze", "unstoppable", "edge", "zipher", "noir", "cake", "developer-guide"] as const;
 
 function isPartnerWithAppIcon(brand: WalletBrand): brand is WalletBrand & { appIcon: WalletBrandAppIcon } {
   return brand.partner && !!brand.appIcon;
@@ -158,10 +164,13 @@ function PartnerIcon({ item }: { item: PartnerReelItem }) {
   );
 
   if (item.href) {
+    const isExternal = /^https?:\/\//.test(item.href);
+
     return (
       <a
         href={item.href}
         className="group relative flex min-w-[10rem] flex-col items-center gap-2 px-7 py-4 text-center transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--partner-card-border-hover)]"
+        {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
         onMouseEnter={() => setIsHighlighted(true)}
         onMouseLeave={() => setIsHighlighted(false)}
         onFocus={() => setIsHighlighted(true)}
