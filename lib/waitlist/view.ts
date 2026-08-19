@@ -327,7 +327,7 @@ function buildSnapshotRows(args: {
     { direct: number; reserved: number; indirect: number }
   >();
 
-  for (const row of allRows) {
+  for (const row of verifiedRows) {
     const normalizedName = normalizeName(row.name);
     if (normalizedName) {
       nameCounts.set(normalizedName, (nameCounts.get(normalizedName) ?? 0) + 1);

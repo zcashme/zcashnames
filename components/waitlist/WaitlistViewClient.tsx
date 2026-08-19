@@ -943,7 +943,7 @@ export default function WaitlistViewClient({
                     { label: "#", info: "The verified waitlist line number in join order." },
                     { label: "Adj#", info: "Referral-adjusted waitlist line number. This is the original line number minus one spot for each 3 direct reserved referrals and minus one spot for each 9 indirect reserved referrals." },
                     { label: "Name", info: "The waitlisted name and its referral code." },
-                    { label: "Position", info: "Position among all entries with the same name, ordered by referral-adjusted line number and then original line number as the tie-breaker." },
+                    { label: "Position", info: "Position among verified entries with the same name, ordered by referral-adjusted line number and then original line number as the tie-breaker." },
                     { label: "Status", info: "Protected names are held back, reserved names have paid, pending names are waiting on reservation, and available names have no current conflict or hold." },
                     { label: "Refs", info: "Reserved referral totals. When both direct and indirect counts exist, both are shown together." },
                   ].map((column, index) => (
@@ -1063,7 +1063,7 @@ export default function WaitlistViewClient({
                           }}
                         >
                           <span className="font-mono font-semibold" style={{ color: "var(--fg-heading)" }}>
-                            {row.reserved ? `${row.rankPosition} of ${row.rankTotal}` : `N/A of ${row.interestCount}`}
+                            {row.reserved ? `${row.rankPosition} of ${row.rankTotal}` : `N/A of ${row.rankTotal}`}
                           </span>
                         </td>
                         <td

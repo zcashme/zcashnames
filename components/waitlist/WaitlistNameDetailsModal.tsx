@@ -306,7 +306,7 @@ function positionLabel(row: PublicWaitlistViewRow) {
   if (row.reserved) {
     return `Position for Name: ${row.rankPosition.toLocaleString()} of ${row.rankTotal.toLocaleString()}`;
   }
-  return `Position for Name: N/A of ${row.interestCount.toLocaleString()}`;
+  return `Position for Name: N/A of ${row.rankTotal.toLocaleString()}`;
 }
 
 const referralActionClassName =
