@@ -2,8 +2,7 @@ import type { MetaRecord } from "nextra";
 
 const meta: MetaRecord = {
   index: "Blogs",
-  updates: "Updates",
-  launch: "Launch",
+  users: "Users",
   builders: "Builders",
 };
 

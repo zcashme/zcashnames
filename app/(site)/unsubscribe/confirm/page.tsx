@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { confirmSubscriberSeries } from "@/lib/email/subscribers";
 import { listDistinctSubscriberSeriesWithToken } from "@/lib/email/subscriber-series";
+import { normalizeEmailSeries } from "@/lib/email/subscription-series";
 import {
   isSubscriberConfirmSignatureValid,
   isSubscriberConfirmTokenExpired,
   parseSubscriberConfirmToken,
 } from "@/lib/email/subscriber-confirm-token";
+import PreferencesPageShell from "../PreferencesPageShell";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +18,16 @@ export default async function ConfirmSubscriberPage({
 }) {
   const params = await searchParams;
   const parsed = parseSubscriberConfirmToken(String(params.token ?? ""));
+  if (parsed) parsed.series = normalizeEmailSeries(parsed.series);
 
-  let title = "Invalid confirmation link";
-  let message = "This confirmation link is missing, invalid, or expired.";
+  let confirmed = false;
+  let title = (
+    <>
+      Confirmation{" "}
+      <span style={{ color: "var(--color-accent-interactive)" }}>needed</span>
+    </>
+  );
+  let description = "This confirmation link is missing, invalid, or expired.";
   const seriesList = parsed ? await listDistinctSubscriberSeriesWithToken(parsed.series) : [];
 
   if (
@@ -32,25 +41,36 @@ export default async function ConfirmSubscriberPage({
       series: parsed.series,
       source: "subscriber_confirm_link",
     });
-    title = "Subscription confirmed";
-    message =
-      parsed.series === "updates"
-        ? `${parsed.email} will now receive early-access and waitlist update emails.`
-        : `${parsed.email} will now receive ${parsed.series} emails.`;
+    confirmed = true;
+    title = (
+      <>
+        Subscription{" "}
+        <span style={{ color: "var(--color-accent-interactive)" }}>confirmed</span>
+      </>
+    );
+    description =
+      parsed.series === "users"
+        ? `${parsed.email} will now receive user emails: launches, releases, and early access.`
+        : parsed.series === "waitlist"
+          ? `${parsed.email} will now receive waitlist campaign emails.`
+          : `${parsed.email} will now receive ${parsed.series} emails.`;
   }
 
   return (
-    <main className="mx-auto flex min-h-[70vh] max-w-xl items-center px-6 py-16">
-      <section className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 p-8 text-center shadow-2xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">ZcashNames</p>
-        <h1 className="mt-3 text-3xl font-semibold text-zinc-100">{title}</h1>
-        <p className="mt-4 text-sm leading-6 text-zinc-400">{message}</p>
-        <div className="mt-8">
-          <Link href="/" className="text-sm font-medium text-amber-400 hover:text-amber-300">
-            Return to zcashnames.com
-          </Link>
-        </div>
-      </section>
-    </main>
+    <PreferencesPageShell title={title} description={description}>
+      <div className="text-center">
+        <Link
+          href="/unsubscribe"
+          className="inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
+          style={{
+            background: "var(--home-result-primary-bg)",
+            color: "var(--home-result-primary-fg)",
+            boxShadow: "var(--home-result-primary-shadow)",
+          }}
+        >
+          {confirmed ? "Manage preferences" : "Request a new preferences link"}
+        </Link>
+      </div>
+    </PreferencesPageShell>
   );
 }

@@ -19,7 +19,7 @@ export default async function BlogsAllPage() {
   return (
     <BlogIndexLayout
       title="All posts"
-      description="Every published post across Updates, Launch, and Builders."
+      description="Every published post across Users and Builders."
     >
       <BlogPostList posts={posts} showSeries />
       <BlogSubscribeCallout

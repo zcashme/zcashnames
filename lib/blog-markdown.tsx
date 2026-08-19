@@ -153,7 +153,7 @@ export function blogMarkdownMetadata(
   const canonicalPath = options?.path ?? "/blogs";
   const canonicalUrl = `https://www.zcashnames.com${canonicalPath.startsWith("/") ? canonicalPath : `/${canonicalPath}`}`;
   const pageTitle = `${title} | Zcash Names`;
-  const pageDescription = description ?? "Updates, launch notes, and builder stories from Zcash Names.";
+  const pageDescription = description ?? "User and builder stories from Zcash Names.";
 
   return {
     title: pageTitle,

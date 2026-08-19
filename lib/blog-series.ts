@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const BLOG_SERIES = ["updates", "launch", "builders"] as const;
+export const BLOG_SERIES = ["users", "builders"] as const;
 
 export type BlogSeriesSlug = (typeof BLOG_SERIES)[number];
 
@@ -14,24 +14,17 @@ export type BlogSeries = {
 
 export const BLOG_SERIES_META: readonly BlogSeries[] = [
   {
-    slug: "updates",
-    label: "Updates",
-    title: "Zcash Names Updates",
-    description: "Product notes, releases, and operator updates from the core team.",
-    href: "/blogs/updates",
-  },
-  {
-    slug: "launch",
-    label: "Launch",
-    title: "Launch Notes",
-    description: "Rollout notes, pricing context, and launch-phase communication.",
-    href: "/blogs/launch",
+    slug: "users",
+    label: "Users",
+    title: "Zcash Names for Users",
+    description: "Launches, releases, early access.",
+    href: "/blogs/users",
   },
   {
     slug: "builders",
     label: "Builders",
     title: "Builder Stories",
-    description: "Integration notes for wallets, apps, explorers, and partner teams.",
+    description: "Integrations, tooling, and opportunities.",
     href: "/blogs/builders",
   },
 ];
@@ -42,7 +35,7 @@ export const BLOG_SUBSCRIPTION_OPTIONS = [
     slug: "general",
     label: "General",
     title: "General Newsletter",
-    description: "General product, launch, and community updates from Zcash Names.",
+    description: "News and outreach.",
     href: "/community",
   },
 ] as const;

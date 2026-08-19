@@ -8,7 +8,7 @@ import { blogMarkdownMetadata } from "@/lib/blog-markdown";
 export async function generateMetadata(): Promise<Metadata> {
   return blogMarkdownMetadata(
     "Blogs",
-    "Updates, launch notes, and builder stories from Zcash Names.",
+    "User and builder stories from Zcash Names.",
     { path: "/blogs" },
   );
 }
@@ -21,7 +21,7 @@ export default async function BlogsIndexPage() {
       <BlogPostList posts={posts} showSeries />
       <BlogSubscribeCallout
         defaultSeries="general"
-        body="Occasional notes on product, launch, and community. No spam."
+        body="Occasional notes on product, launches, and community. No spam."
       />
     </BlogIndexLayout>
   );

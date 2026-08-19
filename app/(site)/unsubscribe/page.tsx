@@ -1,11 +1,19 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { listDistinctSubscriberSeriesWithToken } from "@/lib/email/subscriber-series";
 import { listSubscriberPreferences } from "@/lib/email/subscribers";
+import { normalizeEmailSeries } from "@/lib/email/subscription-series";
 import { parseUnsubscribeToken } from "@/lib/email/unsubscribe-token";
+import PreferencesPageShell from "./PreferencesPageShell";
 import RequestPreferencesLinkClient from "./RequestPreferencesLinkClient";
 import UnsubscribePreferencesClient from "./UnsubscribePreferencesClient";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Email Preferences | Zcash Names",
+  description: "Manage Zcash Names email preferences, including early-access and waitlist updates.",
+  alternates: { canonical: "https://www.zcashnames.com/unsubscribe" },
+};
 
 export default async function UnsubscribePage({
   searchParams,
@@ -15,24 +23,20 @@ export default async function UnsubscribePage({
   const params = await searchParams;
   const token = params.token?.trim() ?? "";
   const parsed = token ? parseUnsubscribeToken(token) : null;
+  if (parsed) parsed.series = normalizeEmailSeries(parsed.series);
 
   if (!parsed) {
     return (
-      <main className="mx-auto flex min-h-[70vh] max-w-xl items-center px-6 py-16">
-        <section className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 p-8 text-center shadow-2xl">
-          <h1 className="mt-3 text-3xl font-semibold text-zinc-100">Invalid unsubscribe link</h1>
-          <p className="mt-4 text-sm leading-6 text-zinc-400">
-            This preferences link is missing, invalid, or expired. Enter your email and we will send
-            a new link if this inbox can manage ZcashNames email preferences.
-          </p>
-          <RequestPreferencesLinkClient />
-          <div className="mt-8">
-            <Link href="/" className="text-sm font-medium text-amber-400 hover:text-amber-300">
-              Return to zcashnames.com
-            </Link>
-          </div>
-        </section>
-      </main>
+      <PreferencesPageShell
+        eyebrow={token ? "Link expired" : "Manage what we send you"}
+        description={
+          token
+            ? "This preferences link is invalid or expired. Enter your email and we will send a new one."
+            : "Enter your email and we will send a link to manage early-access, waitlist updates, and other ZcashNames email."
+        }
+      >
+        <RequestPreferencesLinkClient />
+      </PreferencesPageShell>
     );
   }
 
@@ -49,25 +53,16 @@ export default async function UnsubscribePage({
   }
 
   return (
-    <main className="mx-auto flex min-h-[70vh] max-w-xl items-center px-6 py-16">
-      <section className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 p-8 shadow-2xl">
-        <h1 className="text-3xl font-semibold text-zinc-100">Email preferences</h1>
-        <p className="mt-4 text-sm leading-6 text-zinc-400">
-          Choose what we send to this address. Turning off Updates stops early-access and
-          waitlist update emails. Confirmations, reservation mail, and access codes are separate.
-        </p>
-        <UnsubscribePreferencesClient
-          token={token}
-          email={parsed.email}
-          seriesList={seriesList}
-          initialPreferences={initialMap}
-        />
-        <div className="mt-8">
-          <Link href="/" className="text-sm font-medium text-amber-400 hover:text-amber-300">
-            Return to zcashnames.com
-          </Link>
-        </div>
-      </section>
-    </main>
+    <PreferencesPageShell
+      pills={[parsed.email]}
+      description="Choose what we send to this address."
+    >
+      <UnsubscribePreferencesClient
+        token={token}
+        email={parsed.email}
+        seriesList={seriesList}
+        initialPreferences={initialMap}
+      />
+    </PreferencesPageShell>
   );
 }

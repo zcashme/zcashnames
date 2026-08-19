@@ -2,7 +2,11 @@ import "server-only";
 
 import { db } from "@/lib/db";
 import { buildSubscriberConfirmToken } from "@/lib/email/subscriber-confirm-token";
-import { EMAIL_SUBSCRIPTION_SERIES, type EmailSubscriptionSeries } from "@/lib/email/subscription-series";
+import {
+  EMAIL_SUBSCRIPTION_SERIES,
+  normalizeEmailSeries,
+  type EmailSubscriptionSeries,
+} from "@/lib/email/subscription-series";
 import { resolveSiteUrl } from "@/lib/site-url";
 import { sendSubscriberConfirmationEmail } from "@/lib/email/waitlist";
 
@@ -102,10 +106,13 @@ export async function listSubscriberPreferences(
 
   return effectiveSeries.map((series) => {
     const row = rows.get(series);
+    const isWaitlistOptOut = series === "waitlist";
     return {
       series,
-      isSubscribed: Boolean(row?.confirmed_at) && !row?.unsubscribed_at,
-      isConfirmed: Boolean(row?.confirmed_at),
+      isSubscribed: isWaitlistOptOut
+        ? !row?.unsubscribed_at
+        : Boolean(row?.confirmed_at) && !row?.unsubscribed_at,
+      isConfirmed: isWaitlistOptOut ? !row?.unsubscribed_at : Boolean(row?.confirmed_at),
       isPendingConfirmation: Boolean(row?.confirm_token_sent_at) && !row?.confirmed_at,
       unsubscribedAt: row?.unsubscribed_at ?? null,
       confirmedAt: row?.confirmed_at ?? null,
@@ -284,15 +291,25 @@ export async function applySubscriberPreferences(args: {
   const restored: string[] = [];
   const normalizedEmail = normalizeEmail(args.email);
 
-  for (const series of args.seriesList) {
-    if (args.desiredSeries[series]) {
-      const active = await getActiveSubscriber(normalizedEmail, series);
-      if (active) continue;
-      if (series === "updates" && (await isVerifiedWaitlistEmail(normalizedEmail))) {
-        await restoreWaitlistVerifiedSeries(normalizedEmail, series);
-        restored.push(series);
+  for (const series of args.seriesList.map(normalizeEmailSeries)) {
+    const desired = Boolean(args.desiredSeries[series]);
+    if (series === "waitlist") {
+      if (desired) {
+        const existing = await getSubscriberRecord(normalizedEmail, series);
+        if (existing?.unsubscribed_at) {
+          await restoreWaitlistVerifiedSeries(normalizedEmail, series);
+          restored.push(series);
+        }
         continue;
       }
+      await unsubscribeSeries(normalizedEmail, series);
+      unsubscribed.push(series);
+      continue;
+    }
+
+    if (desired) {
+      const active = await getActiveSubscriber(normalizedEmail, series);
+      if (active) continue;
       await requestSubscriberConfirmation({
         email: normalizedEmail,
         series,

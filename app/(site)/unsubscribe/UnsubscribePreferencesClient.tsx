@@ -7,108 +7,67 @@ import { saveUnsubscribePreferencesAction } from "./actions";
 type PreferenceMap = Record<string, boolean>;
 
 const SERIES_DESCRIPTIONS: Record<string, string> = {
-  general: "News, announcements, and outreach.",
+  general: "News and outreach.",
+  users: "Launches, releases, early access.",
   builders: "Integrations, tooling, and opportunities.",
-  updates: "Early-access and waitlist updates, plus release notes and product availability.",
-  launch: "Launch notes, rollout updates, and go-live communication.",
+  waitlist: "Emails we send to the verified waitlist.",
 };
 
-function ToggleIcon({
-  kind,
-}: {
-  kind: "subscribe" | "unsubscribe";
-}) {
-  if (kind === "subscribe") {
-    return (
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="m5 13 4 4L19 7" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M6 6 18 18" />
-      <path d="M18 6 6 18" />
-    </svg>
-  );
-}
-
-function PreferenceToggle({
+function PreferenceCheckbox({
+  series,
   subscribed,
   onChange,
 }: {
+  series: string;
   subscribed: boolean;
   onChange: (next: boolean) => void;
 }) {
   return (
-    <div
-      className="relative flex h-10 w-[112px] items-center rounded-full border border-zinc-700 bg-zinc-950"
-      style={{ isolation: "isolate" }}
+    <label
+      className="flex cursor-pointer items-start gap-3 rounded-xl px-3 py-2.5 transition-colors"
+      style={{
+        background: subscribed ? "var(--color-raised)" : "transparent",
+        border: `1.5px solid ${subscribed ? "var(--color-accent-green)" : "var(--faq-border)"}`,
+      }}
     >
       <span
-        className="pointer-events-none absolute inset-y-0 left-0 w-1/2 rounded-full transition-transform duration-200"
+        className="relative mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded"
         style={{
-          transform: subscribed ? "translateX(100%)" : "translateX(0%)",
-          background: subscribed
-            ? "rgba(34, 197, 94, 0.2)"
-            : "rgba(239, 68, 68, 0.18)",
-          boxShadow: subscribed
-            ? "0 0 0 1px rgba(34, 197, 94, 0.45)"
-            : "0 0 0 1px rgba(239, 68, 68, 0.35)",
-          zIndex: 0,
-        }}
-        aria-hidden="true"
-      />
-
-      <button
-        type="button"
-        aria-pressed={!subscribed}
-        aria-label="Unsubscribe"
-        onClick={() => onChange(false)}
-        className="relative z-10 flex h-full w-1/2 items-center justify-center rounded-full transition-opacity duration-200"
-        style={{
-          color: !subscribed ? "#fca5a5" : "#71717a",
-          opacity: !subscribed ? 1 : 0.75,
+          background: subscribed ? "var(--color-accent-green)" : "var(--color-surface)",
+          border: `1.5px solid ${subscribed ? "var(--color-accent-green)" : "var(--border-muted)"}`,
         }}
       >
-        <ToggleIcon kind="unsubscribe" />
-      </button>
-
-      <button
-        type="button"
-        aria-pressed={subscribed}
-        aria-label="Subscribe"
-        onClick={() => onChange(true)}
-        className="relative z-10 flex h-full w-1/2 items-center justify-center rounded-full transition-opacity duration-200"
-        style={{
-          color: subscribed ? "#86efac" : "#71717a",
-          opacity: subscribed ? 1 : 0.75,
-        }}
-      >
-        <ToggleIcon kind="subscribe" />
-      </button>
-    </div>
+        <input
+          type="checkbox"
+          checked={subscribed}
+          onChange={(event) => onChange(event.target.checked)}
+          className="absolute inset-0 m-0 cursor-pointer opacity-0"
+        />
+        {subscribed ? (
+          <svg
+            viewBox="0 0 10 8"
+            width="10"
+            height="8"
+            fill="none"
+            stroke="var(--color-background, #1a1a1a)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M1 4l2.5 2.5L9 1" />
+          </svg>
+        ) : null}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold capitalize leading-snug" style={{ color: "var(--fg-heading)" }}>
+          {series}
+        </p>
+        <p className="mt-0.5 text-xs" style={{ color: "var(--fg-muted)", lineHeight: 1.55 }}>
+          {SERIES_DESCRIPTIONS[series] ?? "Email updates for this series."}
+        </p>
+      </div>
+    </label>
   );
 }
 
@@ -142,81 +101,68 @@ export default function UnsubscribePreferencesClient({
   }
 
   return (
-    <form action={formAction} className="mt-6 flex flex-col gap-5">
+    <form action={formAction} className="flex flex-col gap-5">
       <input type="hidden" name="token" value={token} />
+      <input type="hidden" name="email" value={email} />
 
-      <label className="flex flex-col gap-2 text-left">
-        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Email</span>
-        <input
-          type="email"
-          value={email}
-          readOnly
-          disabled
-          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 opacity-90"
-        />
-      </label>
-
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/70">
-        <div className="grid grid-cols-[minmax(0,1fr)_120px] items-center border-b border-zinc-800 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
-          <div>Preferences</div>
-          <div className="text-center">Subscribe</div>
-        </div>
-        <div className="divide-y divide-zinc-800">
-          {seriesList.map((series) => (
-            <label key={series} className="grid grid-cols-[minmax(0,1fr)_120px] items-center gap-4 px-4 py-3">
-              <div className="text-left">
-                <div className="text-sm font-medium capitalize text-zinc-100">{series}</div>
-                <div className="text-xs text-zinc-500">
-                  {SERIES_DESCRIPTIONS[series] ?? "Email updates for this series."}
-                </div>
-              </div>
-              <div className="flex justify-center">
-                <input
-                  type="hidden"
-                  name={`series_${series}`}
-                  value={preferences[series] ? "subscribe" : "unsubscribe"}
-                />
-                <PreferenceToggle subscribed={preferences[series]} onChange={(next) => updateSeries(series, next)} />
-              </div>
-            </label>
-          ))}
-        </div>
+      <div className="flex flex-col gap-2">
+        {seriesList.map((series) => (
+          <div key={series}>
+            <input
+              type="hidden"
+              name={`series_${series}`}
+              value={preferences[series] ? "subscribe" : "unsubscribe"}
+            />
+            <PreferenceCheckbox
+              series={series}
+              subscribed={Boolean(preferences[series])}
+              onChange={(next) => updateSeries(series, next)}
+            />
+          </div>
+        ))}
       </div>
 
-      {preferences.updates === false ? (
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm leading-6 text-amber-200">
-          Turning off Updates means you will not receive emails about ZcashNames early access.
+      {state.message ? (
+        <p
+          className="text-sm leading-6"
+          style={{ color: state.ok ? "var(--fg-body)" : "var(--accent-red, #e05252)" }}
+        >
+          {state.message}
         </p>
       ) : null}
 
-      {state.message ? (
-        <p className={`text-sm ${state.ok ? "text-emerald-300" : "text-red-300"}`}>{state.message}</p>
-      ) : null}
-
-      <div className="grid w-full grid-cols-2 gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-4">
+          <button
+            type="button"
+            onClick={() => updateAll(false)}
+            className="cursor-pointer bg-transparent p-0 text-xs font-semibold transition-colors hover:text-[var(--color-accent-interactive)]"
+            style={{ color: "var(--fg-body)" }}
+          >
+            Unsubscribe all
+          </button>
+          <button
+            type="button"
+            onClick={() => updateAll(true)}
+            className="cursor-pointer bg-transparent p-0 text-xs font-semibold transition-colors hover:text-[var(--color-accent-interactive)]"
+            style={{ color: "var(--fg-body)" }}
+          >
+            Subscribe all
+          </button>
+        </div>
         <button
-          type="button"
-          onClick={() => updateAll(false)}
-          className="w-full rounded-full border border-red-600/40 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 hover:bg-red-500/15"
+          type="submit"
+          disabled={pending}
+          className="inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-60"
+          style={{
+            background: "var(--home-result-primary-bg)",
+            color: "var(--home-result-primary-fg)",
+            boxShadow: "var(--home-result-primary-shadow)",
+          }}
         >
-          Unsubscribe all
-        </button>
-        <button
-          type="button"
-          onClick={() => updateAll(true)}
-          className="w-full rounded-full border border-emerald-600/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-500/15"
-        >
-          Subscribe all
+          {pending ? <AnimatedLoadingLabel label="Saving" active /> : "Save preferences"}
         </button>
       </div>
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded-full bg-amber-500 px-5 py-3 text-sm font-semibold text-zinc-900 hover:bg-amber-400 disabled:opacity-60"
-      >
-        {pending ? <AnimatedLoadingLabel label="Saving" active /> : "Save preferences"}
-      </button>
     </form>
   );
 }

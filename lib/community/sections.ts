@@ -301,25 +301,13 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
     cards: [
       {
         id: "zcashnames-updates",
-        name: "ZcashNames Updates",
+        name: "ZcashNames for Users",
         label: "Company",
-        description:
-          "Follow the core docs and product resources as ZcashNames moves toward release.",
-        href: "/blogs/updates",
-        shareText: "@ZcashNames blog updates are live. Follow along for product notes and resources.",
-        detail: "Product resources",
+        description: "Launches, releases, and early access from the core team.",
+        href: "/blogs/users",
+        shareText: "@ZcashNames user blog is live. Follow along for launches, releases, and early access.",
+        detail: "Launches, releases, early access",
         themedIconSrc: themedCommunityIcon("updates"),
-      },
-      {
-        id: "launch-notes",
-        name: "Launch Notes",
-        label: "Product",
-        description:
-          "Read pricing, rollout, and beta context for the current ZcashNames release phase.",
-        href: "/blogs/launch",
-        shareText: "@ZcashNames launch notes are live. Follow along for rollout updates.",
-        detail: "Pricing and rollout context",
-        themedIconSrc: themedCommunityIcon("launch-notes"),
       },
       {
         id: "builder-stories",

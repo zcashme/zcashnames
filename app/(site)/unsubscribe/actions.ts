@@ -44,19 +44,19 @@ export async function saveUnsubscribePreferencesAction(
     };
   }
 
-  if (result.restored.includes("updates")) {
+  if (result.restored.includes("waitlist")) {
     return {
       ok: true,
-      message: "Saved. You will receive early-access and waitlist update emails again.",
+      message: "Saved. You will receive waitlist campaign emails again.",
       confirmationRequested: [],
     };
   }
 
-  if (result.unsubscribed.includes("updates")) {
+  if (result.unsubscribed.includes("waitlist")) {
     return {
       ok: true,
       message:
-        "Saved. You will no longer receive early-access or waitlist update emails. You can turn Updates back on here anytime this link works.",
+        "Saved. You will no longer receive waitlist campaign emails. You can turn Waitlist campaigns back on here anytime this link works.",
       confirmationRequested: [],
     };
   }
@@ -80,7 +80,7 @@ export async function requestPreferencesLinkAction(
   try {
     const token = buildUnsubscribeToken({
       email,
-      series: "updates",
+      series: "waitlist",
       mode: "series",
     });
     const baseUrl = resolveSiteUrl().replace(/\/$/, "");

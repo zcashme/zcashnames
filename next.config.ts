@@ -98,6 +98,26 @@ const nextConfig: NextConfig = {
         destination: "/docs/use/protected-names",
         permanent: true,
       },
+      {
+        source: "/blogs/launch",
+        destination: "/blogs/users",
+        permanent: true,
+      },
+      {
+        source: "/blogs/launch/:slug",
+        destination: "/blogs/users/:slug",
+        permanent: true,
+      },
+      {
+        source: "/blogs/updates",
+        destination: "/blogs/users",
+        permanent: true,
+      },
+      {
+        source: "/blogs/updates/:slug",
+        destination: "/blogs/users/:slug",
+        permanent: true,
+      },
     ];
   },
   async headers() {

@@ -16,7 +16,7 @@ export default function BlogRecentPostsSidebar({
     slug: post.slug,
     title: post.title,
     href: post.href,
-    series: "updates",
+    series: "users",
     seriesLabel: seriesTitle,
     publishedLabel: post.publishedLabel,
   }));

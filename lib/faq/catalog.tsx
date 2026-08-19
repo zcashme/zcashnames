@@ -1107,7 +1107,7 @@ export const FAQ_SECTIONS: FaqSection[] = [
           <>
             <FaqA href="/blogs">/blogs</FaqA> has launch explainers (Early Access, protected names,
             pricing) and product updates. The Early Access article is{" "}
-            <FaqA href="/blogs/launch/early-access">here</FaqA>.
+            <FaqA href="/blogs/users/early-access">here</FaqA>.
           </>
         ),
       },

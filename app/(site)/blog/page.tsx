@@ -6,7 +6,7 @@ import { blogMarkdownMetadata } from "@/lib/blog-markdown";
 export async function generateMetadata(): Promise<Metadata> {
   return blogMarkdownMetadata(
     "Blogs",
-    "Updates, launch notes, and builder stories from Zcash Names.",
+    "User and builder stories from Zcash Names.",
     { path: "/blogs" },
   );
 }

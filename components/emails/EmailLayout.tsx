@@ -190,10 +190,12 @@ export function EmailLayout({
               <Hr style={{ ...dividerStyle, margin: "0 0 24px" }} />
               <Text style={{ margin: 0, fontSize: 11, color: "#a1a1aa", lineHeight: "18px" }}>
                 <Link href={unsubscribeLinks.seriesHref} style={{ color: "#a1a1aa", textDecoration: "underline" }}>
-                  {unsubscribeLinks.series === "updates" ? "Unsubscribe from updates" : "Unsubscribe"}
+                  {unsubscribeLinks.series === "waitlist"
+                    ? "Unsubscribe from waitlist campaigns"
+                    : "Unsubscribe"}
                 </Link>
               </Text>
-              {unsubscribeLinks.series === "updates" ? (
+              {unsubscribeLinks.series === "waitlist" ? (
                 <Text
                   style={{
                     margin: "8px 0 0",

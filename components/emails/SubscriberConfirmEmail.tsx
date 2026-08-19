@@ -21,10 +21,10 @@ export default function SubscriberConfirmEmail({
       <Section style={content}>
         <Text style={paragraph}>Hi,</Text>
         <Text style={paragraph}>
-          {series === "updates" ? (
+          {series === "users" ? (
             <>
               Click below to confirm that <strong>{email}</strong> should receive ZcashNames
-              early-access and waitlist update emails.
+              user emails: launches, releases, and early access.
             </>
           ) : (
             <>
