@@ -67,6 +67,7 @@ export function EmailLayout({
   unsubscribeLinks?: {
     seriesHref: string;
     allHref: string;
+    series?: string;
   } | null;
 }) {
   const mark = createZcashNamesHeaderMark(headerMark);
@@ -189,9 +190,24 @@ export function EmailLayout({
               <Hr style={{ ...dividerStyle, margin: "0 0 24px" }} />
               <Text style={{ margin: 0, fontSize: 11, color: "#a1a1aa", lineHeight: "18px" }}>
                 <Link href={unsubscribeLinks.seriesHref} style={{ color: "#a1a1aa", textDecoration: "underline" }}>
-                  Unsubscribe
+                  {unsubscribeLinks.series === "waitlist"
+                    ? "Unsubscribe from waitlist campaigns"
+                    : "Unsubscribe"}
                 </Link>
               </Text>
+              {unsubscribeLinks.series === "waitlist" ? (
+                <Text
+                  style={{
+                    margin: "8px 0 0",
+                    fontSize: 11,
+                    lineHeight: "18px",
+                    color: "#a1a1aa",
+                  }}
+                >
+                  You can stop early-access and waitlist update emails here. Transactional mail
+                  (confirmations, reservation, access codes) is separate.
+                </Text>
+              ) : null}
             </Section>
           )}
         </Container>

@@ -45,13 +45,15 @@ export const paragraph: CSSProperties = {
   color: "#d4d4d8",
 };
 
+/** Yellow / gold CTA — label text must stay black for contrast in all clients. */
 export const ctaButton: CSSProperties = {
   display: "inline-block",
   backgroundColor: "#F4B728",
-  color: "#0a0a0a",
+  color: "#000000",
   fontSize: 14,
   fontWeight: 700,
   textDecoration: "none",
   padding: "14px 32px",
   borderRadius: 8,
+  WebkitTextFillColor: "#000000",
 };

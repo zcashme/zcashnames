@@ -33,24 +33,25 @@ import { buildCampaignReferralStatsContext, withCampaignReferralStats } from "@/
 import { getDefaultCampaignSeries, isSupportedCampaignSeries } from "@/lib/campaigns/series";
 import { buildWaitlistConfirmResponseTrackingUrl } from "@/lib/campaigns/waitlist-confirm-response";
 import { resolveSiteUrl } from "@/lib/site-url";
-import type {
-  CampaignAudienceScope,
-  CampaignBlockedRecipient,
-  CampaignDeliveryBatchRecord,
-  CampaignDeliveryBatchStatus,
-  CampaignDedupeMode,
-  CampaignDraftInput,
-  CampaignDraftRecord,
-  CampaignPersonalizationMode,
-  CampaignRecipient,
-  CampaignRecipientEstimate,
-  CampaignRecipientPersonalization,
-  CampaignRecipientSnapshotRecord,
-  CampaignRecord,
-  CampaignSendAttemptRecord,
-  CampaignTargetSeries,
-  CampaignSourceKind,
-  CampaignStatus,
+import {
+  WAITLIST_CAMPAIGN_SERIES,
+  type CampaignAudienceScope,
+  type CampaignBlockedRecipient,
+  type CampaignDeliveryBatchRecord,
+  type CampaignDeliveryBatchStatus,
+  type CampaignDedupeMode,
+  type CampaignDraftInput,
+  type CampaignDraftRecord,
+  type CampaignPersonalizationMode,
+  type CampaignRecipient,
+  type CampaignRecipientEstimate,
+  type CampaignRecipientPersonalization,
+  type CampaignRecipientSnapshotRecord,
+  type CampaignRecord,
+  type CampaignSendAttemptRecord,
+  type CampaignTargetSeries,
+  type CampaignSourceKind,
+  type CampaignStatus,
 } from "@/lib/campaigns/types";
 
 export const LARGE_CAMPAIGN_THRESHOLD = 500;
@@ -114,6 +115,10 @@ function shouldIncludeUnsubscribe(
 ): boolean {
   if (sourceKind === "custom_emails" && !hasSeriesSelection(series)) return false;
   return includeUnsubscribe;
+}
+
+function waitlistDeliverySeries(): string {
+  return WAITLIST_CAMPAIGN_SERIES;
 }
 
 function baseUrl(): string {
@@ -586,9 +591,8 @@ export async function createCampaignDraft(args?: {
   const insert = {
     title: args?.title?.trim() || defaultCampaignTitle(),
     source_kind: sourceKind,
-    series: args?.series ?? getDefaultCampaignSeries(),
-    include_unsubscribe:
-      args?.includeUnsubscribe ?? (sourceKind === "zn_waitlist" ? false : true),
+    series: args?.series ?? (sourceKind === "zn_waitlist" ? WAITLIST_CAMPAIGN_SERIES : getDefaultCampaignSeries()),
+    include_unsubscribe: args?.includeUnsubscribe ?? true,
     audience_scope: args?.audienceScope ?? "verified_only",
     dedupe_mode: args?.dedupeMode ?? "one_per_email",
     personalization_mode: args?.personalizationMode ?? "light",
@@ -822,6 +826,7 @@ async function resolveCampaignRecipientEstimate(
       dedupeMode: campaign.dedupe_mode,
       baseUrl: baseUrl(),
       selectedEmailsText: draft?.custom_emails_text,
+      series: waitlistDeliverySeries(),
     });
     const sampleWithConfirmUrl = waitlistEstimate.sample.map((recipient) => ({
       ...recipient,
@@ -847,6 +852,7 @@ async function resolveCampaignRecipientEstimate(
       dedupeMode: campaign.dedupe_mode,
       baseUrl: baseUrl(),
       selectedEmailsText: draft?.custom_emails_text,
+      series: waitlistDeliverySeries(),
     });
     return applyBetaInviteTokenRules({
       estimate: {
@@ -1588,7 +1594,8 @@ export async function scheduleCampaignWithResend(
     campaign.series,
     campaign.include_unsubscribe,
   );
-  const deliverySeries = campaign.source_kind === "zn_waitlist" ? null : campaign.series;
+  const deliverySeries =
+    campaign.source_kind === "zn_waitlist" ? waitlistDeliverySeries() : campaign.series;
   const skipConsentCheck =
     campaign.source_kind === "zn_waitlist" ||
     (campaign.source_kind === "custom_emails" && !hasSeriesSelection(campaign.series));
@@ -1740,7 +1747,7 @@ async function drainSpecificCampaignBatch(batch: {
       campaign.include_unsubscribe,
     );
     const deliverySeries =
-      campaign.source_kind === "zn_waitlist" ? null : campaign.series;
+      campaign.source_kind === "zn_waitlist" ? waitlistDeliverySeries() : campaign.series;
     const skipConsentCheck =
       campaign.source_kind === "zn_waitlist" ||
       (campaign.source_kind === "custom_emails" && !hasSeriesSelection(campaign.series));

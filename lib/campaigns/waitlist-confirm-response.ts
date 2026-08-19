@@ -2,7 +2,6 @@ import "server-only";
 
 import { resolveSecret, safeEqual, signHmac } from "@/lib/hmac";
 
-const DEFAULT_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
 const PRODUCTION_TRACKING_BASE_URL = "https://zcashnames.com";
 const SAMPLE_TRACKING_URL =
   "https://zcashnames.com/api/campaign-click/waitlist-confirm?token=sample-token";
@@ -10,7 +9,6 @@ const SAMPLE_TRACKING_URL =
 export interface WaitlistConfirmResponseTokenPayload {
   normalizedEmail: string;
   campaignId: string;
-  exp: number;
 }
 
 function getSecret(): string {
@@ -60,7 +58,6 @@ export function getWaitlistConfirmResponseRedirectUrl(): string | null {
 export function buildWaitlistConfirmResponseToken(args: {
   normalizedEmail: string;
   campaignId: string;
-  ttlSeconds?: number;
 }): string {
   const normalizedEmail = args.normalizedEmail.trim().toLowerCase();
   if (!normalizedEmail) {
@@ -70,7 +67,6 @@ export function buildWaitlistConfirmResponseToken(args: {
   const payload: WaitlistConfirmResponseTokenPayload = {
     normalizedEmail,
     campaignId: args.campaignId.trim(),
-    exp: Math.floor(Date.now() / 1000) + (args.ttlSeconds ?? DEFAULT_TOKEN_TTL_SECONDS),
   };
   const encodedPayload = base64UrlEncode(JSON.stringify(payload));
   const signature = signPayload(encodedPayload);
@@ -94,16 +90,13 @@ export function parseWaitlistConfirmResponseToken(
     if (
       !parsed ||
       typeof parsed.normalizedEmail !== "string" ||
-      typeof parsed.campaignId !== "string" ||
-      typeof parsed.exp !== "number"
+      typeof parsed.campaignId !== "string"
     ) {
       return null;
     }
-    if (parsed.exp < Math.floor(Date.now() / 1000)) return null;
     return {
       normalizedEmail: parsed.normalizedEmail.trim().toLowerCase(),
       campaignId: parsed.campaignId.trim(),
-      exp: parsed.exp,
     };
   } catch {
     return null;

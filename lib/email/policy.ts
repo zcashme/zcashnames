@@ -9,6 +9,7 @@ export type EmailKind = "transactional" | "marketing";
 export interface EmailUnsubscribeLinks {
   seriesHref: string;
   allHref: string;
+  series?: string;
 }
 
 export async function ensureMarketingEmailAllowed(
@@ -41,5 +42,6 @@ export function buildUnsubscribeLinks(args: {
   return {
     seriesHref: `${baseUrl}/unsubscribe?token=${encodeURIComponent(seriesToken)}`,
     allHref: `${baseUrl}/unsubscribe?token=${encodeURIComponent(allToken)}`,
+    series: args.series.trim(),
   };
 }

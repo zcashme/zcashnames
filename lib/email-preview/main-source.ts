@@ -18,6 +18,9 @@ type MainModule = Record<string, unknown> & { default?: unknown };
 export type MainPreviewKey =
   | "confirm"
   | "waitlist"
+  | "delete-confirm"
+  | "reservation-confirmed"
+  | "reservation-resend"
   | "referral-recovery"
   | "commission-pin"
   | "beta-invite"
@@ -153,7 +156,7 @@ function loadMainDefault<T>(relativePath: string): T {
   return (mod.default ?? mod) as T;
 }
 
-function resolveMainBetaInviteBodyText(
+function resolveMainBetaInviteBodyParagraphs(
   bodyText: string,
   resolveInviteTemplate: (
     body: string,
@@ -164,7 +167,7 @@ function resolveMainBetaInviteBodyText(
     inviteCode: string;
     joinUrl: string;
   },
-): string {
+): string[] {
   return resolveInviteTemplate(bodyText, personalization)
     .replace(/\r\n?/g, "\n")
     .split(/\n\s*\n/g)
@@ -177,8 +180,7 @@ function resolveMainBetaInviteBodyText(
     .filter(
       (paragraph) =>
         paragraph.trim().toLowerCase() !== "you're invited to the zcashnames beta.",
-    )
-    .join("\n\n");
+    );
 }
 
 function resolveMainWalletCta(
@@ -283,6 +285,9 @@ export function resolveMainPreviewSubject(
   const subjects: Record<Exclude<MainPreviewKey, "beta-invite">, string> = {
     confirm: "Confirm your email",
     waitlist: "Early access to ZcashNames",
+    "delete-confirm": "Confirm removal of Josh",
+    "reservation-confirmed": "Josh, confirming your reservation",
+    "reservation-resend": "Reserve your place for Zcash Names early access",
     "referral-recovery": "Your ZcashNames referral codes",
     "commission-pin": "Your access code",
     "blog-subscriber-confirm": "Confirm your subscription to ZcashNames newsletter",
@@ -331,6 +336,68 @@ export async function renderMainEmailPreview(
         referralUrl: "https://zcashnames.com/?ref=jswihart",
         referralCode: "jswihart",
         accessPin: "924731",
+      }),
+    );
+  }
+
+  if (key === "delete-confirm") {
+    const WaitlistDeleteConfirmEmail = loadMainDefault<
+      (props: {
+        email: string;
+        name: string;
+        confirmUrl: string;
+        rowStatus: "pending" | "protected" | "reserved";
+      }) => ReactElement
+    >("components/emails/WaitlistDeleteConfirmEmail.tsx");
+    return render(
+      WaitlistDeleteConfirmEmail({
+        email: "josh@example.com",
+        name: displayName,
+        confirmUrl:
+          "https://zcashnames.com/api/campaign-click/waitlist-delete?token=sample-delete-token",
+        rowStatus: "reserved",
+      }),
+    );
+  }
+
+  if (key === "reservation-confirmed") {
+    const WaitlistReservationConfirmedEmail = loadMainDefault<
+      (props: {
+        name: string;
+        dashboardUrl: string;
+        reservationUrl: string;
+        queueUrl: string;
+        otherNames: Array<{
+          name: string;
+          status: "pending" | "protected";
+        }>;
+      }) => ReactElement
+    >("components/emails/WaitlistReservationConfirmedEmail.tsx");
+    return render(
+      WaitlistReservationConfirmedEmail({
+        name: displayName,
+        dashboardUrl: "https://zcashnames.com/leaders/ref/jswihart",
+        reservationUrl:
+          "https://zcashnames.com/api/campaign-click/waitlist-confirm?token=sample-reservation-token",
+        queueUrl:
+          "https://zcashnames.com/waitlist/view?search=Josh&searchMode=exact",
+        otherNames: [
+          { name: "bigmad2", status: "pending" },
+          { name: "vipbrand", status: "protected" },
+        ],
+      }),
+    );
+  }
+
+  if (key === "reservation-resend") {
+    const WaitlistReservationResendEmail = loadMainDefault<
+      (props: { name?: string | null; confirmUrl: string }) => ReactElement
+    >("components/emails/WaitlistReservationResendEmail.tsx");
+    return render(
+      WaitlistReservationResendEmail({
+        name: displayName,
+        confirmUrl:
+          "https://zcashnames.com/api/campaign-click/waitlist-confirm?token=sample-reservation-token",
       }),
     );
   }
@@ -388,7 +455,7 @@ export async function renderMainEmailPreview(
         displayName: string;
         joinUrl: string;
         inviteCode: string;
-        bodyText: string;
+        bodyParagraphs: string[];
         headingText?: string;
         previewText?: string;
         walletCta?: {
@@ -447,7 +514,7 @@ export async function renderMainEmailPreview(
 
     const resolvedBaseUrl = "https://www.zcashnames.com";
     const resolvedJoinUrl = `${resolvedBaseUrl}/beta/join?code=${encodeURIComponent(inviteCode)}&stage=mainnet`;
-    const bodyText = resolveMainBetaInviteBodyText(
+    const bodyParagraphs = resolveMainBetaInviteBodyParagraphs(
       defaultInviteBody({ displayName }),
       resolveInviteTemplate,
       {
@@ -477,7 +544,7 @@ export async function renderMainEmailPreview(
         displayName,
         joinUrl: resolvedJoinUrl,
         inviteCode,
-        bodyText,
+        bodyParagraphs,
         headingText,
         walletCta,
         walletLogoRow,

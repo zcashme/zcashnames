@@ -66,8 +66,9 @@ export async function renderCampaignPreview(args: {
         args.includeUnsubscribe === false
           ? null
           : args.unsubscribeLinks ?? {
-              seriesHref: "https://zcashnames.com/unsubscribe?token=sample-series-token",
-              allHref: "https://zcashnames.com/unsubscribe?token=sample-all-token",
+              seriesHref: "https://zcashnames.com/unsubscribe?token=sample-waitlist-series-token",
+              allHref: "https://zcashnames.com/unsubscribe?token=sample-waitlist-all-token",
+              series: "waitlist",
             },
     }),
   );

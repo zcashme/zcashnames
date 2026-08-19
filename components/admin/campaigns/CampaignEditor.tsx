@@ -463,8 +463,8 @@ export default function CampaignEditor(props: CampaignEditorProps) {
   const sourceDescription =
     sourceKind === "zn_waitlist"
       ? audienceScope === "selected_emails"
-        ? "Send only to the entered waitlist emails. Waitlist personalization and tokens still apply."
-        : "Start from waitlist rows. Audience and dedupe apply exactly as selected."
+        ? "Send only to the entered waitlist emails. Waitlist personalization and tokens still apply. Updates unsubscribes are excluded."
+        : "Start from waitlist rows. Audience and dedupe apply exactly as selected. Updates unsubscribes are excluded."
       : sourceKind === "email_subscribers"
         ? "Send to all active subscribers in the selected series."
         : hasSeriesSelection
@@ -879,10 +879,12 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                   const nextSourceKind = event.target.value as CampaignSourceKind;
                   setSourceKind(nextSourceKind);
                   if (nextSourceKind === "zn_waitlist") {
-                    setIncludeUnsubscribe(false);
+                    setSeries("waitlist");
+                    setIncludeUnsubscribe(true);
                   } else if (nextSourceKind === "custom_emails") {
                     setPersonalizationMode("static");
                   } else {
+                    setSeries((current) => (current === "waitlist" ? "general" : current));
                     setIncludeUnsubscribe(true);
                   }
                   markRecipientsStale();
@@ -1005,9 +1007,17 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                 series-backed subscriber context.
               </div>
             ) : null}
+            {showWaitlistControls ? (
+              <div className="mt-2 text-xs text-zinc-500">
+                Waitlist campaigns use the waitlist opt-out flag, not a blog list. Recipients who
+                unsubscribe from Waitlist campaigns will not get the next waitlist send. They stay
+                on the waitlist and can still receive confirmations, reservation mail, and access
+                codes.
+              </div>
+            ) : null}
             {unsubscribeAvailable ? (
               <a
-                href="/internal/unsubscribe-preview"
+                href="/internal/unsubscribe-preview?series=waitlist"
                 target="_blank"
                 rel="noreferrer"
                 className="mt-2 block text-xs text-amber-400 hover:text-amber-300"

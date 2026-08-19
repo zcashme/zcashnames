@@ -406,6 +406,39 @@ Expected:
 - attempts exist for sent or failed recipients
 - timestamps are recent for the test run
 
+## Scenario 17: Waitlist Updates Unsubscribe
+
+Requires `sql/2026-08-19-waitlist-honor-updates-unsubscribe.sql`.
+
+1. Create a new `zn_waitlist` draft
+2. Confirm include-unsubscribe is on
+3. Preview the email
+
+Expected:
+- footer says `Unsubscribe from waitlist campaigns`
+- footer mentions early-access / waitlist mail vs transactional mail
+
+4. Pick a verified waitlist email and set `email_subscribers.unsubscribed_at` for series `waitlist`
+5. Use audience `selected_emails` with that address and one still-subscribed verified address
+6. Refresh recipients
+
+Expected:
+- unsubscribed address is blocked with reason `unsubscribed`
+- subscribed address remains in the count
+
+7. Open `/internal/unsubscribe-preview?series=waitlist`
+8. Turn Waitlist campaigns off and save
+
+Expected:
+- success copy says they will no longer receive waitlist campaign emails
+
+9. Turn Waitlist campaigns back on and save (same verified waitlist inbox)
+
+Expected:
+- no confirmation email
+- success copy says they will receive waitlist campaign emails again
+- a new recipient refresh no longer blocks that address
+
 ## Fast Failure Checks
 
 Referral stats table:

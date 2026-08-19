@@ -1,14 +1,15 @@
 import "server-only";
 
 import { db } from "@/lib/db";
-import type {
-  CampaignAudienceScope,
-  CampaignBlockedRecipient,
-  CampaignDedupeMode,
-  CampaignRecipient,
-  CampaignRecipientEstimate,
-  CampaignRecipientPersonalization,
-  CampaignSourceKind,
+import {
+  WAITLIST_CAMPAIGN_SERIES,
+  type CampaignAudienceScope,
+  type CampaignBlockedRecipient,
+  type CampaignDedupeMode,
+  type CampaignRecipient,
+  type CampaignRecipientEstimate,
+  type CampaignRecipientPersonalization,
+  type CampaignSourceKind,
 } from "@/lib/campaigns/types";
 
 interface WaitlistRow {
@@ -164,12 +165,14 @@ function buildEstimateCacheKey(args: {
   dedupeMode: CampaignDedupeMode;
   baseUrl: string;
   selectedEmailsText?: string | null;
+  series?: string | null;
 }): string {
   return JSON.stringify({
     audienceScope: args.audienceScope,
     dedupeMode: args.dedupeMode,
     baseUrl: args.baseUrl,
     selectedEmailsText: args.selectedEmailsText?.trim() ?? null,
+    series: args.series?.trim() || WAITLIST_CAMPAIGN_SERIES,
   });
 }
 
@@ -304,12 +307,14 @@ async function estimateWaitlistRecipientsViaRpc(args: {
   dedupeMode: CampaignDedupeMode;
   baseUrl: string;
   normalizedEmails?: string[];
+  series?: string | null;
 }): Promise<CampaignRecipientEstimate> {
   const { data, error } = await db.rpc("estimate_waitlist_recipients", {
     p_audience_scope: args.audienceScope,
     p_dedupe_mode: args.dedupeMode,
     p_selected_emails: args.normalizedEmails ?? [],
     p_sample_limit: 5,
+    p_series: args.series?.trim() || WAITLIST_CAMPAIGN_SERIES,
   });
 
   if (error) throw new Error(error.message);
@@ -339,11 +344,13 @@ async function listWaitlistRecipientsViaRpc(args: {
   dedupeMode: CampaignDedupeMode;
   baseUrl: string;
   normalizedEmails?: string[];
+  series?: string | null;
 }): Promise<CampaignRecipient[]> {
   const { data, error } = await db.rpc("list_waitlist_recipients", {
     p_audience_scope: args.audienceScope,
     p_dedupe_mode: args.dedupeMode,
     p_selected_emails: args.normalizedEmails ?? [],
+    p_series: args.series?.trim() || WAITLIST_CAMPAIGN_SERIES,
   });
 
   if (error) throw new Error(error.message);
@@ -433,15 +440,18 @@ export async function estimateWaitlistRecipients(args?: {
   dedupeMode?: CampaignDedupeMode;
   baseUrl?: string;
   selectedEmailsText?: string | null;
+  series?: string | null;
 }): Promise<CampaignRecipientEstimate> {
   const audienceScope = args?.audienceScope ?? "verified_only";
   const dedupeMode = args?.dedupeMode ?? "one_per_email";
   const baseUrl = args?.baseUrl ?? "https://zcashnames.com";
+  const series = args?.series?.trim() || WAITLIST_CAMPAIGN_SERIES;
   const cacheKey = buildEstimateCacheKey({
     audienceScope,
     dedupeMode,
     baseUrl,
     selectedEmailsText: args?.selectedEmailsText,
+    series,
   });
   const cached = readCachedEstimate(cacheKey);
   if (cached) return cached;
@@ -461,6 +471,7 @@ export async function estimateWaitlistRecipients(args?: {
         dedupeMode,
         baseUrl,
         normalizedEmails,
+        series,
       }),
     );
   }
@@ -471,6 +482,7 @@ export async function estimateWaitlistRecipients(args?: {
       audienceScope,
       dedupeMode,
       baseUrl,
+      series,
     }),
   );
 }
@@ -568,10 +580,12 @@ export async function listWaitlistRecipients(args?: {
   dedupeMode?: CampaignDedupeMode;
   baseUrl?: string;
   selectedEmailsText?: string | null;
+  series?: string | null;
 }): Promise<CampaignRecipient[]> {
   const audienceScope = args?.audienceScope ?? "verified_only";
   const dedupeMode = args?.dedupeMode ?? "one_per_email";
   const baseUrl = args?.baseUrl ?? "https://zcashnames.com";
+  const series = args?.series?.trim() || WAITLIST_CAMPAIGN_SERIES;
 
   if (audienceScope === "selected_emails") {
     const { normalizedEmails, invalidEmails } = parseSelectedEmailsText(args?.selectedEmailsText);
@@ -586,11 +600,13 @@ export async function listWaitlistRecipients(args?: {
       dedupeMode,
       baseUrl,
       normalizedEmails,
+      series,
     });
   }
   return listWaitlistRecipientsViaRpc({
     audienceScope,
     dedupeMode,
     baseUrl,
+    series,
   });
 }

@@ -20,9 +20,11 @@ export const CAMPAIGN_PERSONALIZATION_MODES = ["light", "static"] as const;
 export type CampaignPersonalizationMode =
   (typeof CAMPAIGN_PERSONALIZATION_MODES)[number];
 
-export const CAMPAIGN_SERIES = ["general", "builders", "updates"] as const;
+export const CAMPAIGN_SERIES = ["general", "users", "builders"] as const;
 export type CampaignSeries = (typeof CAMPAIGN_SERIES)[number];
 export type CampaignTargetSeries = string;
+
+export const WAITLIST_CAMPAIGN_SERIES = "waitlist";
 
 export const CAMPAIGN_STATUSES = [
   "draft",

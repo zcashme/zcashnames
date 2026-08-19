@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const MAIN_ROOT = path.resolve(process.cwd(), "..", "dotzcash_main");
-const FALLBACK_CAMPAIGN_SERIES = ["general", "builders", "updates", "launch"] as const;
+const FALLBACK_CAMPAIGN_SERIES = ["general", "users", "builders"] as const;
 
 function readFile(filePath: string): string {
   try {
@@ -44,7 +44,7 @@ export function getCampaignSeriesOptions(): string[] {
     ...subscriptionSeries,
     ...blogSeries,
     ...FALLBACK_CAMPAIGN_SERIES,
-  ]).filter((value) => /^[a-z][a-z0-9_-]*$/.test(value));
+  ]).filter((value) => /^[a-z][a-z0-9_-]*$/.test(value) && value !== "waitlist");
 
   const preferredOrder = new Map<string, number>(
     FALLBACK_CAMPAIGN_SERIES.map((value, index) => [value, index]),
@@ -63,5 +63,9 @@ export function getDefaultCampaignSeries(): string {
 }
 
 export function isSupportedCampaignSeries(value: string): boolean {
-  return getCampaignSeriesOptions().includes(value.trim().toLowerCase());
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "launch" || normalized === "updates") {
+    return getCampaignSeriesOptions().includes("users");
+  }
+  return getCampaignSeriesOptions().includes(normalized);
 }

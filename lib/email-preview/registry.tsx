@@ -2,7 +2,6 @@ import { render } from "@react-email/render";
 import CampaignEmail from "@/components/emails/CampaignEmail";
 import FollowUpEmail from "@/components/emails/FollowUpEmail";
 import { type EmailPreviewDriftManifest } from "@/lib/email-preview/drift";
-import { DEFAULT_EMAIL_SERIES } from "@/lib/email/subscribers";
 import { isWalletVariantId, type WalletVariantId } from "@/lib/wallets/catalog";
 
 export type EmailPreviewFilter = "all" | "main" | "other";
@@ -224,6 +223,63 @@ export function getEmailPreviewRegistry(): EmailPreviewRegistryEntry[] {
       },
     },
     {
+      key: "delete-confirm",
+      group: "WAITLIST USER EMAILS",
+      title: "Delete Name Confirmation",
+      description: "Confirmation email sent before permanently removing one waitlist row from /verify.",
+      sourceRepo: "main_production",
+      kind: "react",
+      resolveSubject: () => unresolvedMainPreviewSubject("Delete Name Confirmation"),
+      driftManifest: {
+        files: [
+          {
+            internal: "components/emails/WaitlistDeleteConfirmEmail.tsx",
+            main: "components/emails/WaitlistDeleteConfirmEmail.tsx",
+          },
+          ...SHARED_LAYOUT_BUNDLE,
+        ],
+      },
+      renderHtml: async (context) => {
+        const { renderMainEmailPreview } = await loadMainPreviewHelpers();
+        return renderMainEmailPreview("delete-confirm", context);
+      },
+    },
+    {
+      key: "reservation-confirmed",
+      group: "WAITLIST USER EMAILS",
+      title: "Reservation Confirmation",
+      description: "Sent after a name reservation is confirmed and points the user to their referral dashboard.",
+      sourceRepo: "main_production",
+      kind: "react",
+      resolveSubject: () => unresolvedMainPreviewSubject("Reservation Confirmation"),
+      driftManifest: {
+        files: [
+          {
+            internal: "components/emails/WaitlistReservationConfirmedEmail.tsx",
+            main: "components/emails/WaitlistReservationConfirmedEmail.tsx",
+          },
+          ...SHARED_LAYOUT_BUNDLE,
+        ],
+      },
+      renderHtml: async (context) => {
+        const { renderMainEmailPreview } = await loadMainPreviewHelpers();
+        return renderMainEmailPreview("reservation-confirmed", context);
+      },
+    },
+    {
+      key: "reservation-resend",
+      group: "WAITLIST USER EMAILS",
+      title: "Reservation Link Resend",
+      description: "Transactional resend email that reopens the reservation flow on /verify.",
+      sourceRepo: "main_production",
+      kind: "react",
+      resolveSubject: () => unresolvedMainPreviewSubject("Reservation Link Resend"),
+      renderHtml: async (context) => {
+        const { renderMainEmailPreview } = await loadMainPreviewHelpers();
+        return renderMainEmailPreview("reservation-resend", context);
+      },
+    },
+    {
       key: "referral-recovery",
       group: "WAITLIST USER EMAILS",
       title: "Referral Recovery Resend",
@@ -371,8 +427,9 @@ export function getEmailPreviewRegistry(): EmailPreviewRegistryEntry[] {
               context.includeUnsubscribe === false
                 ? null
                 : {
-                    seriesHref: `https://zcashnames.com/unsubscribe?token=sample-${DEFAULT_EMAIL_SERIES}-series-token`,
-                    allHref: `https://zcashnames.com/unsubscribe?token=sample-${DEFAULT_EMAIL_SERIES}-all-token`,
+                    seriesHref: "https://zcashnames.com/unsubscribe?token=sample-waitlist-series-token",
+                    allHref: "https://zcashnames.com/unsubscribe?token=sample-waitlist-all-token",
+                    series: "waitlist",
                   }
             }
           />,

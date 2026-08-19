@@ -349,7 +349,7 @@ export const LINK_PREVIEW_MANIFEST: LinkPreviewManifestItem[] = [
     url: "https://www.zcashnames.com/blogs",
     image: "/og/blogs.png",
     title: "Blogs | Zcash Names",
-    description: "Updates, launch notes, and builder stories from Zcash Names.",
+    description: "User and builder stories from Zcash Names.",
     source: {
       productionRoute: "/blogs",
       ogSlug: "blogs",
