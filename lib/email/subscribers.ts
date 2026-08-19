@@ -245,29 +245,61 @@ export async function unsubscribeAll(email: string, seriesList?: string[]): Prom
   return updated;
 }
 
+async function isVerifiedWaitlistEmail(email: string): Promise<boolean> {
+  const normalizedEmail = normalizeEmail(email);
+  const escaped = normalizedEmail.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+  const { data, error } = await db
+    .from("zn_waitlist")
+    .select("id")
+    .eq("email_verified", true)
+    .ilike("email", escaped)
+    .limit(1);
+  if (error) throw new Error(error.message);
+  return (data ?? []).length > 0;
+}
+
+async function restoreWaitlistVerifiedSeries(email: string, series: string): Promise<void> {
+  const nowIso = new Date().toISOString();
+  const existing = await getSubscriberRecord(email, series);
+  await upsertSubscriber({
+    email,
+    series,
+    emailVerified: true,
+    source: "unsubscribe_preferences",
+    confirmedAt: existing?.confirmed_at ?? nowIso,
+    unsubscribedAt: null,
+    unsubscribeReason: null,
+  });
+}
+
 export async function applySubscriberPreferences(args: {
   email: string;
   desiredSeries: Record<string, boolean>;
   seriesList: string[];
   source?: string | null;
   baseUrl?: string;
-}): Promise<{ confirmationRequested: string[]; unsubscribed: string[] }> {
+}): Promise<{ confirmationRequested: string[]; unsubscribed: string[]; restored: string[] }> {
   const confirmationRequested: string[] = [];
   const unsubscribed: string[] = [];
+  const restored: string[] = [];
   const normalizedEmail = normalizeEmail(args.email);
 
   for (const series of args.seriesList) {
     if (args.desiredSeries[series]) {
       const active = await getActiveSubscriber(normalizedEmail, series);
-      if (!active) {
-        await requestSubscriberConfirmation({
-          email: normalizedEmail,
-          series,
-          source: args.source ?? "unsubscribe_preferences",
-          baseUrl: args.baseUrl,
-        });
-        confirmationRequested.push(series);
+      if (active) continue;
+      if (series === "updates" && (await isVerifiedWaitlistEmail(normalizedEmail))) {
+        await restoreWaitlistVerifiedSeries(normalizedEmail, series);
+        restored.push(series);
+        continue;
       }
+      await requestSubscriberConfirmation({
+        email: normalizedEmail,
+        series,
+        source: args.source ?? "unsubscribe_preferences",
+        baseUrl: args.baseUrl,
+      });
+      confirmationRequested.push(series);
       continue;
     }
 
@@ -275,5 +307,5 @@ export async function applySubscriberPreferences(args: {
     unsubscribed.push(series);
   }
 
-  return { confirmationRequested, unsubscribed };
+  return { confirmationRequested, unsubscribed, restored };
 }

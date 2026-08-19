@@ -33,7 +33,10 @@ export default async function ConfirmSubscriberPage({
       source: "subscriber_confirm_link",
     });
     title = "Subscription confirmed";
-    message = `${parsed.email} will now receive ${parsed.series} emails.`;
+    message =
+      parsed.series === "updates"
+        ? `${parsed.email} will now receive early-access and waitlist update emails.`
+        : `${parsed.email} will now receive ${parsed.series} emails.`;
   }
 
   return (

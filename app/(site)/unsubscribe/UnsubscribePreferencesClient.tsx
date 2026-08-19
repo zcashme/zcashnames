@@ -9,7 +9,7 @@ type PreferenceMap = Record<string, boolean>;
 const SERIES_DESCRIPTIONS: Record<string, string> = {
   general: "News, announcements, and outreach.",
   builders: "Integrations, tooling, and opportunities.",
-  updates: "Release notes, feature changes, and product availability.",
+  updates: "Early-access and waitlist updates, plus release notes and product availability.",
   launch: "Launch notes, rollout updates, and go-live communication.",
 };
 
@@ -182,6 +182,12 @@ export default function UnsubscribePreferencesClient({
           ))}
         </div>
       </div>
+
+      {preferences.updates === false ? (
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm leading-6 text-amber-200">
+          Turning off Updates means you will not receive emails about ZcashNames early access.
+        </p>
+      ) : null}
 
       {state.message ? (
         <p className={`text-sm ${state.ok ? "text-emerald-300" : "text-red-300"}`}>{state.message}</p>

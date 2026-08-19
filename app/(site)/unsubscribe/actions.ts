@@ -2,7 +2,8 @@
 
 import { applySubscriberPreferences } from "@/lib/email/subscribers";
 import { listDistinctSubscriberSeriesWithToken } from "@/lib/email/subscriber-series";
-import { parseUnsubscribeToken } from "@/lib/email/unsubscribe-token";
+import { sendPreferencesLinkEmail } from "@/lib/email/preferences-link";
+import { buildUnsubscribeToken, parseUnsubscribeToken } from "@/lib/email/unsubscribe-token";
 import { resolveSiteUrl } from "@/lib/site-url";
 
 export async function saveUnsubscribePreferencesAction(
@@ -43,9 +44,56 @@ export async function saveUnsubscribePreferencesAction(
     };
   }
 
+  if (result.restored.includes("updates")) {
+    return {
+      ok: true,
+      message: "Saved. You will receive early-access and waitlist update emails again.",
+      confirmationRequested: [],
+    };
+  }
+
+  if (result.unsubscribed.includes("updates")) {
+    return {
+      ok: true,
+      message:
+        "Saved. You will no longer receive early-access or waitlist update emails. You can turn Updates back on here anytime this link works.",
+      confirmationRequested: [],
+    };
+  }
+
   return {
     ok: true,
     message: "Email preferences updated.",
     confirmationRequested: [],
+  };
+}
+
+export async function requestPreferencesLinkAction(
+  _previousState: { ok: boolean; message: string },
+  formData: FormData,
+): Promise<{ ok: boolean; message: string }> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, message: "Enter a valid email address." };
+  }
+
+  try {
+    const token = buildUnsubscribeToken({
+      email,
+      series: "updates",
+      mode: "series",
+    });
+    const baseUrl = resolveSiteUrl().replace(/\/$/, "");
+    await sendPreferencesLinkEmail({
+      email,
+      preferencesUrl: `${baseUrl}/unsubscribe?token=${encodeURIComponent(token)}`,
+    });
+  } catch {
+    return { ok: false, message: "Couldn't send right now. Try again in a few minutes." };
+  }
+
+  return {
+    ok: true,
+    message: "If that inbox can manage preferences, we sent a new link.",
   };
 }

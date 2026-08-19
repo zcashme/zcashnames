@@ -8,5 +8,5 @@ export const EMAIL_SUBSCRIPTION_SERIES_DESCRIPTIONS: Record<
 > = {
   general: "News, announcements, and outreach.",
   builders: "Integrations, tooling, and opportunities.",
-  updates: "Release notes, feature changes, and product availability.",
+  updates: "Early-access and waitlist updates, plus release notes and product availability.",
 };

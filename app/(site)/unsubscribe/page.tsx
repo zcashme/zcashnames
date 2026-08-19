@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listDistinctSubscriberSeriesWithToken } from "@/lib/email/subscriber-series";
 import { listSubscriberPreferences } from "@/lib/email/subscribers";
 import { parseUnsubscribeToken } from "@/lib/email/unsubscribe-token";
+import RequestPreferencesLinkClient from "./RequestPreferencesLinkClient";
 import UnsubscribePreferencesClient from "./UnsubscribePreferencesClient";
 
 export const dynamic = "force-dynamic";
@@ -21,8 +22,10 @@ export default async function UnsubscribePage({
         <section className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 p-8 text-center shadow-2xl">
           <h1 className="mt-3 text-3xl font-semibold text-zinc-100">Invalid unsubscribe link</h1>
           <p className="mt-4 text-sm leading-6 text-zinc-400">
-            This preferences link is missing or invalid. If you still need help, contact us directly.
+            This preferences link is missing, invalid, or expired. Enter your email and we will send
+            a new link if this inbox can manage ZcashNames email preferences.
           </p>
+          <RequestPreferencesLinkClient />
           <div className="mt-8">
             <Link href="/" className="text-sm font-medium text-amber-400 hover:text-amber-300">
               Return to zcashnames.com
@@ -50,7 +53,8 @@ export default async function UnsubscribePage({
       <section className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 p-8 shadow-2xl">
         <h1 className="text-3xl font-semibold text-zinc-100">Email preferences</h1>
         <p className="mt-4 text-sm leading-6 text-zinc-400">
-          Choose what we send to this address.
+          Choose what we send to this address. Turning off Updates stops early-access and
+          waitlist update emails. Confirmations, reservation mail, and access codes are separate.
         </p>
         <UnsubscribePreferencesClient
           token={token}
