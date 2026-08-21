@@ -8,8 +8,20 @@ import {
 } from "@/lib/captcha/http";
 import { db } from "@/lib/db";
 import { isBlogSubscriptionSlug, type BlogSubscriptionSlug } from "@/lib/blog-series";
-import { buildBlogSubscriberConfirmToken, isBlogSubscriberConfirmSignatureValid, isBlogSubscriberConfirmTokenExpired, parseBlogSubscriberConfirmToken } from "@/lib/blog-subscribers/confirm-token";
+import {
+  isBlogSubscriberConfirmSignatureValid,
+  isBlogSubscriberConfirmTokenExpired,
+  parseBlogSubscriberConfirmToken,
+} from "@/lib/blog-subscribers/confirm-token";
 import { sendBlogSubscriberConfirmationEmail } from "@/lib/email/blog-subscribers";
+import {
+  buildSubscriberConfirmToken,
+  isSubscriberConfirmSignatureValid,
+  isSubscriberConfirmTokenExpired,
+  parseSubscriberConfirmToken,
+} from "@/lib/email/subscriber-confirm-token";
+import { confirmSubscriberSeries, getActiveSubscriber } from "@/lib/email/subscribers";
+import { normalizeEmailSeries } from "@/lib/email/subscription-series";
 import { resolveSiteUrl } from "@/lib/site-url";
 
 const GENERIC_ERROR = "Something went wrong. Please try again.";
@@ -19,6 +31,7 @@ type EmailSubscriberRow = {
   email: string;
   series: BlogSubscriptionSlug;
   email_verified: boolean;
+  unsubscribed_at: string | null;
 };
 
 export type SubmitBlogSubscriptionResult =
@@ -28,8 +41,8 @@ export type SubmitBlogSubscriptionResult =
   | { status: "error"; error: string; code?: string };
 
 export type ConfirmBlogSubscriptionResult =
-  | { status: "success"; series: BlogSubscriptionSlug; email: string }
-  | { status: "already"; series: BlogSubscriptionSlug; email: string }
+  | { status: "success"; series: string[]; email: string }
+  | { status: "already"; series: string[]; email: string }
   | { status: "invalid" };
 
 function normalizeEmail(email: string): string {
@@ -47,7 +60,7 @@ function isUniqueViolation(error: { code?: string } | null | undefined): boolean
 async function findSubscription(email: string, series: BlogSubscriptionSlug): Promise<EmailSubscriberRow | null> {
   const { data, error } = await db
     .from("email_subscribers")
-    .select("id, email, series, email_verified")
+    .select("id, email, series, email_verified, unsubscribed_at")
     .eq("email", email)
     .eq("series", series)
     .order("created_at", { ascending: false })
@@ -61,30 +74,39 @@ async function findSubscription(email: string, series: BlogSubscriptionSlug): Pr
   return (data as EmailSubscriberRow | null) ?? null;
 }
 
-async function sendConfirmationEmail(row: EmailSubscriberRow): Promise<boolean> {
+async function sendConfirmationEmail(
+  email: string,
+  seriesList: BlogSubscriptionSlug[],
+): Promise<boolean> {
+  if (seriesList.length === 0) return true;
+
   try {
     const headerStore = await headers();
     const baseUrl = resolveSiteUrl(headerStore);
-    const token = buildBlogSubscriberConfirmToken({
-      subscriberId: row.id,
-      email: row.email,
-      series: row.series,
+    const token = buildSubscriberConfirmToken({
+      email,
+      series: seriesList,
     });
-    const confirmUrl = `${baseUrl}/blogs/confirm?token=${encodeURIComponent(token)}`;
+    const confirmUrl = `${baseUrl}/subscribe/confirm?token=${encodeURIComponent(token)}`;
 
     await sendBlogSubscriberConfirmationEmail({
-      email: row.email,
-      series: row.series,
+      email,
+      series: seriesList,
       confirmUrl,
     });
 
-    await db
+    const now = new Date().toISOString();
+    const { error } = await db
       .from("email_subscribers")
       .update({
-        confirm_token_sent_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        confirm_token_sent_at: now,
+        updated_at: now,
       })
-      .eq("id", row.id);
+      .eq("email", email)
+      .in("series", seriesList);
+    if (error) {
+      console.error("Blog subscription confirm-token timestamp error:", error.message);
+    }
 
     return true;
   } catch (error) {
@@ -125,19 +147,13 @@ export async function submitBlogSubscription(input: {
   }
 
   const subscriptionSeries = uniqueSeriesValues as BlogSubscriptionSlug[];
-  const submittedSeries: BlogSubscriptionSlug[] = [];
-  const resentSeries: BlogSubscriptionSlug[] = [];
-  const alreadySeries: BlogSubscriptionSlug[] = [];
+  const pendingSeries: BlogSubscriptionSlug[] = [];
 
   for (const seriesValue of subscriptionSeries) {
+    const active = await getActiveSubscriber(email, seriesValue);
+    if (active) continue;
+
     let existing = await findSubscription(email, seriesValue);
-    const hadExistingRow = Boolean(existing);
-
-    if (existing?.email_verified) {
-      alreadySeries.push(seriesValue);
-      continue;
-    }
-
     if (!existing) {
       const { data, error } = await db
         .from("email_subscribers")
@@ -145,8 +161,9 @@ export async function submitBlogSubscription(input: {
           email,
           series: seriesValue,
           email_verified: false,
+          source: "blog_subscribe",
         })
-        .select("id, email, series, email_verified")
+        .select("id, email, series, email_verified, unsubscribed_at")
         .single();
 
       if (error || !data) {
@@ -157,76 +174,80 @@ export async function submitBlogSubscription(input: {
 
         existing = await findSubscription(email, seriesValue);
         if (!existing) return { status: "error", error: GENERIC_ERROR };
-      } else {
-        existing = data as EmailSubscriberRow;
       }
     }
 
-    const mailed = await sendConfirmationEmail(existing);
-    if (!mailed) return { status: "error", error: GENERIC_ERROR };
-
-    if (hadExistingRow) {
-      resentSeries.push(seriesValue);
-    } else {
-      submittedSeries.push(seriesValue);
-    }
+    pendingSeries.push(seriesValue);
   }
 
-  if (submittedSeries.length > 0) {
+  if (pendingSeries.length > 0) {
+    const mailed = await sendConfirmationEmail(email, pendingSeries);
+    if (!mailed) return { status: "error", error: GENERIC_ERROR };
     return {
       status: "submitted",
-      message:
-        submittedSeries.length === 1 && resentSeries.length === 0 && alreadySeries.length === 0
-          ? "Check your inbox for the confirmation link."
-          : "Check your inbox for confirmation links for the selected series.",
+      message: "Check your inbox for the confirmation link.",
     };
-  }
-
-  if (resentSeries.length > 0) {
-    return { status: "resent", message: "Check your inbox for the confirmation links." };
   }
 
   return { status: "already", message: "You're already subscribed to the selected series." };
 }
 
+async function confirmSeriesList(
+  email: string,
+  seriesList: string[],
+): Promise<ConfirmBlogSubscriptionResult> {
+  const normalized = [
+    ...new Set(seriesList.map((value) => normalizeEmailSeries(value)).filter(Boolean)),
+  ];
+  if (normalized.length === 0) return { status: "invalid" };
+
+  const confirmed: string[] = [];
+  const already: string[] = [];
+
+  for (const series of normalized) {
+    const wasActive = Boolean(await getActiveSubscriber(email, series));
+    await confirmSubscriberSeries({
+      email,
+      series,
+      source: "subscriber_confirm_link",
+    });
+    if (wasActive) already.push(series);
+    else confirmed.push(series);
+  }
+
+  if (confirmed.length === 0) {
+    return { status: "already", series: already, email };
+  }
+  return { status: "success", series: [...confirmed, ...already], email };
+}
+
 export async function confirmBlogSubscription(token: string): Promise<ConfirmBlogSubscriptionResult> {
-  const parsed = parseBlogSubscriberConfirmToken(token);
-  if (!parsed || isBlogSubscriberConfirmTokenExpired(parsed)) {
+  const parsed = parseSubscriberConfirmToken(token);
+  if (parsed) {
+    if (isSubscriberConfirmTokenExpired(parsed) || !isSubscriberConfirmSignatureValid(parsed)) {
+      return { status: "invalid" };
+    }
+    return confirmSeriesList(parsed.email, parsed.seriesList);
+  }
+
+  const legacy = parseBlogSubscriberConfirmToken(token);
+  if (!legacy || isBlogSubscriberConfirmTokenExpired(legacy)) {
     return { status: "invalid" };
   }
 
   const { data, error } = await db
     .from("email_subscribers")
-    .select("id, email, series, email_verified")
-    .eq("id", parsed.subscriberId)
+    .select("id, email, series, email_verified, unsubscribed_at")
+    .eq("id", legacy.subscriberId)
     .single();
 
   if (error || !data) return { status: "invalid" };
 
   const row = data as EmailSubscriberRow;
   if (!isBlogSubscriptionSlug(row.series)) return { status: "invalid" };
-  if (!isBlogSubscriberConfirmSignatureValid(parsed, row.email, row.series)) {
+  if (!isBlogSubscriberConfirmSignatureValid(legacy, row.email, row.series)) {
     return { status: "invalid" };
   }
 
-  if (row.email_verified) {
-    return { status: "already", series: row.series, email: row.email };
-  }
-
-  const now = new Date().toISOString();
-  const { error: updateError } = await db
-    .from("email_subscribers")
-    .update({
-      email_verified: true,
-      confirmed_at: now,
-      updated_at: now,
-    })
-    .eq("id", row.id);
-
-  if (updateError) {
-    console.error("Blog subscription confirm update error:", updateError.message);
-    return { status: "invalid" };
-  }
-
-  return { status: "success", series: row.series, email: row.email };
+  return confirmSeriesList(row.email, [row.series]);
 }

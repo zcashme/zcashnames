@@ -118,6 +118,16 @@ const nextConfig: NextConfig = {
         destination: "/blogs/users/:slug",
         permanent: true,
       },
+      {
+        source: "/unsubscribe/confirm",
+        destination: "/subscribe/confirm",
+        permanent: false,
+      },
+      {
+        source: "/blogs/confirm",
+        destination: "/subscribe/confirm",
+        permanent: false,
+      },
     ];
   },
   async headers() {

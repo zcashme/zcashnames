@@ -58,7 +58,7 @@ export default function RequestPreferencesLinkClient() {
       </div>
       {state.message ? (
         <p
-          className="text-sm leading-6"
+          className="text-center text-sm leading-6"
           style={{ color: state.ok ? "var(--fg-body)" : "var(--accent-red, #e05252)" }}
         >
           {state.message}

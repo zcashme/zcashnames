@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { listDistinctSubscriberSeriesWithToken } from "@/lib/email/subscriber-series";
-import { listSubscriberPreferences } from "@/lib/email/subscribers";
+import { listPreferenceSeriesForEmail, listSubscriberPreferences } from "@/lib/email/subscribers";
 import { normalizeEmailSeries } from "@/lib/email/subscription-series";
 import { parseUnsubscribeToken } from "@/lib/email/unsubscribe-token";
 import PreferencesPageShell from "./PreferencesPageShell";
@@ -40,17 +39,11 @@ export default async function UnsubscribePage({
     );
   }
 
-  const seriesList = await listDistinctSubscriberSeriesWithToken(parsed.series);
+  const seriesList = await listPreferenceSeriesForEmail(parsed.email, parsed.series);
   const preferences = await listSubscriberPreferences(parsed.email, seriesList);
   const initialMap = Object.fromEntries(
     preferences.map((preference) => [preference.series, preference.isSubscribed]),
   ) as Record<string, boolean>;
-
-  if (parsed.mode === "all") {
-    for (const series of seriesList) initialMap[series] = false;
-  } else {
-    initialMap[parsed.series] = false;
-  }
 
   return (
     <PreferencesPageShell

@@ -1,48 +1,11 @@
-import Link from "next/link";
-import { confirmBlogSubscription } from "@/lib/blog-subscribers/subscribers";
-import { getBlogSubscriptionOption } from "@/lib/blog-series";
-import { buildUnsubscribeToken } from "@/lib/email/unsubscribe-token";
-import BlogRouteChrome from "@/components/blogs/BlogRouteChrome";
-import SiteRouteTitle from "@/components/SiteRouteTitle";
+import { redirect } from "next/navigation";
 
-export default async function BlogConfirmPage({
+export default async function BlogConfirmRedirectPage({
   searchParams,
 }: {
   searchParams: Promise<{ token?: string }>;
 }) {
-  const { token } = await searchParams;
-  const result = token ? await confirmBlogSubscription(token) : { status: "invalid" as const };
-  const series = result.status === "invalid" ? null : getBlogSubscriptionOption(result.series);
-  const preferencesHref =
-    result.status === "invalid"
-      ? "/unsubscribe"
-      : `/unsubscribe?token=${encodeURIComponent(
-          buildUnsubscribeToken({
-            email: result.email,
-            series: result.series,
-            mode: "series",
-          }),
-        )}`;
-
-  return (
-    <main className="blog-confirm-shell">
-      <BlogRouteChrome />
-      <SiteRouteTitle title="Blogs" href="/blogs" />
-      <div className="blog-confirm-card">
-        <h1 className="blog-shell-title">
-          {result.status === "success" && "Subscription confirmed"}
-          {result.status === "already" && "Already confirmed"}
-          {result.status === "invalid" && "Invalid link"}
-        </h1>
-        <p className="blog-shell-description">
-          {result.status === "success" && `You're now subscribed to ${series?.title}.`}
-          {result.status === "already" && `This email is already subscribed to ${series?.title}.`}
-          {result.status === "invalid" && "This confirmation link is invalid or expired."}
-        </p>
-        <Link href={preferencesHref} className="blog-subscribe-button blog-confirm-button">
-          Email preferences
-        </Link>
-      </div>
-    </main>
-  );
+  const params = await searchParams;
+  const token = params.token?.trim();
+  redirect(token ? `/subscribe/confirm?token=${encodeURIComponent(token)}` : "/subscribe/confirm");
 }

@@ -19,6 +19,7 @@ import WaitlistReservationResendEmail, {
 import type { WaitlistRowDeleteRequestRowStatus } from "@/lib/campaigns/waitlist-row-delete";
 import { FROM_EMAIL } from "@/lib/email/constants";
 import { sendEmail } from "@/lib/email/client";
+import { formatSubscriptionSeriesPhrase } from "@/lib/email/subscription-series";
 import { getCommissionPin } from "@/lib/leaders/commission-access";
 
 export async function sendWaitlistConfirmationEmail({
@@ -68,14 +69,20 @@ export async function sendSubscriberConfirmationEmail({
   confirmUrl,
 }: {
   email: string;
-  series: string;
+  series: string | string[];
   confirmUrl: string;
 }): Promise<void> {
+  const seriesList = Array.isArray(series) ? series : [series];
+  const seriesPhrase = formatSubscriptionSeriesPhrase(seriesList);
+  const subject =
+    seriesList.length === 1
+      ? `Confirm your ${seriesPhrase} subscription`
+      : "Confirm your email subscription";
   await sendEmail({
     from: FROM_EMAIL,
     to: email,
-    subject: `Confirm your ${series} subscription`,
-    react: SubscriberConfirmEmail({ email, series, confirmUrl }),
+    subject,
+    react: SubscriberConfirmEmail({ email, series: seriesPhrase, confirmUrl }),
   });
 }
 

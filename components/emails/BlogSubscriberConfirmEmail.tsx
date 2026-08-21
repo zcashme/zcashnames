@@ -15,7 +15,7 @@ export default function BlogSubscriberConfirmEmail({
       <Section style={content}>
         <Text style={paragraph}>You asked to subscribe to {seriesTitle}.</Text>
         <Text style={paragraph}>
-          Click below to confirm your email and receive updates when new posts in this series are published.
+          Click below to confirm your email and start receiving those updates.
         </Text>
       </Section>
 

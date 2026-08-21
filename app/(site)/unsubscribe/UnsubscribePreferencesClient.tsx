@@ -85,7 +85,6 @@ export default function UnsubscribePreferencesClient({
   const [state, formAction, pending] = useActionState(saveUnsubscribePreferencesAction, {
     ok: true,
     message: "",
-    confirmationRequested: [] as string[],
   });
   const [preferences, setPreferences] = useState<PreferenceMap>(initialPreferences);
 
@@ -124,7 +123,7 @@ export default function UnsubscribePreferencesClient({
 
       {state.message ? (
         <p
-          className="text-sm leading-6"
+          className="text-center text-sm leading-6"
           style={{ color: state.ok ? "var(--fg-body)" : "var(--accent-red, #e05252)" }}
         >
           {state.message}

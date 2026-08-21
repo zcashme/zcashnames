@@ -2,7 +2,7 @@ import "server-only";
 
 import { resolveSecret, safeEqual, signHmac } from "@/lib/hmac";
 
-export type UnsubscribeMode = "series" | "all";
+export type UnsubscribeMode = "series" | "all" | "manage";
 
 export interface UnsubscribeTokenPayload {
   email: string;
@@ -57,8 +57,24 @@ export function buildUnsubscribeToken(args: {
   return `${encodedPayload}.${signature}`;
 }
 
+function normalizeIncomingToken(token: string): string {
+  let value = token.trim().replace(/\s+/g, "");
+  if (value.includes("%")) {
+    try {
+      value = decodeURIComponent(value);
+    } catch {
+      // Keep the trimmed token if it was not URI-encoded.
+    }
+  }
+  return value;
+}
+
 export function parseUnsubscribeToken(token: string): UnsubscribeTokenPayload | null {
-  const [encodedPayload, signature] = token.split(".");
+  const normalized = normalizeIncomingToken(token);
+  const lastDot = normalized.lastIndexOf(".");
+  if (lastDot <= 0 || lastDot === normalized.length - 1) return null;
+  const encodedPayload = normalized.slice(0, lastDot);
+  const signature = normalized.slice(lastDot + 1);
   if (!encodedPayload || !signature) return null;
   const expected = signPayload(encodedPayload);
   if (!safeEqual(expected, signature)) return null;
@@ -72,7 +88,7 @@ export function parseUnsubscribeToken(token: string): UnsubscribeTokenPayload | 
       !parsed ||
       typeof parsed.email !== "string" ||
       typeof parsed.series !== "string" ||
-      (parsed.mode !== "series" && parsed.mode !== "all") ||
+      (parsed.mode !== "series" && parsed.mode !== "all" && parsed.mode !== "manage") ||
       typeof parsed.exp !== "number"
     ) {
       return null;
