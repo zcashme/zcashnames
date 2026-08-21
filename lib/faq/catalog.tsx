@@ -901,8 +901,8 @@ export const FAQ_SECTIONS: FaqSection[] = [
             <FaqA href="/beta/wallets">supported wallets</FaqA> and{" "}
             <FaqA href="/beta/instructions">instructions</FaqA>, then apply at{" "}
             <FaqA href="/beta/apply">/beta/apply</FaqA>. Applying with a specific wallet path (for
-            example <FaqA href="/beta/apply/edge">/beta/apply/edge</FaqA>) keeps feedback and rewards
-            attributed correctly.
+            example <FaqA href="/beta/apply/edge">/beta/apply/edge</FaqA>) keeps wallet preference and
+            feedback attributed correctly.
           </>
         ),
       },
@@ -951,8 +951,17 @@ export const FAQ_SECTIONS: FaqSection[] = [
       {
         id: "beta-bounties",
         question: "Are there bug bounties?",
-        answer:
-          "Testers who report confirmed, reproducible issues through the feedback panel may qualify. Current targets are 0.05 ZEC for minor confirmed bugs and 0.5 ZEC for critical confirmed bugs, typically to the first valid report.",
+        answer: (
+          <>
+            <s>
+              Testers who report confirmed, reproducible issues through the feedback panel may
+              qualify. Current targets are 0.05 ZEC for minor confirmed bugs and 0.5 ZEC for
+              critical confirmed bugs, typically to the first valid report.
+            </s>{" "}
+            <strong>Update:</strong> All beta rewards have been claimed. We are still accepting
+            feedback.
+          </>
+        ),
       },
     ],
   },

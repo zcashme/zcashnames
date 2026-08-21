@@ -15,7 +15,7 @@ export function defaultInviteBody({ displayName: _displayName }: { displayName: 
   return [
     "Your application was accepted! This is your invitation to join the latest Zcash Names beta.",
     "",
-    "Send bug reports through the feedback panel for your chance to earn ZEC. Start by using the sign-in link below.",
+    "Send bug reports through the feedback panel. All beta rewards have been claimed. We are still accepting feedback. Start by using the sign-in link below.",
   ].join("\n");
 }
 

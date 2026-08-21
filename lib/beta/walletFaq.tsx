@@ -338,7 +338,7 @@ const BASE_FAQ_TEMPLATE: readonly WalletFaqSectionTemplate[] = [
           <>
             <p>
               Apply through <a href={`/beta/apply/${context.brand.slug}`}>/beta/apply/{context.brand.slug}</a>{" "}
-              so your wallet preference, feedback, and any rewards can be attributed correctly.
+              so your wallet preference and feedback can be attributed correctly.
             </p>
             <p>
               Approved testers receive beta access details and setup instructions through their
@@ -454,12 +454,21 @@ const BASE_FAQ_TEMPLATE: readonly WalletFaqSectionTemplate[] = [
         answer: () => (
           <>
             <p>
-              Beta testers help shape the live wallet experience and may qualify for bug-bounty
-              rewards when they report confirmed, reproducible issues through the feedback panel.
+              Beta testers help shape the live wallet experience
+              <s>
+                {" "}and may qualify for bug-bounty rewards when they report confirmed, reproducible
+                issues through the feedback panel.
+              </s>
             </p>
             <p>
-              Current reward targets are 0.05 ZEC for minor confirmed bugs and 0.5 ZEC for
-              critical confirmed bugs, with rewards typically going to the first valid report.
+              <s>
+                Current reward targets are 0.05 ZEC for minor confirmed bugs and 0.5 ZEC for
+                critical confirmed bugs, with rewards typically going to the first valid report.
+              </s>
+            </p>
+            <p>
+              <strong>Update:</strong> All beta rewards have been claimed. We are still accepting
+              feedback.
             </p>
           </>
         ),
@@ -474,8 +483,8 @@ const EDGE_ENTRY_OVERRIDES: WalletFaqOverrideMap = {
     answer: () => (
       <>
         <p>
-          Apply through <a href="/beta/apply/edge">/beta/apply/edge</a> so your wallet preference,
-          feedback, and any rewards can be attributed correctly.
+          Apply through <a href="/beta/apply/edge">/beta/apply/edge</a> so your wallet preference
+          and feedback can be attributed correctly.
         </p>
         <p>
           Approved testers receive the beta access details and setup instructions through their

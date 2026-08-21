@@ -262,15 +262,20 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
       <section>
         <SectionTitle id="rewards" title="Rewards" />
         <p style={p}>
-          Rewards go to the first person to report a reproducible issue through the feedback panel.
-          Minor confirmed bugs receive 0.05 ZEC. Critical confirmed bugs receive 0.5 ZEC.
+          <s>
+            Rewards go to the first person to report a reproducible issue through the feedback panel.
+            Minor confirmed bugs receive 0.05 ZEC. Critical confirmed bugs receive 0.5 ZEC.
+          </s>
         </p>
         <p style={p}>
           The highest priority bugs are funds sent to the wrong place, names resolving to the wrong
           address, sale proceeds not arriving, old sale status still showing, and purchase conflicts.
         </p>
         <p style={p}>
-          Duplicate, incomplete, or unverifiable reports may not qualify.
+          <s>Duplicate, incomplete, or unverifiable reports may not qualify.</s>
+        </p>
+        <p style={p}>
+          <strong>Update:</strong> All beta rewards have been claimed. We are still accepting feedback.
         </p>
       </section>
 

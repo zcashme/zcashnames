@@ -316,16 +316,19 @@ export default function BetaInstructionsBrief() {
               <tr style={{ borderBottom: "1px solid var(--faq-border)" }}>
                 <td className="py-2 pr-3 font-semibold">High</td>
                 <td className="py-2 pr-3">Funds at risk, invalid claim accepted, replay attack, core flow broken</td>
-                <td className="py-2 font-semibold">0.5 ZEC</td>
+                <td className="py-2 font-semibold"><s>0.5 ZEC</s></td>
               </tr>
               <tr>
                 <td className="py-2 pr-3 font-semibold">Low</td>
                 <td className="py-2 pr-3">Edge case failure, OTP issue, wallet compat gap, wrong error, cosmetic</td>
-                <td className="py-2 font-semibold">0.05 ZEC</td>
+                <td className="py-2 font-semibold"><s>0.05 ZEC</s></td>
               </tr>
             </tbody>
           </table>
         </div>
+        <p style={{ ...p, marginTop: "0.85rem" }}>
+          <strong>Update:</strong> All beta rewards have been claimed. We are still accepting feedback.
+        </p>
       </section>
 
       <hr style={divider} />

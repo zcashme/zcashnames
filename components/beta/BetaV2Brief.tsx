@@ -130,12 +130,17 @@ export default function BetaV2Brief() {
           address, sale proceeds not arriving, old sale status still showing, and purchase conflicts.
         </p>
         <p style={p}>
-          Rewards go to the first person to report an issue we can reproduce and confirm through the
-          feedback panel. Minor confirmed bugs receive 0.05 ZEC. Critical confirmed bugs
-          receive 0.5 ZEC.
+          <s>
+            Rewards go to the first person to report an issue we can reproduce and confirm through the
+            feedback panel. Minor confirmed bugs receive 0.05 ZEC. Critical confirmed bugs
+            receive 0.5 ZEC.
+          </s>
         </p>
         <p style={p}>
-          Duplicate, incomplete, or unverifiable reports may not qualify.
+          <s>Duplicate, incomplete, or unverifiable reports may not qualify.</s>
+        </p>
+        <p style={p}>
+          <strong>Update:</strong> All beta rewards have been claimed. We are still accepting feedback.
         </p>
       </section>
 
