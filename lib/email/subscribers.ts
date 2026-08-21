@@ -152,8 +152,11 @@ export async function upsertSubscriber(args: {
       .update({
         email_verified: Boolean(existing.email_verified) || Boolean(args.emailVerified),
         source: args.source ?? existing.source,
-        confirmed_at: args.confirmedAt ?? existing.confirmed_at,
-        confirm_token_sent_at: args.confirmTokenSentAt ?? existing.confirm_token_sent_at,
+        confirmed_at: args.confirmedAt !== undefined ? args.confirmedAt : existing.confirmed_at,
+        confirm_token_sent_at:
+          args.confirmTokenSentAt !== undefined
+            ? args.confirmTokenSentAt
+            : existing.confirm_token_sent_at,
         unsubscribed_at:
           args.unsubscribedAt !== undefined ? args.unsubscribedAt : existing.unsubscribed_at,
         unsubscribe_reason:
@@ -185,30 +188,44 @@ export async function upsertSubscriber(args: {
 
 export async function requestSubscriberConfirmation(args: {
   email: string;
-  series: string;
+  series: string | string[];
   source?: string | null;
   baseUrl?: string;
-}): Promise<void> {
+}): Promise<string[]> {
   const normalizedEmail = normalizeEmail(args.email);
+  const seriesList = [
+    ...new Set(
+      (Array.isArray(args.series) ? args.series : [args.series])
+        .map((value) =>
+          value === "launch" ? "users" : value === "updates" ? "waitlist" : value.trim().toLowerCase(),
+        )
+        .filter((value) => value && value !== "waitlist"),
+    ),
+  ];
+  if (seriesList.length === 0) return [];
+
   const nowIso = new Date().toISOString();
-  await upsertSubscriber({
-    email: normalizedEmail,
-    series: args.series,
-    emailVerified: false,
-    source: args.source ?? "unsubscribe_preferences",
-    confirmTokenSentAt: nowIso,
-  });
+  for (const series of seriesList) {
+    await upsertSubscriber({
+      email: normalizedEmail,
+      series,
+      emailVerified: false,
+      source: args.source ?? "blog_subscribe",
+      confirmTokenSentAt: nowIso,
+    });
+  }
 
   const token = buildSubscriberConfirmToken({
     email: normalizedEmail,
-    series: args.series,
+    series: seriesList,
   });
-  const confirmUrl = `${(args.baseUrl ?? resolveSiteUrl()).replace(/\/$/, "")}/unsubscribe/confirm?token=${encodeURIComponent(token)}`;
+  const confirmUrl = `${(args.baseUrl ?? resolveSiteUrl()).replace(/\/$/, "")}/subscribe/confirm?token=${encodeURIComponent(token)}`;
   await sendSubscriberConfirmationEmail({
     email: normalizedEmail,
-    series: args.series,
+    series: seriesList,
     confirmUrl,
   });
+  return seriesList;
 }
 
 export async function confirmSubscriberSeries(args: {
@@ -297,9 +314,8 @@ export async function applySubscriberPreferences(args: {
   desiredSeries: Record<string, boolean>;
   seriesList: string[];
   source?: string | null;
-  baseUrl?: string;
-}): Promise<{ confirmationRequested: string[]; unsubscribed: string[]; restored: string[] }> {
-  const confirmationRequested: string[] = [];
+}): Promise<{ subscribed: string[]; unsubscribed: string[]; restored: string[] }> {
+  const subscribed: string[] = [];
   const unsubscribed: string[] = [];
   const restored: string[] = [];
   const normalizedEmail = normalizeEmail(args.email);
@@ -325,13 +341,12 @@ export async function applySubscriberPreferences(args: {
     if (desired) {
       const active = await getActiveSubscriber(normalizedEmail, series);
       if (active) continue;
-      await requestSubscriberConfirmation({
+      await confirmSubscriberSeries({
         email: normalizedEmail,
         series,
         source: args.source ?? "unsubscribe_preferences",
-        baseUrl: args.baseUrl,
       });
-      confirmationRequested.push(series);
+      subscribed.push(series);
       continue;
     }
 
@@ -339,5 +354,5 @@ export async function applySubscriberPreferences(args: {
     unsubscribed.push(series);
   }
 
-  return { confirmationRequested, unsubscribed, restored };
+  return { subscribed, unsubscribed, restored };
 }

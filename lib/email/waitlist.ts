@@ -36,14 +36,19 @@ export async function sendSubscriberConfirmationEmail({
   confirmUrl,
 }: {
   email: string;
-  series: string;
+  series: string | string[];
   confirmUrl: string;
 }): Promise<void> {
+  const seriesList = Array.isArray(series) ? series : [series];
+  const subject =
+    seriesList.length === 1
+      ? `Confirm your ${seriesList[0]} subscription`
+      : "Confirm your email subscription";
   await sendEmail({
     from: FROM_EMAIL,
     to: email,
-    subject: `Confirm your ${series} subscription`,
-    react: SubscriberConfirmEmail({ email, series, confirmUrl }),
+    subject,
+    react: SubscriberConfirmEmail({ email, series: seriesList, confirmUrl }),
   });
 }
 

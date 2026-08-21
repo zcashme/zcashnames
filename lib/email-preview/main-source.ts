@@ -559,19 +559,19 @@ export async function renderMainEmailPreview(
     return render(
       BlogSubscriberConfirmEmail({
         seriesTitle: "our newsletter",
-        confirmUrl: "https://zcashnames.com/blogs/confirm?token=sample-blog-confirm-token",
+        confirmUrl: "https://zcashnames.com/subscribe/confirm?token=sample-blog-confirm-token",
       }),
     );
   }
 
   const SubscriberConfirmEmail = loadMainDefault<
-    (props: { email: string; series: string; confirmUrl: string }) => ReactElement
+    (props: { email: string; series: string | string[]; confirmUrl: string }) => ReactElement
   >("components/emails/SubscriberConfirmEmail.tsx");
   return render(
     SubscriberConfirmEmail({
       email: "josh@example.com",
-      series: "general",
-      confirmUrl: "https://zcashnames.com/unsubscribe/confirm?token=sample-subscriber-confirm-token",
+      series: ["general", "users"],
+      confirmUrl: "https://zcashnames.com/subscribe/confirm?token=sample-subscriber-confirm-token",
     }),
   );
 }

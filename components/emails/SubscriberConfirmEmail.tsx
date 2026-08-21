@@ -2,35 +2,36 @@ import { Button, Section, Text } from "@react-email/components";
 import { createZcashNamesHeaderMark, EmailLayout } from "./EmailLayout";
 import { content, ctaButton, paragraph } from "@/lib/email/styles";
 
+function formatSeriesPhrase(series: string | string[]): string {
+  const list = (Array.isArray(series) ? series : [series])
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (list.length === 0) return "Zcash Names";
+  if (list.length === 1) return list[0]!;
+  if (list.length === 2) return `${list[0]} and ${list[1]}`;
+  return `${list.slice(0, -1).join(", ")}, and ${list[list.length - 1]}`;
+}
+
 export default function SubscriberConfirmEmail({
   email,
   series,
   confirmUrl,
 }: {
   email: string;
-  series: string;
+  series: string | string[];
   confirmUrl: string;
 }) {
+  const seriesPhrase = formatSeriesPhrase(series);
   return (
     <EmailLayout
-      preview={`Confirm your ${series} email subscription.`}
+      preview={`Confirm your ${seriesPhrase} email subscription.`}
       headingText="Confirm your subscription"
       headerMark={createZcashNamesHeaderMark()}
     >
       <Section style={content}>
         <Text style={paragraph}>Hi,</Text>
         <Text style={paragraph}>
-          {series === "users" ? (
-            <>
-              Click below to confirm that <strong>{email}</strong> should receive ZcashNames
-              user emails: launches, releases, and early access.
-            </>
-          ) : (
-            <>
-              Click below to confirm that <strong>{email}</strong> should receive ZcashNames{" "}
-              <strong>{series}</strong> emails.
-            </>
-          )}
+          Click below to confirm that <strong>{email}</strong> should receive {seriesPhrase} emails.
         </Text>
       </Section>
 

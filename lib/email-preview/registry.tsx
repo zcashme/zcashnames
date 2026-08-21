@@ -461,7 +461,7 @@ export function getEmailPreviewRegistry(): EmailPreviewRegistryEntry[] {
       key: "subscriber-confirm",
       group: "SUBSCRIBER EMAILS",
       title: "Email Preferences Confirm",
-      description: "Public email-preferences confirmation email from dotzcash_main.",
+      description: "Public subscription confirmation email from dotzcash_main. One link confirms every selected series.",
       sourceRepo: "main_production",
       kind: "react",
       resolveSubject: () => unresolvedMainPreviewSubject("Email Preferences Confirm"),
