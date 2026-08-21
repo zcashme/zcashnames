@@ -7,6 +7,11 @@ import {
   WAITLIST_VIEW_EARLY_ACCESS_LABEL,
   WAITLIST_VIEW_EARLY_ACCESS_START_AT,
 } from "@/lib/waitlist/early-access";
+import {
+  WAITLIST_VIEW_INDIRECT_REFERRALS_PER_SPOT,
+  WAITLIST_VIEW_REFERRALS_PER_SPOT,
+  waitlistReferralAdjustment,
+} from "@/lib/waitlist/referral-spots";
 import { syncWaitlistReservationFieldsFromReserves } from "@/lib/waitlist/reserves";
 
 export {
@@ -14,9 +19,11 @@ export {
   WAITLIST_VIEW_EARLY_ACCESS_LABEL,
   WAITLIST_VIEW_EARLY_ACCESS_START_AT,
 } from "@/lib/waitlist/early-access";
+export {
+  WAITLIST_VIEW_INDIRECT_REFERRALS_PER_SPOT,
+  WAITLIST_VIEW_REFERRALS_PER_SPOT,
+} from "@/lib/waitlist/referral-spots";
 export const WAITLIST_VIEW_ADMIN_WALLET_UIVK = NETWORKS.mainnet.uivk;
-export const WAITLIST_VIEW_REFERRALS_PER_SPOT = 3;
-export const WAITLIST_VIEW_INDIRECT_REFERRALS_PER_SPOT = 9;
 export const WAITLIST_VIEW_PAGE_SIZE = 10;
 const WAITLIST_VIEW_SOURCE_BATCH_SIZE = 1000;
 const WAITLIST_VIEW_SNAPSHOT_WRITE_BATCH_SIZE = 500;
@@ -113,6 +120,7 @@ export interface PublicWaitlistViewData {
   earlyAccessLabel: string;
   adminWalletUivk: string;
   referralsPerSpot: number;
+  indirectReferralsPerSpot: number;
 }
 
 type RankPeerSnapshotRow = Pick<
@@ -424,9 +432,7 @@ function buildSnapshotRows(args: {
     .map((row, index) => ({
       ...row,
       reservedBasePosition: index + 1,
-      reservedAdjustment:
-        Math.floor(row.direct_referrals / WAITLIST_VIEW_REFERRALS_PER_SPOT)
-        + Math.floor(row.indirect_referrals / WAITLIST_VIEW_INDIRECT_REFERRALS_PER_SPOT),
+      reservedAdjustment: waitlistReferralAdjustment(row.direct_referrals, row.indirect_referrals),
     }));
 
   const adjustedOrder = [...reservedEnriched].sort((a, b) => {
@@ -707,13 +713,9 @@ export async function getPublicWaitlistViewData(args?: {
   for (const peers of peersByName.values()) {
     const orderedPeers = [...peers].sort((a, b) => {
       const aAdjusted =
-        a.base_position
-        - Math.floor(a.direct_referrals / WAITLIST_VIEW_REFERRALS_PER_SPOT)
-        - Math.floor(a.indirect_referrals / WAITLIST_VIEW_INDIRECT_REFERRALS_PER_SPOT);
+        a.base_position - waitlistReferralAdjustment(a.direct_referrals, a.indirect_referrals);
       const bAdjusted =
-        b.base_position
-        - Math.floor(b.direct_referrals / WAITLIST_VIEW_REFERRALS_PER_SPOT)
-        - Math.floor(b.indirect_referrals / WAITLIST_VIEW_INDIRECT_REFERRALS_PER_SPOT);
+        b.base_position - waitlistReferralAdjustment(b.direct_referrals, b.indirect_referrals);
       if (aAdjusted !== bAdjusted) return aAdjusted - bAdjusted;
       if (a.base_position !== b.base_position) return a.base_position - b.base_position;
       return a.source_waitlist_id.localeCompare(b.source_waitlist_id);
@@ -726,9 +728,7 @@ export async function getPublicWaitlistViewData(args?: {
 
   const rows = snapshotRows.map((row) => {
     const adjustedLineNumber =
-      row.base_position
-      - Math.floor(row.direct_referrals / WAITLIST_VIEW_REFERRALS_PER_SPOT)
-      - Math.floor(row.indirect_referrals / WAITLIST_VIEW_INDIRECT_REFERRALS_PER_SPOT);
+      row.base_position - waitlistReferralAdjustment(row.direct_referrals, row.indirect_referrals);
 
     return {
       id: row.source_waitlist_id,
@@ -775,5 +775,6 @@ export async function getPublicWaitlistViewData(args?: {
     earlyAccessLabel: WAITLIST_VIEW_EARLY_ACCESS_LABEL,
     adminWalletUivk: WAITLIST_VIEW_ADMIN_WALLET_UIVK,
     referralsPerSpot: WAITLIST_VIEW_REFERRALS_PER_SPOT,
+    indirectReferralsPerSpot: WAITLIST_VIEW_INDIRECT_REFERRALS_PER_SPOT,
   };
 }

@@ -69,6 +69,7 @@ export default async function WaitlistViewPage({ searchParams }: WaitlistViewPag
         earlyAccessLabel={data.earlyAccessLabel}
         adminWalletUivk={data.adminWalletUivk}
         referralsPerSpot={data.referralsPerSpot}
+        indirectReferralsPerSpot={data.indirectReferralsPerSpot}
         openMatchingDetails={
           params.details === "1"
           || params.details === "true"

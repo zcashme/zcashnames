@@ -4,10 +4,8 @@ import {
   WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
   WAITLIST_VIEW_EARLY_ACCESS_LABEL,
 } from "@/lib/waitlist/early-access";
+import { reservedReferralSpotPhrase } from "@/lib/waitlist/referral-spots";
 import type { FaqSection } from "./types";
-
-const DIRECT_REFERRALS_PER_SPOT = 3;
-const INDIRECT_REFERRALS_PER_SPOT = 9;
 
 function FaqA({
   href,
@@ -219,11 +217,10 @@ export const FAQ_SECTIONS: FaqSection[] = [
         answer: (
           <>
             Sharing your referral link attributes people who join through it to you. Only referrals who
-            also complete a reservation improve your adjusted line: every {DIRECT_REFERRALS_PER_SPOT}{" "}
-            direct reserved referrals and every {INDIRECT_REFERRALS_PER_SPOT} indirect reserved
-            referrals move you up 1. Referral <em>rewards</em> are separate — they pay when the
-            referred person claims a name, up to 0.05 ZEC (1/5 of the lowest claim price at purchase
-            time). <FaqA href="/leaders/terms">View terms</FaqA>.
+            also complete a reservation improve your adjusted line: {reservedReferralSpotPhrase("direct")}{" "}
+            and {reservedReferralSpotPhrase("indirect")} move you up 1. Referral <em>rewards</em> are
+            separate — they pay when the referred person claims a name, up to 0.05 ZEC (1/5 of the
+            lowest claim price at purchase time). <FaqA href="/leaders/terms">View terms</FaqA>.
           </>
         ),
       },
@@ -499,10 +496,10 @@ export const FAQ_SECTIONS: FaqSection[] = [
         surfaces: ["waitlist-view"],
         answer: (
           <>
-            Only completed reservation referrals count. Your adjusted waitlist line improves by 1 for
-            every {DIRECT_REFERRALS_PER_SPOT} direct referrals who reserve and by 1 for every{" "}
-            {INDIRECT_REFERRALS_PER_SPOT} indirect referrals who reserve. Partial thresholds do not
-            count until the full threshold is reached. Sharing a link alone does not change Position.
+            Only completed reservation referrals count. Your adjusted waitlist line improves by 1 for{" "}
+            {reservedReferralSpotPhrase("direct")} and by 1 for {reservedReferralSpotPhrase("indirect")}.
+            Partial thresholds do not count until the full threshold is reached. Sharing a link alone
+            does not change Position.
           </>
         ),
       },

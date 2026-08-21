@@ -17,6 +17,7 @@ import HeroShareButton from "@/components/HeroShareButton";
 import { useAppRouter } from "@/components/hooks/useAppRouter";
 import WaitlistNameDetailsModal from "@/components/waitlist/WaitlistNameDetailsModal";
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
+import { reservedReferralSpotPhrase } from "@/lib/waitlist/referral-spots";
 import type {
   PublicWaitlistViewData,
   PublicWaitlistViewRow,
@@ -45,6 +46,7 @@ type WaitlistViewClientProps = {
   earlyAccessLabel: string;
   adminWalletUivk: string;
   referralsPerSpot: number;
+  indirectReferralsPerSpot: number;
   openMatchingDetails?: boolean;
 };
 
@@ -568,6 +570,7 @@ export default function WaitlistViewClient({
   earlyAccessLabel,
   adminWalletUivk,
   referralsPerSpot,
+  indirectReferralsPerSpot,
   openMatchingDetails = false,
 }: WaitlistViewClientProps) {
   const router = useAppRouter();
@@ -606,6 +609,7 @@ export default function WaitlistViewClient({
     earlyAccessLabel,
     adminWalletUivk,
     referralsPerSpot,
+    indirectReferralsPerSpot,
   });
   const tableShellRef = useRef<HTMLDivElement | null>(null);
   const effectiveSearchMode: WaitlistViewSearchMode = appliedSearch.trim() ? searchMode : "contains";
@@ -941,7 +945,10 @@ export default function WaitlistViewClient({
                 <tr>
                   {[
                     { label: "#", info: "The verified waitlist line number in join order." },
-                    { label: "Adj#", info: "Referral-adjusted waitlist line number. This is the original line number minus one spot for each 3 direct reserved referrals and minus one spot for each 9 indirect reserved referrals." },
+                    {
+                      label: "Adj#",
+                      info: `Referral-adjusted waitlist line number. This is the original line number minus one spot for ${reservedReferralSpotPhrase("direct", viewData.referralsPerSpot)} and minus one spot for ${reservedReferralSpotPhrase("indirect", viewData.indirectReferralsPerSpot)}.`,
+                    },
                     { label: "Name", info: "The waitlisted name and its referral code." },
                     { label: "Position", info: "Position among verified entries with the same name, ordered by referral-adjusted line number and then original line number as the tie-breaker." },
                     { label: "Status", info: "Protected names are held back, reserved names have paid, pending names are waiting on reservation, and available names have no current conflict or hold." },

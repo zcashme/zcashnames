@@ -8,11 +8,15 @@ import {
   WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
   WAITLIST_VIEW_EARLY_ACCESS_LABEL,
 } from "@/lib/waitlist/early-access";
+import {
+  RESERVED_DIRECT_REFERRAL_SPOT_PHRASE,
+  RESERVED_INDIRECT_REFERRAL_SPOT_PHRASE,
+} from "@/lib/waitlist/referral-spots";
 
 const BLOGS_CONTENT_ROOT = path.join(process.cwd(), "content", "blogs");
 
 /**
- * Tokens blog markdown can use so dates stay tied to shared schedule constants.
+ * Tokens blog markdown can use so dates and waitlist referral thresholds stay tied to shared constants.
  * Supports both:
  * - `{{EARLY_ACCESS_LABEL}}` (mustache-style; not valid alone under Nextra MDX)
  * - `{WAITLIST_VIEW_EARLY_ACCESS_LABEL}` (MDX expression after import — dual-rendered posts)
@@ -22,6 +26,8 @@ const BLOG_MARKDOWN_TOKENS: Record<string, string> = {
   EARLY_ACCESS_DATE_LABEL: WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
   WAITLIST_VIEW_EARLY_ACCESS_LABEL,
   WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
+  RESERVED_DIRECT_REFERRAL_SPOT_PHRASE,
+  RESERVED_INDIRECT_REFERRAL_SPOT_PHRASE,
 };
 
 function stripYamlFrontmatter(markdown: string): string {

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import HeroShareButton from "@/components/HeroShareButton";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import { WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL } from "@/lib/waitlist/early-access";
+import { reservedReferralSpotPhrase } from "@/lib/waitlist/referral-spots";
 
 export const metadata: Metadata = {
   title: "Leaderboard Terms | Zcash Names",
@@ -53,7 +54,7 @@ const terms: Array<{ title: string; body: ReactNode }> = [
   },
   {
     title: "Referrals",
-    body: "A referral qualifies for a reward only after the invited person joins through your link and claims their name. Position improves when referrals complete a reservation: every 3 direct reserved referrals improves your adjusted line by 1, and every 9 indirect reserved referrals improves it by 1. Partial counts do not apply until the full threshold is reached. Sharing a link alone does not change Position. The reward is distributed when referrals claim their name, regardless of whether they reserved.",
+    body: `A referral qualifies for a reward only after the invited person joins through your link and claims their name. Position improves when referrals complete a reservation: ${reservedReferralSpotPhrase("direct")} improves your adjusted line by 1, and ${reservedReferralSpotPhrase("indirect")} improve it by 1. Partial counts do not apply until the full threshold is reached. Sharing a link alone does not change Position. The reward is distributed when referrals claim their name, regardless of whether they reserved.`,
   },
   {
     title: "Reward Basis",

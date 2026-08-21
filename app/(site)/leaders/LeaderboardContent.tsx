@@ -24,6 +24,7 @@ import type {
   WeeklyRow,
 } from "@/lib/leaders/leaders";
 import CopyIconButton from "@/components/CopyIconButton";
+import { reservedReferralSpotPhrase } from "@/lib/waitlist/referral-spots";
 
 const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
 const PERIOD_COLUMN_STYLE = { width: "8.75rem", minWidth: "8.75rem" } as const;
@@ -1306,8 +1307,10 @@ const HOW_IT_WORKS: { title: string; body: ReactNode }[] = [
     body: (
       <>
         Early access is distributed on a <strong>first come, first served</strong> basis based on
-        when you joined the waitlist. However, referrals can move you up in line. For example,
-        every 3 referrals allows you to skip 1 spot, improving your position for earlier access.
+        when you joined the waitlist. Reserved referrals can move you up in line:{" "}
+        {reservedReferralSpotPhrase("direct")} moves you up 1 spot, and{" "}
+        {reservedReferralSpotPhrase("indirect")} move you up 1 spot. Partial counts do not apply
+        until the full threshold is reached.
       </>
     ),
   },

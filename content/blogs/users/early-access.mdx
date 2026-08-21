@@ -3,6 +3,10 @@ date: 2026-08-08
 ---
 
 import { WAITLIST_VIEW_EARLY_ACCESS_LABEL } from "@/lib/waitlist/early-access";
+import {
+  RESERVED_DIRECT_REFERRAL_SPOT_PHRASE,
+  RESERVED_INDIRECT_REFERRAL_SPOT_PHRASE,
+} from "@/lib/waitlist/referral-spots";
 
 # Early Access
 
@@ -44,8 +48,8 @@ Queue position is name-specific and can change before Early Access starts.
 
 Only completed reservation referrals count:
 
-- Every **3** direct referrals who reserve improves your adjusted line by 1
-- Every **9** indirect referrals who reserve improves your adjusted line by 1
+- **{RESERVED_DIRECT_REFERRAL_SPOT_PHRASE}** improves your adjusted line by 1
+- **{RESERVED_INDIRECT_REFERRAL_SPOT_PHRASE}** improve your adjusted line by 1
 - Partial thresholds do not apply until the full threshold is reached
 
 When adjusted values tie, the earlier original waitlist line wins.
