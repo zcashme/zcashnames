@@ -4,61 +4,11 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {
-  WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
-  WAITLIST_VIEW_EARLY_ACCESS_LABEL,
-} from "@/lib/waitlist/early-access";
-import {
-  RESERVED_DIRECT_REFERRAL_SPOT_PHRASE,
-  RESERVED_INDIRECT_REFERRAL_SPOT_PHRASE,
-} from "@/lib/waitlist/referral-spots";
+import { prepareBlogMarkdown } from "@/lib/prepare-blog-markdown";
+
+export { prepareBlogMarkdown };
 
 const BLOGS_CONTENT_ROOT = path.join(process.cwd(), "content", "blogs");
-
-/**
- * Tokens blog markdown can use so dates and waitlist referral thresholds stay tied to shared constants.
- * Supports both:
- * - `{{EARLY_ACCESS_LABEL}}` (mustache-style; not valid alone under Nextra MDX)
- * - `{WAITLIST_VIEW_EARLY_ACCESS_LABEL}` (MDX expression after import — dual-rendered posts)
- */
-const BLOG_MARKDOWN_TOKENS: Record<string, string> = {
-  EARLY_ACCESS_LABEL: WAITLIST_VIEW_EARLY_ACCESS_LABEL,
-  EARLY_ACCESS_DATE_LABEL: WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
-  WAITLIST_VIEW_EARLY_ACCESS_LABEL,
-  WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
-  RESERVED_DIRECT_REFERRAL_SPOT_PHRASE,
-  RESERVED_INDIRECT_REFERRAL_SPOT_PHRASE,
-};
-
-function stripYamlFrontmatter(markdown: string): string {
-  // Drop leading `--- ... ---` so publication metadata never renders as body content.
-  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
-}
-
-function expandBlogMarkdownTokens(markdown: string): string {
-  const withoutFrontmatter = stripYamlFrontmatter(markdown);
-
-  // Drop MDX import lines — site blogs are rendered as plain Markdown, not MDX.
-  const withoutImports = withoutFrontmatter.replace(/^import\s+.+;?\s*$/gm, "");
-
-  // `{{TOKEN}}` mustache form
-  const withMustache = withoutImports.replace(
-    /\{\{\s*([A-Z0-9_]+)\s*\}\}/g,
-    (match, key: string) =>
-      Object.prototype.hasOwnProperty.call(BLOG_MARKDOWN_TOKENS, key)
-        ? BLOG_MARKDOWN_TOKENS[key]
-        : match,
-  );
-
-  // `{CONST}` form used when the same file is dual-rendered via Nextra MDX
-  return withMustache.replace(
-    /\{([A-Z][A-Z0-9_]*)\}/g,
-    (match, key: string) =>
-      Object.prototype.hasOwnProperty.call(BLOG_MARKDOWN_TOKENS, key)
-        ? BLOG_MARKDOWN_TOKENS[key]
-        : match,
-  );
-}
 
 export type BlogHeading = {
   id: string;
@@ -142,7 +92,7 @@ export async function loadBlogMarkdown(parts: string[], fallbackTitle: string): 
   description?: string;
   toc: BlogHeading[];
 }> {
-  const markdown = expandBlogMarkdownTokens(await readBlogFile(parts));
+  const markdown = prepareBlogMarkdown(await readBlogFile(parts));
   return {
     markdown,
     title: titleFromMarkdown(markdown, fallbackTitle),

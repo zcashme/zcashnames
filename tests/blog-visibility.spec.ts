@@ -6,6 +6,7 @@ import {
   isBlogPostDateVisible,
   isValidIsoDateString,
 } from "../lib/blog-visibility";
+import { prepareBlogMarkdown } from "../lib/prepare-blog-markdown";
 
 const FIXED_NOW_MS = Date.parse("2026-08-13T12:00:00.000Z");
 const BLOGS_CONTENT_ROOT = path.join(process.cwd(), "content", "blogs");
@@ -110,4 +111,21 @@ test("current blog content resolves to the expected visible August set", async (
       "how-name-actions-work",
     ]),
   );
+});
+
+test("early-access markdown does not leak MDX import remnants", async () => {
+  const markdown = await fs.readFile(
+    path.join(BLOGS_CONTENT_ROOT, "users", "early-access.mdx"),
+    "utf8",
+  );
+  const prepared = prepareBlogMarkdown(markdown);
+
+  expect(prepared).not.toMatch(/from\s+["']@\/lib\/waitlist/);
+  expect(prepared).not.toContain("RESERVED_DIRECT_REFERRAL_SPOT_PHRASE");
+  expect(prepared).not.toContain("RESERVED_INDIRECT_REFERRAL_SPOT_PHRASE");
+  expect(prepared).not.toContain("WAITLIST_VIEW_EARLY_ACCESS_LABEL");
+  expect(prepared).toContain("September 15, 2026 at 12:00 PM Eastern");
+  expect(prepared).toContain("each direct reserved referral");
+  expect(prepared).toContain("every 3 indirect reserved referrals");
+  expect(prepared.trimStart().startsWith("# Early Access")).toBe(true);
 });

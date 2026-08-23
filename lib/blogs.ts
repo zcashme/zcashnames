@@ -10,6 +10,7 @@ import {
   isValidIsoDateString,
   type BlogVisibilityFilter,
 } from "@/lib/blog-visibility";
+import { prepareBlogMarkdown } from "@/lib/prepare-blog-markdown";
 import {
   type BlogSeriesSlug,
   BLOG_SERIES,
@@ -224,7 +225,7 @@ async function readSeriesPosts(
             href: `/blogs/${series}/${slug}`,
             series,
             seriesLabel: seriesMeta.label,
-            excerpt: firstParagraph(markdown),
+            excerpt: firstParagraph(prepareBlogMarkdown(markdown)),
             frontmatterDate,
             modifiedAt,
             publishedLabel:
