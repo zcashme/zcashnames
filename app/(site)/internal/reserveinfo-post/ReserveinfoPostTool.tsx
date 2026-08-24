@@ -7,14 +7,14 @@ import { dryRunReserveinfoPostAction, runReserveinfoPostAction, saveReserveinfoP
 
 function PreviewCard({ post }: { post: ReserveinfoPlannedPost }) {
   const columns = Array.from({ length: 3 }, (_, column) => Array.from({ length: 10 }, (_, row) => post.names[column * 10 + row] ?? null));
-  return <div className="relative aspect-square overflow-hidden rounded-xl border border-border-muted bg-[#f6f2e8] text-[#111111]" style={{ fontFamily: "Consolas, monospace", backgroundImage: "url(/api/reserveinfo-post/background)", backgroundSize: "cover" }}>
-    <div className="absolute left-[19.8%] top-[5.7%] text-[clamp(8px,1.85vw,20px)] font-bold tracking-[0.12em]">Last Week's Reservations</div>
-    <div className="absolute left-[19.8%] top-[8%] text-[clamp(18px,4vw,43px)] font-bold tracking-[-0.06em]">Reserved Names</div>
-    <div className="absolute left-[10.4%] top-[23%] grid w-[79.3%] grid-cols-3 gap-3 text-[clamp(9px,2.2vw,24px)] font-bold leading-[2.16]">
+  return <div className="relative aspect-square overflow-hidden rounded-xl border border-border-muted bg-[#f6f2e8] text-[#111111]" style={{ fontFamily: "Consolas, monospace", backgroundImage: "url(/api/reserveinfo-post/background)", backgroundSize: "cover", containerType: "inline-size" }}>
+    <div className="absolute left-[19.8%] top-[5.7%] text-[1.852cqw] font-bold tracking-[0.12em]">Last Week's Reservations</div>
+    <div className="absolute left-[19.8%] top-[8%] text-[3.981cqw] font-bold tracking-[-0.06em]">Reserved Names</div>
+    <div className="absolute left-[10.4%] top-[23%] grid w-[79.3%] grid-cols-3 gap-3 text-[2.222cqw] font-bold leading-[4.815cqw]">
       {columns.map((column, columnIndex) => <div key={columnIndex} className="overflow-hidden whitespace-nowrap text-center">{column.map((entry, rowIndex) => <div key={entry ? `${entry.name}-${entry.reservedAt}` : `empty-${columnIndex}-${rowIndex}`}>{entry?.name ?? "..."}</div>)}</div>)}
     </div>
-    <div className="absolute left-[10.4%] top-[81%] w-[79.3%] text-center text-[clamp(9px,2vw,22px)] font-bold">Showing {post.shownStart}-{post.shownEnd} of {post.totalNames}</div>
-    <div className="absolute right-[9.4%] top-[91.6%] whitespace-nowrap text-right text-[clamp(8px,1.85vw,20px)] font-extrabold tracking-[0.02em]">{post.weekLabel}</div>
+    <div className="absolute left-[10.4%] top-[81%] w-[79.3%] text-center text-[2.037cqw] font-bold">Showing {post.shownStart}-{post.shownEnd} of {post.totalNames}</div>
+    <div className="absolute right-[9.4%] top-[91.6%] whitespace-nowrap text-right text-[1.852cqw] font-extrabold tracking-[0.02em]">{post.weekLabel}</div>
   </div>;
 }
 
