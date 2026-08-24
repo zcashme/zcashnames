@@ -7,6 +7,7 @@ export type CampaignSourceKind = (typeof CAMPAIGN_SOURCE_KINDS)[number];
 
 export const CAMPAIGN_AUDIENCE_SCOPES = [
   "verified_only",
+  "verified_unreserved",
   "all_rows",
   "verified_newsletter",
   "selected_emails",

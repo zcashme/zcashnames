@@ -108,6 +108,41 @@ from (
 ) t;
 ```
 
+## Scenario 3b: Waitlist Verified Unreserved
+
+Requires `sql/2026-08-24-campaign-audience-verified-unreserved.sql` applied in Supabase.
+
+1. Set:
+   - source kind: `zn_waitlist`
+   - audience scope: `verified_unreserved`
+   - dedupe mode: `one_per_email`
+2. Click `Refresh recipients`
+3. Record count as `count_verified_unreserved`
+4. Set audience scope to `verified_only`
+5. Click `Refresh recipients`
+6. Record count as `count_verified_only`
+
+Expected:
+- `count_verified_only >= count_verified_unreserved`
+- both actions succeed
+- sample updates each time
+
+DB validation for `verified_unreserved` with `one_per_email`:
+
+```sql
+select count(*) as verified_unreserved_unique_emails
+from (
+  select lower(trim(email)) as normalized_email
+  from public.zn_waitlist
+  where coalesce(trim(email), '') <> ''
+    and email_verified is true
+    and name_reserved is not true
+  group by lower(trim(email))
+) t;
+```
+
+This count is an upper bound versus the campaign estimate: suppressions and waitlist unsubscribes are excluded at estimate time.
+
 ## Scenario 4: Waitlist Selected Emails Happy Path
 
 1. Set audience scope to `selected_emails`

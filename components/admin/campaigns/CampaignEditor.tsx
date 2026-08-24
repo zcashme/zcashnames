@@ -464,7 +464,9 @@ export default function CampaignEditor(props: CampaignEditorProps) {
     sourceKind === "zn_waitlist"
       ? audienceScope === "selected_emails"
         ? "Send only to the entered waitlist emails. Waitlist personalization and tokens still apply. Updates unsubscribes are excluded."
-        : "Start from waitlist rows. Audience and dedupe apply exactly as selected. Updates unsubscribes are excluded."
+        : audienceScope === "verified_unreserved"
+          ? "Send to verified waitlist rows that have not reserved a name. Mixed inboxes still receive mail for remaining unreserved names. Waitlist unsubscribes are excluded."
+          : "Start from waitlist rows. Audience and dedupe apply exactly as selected. Updates unsubscribes are excluded."
       : sourceKind === "email_subscribers"
         ? "Send to all active subscribers in the selected series."
         : hasSeriesSelection
@@ -931,6 +933,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                   className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-amber-500"
                 >
                   <option value="verified_only">verified_only</option>
+                  <option value="verified_unreserved">verified_unreserved</option>
                   <option value="all_rows">all_rows</option>
                   <option value="verified_newsletter">verified_newsletter</option>
                   <option value="selected_emails">selected_emails</option>
