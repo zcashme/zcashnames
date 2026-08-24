@@ -37,7 +37,7 @@ export function isReferinfoPostTemplateVariant(value: string | null | undefined)
 }
 
 export function normalizeReferinfoPostTemplateVariant(value: string | null | undefined): ReferinfoPostTemplateVariant {
-  return isReferinfoPostTemplateVariant(value) ? value : "light";
+  return isReferinfoPostTemplateVariant(value) ? value : "original";
 }
 
 export function getReferinfoPostTemplateTheme(variant: ReferinfoPostTemplateVariant): ReferinfoPostTemplateTheme {

@@ -955,7 +955,7 @@ export default function ReferinfoPostTool(props: {
               );
             })}
           </div>
-          <span className="text-xs font-medium text-fg-muted">Light is the active renderer default. This control only changes the preview; selecting Original does not change posts.</span>
+          <span className="text-xs font-medium text-fg-muted">Original is the active renderer default. This control only changes the preview; selecting Light does not change posts.</span>
         </div>
 
         <div className="flex flex-wrap gap-3">

@@ -118,15 +118,15 @@ If any placeholder is unresolved, the run fails fast.
 
 ### Template Preview And Approval
 
-The light black/ivory template is the default for deterministic and OpenAI blockinfo posts. Open `/internal/blockinfo-post`, then use **Preview template** to compare it with the original lime/dark composition using the same current `zebra_stats` data. **Download PNG** exports the selected preview without sending a post.
+The original lime/dark template is the default for deterministic and OpenAI blockinfo posts. Open `/internal/blockinfo-post`, then use **Preview template** to compare it with the light black/ivory composition using the same current `zebra_stats` data. **Download PNG** exports the selected preview without sending a post.
 
-The selector is preview-only. Use the original template only as a rollback by explicitly setting:
+The selector is preview-only. Use the light template only as an opt-in override by explicitly setting:
 
 ```text
-BLOCKINFO_POST_DETERMINISTIC_TEMPLATE_VARIANT=original
+BLOCKINFO_POST_DETERMINISTIC_TEMPLATE_VARIANT=light
 ```
 
-Keep `BLOCKINFO_POST_DETERMINISTIC_BACKGROUND_PATH` unset so all render modes use the light default.
+Keep `BLOCKINFO_POST_DETERMINISTIC_BACKGROUND_PATH` unset so all render modes use the original default.
 
 The deterministic renderer:
 

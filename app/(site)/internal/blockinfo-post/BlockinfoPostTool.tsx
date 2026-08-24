@@ -1153,7 +1153,7 @@ export default function BlockinfoPostTool(props: {
                 );
               })}
             </div>
-            <span className="text-xs font-medium text-fg-muted">Light is the active renderer default. This control only changes the preview; selecting Original does not change posts.</span>
+            <span className="text-xs font-medium text-fg-muted">Original is the active renderer default. This control only changes the preview; selecting Light does not change posts.</span>
           </div>
 
           <DeterministicPreview layout={layout} captionPolicy={captionPolicy} snapshot={snapshot} backgroundUrl={backgroundPreviewUrl} templateVariant={templateVariant} />

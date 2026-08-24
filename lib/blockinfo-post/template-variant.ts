@@ -34,7 +34,7 @@ export function isBlockinfoPostTemplateVariant(value: string | null | undefined)
 }
 
 export function normalizeBlockinfoPostTemplateVariant(value: string | null | undefined): BlockinfoPostTemplateVariant {
-  return isBlockinfoPostTemplateVariant(value) ? value : "light";
+  return isBlockinfoPostTemplateVariant(value) ? value : "original";
 }
 
 export function getBlockinfoPostTemplateTheme(variant: BlockinfoPostTemplateVariant): BlockinfoPostTemplateTheme {
