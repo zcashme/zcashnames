@@ -11,6 +11,10 @@
     {
       "path": "/api/referinfo-post",
       "schedule": "30 * * * *"
+    },
+    {
+      "path": "/api/reserveinfo-post",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

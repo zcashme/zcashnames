@@ -39,6 +39,8 @@ playwright-report/
 .playwright-mcp/
 tests/
 scripts/
+!scripts/
+!scripts/reserveinfo-post.test.mjs
 
 # debug logs
 npm-debug.log*
@@ -60,6 +62,7 @@ backup-latest-commit.patch
 beta-testers.json
 sql/*
 !sql/2026-07-01-referinfo-post-schedule.sql
+!sql/2026-08-24-reserveinfo-post-schedule.sql
 
 
 # temporary internal preview QA page

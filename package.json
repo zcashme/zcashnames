@@ -9,6 +9,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:blockinfo-caption-policy": "node --experimental-strip-types --test scripts/blockinfo-caption-policy.test.mjs",
+    "test:reserveinfo-post": "node --experimental-strip-types --test scripts/reserveinfo-post.test.mjs",
     "blockinfo-post:dry-run": "powershell -ExecutionPolicy Bypass -File scripts/run-blockinfo-post.ps1 -DryRun -Destination telegram",
     "blockinfo-post:run": "powershell -ExecutionPolicy Bypass -File scripts/run-blockinfo-post.ps1 -Destination telegram"
   },

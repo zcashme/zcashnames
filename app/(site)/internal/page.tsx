@@ -46,6 +46,11 @@ const tools = [
     label: "Referinfo Post",
     description: "Generate the weekly referral-intelligence thread, preview each card, and post the queue to Telegram, X, or both.",
   },
+  {
+    href: "/internal/reserveinfo-post",
+    label: "Reserveinfo Post",
+    description: "Preview the weekly reserved-names queue and publish its persistent Telegram and X pages.",
+  },
 ] as const;
 
 export default function InternalToolsIndexPage() {
