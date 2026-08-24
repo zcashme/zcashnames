@@ -1185,6 +1185,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">__underline__</code>,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300"># Heading</code>,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">## center: Heading</code>,{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">center: paragraph</code>,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">![alt](https://...)</code>,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">[![alt](https://...)](https://...)</code>,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">[text](https://...)</code>,{" "}
@@ -1214,10 +1215,13 @@ export default function CampaignEditor(props: CampaignEditorProps) {
               {" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::codebox left</code>.{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">:::box center</code>{" "}
-              centers contents horizontally and vertically in the callout. Headers support{" "}
+              centers contents horizontally and vertically in the callout. Headers and paragraphs support{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">left:</code>,{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">center:</code>, and{" "}
-              <code className="rounded bg-zinc-800 px-1 text-zinc-300">justify:</code>. Links accept{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">justify:</code>
+              {" "}
+              on their own line, for example{" "}
+              <code className="rounded bg-zinc-800 px-1 text-zinc-300">center: footer text</code>. Links accept{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">https://</code> and{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">mailto:</code>. Put{" "}
               <code className="rounded bg-zinc-800 px-1 text-zinc-300">---</code>{" "}

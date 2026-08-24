@@ -363,6 +363,15 @@ function parseEmailContentInternal(
       continue;
     }
 
+    const paragraphAlignMatch = trimmed.match(/^(left|center|justify)\s*:\s*(.+)$/i);
+    if (paragraphAlignMatch) {
+      flushParagraph();
+      const align = paragraphAlignMatch[1].toLowerCase() as EmailBlockAlignment;
+      const text = paragraphAlignMatch[2]?.trim() ?? "";
+      if (text) blocks.push({ type: "paragraph", text, align });
+      continue;
+    }
+
     const linkedImageMatch = trimmed.match(
       /^\[!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)\]\((https?:\/\/[^\s)]+)\)$/i,
     );
