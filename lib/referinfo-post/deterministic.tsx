@@ -13,6 +13,12 @@ import {
   visibleReferinfoColumns,
   wrapTextToBlock,
 } from "@/lib/referinfo-post/layout";
+import {
+  applyReferinfoPostTemplateTheme,
+  getReferinfoPostTemplateTheme,
+  normalizeReferinfoPostTemplateVariant,
+  type ReferinfoPostTemplateVariant,
+} from "@/lib/referinfo-post/template-variant";
 import type {
   ReferinfoCaptionPolicy,
   ReferinfoDeterministicLayout,
@@ -23,7 +29,7 @@ import type {
   ReferinfoReportWindow,
 } from "@/lib/referinfo-post/types";
 
-const DEFAULT_BACKGROUND_PATH = path.resolve("templates/referinfo-post/template-image.png");
+const DEFAULT_TEMPLATE_DIRECTORY = "templates/referinfo-post";
 const DEFAULT_TOP10_LAYOUT_PATH = path.resolve("templates/referinfo-post/layout.top10.json");
 const DEFAULT_TOP5_LAYOUT_PATH = path.resolve("templates/referinfo-post/layout.top5.json");
 const DEFAULT_TOP_INDIRECT_LAYOUT_PATH = path.resolve("templates/referinfo-post/layout.top-indirect.json");
@@ -32,9 +38,7 @@ const DEFAULT_CAPTION_POLICY_PATH = path.resolve("templates/referinfo-post/capti
 const DEFAULT_DETERMINISTIC_FONT_REGULAR_PATH = path.resolve("public/fonts/consola.ttf");
 const DEFAULT_DETERMINISTIC_FONT_BOLD_PATH = path.resolve("public/fonts/consolab.ttf");
 const DETERMINISTIC_FONT_FAMILY = '"DeterministicMono", monospace';
-const DETERMINISTIC_GRID_VERTICAL_COLOR = "rgba(223, 255, 114, 0.28)";
 const DETERMINISTIC_GRID_VERTICAL_THICKNESS = 1;
-const DETERMINISTIC_GRID_HORIZONTAL_COLOR = "rgba(223, 255, 114, 0.28)";
 const DETERMINISTIC_GRID_HORIZONTAL_THICKNESS = 2;
 
 type DeterministicFontOption = {
@@ -181,9 +185,12 @@ function validateLayout(layout: ReferinfoDeterministicLayout): ReferinfoDetermin
   return layout;
 }
 
-export function getReferinfoDeterministicAssetConfig() {
+export function getReferinfoDeterministicAssetConfig(previewVariant?: ReferinfoPostTemplateVariant) {
+  const templateVariant = previewVariant ?? normalizeReferinfoPostTemplateVariant(process.env.REFERINFO_POST_DETERMINISTIC_TEMPLATE_VARIANT);
+  const defaultBackgroundPath = path.resolve(DEFAULT_TEMPLATE_DIRECTORY, getReferinfoPostTemplateTheme(templateVariant).backgroundFile);
   return {
-    backgroundPath: path.resolve(process.env.REFERINFO_POST_DETERMINISTIC_BACKGROUND_PATH?.trim() || DEFAULT_BACKGROUND_PATH),
+    templateVariant,
+    backgroundPath: path.resolve(previewVariant ? defaultBackgroundPath : process.env.REFERINFO_POST_DETERMINISTIC_BACKGROUND_PATH?.trim() || defaultBackgroundPath),
     top10LayoutPath: path.resolve(process.env.REFERINFO_POST_DETERMINISTIC_TOP10_LAYOUT_PATH?.trim() || DEFAULT_TOP10_LAYOUT_PATH),
     top5LayoutPath: path.resolve(process.env.REFERINFO_POST_DETERMINISTIC_TOP5_LAYOUT_PATH?.trim() || DEFAULT_TOP5_LAYOUT_PATH),
     topIndirectLayoutPath: path.resolve(process.env.REFERINFO_POST_DETERMINISTIC_TOP_INDIRECT_LAYOUT_PATH?.trim() || DEFAULT_TOP_INDIRECT_LAYOUT_PATH),
@@ -326,7 +333,7 @@ function formatHeaderTitle(post: ReferinfoPlannedPost): string {
   return post.subtitle;
 }
 
-function renderHeaderTitle(block: ReferinfoDeterministicTextBlock, text: string) {
+function renderHeaderTitle(block: ReferinfoDeterministicTextBlock, text: string, titleGradient: readonly [string, string, string]) {
   if (!block.visible) return null;
   return (
     <div
@@ -343,7 +350,7 @@ function renderHeaderTitle(block: ReferinfoDeterministicTextBlock, text: string)
         fontWeight: block.fontWeight,
         lineHeight: block.lineHeight,
         letterSpacing: `${block.letterSpacing}px`,
-        background: "linear-gradient(180deg, #f3ff8f 0%, #dfff72 42%, #94d11a 100%)",
+        background: `linear-gradient(180deg, ${titleGradient[0]} 0%, ${titleGradient[1]} 42%, ${titleGradient[2]} 100%)`,
         color: "transparent",
         backgroundClip: "text",
         WebkitBackgroundClip: "text",
@@ -358,27 +365,30 @@ function renderHeaderTitle(block: ReferinfoDeterministicTextBlock, text: string)
 
 export async function renderReferinfoDeterministicImage(args: {
   backgroundPath: string;
+  templateVariant: ReferinfoPostTemplateVariant;
   layout: ReferinfoDeterministicLayout;
   post: ReferinfoPlannedPost;
   reportWindow: ReferinfoReportWindow;
 }): Promise<Buffer> {
   const backgroundDataUrl = await readBackgroundAsDataUrl(args.backgroundPath);
   const fonts = await loadDeterministicFonts();
-  const columns = visibleReferinfoColumns(args.layout, args.post);
-  const tableLeft = columns[0]?.block.x ?? args.layout.table.columns[0]?.x ?? 80;
+  const theme = getReferinfoPostTemplateTheme(args.templateVariant);
+  const layout = applyReferinfoPostTemplateTheme(args.layout, args.templateVariant);
+  const columns = visibleReferinfoColumns(layout, args.post);
+  const tableLeft = columns[0]?.block.x ?? layout.table.columns[0]?.x ?? 80;
   const columnTableRight = columns[columns.length - 1]
     ? columns[columns.length - 1]!.block.x + columns[columns.length - 1]!.block.maxWidth
     : tableLeft + 800;
-  const tableRight = Math.max(columnTableRight, args.layout.width - 92);
+  const tableRight = Math.max(columnTableRight, layout.width - 92);
   const dividerXs = columns.slice(0, -1).map((entry, index) => referinfoDividerX(entry.block, columns[index + 1]!.block));
   const referralGroup = referinfoReferralColumnGroup(columns) ?? referinfoIndirectReferralColumnGroup(columns);
   const rewardGroup = referinfoRewardColumnGroup(columns);
-  const computedRows = computeReferinfoRows({ layout: args.layout, post: args.post, columns });
-  const headerDividerY = args.layout.table.startY - 24;
+  const computedRows = computeReferinfoRows({ layout, post: args.post, columns });
+  const headerDividerY = layout.table.startY - 24;
   const rowLineYs = computedRows.map((row) => row.lineY);
-  const tableBottomY = rowLineYs[rowLineYs.length - 1] ?? args.layout.table.startY;
-  const noteY = args.layout.table.note.y;
-  const groupedHeaderY = args.layout.table.headerY + 10;
+  const tableBottomY = rowLineYs[rowLineYs.length - 1] ?? layout.table.startY;
+  const noteY = layout.table.note.y;
+  const groupedHeaderY = layout.table.headerY + 10;
 
   function isGroupedColumn(entry: (typeof columns)[number]) {
     const x = entry.block.x;
@@ -396,7 +406,7 @@ export async function renderReferinfoDeterministicImage(args: {
           position: "relative",
           display: "flex",
           overflow: "hidden",
-          background: "#08130d",
+          background: theme.canvasColor,
           fontFamily: DETERMINISTIC_FONT_FAMILY,
           color: "#ffffff",
         }}
@@ -405,8 +415,8 @@ export async function renderReferinfoDeterministicImage(args: {
         <img
           src={backgroundDataUrl}
           alt=""
-          width={args.layout.width}
-          height={args.layout.height}
+          width={layout.width}
+          height={layout.height}
           style={{
             position: "absolute",
             inset: 0,
@@ -416,19 +426,19 @@ export async function renderReferinfoDeterministicImage(args: {
           }}
         />
 
-        {renderTextBlock(args.layout.header.eyebrow, args.post.title, "eyebrow")}
-        {renderHeaderTitle(args.layout.header.title, formatHeaderTitle(args.post))}
-        {renderTextBlock(args.layout.header.subtitle, "", "subtitle")}
+        {renderTextBlock(layout.header.eyebrow, args.post.title, "eyebrow")}
+        {renderHeaderTitle(layout.header.title, formatHeaderTitle(args.post), theme.titleGradient)}
+        {renderTextBlock(layout.header.subtitle, "", "subtitle")}
 
         {columns.map((entry) =>
           renderTextBlock(
             {
               ...entry.block,
-              y: isGroupedColumn(entry) ? groupedHeaderY : args.layout.table.headerY,
+              y: isGroupedColumn(entry) ? groupedHeaderY : layout.table.headerY,
               fontWeight: 800,
-              fontSize: args.layout.table.headerFontSize,
+              fontSize: layout.table.headerFontSize,
             },
-            wrapTextToBlock(entry.label, { ...entry.block, fontSize: args.layout.table.headerFontSize }).join("\n"),
+            wrapTextToBlock(entry.label, { ...entry.block, fontSize: layout.table.headerFontSize }).join("\n"),
             `header-${entry.key}`,
           ),
         )}
@@ -438,7 +448,7 @@ export async function renderReferinfoDeterministicImage(args: {
               {
                 ...referralGroup.start.block,
                 x: referralGroup.start.block.x,
-                y: args.layout.table.headerY - 26,
+                y: layout.table.headerY - 26,
                 maxWidth: referralGroup.end.block.x + referralGroup.end.block.maxWidth - referralGroup.start.block.x,
                 fontSize: 16,
                 fontWeight: 800,
@@ -452,10 +462,10 @@ export async function renderReferinfoDeterministicImage(args: {
               style={{
                 position: "absolute",
                 left: referralGroup.start.block.x,
-                top: args.layout.table.headerY - 6,
+                top: layout.table.headerY - 6,
                 width: referralGroup.end.block.x + referralGroup.end.block.maxWidth - referralGroup.start.block.x,
                 height: 2,
-                background: "rgba(223, 255, 114, 0.52)",
+                background: theme.groupGridColor,
               }}
             />
           </>
@@ -466,7 +476,7 @@ export async function renderReferinfoDeterministicImage(args: {
               {
                 ...rewardGroup.start.block,
                 x: rewardGroup.start.block.x,
-                y: args.layout.table.headerY - 26,
+                y: layout.table.headerY - 26,
                 maxWidth: rewardGroup.end.block.x + rewardGroup.end.block.maxWidth - rewardGroup.start.block.x,
                 fontSize: 16,
                 fontWeight: 800,
@@ -480,10 +490,10 @@ export async function renderReferinfoDeterministicImage(args: {
               style={{
                 position: "absolute",
                 left: rewardGroup.start.block.x,
-                top: args.layout.table.headerY - 6,
+                top: layout.table.headerY - 6,
                 width: rewardGroup.end.block.x + rewardGroup.end.block.maxWidth - rewardGroup.start.block.x,
                 height: 2,
-                background: "rgba(223, 255, 114, 0.52)",
+                background: theme.groupGridColor,
               }}
             />
           </>
@@ -496,7 +506,7 @@ export async function renderReferinfoDeterministicImage(args: {
             top: headerDividerY,
             width: tableRight - tableLeft,
             height: DETERMINISTIC_GRID_HORIZONTAL_THICKNESS,
-            background: DETERMINISTIC_GRID_HORIZONTAL_COLOR,
+            background: theme.gridColor,
           }}
         />
 
@@ -506,10 +516,10 @@ export async function renderReferinfoDeterministicImage(args: {
             style={{
               position: "absolute",
               left: x,
-              top: args.layout.table.headerY - 8,
+              top: layout.table.headerY - 8,
               width: DETERMINISTIC_GRID_VERTICAL_THICKNESS,
-              height: Math.max(0, tableBottomY - (args.layout.table.headerY - 8)),
-              background: DETERMINISTIC_GRID_VERTICAL_COLOR,
+              height: Math.max(0, tableBottomY - (layout.table.headerY - 8)),
+              background: theme.gridColor,
             }}
           />
         ))}
@@ -523,7 +533,7 @@ export async function renderReferinfoDeterministicImage(args: {
               top: y,
               width: tableRight - tableLeft,
               height: DETERMINISTIC_GRID_HORIZONTAL_THICKNESS,
-              background: DETERMINISTIC_GRID_HORIZONTAL_COLOR,
+              background: theme.gridColor,
             }}
           />
         ))}
@@ -538,13 +548,13 @@ export async function renderReferinfoDeterministicImage(args: {
           });
         })}
 
-        {renderTextBlock({ ...args.layout.table.note, y: noteY }, args.post.table.note ?? "", "note")}
-        {renderTextBlock(args.layout.footer, args.reportWindow.weekLabel, "footer")}
+        {renderTextBlock({ ...layout.table.note, y: noteY }, args.post.table.note ?? "", "note")}
+        {renderTextBlock(layout.footer, args.reportWindow.weekLabel, "footer")}
       </div>
     ),
     {
-      width: args.layout.width,
-      height: args.layout.height,
+      width: layout.width,
+      height: layout.height,
       fonts,
     },
   );

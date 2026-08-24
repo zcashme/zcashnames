@@ -28,11 +28,15 @@ import {
   saveReferinfoDeterministicLayoutAction,
   saveReferinfoPostScheduleAction,
 } from "./actions";
+import {
+  applyReferinfoPostTemplateTheme,
+  getReferinfoPostTemplateTheme,
+  REFERINFO_POST_TEMPLATE_VARIANTS,
+  type ReferinfoPostTemplateVariant,
+} from "@/lib/referinfo-post/template-variant";
 
 const DETERMINISTIC_FONT_FAMILY = '"DeterministicMono", monospace';
-const GRID_VERTICAL_COLOR = "rgba(223,255,114,0.28)";
 const GRID_VERTICAL_THICKNESS = 1;
-const GRID_HORIZONTAL_COLOR = "rgba(223,255,114,0.28)";
 const GRID_HORIZONTAL_THICKNESS = 2;
 
 function previewHeaderTitle(post: ReferinfoPlannedPost) {
@@ -113,7 +117,10 @@ function SvgBlock(props: { block: ReferinfoDeterministicLayout["header"]["eyebro
   );
 }
 
-function SvgHeaderTitle(props: { block: ReferinfoDeterministicLayout["header"]["title"]; text: string }) {
+function SvgHeaderTitle(props: {
+  block: ReferinfoDeterministicLayout["header"]["title"];
+  text: string;
+}) {
   const { block, text } = props;
   if (!block.visible) return null;
   return (
@@ -182,20 +189,23 @@ function PreviewCard(props: {
   layout: ReferinfoDeterministicLayout;
   backgroundUrl: string;
   reportWindow: ReferinfoReportWindow | null;
+  templateVariant: ReferinfoPostTemplateVariant;
 }) {
+  const layout = applyReferinfoPostTemplateTheme(props.layout, props.templateVariant);
+  const theme = getReferinfoPostTemplateTheme(props.templateVariant);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
-  const columns = visibleReferinfoColumns(props.layout, props.post);
+  const columns = visibleReferinfoColumns(layout, props.post);
   const tableLeft = columns[0]?.block.x ?? 0;
   const columnTableRight = columns[columns.length - 1] ? columns[columns.length - 1]!.block.x + columns[columns.length - 1]!.block.maxWidth : 900;
-  const tableRight = Math.max(columnTableRight, props.layout.width - 92);
+  const tableRight = Math.max(columnTableRight, layout.width - 92);
   const dividerXs = columns.slice(0, -1).map((entry, index) => referinfoDividerX(entry.block, columns[index + 1]!.block));
   const referralGroup = referinfoReferralColumnGroup(columns) ?? referinfoIndirectReferralColumnGroup(columns);
   const rewardGroup = referinfoRewardColumnGroup(columns);
-  const computedRows = computeReferinfoRows({ layout: props.layout, post: props.post, columns });
-  const tableBottomY = computedRows[computedRows.length - 1]?.lineY ?? props.layout.table.startY;
-  const noteY = props.layout.table.note.y;
-  const groupedHeaderY = props.layout.table.headerY + 10;
+  const computedRows = computeReferinfoRows({ layout, post: props.post, columns });
+  const tableBottomY = computedRows[computedRows.length - 1]?.lineY ?? layout.table.startY;
+  const noteY = layout.table.note.y;
+  const groupedHeaderY = layout.table.headerY + 10;
 
   function isGroupedColumn(entry: (typeof columns)[number]) {
     const x = entry.block.x;
@@ -211,8 +221,8 @@ function PreviewCard(props: {
     try {
       const svgNode = svgRef.current.cloneNode(true) as SVGSVGElement;
       svgNode.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-      svgNode.setAttribute("width", String(props.layout.width));
-      svgNode.setAttribute("height", String(props.layout.height));
+      svgNode.setAttribute("width", String(layout.width));
+      svgNode.setAttribute("height", String(layout.height));
 
       const imageNode = svgNode.querySelector("image");
       if (imageNode) {
@@ -234,15 +244,15 @@ function PreviewCard(props: {
       });
 
       const canvas = document.createElement("canvas");
-      canvas.width = props.layout.width;
-      canvas.height = props.layout.height;
+      canvas.width = layout.width;
+      canvas.height = layout.height;
       const context = canvas.getContext("2d");
       if (!context) {
         URL.revokeObjectURL(svgUrl);
         throw new Error("Canvas context unavailable.");
       }
 
-      context.drawImage(image, 0, 0, props.layout.width, props.layout.height);
+      context.drawImage(image, 0, 0, layout.width, layout.height);
       URL.revokeObjectURL(svgUrl);
 
       const pngBlob = await new Promise<Blob>((resolve, reject) => {
@@ -282,28 +292,28 @@ function PreviewCard(props: {
         </button>
         {downloadStatus ? <div className="text-xs font-semibold text-fg-muted">{downloadStatus}</div> : null}
       </div>
-      <svg ref={svgRef} viewBox={`0 0 ${props.layout.width} ${props.layout.height}`} className="block aspect-square w-full bg-[#08130d]">
+      <svg ref={svgRef} viewBox={`0 0 ${layout.width} ${layout.height}`} className="block aspect-square w-full" style={{ background: theme.canvasColor }}>
         <defs>
           <linearGradient id="referinfo-title-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#f3ff8f" />
-            <stop offset="42%" stopColor="#dfff72" />
-            <stop offset="100%" stopColor="#94d11a" />
+            <stop offset="0%" stopColor={theme.titleGradient[0]} />
+            <stop offset="42%" stopColor={theme.titleGradient[1]} />
+            <stop offset="100%" stopColor={theme.titleGradient[2]} />
           </linearGradient>
         </defs>
-        <image href={props.backgroundUrl} x="0" y="0" width={props.layout.width} height={props.layout.height} preserveAspectRatio="xMidYMid slice" />
-        <SvgBlock block={props.layout.header.eyebrow} text={props.post.title} keyValue="eyebrow" />
-        <SvgHeaderTitle block={props.layout.header.title} text={previewHeaderTitle(props.post)} />
-        <SvgBlock block={props.layout.header.subtitle} text="" keyValue="subtitle" />
+        <image href={props.backgroundUrl} x="0" y="0" width={layout.width} height={layout.height} preserveAspectRatio="xMidYMid slice" />
+        <SvgBlock block={layout.header.eyebrow} text={props.post.title} keyValue="eyebrow" />
+        <SvgHeaderTitle block={layout.header.title} text={previewHeaderTitle(props.post)} />
+        <SvgBlock block={layout.header.subtitle} text="" keyValue="subtitle" />
 
         {columns.map((entry) => (
           <SvgBlock
             key={`header-${entry.key}`}
             block={{
               ...entry.block,
-              y: isGroupedColumn(entry) ? groupedHeaderY : props.layout.table.headerY,
-              fontSize: props.layout.table.headerFontSize,
+              y: isGroupedColumn(entry) ? groupedHeaderY : layout.table.headerY,
+              fontSize: layout.table.headerFontSize,
             }}
-            text={wrapTextToBlock(entry.label, { ...entry.block, fontSize: props.layout.table.headerFontSize }).join("\n")}
+            text={wrapTextToBlock(entry.label, { ...entry.block, fontSize: layout.table.headerFontSize }).join("\n")}
             keyValue={`header-${entry.key}`}
           />
         ))}
@@ -313,7 +323,7 @@ function PreviewCard(props: {
               block={{
                 ...referralGroup.start.block,
                 x: referralGroup.start.block.x,
-                y: props.layout.table.headerY - 26,
+                y: layout.table.headerY - 26,
                 maxWidth: referralGroup.end.block.x + referralGroup.end.block.maxWidth - referralGroup.start.block.x,
                 fontSize: 16,
                 fontWeight: 800,
@@ -326,9 +336,9 @@ function PreviewCard(props: {
             <line
               x1={referralGroup.start.block.x}
               x2={referralGroup.end.block.x + referralGroup.end.block.maxWidth}
-              y1={props.layout.table.headerY - 6}
-              y2={props.layout.table.headerY - 6}
-              stroke="rgba(223,255,114,0.52)"
+              y1={layout.table.headerY - 6}
+              y2={layout.table.headerY - 6}
+              stroke={theme.groupGridColor}
               strokeWidth="2"
             />
           </>
@@ -339,7 +349,7 @@ function PreviewCard(props: {
               block={{
                 ...rewardGroup.start.block,
                 x: rewardGroup.start.block.x,
-                y: props.layout.table.headerY - 26,
+                y: layout.table.headerY - 26,
                 maxWidth: rewardGroup.end.block.x + rewardGroup.end.block.maxWidth - rewardGroup.start.block.x,
                 fontSize: 16,
                 fontWeight: 800,
@@ -352,9 +362,9 @@ function PreviewCard(props: {
             <line
               x1={rewardGroup.start.block.x}
               x2={rewardGroup.end.block.x + rewardGroup.end.block.maxWidth}
-              y1={props.layout.table.headerY - 6}
-              y2={props.layout.table.headerY - 6}
-              stroke="rgba(223,255,114,0.52)"
+              y1={layout.table.headerY - 6}
+              y2={layout.table.headerY - 6}
+              stroke={theme.groupGridColor}
               strokeWidth="2"
             />
           </>
@@ -363,9 +373,9 @@ function PreviewCard(props: {
         <line
           x1={tableLeft}
           x2={tableRight}
-          y1={props.layout.table.startY - 24}
-          y2={props.layout.table.startY - 24}
-          stroke={GRID_HORIZONTAL_COLOR}
+          y1={layout.table.startY - 24}
+          y2={layout.table.startY - 24}
+          stroke={theme.gridColor}
           strokeWidth={GRID_HORIZONTAL_THICKNESS}
         />
 
@@ -374,9 +384,9 @@ function PreviewCard(props: {
             key={`divider-${index}`}
             x1={x}
             x2={x}
-            y1={props.layout.table.headerY - 8}
+            y1={layout.table.headerY - 8}
             y2={tableBottomY}
-            stroke={GRID_VERTICAL_COLOR}
+            stroke={theme.gridColor}
             strokeWidth={GRID_VERTICAL_THICKNESS}
           />
         ))}
@@ -390,7 +400,7 @@ function PreviewCard(props: {
               x2={tableRight}
               y1={y}
               y2={y}
-              stroke={GRID_HORIZONTAL_COLOR}
+              stroke={theme.gridColor}
               strokeWidth={GRID_HORIZONTAL_THICKNESS}
             />
           );
@@ -406,8 +416,8 @@ function PreviewCard(props: {
           });
         })}
 
-        <SvgBlock block={{ ...props.layout.table.note, y: noteY }} text={props.post.table.note ?? ""} keyValue="note" />
-        <SvgBlock block={props.layout.footer} text={props.reportWindow ? props.reportWindow.weekLabel : "Preview unavailable"} keyValue="footer" />
+        <SvgBlock block={{ ...layout.table.note, y: noteY }} text={props.post.table.note ?? ""} keyValue="note" />
+        <SvgBlock block={layout.footer} text={props.reportWindow ? props.reportWindow.weekLabel : "Preview unavailable"} keyValue="footer" />
       </svg>
     </div>
   );
@@ -749,6 +759,7 @@ export default function ReferinfoPostTool(props: {
   topIndirectLayout: ReferinfoDeterministicLayout;
   leaderChangesLayout: ReferinfoDeterministicLayout;
   hostedFilesystemReadonly: boolean;
+  initialTemplateVariant: ReferinfoPostTemplateVariant;
   deterministicBackgroundPath: string;
   top10LayoutPath: string;
   top5LayoutPath: string;
@@ -775,11 +786,12 @@ export default function ReferinfoPostTool(props: {
     top_indirect: props.topIndirectLayout,
     leader_changes: props.leaderChangesLayout,
   });
+  const [templateVariant, setTemplateVariant] = useState<ReferinfoPostTemplateVariant>(props.initialTemplateVariant);
   const [isPending, startTransition] = useTransition();
 
   const previewPosts = result?.plannedPosts ?? props.initialPreviewPosts;
   const reportWindow = result?.reportWindow ?? props.initialReportWindow;
-  const backgroundUrl = "/api/referinfo-post/background";
+  const backgroundUrl = `/api/referinfo-post/background?variant=${templateVariant}`;
 
   function layoutForPost(post: ReferinfoPlannedPost) {
     return layouts[layoutKindForPost(post)];
@@ -913,12 +925,37 @@ export default function ReferinfoPostTool(props: {
 
         <div className="grid gap-2 text-sm text-fg-body">
           <div>Current weekly target: <span className="font-semibold text-fg-heading">Monday {toTimeInputValue(schedule.weeklyHour, schedule.weeklyMinute)} {schedule.weeklyTimezone}</span></div>
+          <div>Active renderer theme: <span className="font-semibold text-fg-heading">{props.initialTemplateVariant}</span></div>
           <div>Background: <span className="font-semibold text-fg-heading break-all">{props.deterministicBackgroundPath}</span></div>
           <div>Top 10 layout: <span className="font-semibold text-fg-heading break-all">{props.top10LayoutPath}</span></div>
           <div>Top 5 layout: <span className="font-semibold text-fg-heading break-all">{props.top5LayoutPath}</span></div>
           <div>Top indirect layout: <span className="font-semibold text-fg-heading break-all">{props.topIndirectLayoutPath}</span></div>
           <div>Leader changes layout: <span className="font-semibold text-fg-heading break-all">{props.leaderChangesLayoutPath}</span></div>
           <div>Caption policy: <span className="font-semibold text-fg-heading break-all">{props.captionPolicyPath}</span></div>
+        </div>
+
+        <div className="grid gap-2 text-sm font-semibold text-fg-heading">
+          <span>Preview template</span>
+          <div role="group" aria-label="Preview template" className="grid w-full max-w-md grid-cols-2 rounded-lg border border-border-muted bg-[var(--color-raised)] p-1">
+            {REFERINFO_POST_TEMPLATE_VARIANTS.map((variant) => {
+              const active = templateVariant === variant;
+              const label = variant === "original" ? "Original" : "Light";
+              const description = variant === "original" ? "Lime on dark" : "Black on ivory";
+              return (
+                <button
+                  key={variant}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setTemplateVariant(variant)}
+                  className={`rounded-md px-3 py-2 text-left transition-colors ${active ? "bg-fg-heading text-[var(--color-background)]" : "text-fg-heading hover:bg-[var(--color-card)]"}`}
+                >
+                  <span className="block text-sm font-bold">{label}</span>
+                  <span className={`block text-xs font-medium ${active ? "text-[var(--color-background)]/75" : "text-fg-muted"}`}>{description}</span>
+                </button>
+              );
+            })}
+          </div>
+          <span className="text-xs font-medium text-fg-muted">Light is the active renderer default. This control only changes the preview; selecting Original does not change posts.</span>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -1007,6 +1044,7 @@ export default function ReferinfoPostTool(props: {
                         layout={layout}
                         backgroundUrl={backgroundUrl}
                         reportWindow={reportWindow}
+                        templateVariant={templateVariant}
                       />
                     ) : (
                       <TextOnlyPreviewCard post={post} />

@@ -62,6 +62,7 @@ export default async function ReferinfoPostPage() {
         topIndirectLayout={topIndirectLayout}
         leaderChangesLayout={leaderChangesLayout}
         hostedFilesystemReadonly={hostedFilesystemReadonly}
+        initialTemplateVariant={assets.templateVariant}
         deterministicBackgroundPath={assets.backgroundPath}
         top10LayoutPath={assets.top10LayoutPath}
         top5LayoutPath={assets.top5LayoutPath}

@@ -552,6 +552,7 @@ export async function runReferinfoPost(run: ReferinfoPostRunArgs): Promise<Refer
       const layout = await loadReferinfoDeterministicLayout(post.deterministicLayoutPath, post.table.columns.map((column) => column.key));
       const buffer = await renderReferinfoDeterministicImage({
         backgroundPath: preview.assets.backgroundPath,
+        templateVariant: preview.assets.templateVariant,
         layout,
         post,
         reportWindow: preview.reportWindow,
