@@ -4,7 +4,7 @@
 
 - `openai`
   - render a prompt template with `{{column_name}}` placeholders
-  - load a separate image-template asset
+  - load the active blockinfo template asset
   - send both into OpenAI image editing
 - `deterministic`
   - load a repo-local background template
@@ -62,7 +62,6 @@ Deterministic mode does not need these overrides unless you have a special reaso
 
 OpenAI mode also requires:
 
-- `BLOCKINFO_POST_TEMPLATE_IMAGE_PATH`
 - `OPENAI_API_KEY`
 - `BLOCKINFO_POST_OPENAI_MODEL`
 
@@ -73,7 +72,11 @@ OpenAI mode also requires:
 Deterministic mode uses repo defaults if these are omitted:
 
 - `BLOCKINFO_POST_DETERMINISTIC_BACKGROUND_PATH`
-  - default: `templates/blockinfo-post/template-image.png`
+  - default: the active template variant image
+- `BLOCKINFO_POST_DETERMINISTIC_TEMPLATE_VARIANT`
+  - default: `light`
+  - allowed: `original`, `light`
+  - `light` uses `templates/blockinfo-post/template-image-light.png` with black text and blue grid lines. A direct `BLOCKINFO_POST_DETERMINISTIC_BACKGROUND_PATH` override still takes precedence for renderer jobs.
 - `BLOCKINFO_POST_DETERMINISTIC_LAYOUT_PATH`
   - default: `templates/blockinfo-post/layout.deterministic.json`
 
@@ -112,6 +115,18 @@ Supported placeholders include:
 If any placeholder is unresolved, the run fails fast.
 
 ## Deterministic Renderer
+
+### Template Preview And Approval
+
+The light black/ivory template is the default for deterministic and OpenAI blockinfo posts. Open `/internal/blockinfo-post`, then use **Preview template** to compare it with the original lime/dark composition using the same current `zebra_stats` data. **Download PNG** exports the selected preview without sending a post.
+
+The selector is preview-only. Use the original template only as a rollback by explicitly setting:
+
+```text
+BLOCKINFO_POST_DETERMINISTIC_TEMPLATE_VARIANT=original
+```
+
+Keep `BLOCKINFO_POST_DETERMINISTIC_BACKGROUND_PATH` unset so all render modes use the light default.
 
 The deterministic renderer:
 

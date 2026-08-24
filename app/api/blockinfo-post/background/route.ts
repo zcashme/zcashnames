@@ -2,13 +2,19 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { getDeterministicAssetConfig } from "@/lib/blockinfo-post/deterministic";
+import { isBlockinfoPostTemplateVariant } from "@/lib/blockinfo-post/template-variant";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const { backgroundPath } = getDeterministicAssetConfig();
+    const requestedVariant = new URL(request.url).searchParams.get("variant");
+    if (requestedVariant && !isBlockinfoPostTemplateVariant(requestedVariant)) {
+      return NextResponse.json({ ok: false, error: "Unknown blockinfo template variant." }, { status: 400 });
+    }
+    const previewVariant = isBlockinfoPostTemplateVariant(requestedVariant) ? requestedVariant : undefined;
+    const { backgroundPath } = getDeterministicAssetConfig(previewVariant);
     const buffer = await readFile(backgroundPath);
     const ext = path.extname(backgroundPath).toLowerCase();
     const contentType =

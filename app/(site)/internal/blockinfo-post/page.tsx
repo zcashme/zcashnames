@@ -62,6 +62,7 @@ export default async function BlockinfoPostPage() {
         initialLayout={initialLayout}
         initialCaptionPolicy={initialCaptionPolicy}
         initialSnapshot={initialSnapshot}
+        initialTemplateVariant={deterministicPaths.templateVariant}
         deterministicBackgroundPath={deterministicPaths.backgroundPath}
         deterministicLayoutPath={deterministicPaths.layoutPath}
         deterministicCaptionPolicyPath={deterministicPaths.captionPolicyPath}

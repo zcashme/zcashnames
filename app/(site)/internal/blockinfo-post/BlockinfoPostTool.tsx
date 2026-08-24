@@ -27,11 +27,15 @@ import {
   saveDeterministicCaptionPolicyAction,
   saveDeterministicLayoutAction,
 } from "./actions";
+import {
+  applyBlockinfoPostTemplateTheme,
+  BLOCKINFO_POST_TEMPLATE_VARIANTS,
+  getBlockinfoPostTemplateTheme,
+  type BlockinfoPostTemplateVariant,
+} from "@/lib/blockinfo-post/template-variant";
 
 const DETERMINISTIC_FONT_FAMILY = '"DeterministicMono", monospace';
-const GRID_VERTICAL_COLOR = "rgba(223,255,114,0.28)";
 const GRID_VERTICAL_THICKNESS = 1;
-const GRID_HORIZONTAL_COLOR = "rgba(223,255,114,0.28)";
 const GRID_HORIZONTAL_THICKNESS = 2;
 
 function destinationLabel(destination: BlockinfoPostDestination) {
@@ -347,8 +351,11 @@ function DeterministicPreview(props: {
   captionPolicy: BlockinfoPostCaptionPolicy;
   snapshot: BlockinfoPostDeterministicSnapshot | null;
   backgroundUrl: string;
+  templateVariant: BlockinfoPostTemplateVariant;
 }) {
-  const { layout, snapshot } = props;
+  const { snapshot } = props;
+  const layout = applyBlockinfoPostTemplateTheme(props.layout, props.templateVariant);
+  const theme = getBlockinfoPostTemplateTheme(props.templateVariant);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
   const stats = snapshot?.stats;
@@ -454,12 +461,12 @@ function DeterministicPreview(props: {
         </div>
       </div>
       <div className="overflow-hidden rounded-2xl border border-border-muted bg-[var(--color-raised)]">
-        <svg ref={svgRef} viewBox={`0 0 ${layout.width} ${layout.height}`} className="block aspect-square w-full bg-[#08130d]">
+        <svg ref={svgRef} viewBox={`0 0 ${layout.width} ${layout.height}`} className="block aspect-square w-full" style={{ background: theme.canvasColor }}>
           <defs>
             <linearGradient id="blockinfoTitleGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#f3ff8f" />
-              <stop offset="42%" stopColor="#dfff72" />
-              <stop offset="100%" stopColor="#94d11a" />
+              <stop offset="0%" stopColor={theme.titleGradient[0]} />
+              <stop offset="42%" stopColor={theme.titleGradient[1]} />
+              <stop offset="100%" stopColor={theme.titleGradient[2]} />
             </linearGradient>
           </defs>
           <image href={props.backgroundUrl} x="0" y="0" width={layout.width} height={layout.height} preserveAspectRatio="xMidYMid slice" />
@@ -505,7 +512,7 @@ function DeterministicPreview(props: {
             x2={tableRight}
             y1={headerDividerY}
             y2={headerDividerY}
-            stroke={GRID_HORIZONTAL_COLOR}
+            stroke={theme.gridColor}
             strokeWidth={GRID_HORIZONTAL_THICKNESS}
           />
 
@@ -516,7 +523,7 @@ function DeterministicPreview(props: {
               x2={x}
               y1={layout.table.headerY - 8}
               y2={layout.table.startY + visibleRows.length * layout.table.rowHeight - 18}
-              stroke={GRID_VERTICAL_COLOR}
+              stroke={theme.gridColor}
               strokeWidth={GRID_VERTICAL_THICKNESS}
             />
           ))}
@@ -530,7 +537,7 @@ function DeterministicPreview(props: {
                 x2={tableRight}
                 y1={y}
                 y2={y}
-                stroke={GRID_HORIZONTAL_COLOR}
+                stroke={theme.gridColor}
                 strokeWidth={GRID_HORIZONTAL_THICKNESS}
               />
             );
@@ -724,6 +731,7 @@ export default function BlockinfoPostTool(props: {
   initialLayout: BlockinfoPostDeterministicLayout;
   initialCaptionPolicy: BlockinfoPostCaptionPolicy;
   initialSnapshot: BlockinfoPostDeterministicSnapshot | null;
+  initialTemplateVariant: BlockinfoPostTemplateVariant;
   deterministicBackgroundPath: string;
   deterministicLayoutPath: string;
   deterministicCaptionPolicyPath: string;
@@ -742,6 +750,7 @@ export default function BlockinfoPostTool(props: {
   const [layout, setLayout] = useState<BlockinfoPostDeterministicLayout>(props.initialLayout);
   const [captionPolicy, setCaptionPolicy] = useState<BlockinfoPostCaptionPolicy>(props.initialCaptionPolicy ?? getDefaultBlockinfoPostCaptionPolicy());
   const [snapshot, setSnapshot] = useState<BlockinfoPostDeterministicSnapshot | null>(props.initialSnapshot);
+  const [templateVariant, setTemplateVariant] = useState<BlockinfoPostTemplateVariant>(props.initialTemplateVariant);
   const [expandedSection, setExpandedSection] = useState<string>("header.eyebrow");
   const [isPending, startTransition] = useTransition();
 
@@ -880,7 +889,7 @@ export default function BlockinfoPostTool(props: {
     });
   }
 
-  const backgroundPreviewUrl = `/api/blockinfo-post/background`;
+  const backgroundPreviewUrl = `/api/blockinfo-post/background?variant=${templateVariant}`;
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-20 pt-10 sm:px-6 lg:px-8">
@@ -1116,13 +1125,38 @@ export default function BlockinfoPostTool(props: {
           ) : null}
 
           <div className="grid gap-2 rounded-xl border border-border-muted bg-[var(--color-raised)] p-4 text-sm text-fg-body">
+            <div>Active renderer theme: <span className="font-semibold text-fg-heading">{props.initialTemplateVariant}</span></div>
             <div className="break-all">Background template: <span className="font-semibold text-fg-heading">{props.deterministicBackgroundPath}</span></div>
             <div className="break-all">Layout config: <span className="font-semibold text-fg-heading">{props.deterministicLayoutPath}</span></div>
             <div className="break-all">Caption policy: <span className="font-semibold text-fg-heading">{props.deterministicCaptionPolicyPath}</span></div>
             <div>Preview source row: <span className="font-semibold text-fg-heading">{snapshot?.latestMeasuredAt ?? "Unavailable"}</span></div>
           </div>
 
-          <DeterministicPreview layout={layout} captionPolicy={captionPolicy} snapshot={snapshot} backgroundUrl={backgroundPreviewUrl} />
+          <div className="grid gap-2 text-sm font-semibold text-fg-heading">
+            <span>Preview template</span>
+            <div role="group" aria-label="Preview template" className="grid w-full grid-cols-2 rounded-lg border border-border-muted bg-[var(--color-raised)] p-1">
+              {BLOCKINFO_POST_TEMPLATE_VARIANTS.map((variant) => {
+                const active = templateVariant === variant;
+                const label = variant === "original" ? "Original" : "Light";
+                const description = variant === "original" ? "Lime on dark" : "Black on ivory";
+                return (
+                  <button
+                    key={variant}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setTemplateVariant(variant)}
+                    className={`rounded-md px-3 py-2 text-left transition-colors ${active ? "bg-fg-heading text-[var(--color-background)]" : "text-fg-heading hover:bg-[var(--color-card)]"}`}
+                  >
+                    <span className="block text-sm font-bold">{label}</span>
+                    <span className={`block text-xs font-medium ${active ? "text-[var(--color-background)]/75" : "text-fg-muted"}`}>{description}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <span className="text-xs font-medium text-fg-muted">Light is the active renderer default. This control only changes the preview; selecting Original does not change posts.</span>
+          </div>
+
+          <DeterministicPreview layout={layout} captionPolicy={captionPolicy} snapshot={snapshot} backgroundUrl={backgroundPreviewUrl} templateVariant={templateVariant} />
 
           <div className="grid gap-3 md:grid-cols-3">
             <NumericField

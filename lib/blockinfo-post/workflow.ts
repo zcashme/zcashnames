@@ -166,7 +166,7 @@ function getOpenAiConfig(): OpenAiConfig {
   }
 
   return {
-    imageTemplatePath: resolveEnvPath("BLOCKINFO_POST_TEMPLATE_IMAGE_PATH"),
+    imageTemplatePath: getDeterministicAssetConfig().backgroundPath,
     openAiApiKey: requireEnv("OPENAI_API_KEY"),
     openAiModel,
     outputFormat,
@@ -1058,6 +1058,7 @@ export async function runBlockinfoPost(run: BlockinfoPostRunArgs): Promise<Block
       const generated = {
         buffer: await renderDeterministicImage({
           backgroundPath: deterministicAssets!.backgroundPath,
+          templateVariant: deterministicAssets!.templateVariant,
           layout,
           summary,
           snapshot,

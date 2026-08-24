@@ -21,8 +21,14 @@ import {
   getHostedConfigPersistenceMessage,
   isEphemeralBlockinfoFilesystemRuntime,
 } from "@/lib/blockinfo-post/runtime";
+import {
+  applyBlockinfoPostTemplateTheme,
+  getBlockinfoPostTemplateTheme,
+  normalizeBlockinfoPostTemplateVariant,
+  type BlockinfoPostTemplateVariant,
+} from "@/lib/blockinfo-post/template-variant";
 
-const DEFAULT_BACKGROUND_PATH = path.resolve("templates/blockinfo-post/template-image.png");
+const DEFAULT_TEMPLATE_DIRECTORY = "templates/blockinfo-post";
 const DEFAULT_LAYOUT_PATH = path.resolve("templates/blockinfo-post/layout.deterministic.json");
 const DEFAULT_CAPTION_POLICY_PATH = path.resolve("templates/blockinfo-post/caption-policy.json");
 const DEFAULT_DETERMINISTIC_FONT_REGULAR_PATH = path.resolve("public/fonts/consola.ttf");
@@ -33,9 +39,7 @@ const WINDOW_HOURS = {
   "7d": 24 * 7,
   "30d": 24 * 30,
 } as const;
-const DETERMINISTIC_GRID_VERTICAL_COLOR = "rgba(223, 255, 114, 0.28)";
 const DETERMINISTIC_GRID_VERTICAL_THICKNESS = 1;
-const DETERMINISTIC_GRID_HORIZONTAL_COLOR = "rgba(223, 255, 114, 0.28)";
 const DETERMINISTIC_GRID_HORIZONTAL_THICKNESS = 2;
 
 type JsonRecord = Record<string, unknown>;
@@ -249,9 +253,12 @@ export function getDefaultDeterministicLayout(): BlockinfoPostDeterministicLayou
   };
 }
 
-export function getDeterministicAssetConfig() {
+export function getDeterministicAssetConfig(previewVariant?: BlockinfoPostTemplateVariant) {
+  const templateVariant = previewVariant ?? normalizeBlockinfoPostTemplateVariant(process.env.BLOCKINFO_POST_DETERMINISTIC_TEMPLATE_VARIANT);
+  const defaultBackgroundPath = path.resolve(DEFAULT_TEMPLATE_DIRECTORY, getBlockinfoPostTemplateTheme(templateVariant).backgroundFile);
   return {
-    backgroundPath: path.resolve(process.env.BLOCKINFO_POST_DETERMINISTIC_BACKGROUND_PATH?.trim() || DEFAULT_BACKGROUND_PATH),
+    templateVariant,
+    backgroundPath: path.resolve(previewVariant ? defaultBackgroundPath : process.env.BLOCKINFO_POST_DETERMINISTIC_BACKGROUND_PATH?.trim() || defaultBackgroundPath),
     layoutPath: path.resolve(process.env.BLOCKINFO_POST_DETERMINISTIC_LAYOUT_PATH?.trim() || DEFAULT_LAYOUT_PATH),
     captionPolicyPath: path.resolve(process.env.BLOCKINFO_POST_DETERMINISTIC_CAPTION_POLICY_PATH?.trim() || DEFAULT_CAPTION_POLICY_PATH),
   };
@@ -691,20 +698,23 @@ function formatDisplayDateTime(value: string | null): string {
 
 export async function renderDeterministicImage(args: {
   backgroundPath: string;
+  templateVariant: BlockinfoPostTemplateVariant;
   layout: BlockinfoPostDeterministicLayout;
   summary: BlockinfoPostRowSummary;
   snapshot: BlockinfoPostDeterministicSnapshot;
 }): Promise<Buffer> {
   const backgroundDataUrl = await readBackgroundAsDataUrl(args.backgroundPath);
   const fonts = await loadDeterministicFonts();
-  const visibleRows = args.layout.table.statRows.filter((row) => row.visible);
+  const theme = getBlockinfoPostTemplateTheme(args.templateVariant);
+  const layout = applyBlockinfoPostTemplateTheme(args.layout, args.templateVariant);
+  const visibleRows = layout.table.statRows.filter((row) => row.visible);
   const footer = formatDisplayDateTime(args.snapshot.latestMeasuredAt);
-  const visibleColumns = visibleColumnEntries(args.layout);
-  const tableLeft = args.layout.table.columns.label.x;
+  const visibleColumns = visibleColumnEntries(layout);
+  const tableLeft = layout.table.columns.label.x;
   const tableRight = visibleColumns[visibleColumns.length - 1]!.block.x + visibleColumns[visibleColumns.length - 1]!.block.maxWidth;
   const dividerXs = visibleColumns.slice(0, -1).map((entry, index) => columnDividerX(entry.block, visibleColumns[index + 1]!.block));
-  const headerDividerY = args.layout.table.startY - 20;
-  const rowLineYs = visibleRows.map((_, index) => args.layout.table.startY + (index + 1) * args.layout.table.rowHeight - 18);
+  const headerDividerY = layout.table.startY - 20;
+  const rowLineYs = visibleRows.map((_, index) => layout.table.startY + (index + 1) * layout.table.rowHeight - 18);
 
   const response = new ImageResponse(
     (
@@ -715,7 +725,7 @@ export async function renderDeterministicImage(args: {
           position: "relative",
           display: "flex",
           overflow: "hidden",
-          background: "#08130d",
+          background: theme.canvasColor,
           fontFamily: DETERMINISTIC_FONT_FAMILY,
           color: "#ffffff",
         }}
@@ -724,8 +734,8 @@ export async function renderDeterministicImage(args: {
         <img
           src={backgroundDataUrl}
           alt=""
-          width={args.layout.width}
-          height={args.layout.height}
+          width={layout.width}
+          height={layout.height}
           style={{
             position: "absolute",
             inset: 0,
@@ -734,19 +744,19 @@ export async function renderDeterministicImage(args: {
             objectFit: "cover",
           }}
         />
-        {renderTextBlock(args.layout.header.eyebrow, "$ ZCASH-CLI GETBLOCKCHAININFO", "eyebrow")}
+        {renderTextBlock(layout.header.eyebrow, "$ ZCASH-CLI GETBLOCKCHAININFO", "eyebrow")}
         <div
           style={{
             position: "absolute",
-            left: args.layout.header.title.x,
-            top: args.layout.header.title.y,
-            width: args.layout.header.title.maxWidth,
+            left: layout.header.title.x,
+            top: layout.header.title.y,
+            width: layout.header.title.maxWidth,
             display: "flex",
-            fontSize: args.layout.header.title.fontSize,
-            fontWeight: args.layout.header.title.fontWeight,
-            lineHeight: args.layout.header.title.lineHeight,
-            letterSpacing: `${args.layout.header.title.letterSpacing}px`,
-            background: "linear-gradient(180deg, #f3ff8f 0%, #dfff72 42%, #94d11a 100%)",
+            fontSize: layout.header.title.fontSize,
+            fontWeight: layout.header.title.fontWeight,
+            lineHeight: layout.header.title.lineHeight,
+            letterSpacing: `${layout.header.title.letterSpacing}px`,
+            background: `linear-gradient(180deg, ${theme.titleGradient[0]} 0%, ${theme.titleGradient[1]} 42%, ${theme.titleGradient[2]} 100%)`,
             color: "transparent",
             backgroundClip: "text",
             WebkitBackgroundClip: "text",
@@ -756,15 +766,15 @@ export async function renderDeterministicImage(args: {
         >
           {args.summary.height != null ? `Block ${Math.round(args.summary.height).toLocaleString("en-US")}` : "Latest Block"}
         </div>
-        {renderTextBlock(args.layout.header.subtitle, "", "subtitle")}
+        {renderTextBlock(layout.header.subtitle, "", "subtitle")}
 
         {visibleColumns.map((entry) =>
           renderTextBlock(
             {
               ...entry.block,
-              y: args.layout.table.headerY,
+              y: layout.table.headerY,
               fontWeight: 800,
-              fontSize: args.layout.table.columns.label.fontSize,
+              fontSize: layout.table.columns.label.fontSize,
             },
             entry.label,
             `header-${entry.key}`,
@@ -778,7 +788,7 @@ export async function renderDeterministicImage(args: {
             top: headerDividerY,
             width: tableRight - tableLeft,
             height: DETERMINISTIC_GRID_HORIZONTAL_THICKNESS,
-            background: DETERMINISTIC_GRID_HORIZONTAL_COLOR,
+            background: theme.gridColor,
           }}
         />
 
@@ -788,10 +798,10 @@ export async function renderDeterministicImage(args: {
             style={{
               position: "absolute",
               left: x,
-              top: args.layout.table.headerY - 8,
+              top: layout.table.headerY - 8,
               width: DETERMINISTIC_GRID_VERTICAL_THICKNESS,
-              height: visibleRows.length * args.layout.table.rowHeight + 26,
-              background: DETERMINISTIC_GRID_VERTICAL_COLOR,
+              height: visibleRows.length * layout.table.rowHeight + 26,
+              background: theme.gridColor,
             }}
           />
         ))}
@@ -805,14 +815,14 @@ export async function renderDeterministicImage(args: {
               top: y,
               width: tableRight - tableLeft,
               height: DETERMINISTIC_GRID_HORIZONTAL_THICKNESS,
-              background: DETERMINISTIC_GRID_HORIZONTAL_COLOR,
+              background: theme.gridColor,
             }}
           />
         ))}
 
         {visibleRows.flatMap((row, index) => {
           const stat = args.snapshot.stats[row.key];
-          const y = args.layout.table.startY + index * args.layout.table.rowHeight;
+          const y = layout.table.startY + index * layout.table.rowHeight;
           return visibleColumns.map((entry) => {
             const text =
               entry.key === "label"
@@ -828,12 +838,12 @@ export async function renderDeterministicImage(args: {
           });
         })}
 
-        {renderTextBlock(args.layout.footer, footer, "footer")}
+        {renderTextBlock(layout.footer, footer, "footer")}
       </div>
     ),
     {
-      width: args.layout.width,
-      height: args.layout.height,
+      width: layout.width,
+      height: layout.height,
       fonts,
     },
   );
