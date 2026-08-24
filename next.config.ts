@@ -99,6 +99,16 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
+        source: "/protect",
+        destination: "/protected",
+        permanent: true,
+      },
+      {
+        source: "/protect/:path*",
+        destination: "/protected/:path*",
+        permanent: true,
+      },
+      {
         source: "/blogs/launch",
         destination: "/blogs/users",
         permanent: true,
