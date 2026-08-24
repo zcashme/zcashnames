@@ -36,7 +36,7 @@ export async function renderReserveinfoImage(post: ReserveinfoPlannedPost): Prom
     <div style={{ width: "100%", height: "100%", display: "flex", position: "relative", overflow: "hidden", fontFamily: "ReserveMono", color: "#111111" }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={background} alt="" width="1080" height="1080" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-      <div style={{ position: "absolute", left: 214, top: 62, fontSize: 20, fontWeight: 700, letterSpacing: 2 }}>Weekly Reserveinfo</div>
+      <div style={{ position: "absolute", left: 214, top: 62, fontSize: 20, fontWeight: 700, letterSpacing: 2 }}>Last Week's Reservations</div>
       <div style={{ position: "absolute", left: 214, top: 86, fontSize: 43, fontWeight: 700, letterSpacing: -1 }}>Reserved Names</div>
       {columns.map((column, columnIndex) => (
         <div key={columnIndex} style={{ position: "absolute", left: 112 + columnIndex * 290, top: 248, width: 250, display: "flex", flexDirection: "column", alignItems: "center" }}>

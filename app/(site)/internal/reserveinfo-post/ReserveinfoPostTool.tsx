@@ -8,7 +8,7 @@ import { dryRunReserveinfoPostAction, runReserveinfoPostAction, saveReserveinfoP
 function PreviewCard({ post }: { post: ReserveinfoPlannedPost }) {
   const columns = Array.from({ length: 3 }, (_, column) => Array.from({ length: 10 }, (_, row) => post.names[column * 10 + row] ?? null));
   return <div className="relative aspect-square overflow-hidden rounded-xl border border-border-muted bg-[#f6f2e8] text-[#111111]" style={{ fontFamily: "Consolas, monospace", backgroundImage: "url(/api/reserveinfo-post/background)", backgroundSize: "cover" }}>
-    <div className="absolute left-[19.8%] top-[5.7%] text-[clamp(8px,1.85vw,20px)] font-bold tracking-[0.12em]">Weekly Reserveinfo</div>
+    <div className="absolute left-[19.8%] top-[5.7%] text-[clamp(8px,1.85vw,20px)] font-bold tracking-[0.12em]">Last Week's Reservations</div>
     <div className="absolute left-[19.8%] top-[8%] text-[clamp(18px,4vw,43px)] font-bold tracking-[-0.06em]">Reserved Names</div>
     <div className="absolute left-[10.4%] top-[23%] grid w-[79.3%] grid-cols-3 gap-3 text-[clamp(9px,2.2vw,24px)] font-bold leading-[2.16]">
       {columns.map((column, columnIndex) => <div key={columnIndex} className="overflow-hidden whitespace-nowrap text-center">{column.map((entry, rowIndex) => <div key={entry ? `${entry.name}-${entry.reservedAt}` : `empty-${columnIndex}-${rowIndex}`}>{entry?.name ?? "..."}</div>)}</div>)}
