@@ -305,6 +305,21 @@ export const FAQ_SECTIONS: FaqSection[] = [
         ),
       },
       {
+        id: "waitlist-view-tabs",
+        question: "What do the All, Reserved, and Protected tabs show?",
+        surfaces: ["waitlist-view"],
+        answer: (
+          <>
+            <strong>All</strong> is every waitlisted name. <strong>Reserved</strong> is entries with a
+            completed reservation payment. <strong>Protected</strong> is names that are gated and need
+            an unlock path — see <FaqA href="/faq#protected">protected names</FaqA>. A name can be
+            both reserved and protected, so those two counts do not have to add up to All. The number
+            on each tab is that tab&apos;s own count, including when a search is active; switching
+            tabs only changes which rows you see.
+          </>
+        ),
+      },
+      {
         id: "waitlist-view-statuses",
         question: "What do Reserved, Protected, Pending, and Available mean?",
         answer: (
@@ -325,7 +340,9 @@ export const FAQ_SECTIONS: FaqSection[] = [
           <>
             Position is the name-specific reserved queue. Until you verify your email and complete an
             on-chain reservation, there is no reserved rank to show. After both are done, Position
-            compares your adjusted line against everyone else waiting for the same name.
+            compares your adjusted line against everyone else waiting for the same name. That same
+            waitlist priority — not who paid first — is what the reserve page shows and what drives
+            Early Access order.
           </>
         ),
       },
@@ -354,8 +371,11 @@ export const FAQ_SECTIONS: FaqSection[] = [
         answer: (
           <>
             Use the search field on <FaqA href="/waitlist/view">/waitlist/view</FaqA>. Contains mode
-            matches part of a name; exact mode matches the full string. You can also filter to reserved
-            or protected rows and tap a row for summary, referrals, and protection detail.
+            matches part of a name, referral code, human-readable refcode, or pasted reflink; exact
+            mode matches the full string. You can paste <code>?ref=</code> links or{" "}
+            <code>/leaders/ref/...</code> URLs. The <strong>All</strong>, <strong>Reserved</strong>,
+            and <strong>Protected</strong> tabs filter which matching rows you see. Tap a row for
+            summary, referrals, and protection detail.
           </>
         ),
       },

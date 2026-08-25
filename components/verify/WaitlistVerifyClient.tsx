@@ -2511,6 +2511,9 @@ function RenderSummaryModal({
     const paragraphs: string[] = [];
     if (card.reserved && card.positionForName) {
       paragraphs.push(`You are ${formatOrdinal(card.positionForName)} in line for ${name}.`);
+      paragraphs.push(
+        "Early Access order follows waitlist priority for this name, not who completed reservation payment first.",
+      );
     } else {
       paragraphs.push(`You have not reserved ${name} yet, so your place in line is not finalized.`);
     }

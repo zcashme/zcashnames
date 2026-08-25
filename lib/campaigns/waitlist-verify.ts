@@ -3,6 +3,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { buildFixedDepthReferralSummaries } from "@/lib/leaders/referral-dashboard";
 import { fetchAllSupabaseRows } from "@/lib/supabase/fetch-all";
+import { compareWaitlistNameRank } from "@/lib/waitlist/referral-spots";
 
 export type WaitlistVerifyRow = {
   id: string;
@@ -24,8 +25,17 @@ const WAITLIST_PAGE_SIZE = 1000;
 
 type WaitlistVerifyNameStatRow = Pick<
   WaitlistVerifyRow,
-  "id" | "name" | "created_at" | "name_reserved" | "name_reserved_at"
+  "id" | "name" | "created_at" | "name_reserved" | "email_verified"
 >;
+
+type WaitlistNameQueueSnapshotRow = {
+  source_waitlist_id: string;
+  normalized_name: string;
+  base_position: number;
+  direct_referrals: number;
+  indirect_referrals: number;
+  is_reserved: boolean;
+};
 
 export type WaitlistVerifyNameStats = {
   totalCount: number;
@@ -73,38 +83,40 @@ function compareWaitlistRows(
   return a.id.localeCompare(b.id);
 }
 
-function compareReservedRows(
-  a: Pick<WaitlistVerifyNameStatRow, "name_reserved_at" | "created_at" | "id">,
-  b: Pick<WaitlistVerifyNameStatRow, "name_reserved_at" | "created_at" | "id">,
-): number {
-  const aReservedAt = a.name_reserved_at
-    ? new Date(a.name_reserved_at).getTime()
-    : Number.MAX_SAFE_INTEGER;
-  const bReservedAt = b.name_reserved_at
-    ? new Date(b.name_reserved_at).getTime()
-    : Number.MAX_SAFE_INTEGER;
-  if (aReservedAt !== bReservedAt) return aReservedAt - bReservedAt;
-
-  const aCreatedAt = a.created_at ? new Date(a.created_at).getTime() : Number.MAX_SAFE_INTEGER;
-  const bCreatedAt = b.created_at ? new Date(b.created_at).getTime() : Number.MAX_SAFE_INTEGER;
-  if (aCreatedAt !== bCreatedAt) return aCreatedAt - bCreatedAt;
-
-  return a.id.localeCompare(b.id);
-}
-
 async function fetchAllWaitlistNameStatRows(): Promise<WaitlistVerifyNameStatRow[]> {
   const rows = await fetchAllSupabaseRows<WaitlistVerifyNameStatRow>({
     pageSize: WAITLIST_PAGE_SIZE,
     fetchPage: async (from, to) =>
       await db
         .from("zn_waitlist")
-        .select("id, name, created_at, name_reserved, name_reserved_at")
+        .select("id, name, created_at, name_reserved, email_verified")
         .order("created_at", { ascending: true })
         .order("id", { ascending: true })
         .range(from, to),
   });
 
   return rows.sort(compareWaitlistRows);
+}
+
+async function fetchNameQueueSnapshotRows(
+  names: string[],
+): Promise<WaitlistNameQueueSnapshotRow[]> {
+  if (names.length === 0) return [];
+
+  return fetchAllSupabaseRows<WaitlistNameQueueSnapshotRow>({
+    pageSize: WAITLIST_PAGE_SIZE,
+    fetchPage: async (from, to) =>
+      await db
+        .from("public_waitlist_view_snapshots")
+        .select(
+          "source_waitlist_id, normalized_name, base_position, direct_referrals, indirect_referrals, is_reserved",
+        )
+        .in("normalized_name", names)
+        .order("normalized_name", { ascending: true })
+        .order("base_position", { ascending: true })
+        .order("source_waitlist_id", { ascending: true })
+        .range(from, to),
+  });
 }
 
 type WaitlistVerifyReferralStatRow = Pick<
@@ -189,38 +201,85 @@ export async function getWaitlistVerifyNameStats(
     return statsByRowId;
   }
 
-  const allRows = await fetchAllWaitlistNameStatRows();
-  const rowsByNormalizedName = new Map<string, WaitlistVerifyNameStatRow[]>();
-
-  for (const row of allRows) {
-    const normalizedName = normalizeWaitlistName(row.name);
-    if (!normalizedName || !targetNames.has(normalizedName)) continue;
-
-    const existing = rowsByNormalizedName.get(normalizedName);
+  const snapshotRows = await fetchNameQueueSnapshotRows([...targetNames]);
+  const snapshotByName = new Map<string, WaitlistNameQueueSnapshotRow[]>();
+  for (const row of snapshotRows) {
+    const existing = snapshotByName.get(row.normalized_name);
     if (existing) {
       existing.push(row);
     } else {
-      rowsByNormalizedName.set(normalizedName, [row]);
+      snapshotByName.set(row.normalized_name, [row]);
     }
   }
 
-  for (const [normalizedName, rows] of rowsByNormalizedName) {
-    const reservedRows = rows
-      .filter((row) => row.name_reserved === true)
-      .sort(compareReservedRows);
-    const reservedPositionById = new Map(
-      reservedRows.map((row, index) => [row.id, index + 1]),
+  for (const peers of snapshotByName.values()) {
+    const orderedPeers = [...peers].sort((a, b) =>
+      compareWaitlistNameRank(
+        {
+          id: a.source_waitlist_id,
+          basePosition: a.base_position,
+          directReferrals: a.direct_referrals,
+          indirectReferrals: a.indirect_referrals,
+        },
+        {
+          id: b.source_waitlist_id,
+          basePosition: b.base_position,
+          directReferrals: b.direct_referrals,
+          indirectReferrals: b.indirect_referrals,
+        },
+      ),
     );
+    const positionById = new Map(orderedPeers.map((row, index) => [row.source_waitlist_id, index + 1]));
 
-    for (const row of rows) {
-      statsByRowId.set(row.id, {
-        totalCount: rows.length,
-        reservedPosition: reservedPositionById.get(row.id) ?? null,
-        waitlistPosition: rows.findIndex((candidate) => candidate.id === row.id) + 1,
+    for (const row of orderedPeers) {
+      const waitlistPosition = positionById.get(row.source_waitlist_id) ?? null;
+      statsByRowId.set(row.source_waitlist_id, {
+        totalCount: orderedPeers.length,
+        reservedPosition: row.is_reserved ? waitlistPosition : null,
+        waitlistPosition,
       });
     }
+  }
 
-    if (!targetNames.has(normalizedName)) continue;
+  const unresolvedNames = new Set(
+    targetRows
+      .filter((row) => !statsByRowId.has(row.id))
+      .map((row) => normalizeWaitlistName(row.name))
+      .filter((value): value is string => Boolean(value)),
+  );
+  if (unresolvedNames.size === 0) {
+    return statsByRowId;
+  }
+
+  const allRows = await fetchAllWaitlistNameStatRows();
+  const fallbackRowsByName = new Map<string, WaitlistVerifyNameStatRow[]>();
+  for (const row of allRows) {
+    const normalizedName = normalizeWaitlistName(row.name);
+    if (!normalizedName || !unresolvedNames.has(normalizedName)) continue;
+    const existing = fallbackRowsByName.get(normalizedName);
+    if (existing) {
+      existing.push(row);
+    } else {
+      fallbackRowsByName.set(normalizedName, [row]);
+    }
+  }
+
+  for (const rows of fallbackRowsByName.values()) {
+    const queueRows = rows
+      .filter((row) => row.email_verified === true)
+      .sort(compareWaitlistRows);
+    const rankedRows = queueRows.length > 0 ? queueRows : [...rows].sort(compareWaitlistRows);
+    const positionById = new Map(rankedRows.map((row, index) => [row.id, index + 1]));
+
+    for (const row of rows) {
+      if (statsByRowId.has(row.id)) continue;
+      const waitlistPosition = positionById.get(row.id) ?? null;
+      statsByRowId.set(row.id, {
+        totalCount: rankedRows.length,
+        reservedPosition: row.name_reserved === true ? waitlistPosition : null,
+        waitlistPosition,
+      });
+    }
   }
 
   return statsByRowId;

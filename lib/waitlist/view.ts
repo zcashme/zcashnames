@@ -10,8 +10,10 @@ import {
 import {
   WAITLIST_VIEW_INDIRECT_REFERRALS_PER_SPOT,
   WAITLIST_VIEW_REFERRALS_PER_SPOT,
+  compareWaitlistNameRank,
   waitlistReferralAdjustment,
 } from "@/lib/waitlist/referral-spots";
+import { extractReferralCode, getPreferredReferralCode } from "@/lib/referral-code";
 import { syncWaitlistReservationFieldsFromReserves } from "@/lib/waitlist/reserves";
 
 export {
@@ -35,6 +37,7 @@ type WaitlistViewDbRow = {
   created_at: string;
   email_verified: boolean | null;
   referral_code: string | null;
+  human_referral_code: string | null;
   referred_by: string | null;
   name_reserved: boolean | null;
   name_reserved_at: string | null;
@@ -94,6 +97,7 @@ export interface PublicWaitlistViewRow {
   reservedReferrals: number;
   indirectReferrals: number;
   displayReferralCode: string | null;
+  canonicalReferralCode: string | null;
   leaderHref: string | null;
   adjustedPosition: number;
   ensPriorityClaim: boolean;
@@ -171,34 +175,55 @@ function quotePostgrestValue(value: string): string {
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
+function isReferralLinkQuery(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return (
+    /^https?:\/\//.test(normalized)
+    || normalized.includes("?ref=")
+    || normalized.includes("&ref=")
+    || /\/leaders\/ref\//.test(normalized)
+  );
+}
+
+function waitlistSearchNeedles(searchQuery: string): string[] {
+  const trimmed = searchQuery.trim().toLowerCase();
+  if (!trimmed) return [];
+  const extracted = extractReferralCode(trimmed).trim().toLowerCase();
+  if (isReferralLinkQuery(trimmed) && extracted) return [extracted];
+  const needles = new Set<string>([trimmed]);
+  if (extracted) needles.add(extracted);
+  return [...needles];
+}
+
 function applyWaitlistSearch<T>(
   query: T,
   searchQuery: string,
   searchMode: WaitlistViewSearchMode,
 ): T {
-  if (!searchQuery) return query;
+  const needles = waitlistSearchNeedles(searchQuery);
+  if (needles.length === 0) return query;
   const filterable = query as { or: (filters: string) => T };
 
-  if (searchMode === "exact") {
-    const exact = quotePostgrestValue(searchQuery);
-    return filterable.or(
-      [
-        `normalized_name.eq.${searchQuery}`,
+  const clauses = needles.flatMap((needle) => {
+    if (searchMode === "exact") {
+      const exact = quotePostgrestValue(needle);
+      return [
+        `normalized_name.eq.${exact}`,
         `display_referral_code.ilike.${exact}`,
         `canonical_referral_code.ilike.${exact}`,
-      ].join(","),
-    );
-  }
+      ];
+    }
 
-  const likeNeedle = searchQuery.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
-  const pattern = quotePostgrestValue(`%${likeNeedle}%`);
-  return filterable.or(
-    [
+    const likeNeedle = needle.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+    const pattern = quotePostgrestValue(`%${likeNeedle}%`);
+    return [
       `normalized_name.ilike.${pattern}`,
       `display_referral_code.ilike.${pattern}`,
       `canonical_referral_code.ilike.${pattern}`,
-    ].join(","),
-  );
+    ];
+  });
+
+  return filterable.or(clauses.join(","));
 }
 
 function sanitizeSearchMode(value: string | null | undefined): WaitlistViewSearchMode {
@@ -222,7 +247,7 @@ async function fetchAllWaitlistRows(): Promise<WaitlistViewDbRow[]> {
       await db
         .from("zn_waitlist")
         .select(
-          "id, name, created_at, email_verified, referral_code, referred_by, name_reserved, name_reserved_at, name_reserved_txid, campaign_email_confirm_response",
+          "id, name, created_at, email_verified, referral_code, human_referral_code, referred_by, name_reserved, name_reserved_at, name_reserved_txid, campaign_email_confirm_response",
         )
         .order("created_at", { ascending: true })
         .order("id", { ascending: true })
@@ -396,6 +421,7 @@ function buildSnapshotRows(args: {
 
   const enriched = verifiedRows.map((row, index) => {
     const referralCode = row.referral_code?.trim() ?? "";
+    const preferredReferralCode = getPreferredReferralCode(row);
     const normalizedName = normalizeName(row.name) ?? row.id.toLowerCase();
     const referralSummary = referralCode
       ? summarizeReservedReferrals(referralCode)
@@ -417,7 +443,7 @@ function buildSnapshotRows(args: {
       direct_referrals: directReferrals,
       reserved_referrals: reservedReferrals,
       indirect_referrals: indirectReferrals,
-      display_referral_code: referralCode || null,
+      display_referral_code: preferredReferralCode || null,
       canonical_referral_code: referralCode || null,
       is_reserved: reservedVerifiedIds.has(row.id),
     };
@@ -709,15 +735,22 @@ export async function getPublicWaitlistViewData(args?: {
   }
 
   for (const peers of peersByName.values()) {
-    const orderedPeers = [...peers].sort((a, b) => {
-      const aAdjusted =
-        a.base_position - waitlistReferralAdjustment(a.direct_referrals, a.indirect_referrals);
-      const bAdjusted =
-        b.base_position - waitlistReferralAdjustment(b.direct_referrals, b.indirect_referrals);
-      if (aAdjusted !== bAdjusted) return aAdjusted - bAdjusted;
-      if (a.base_position !== b.base_position) return a.base_position - b.base_position;
-      return a.source_waitlist_id.localeCompare(b.source_waitlist_id);
-    });
+    const orderedPeers = [...peers].sort((a, b) =>
+      compareWaitlistNameRank(
+        {
+          id: a.source_waitlist_id,
+          basePosition: a.base_position,
+          directReferrals: a.direct_referrals,
+          indirectReferrals: a.indirect_referrals,
+        },
+        {
+          id: b.source_waitlist_id,
+          basePosition: b.base_position,
+          directReferrals: b.direct_referrals,
+          indirectReferrals: b.indirect_referrals,
+        },
+      ),
+    );
 
     orderedPeers.forEach((peer, index) => {
       rankById.set(peer.source_waitlist_id, { position: index + 1, total: orderedPeers.length });
@@ -744,6 +777,7 @@ export async function getPublicWaitlistViewData(args?: {
       reservedReferrals: row.reserved_referrals,
       indirectReferrals: row.indirect_referrals,
       displayReferralCode: row.display_referral_code,
+      canonicalReferralCode: row.canonical_referral_code,
       leaderHref: row.canonical_referral_code
         ? `/leaders/ref/${encodeURIComponent(row.canonical_referral_code)}`
         : null,

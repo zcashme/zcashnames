@@ -13,6 +13,25 @@ export function waitlistReferralAdjustment(
   );
 }
 
+export type WaitlistNameRankFields = {
+  id: string;
+  basePosition: number;
+  directReferrals: number;
+  indirectReferrals: number;
+};
+
+/** Per-name Early Access rank: adjusted line, then original waitlist line, then id. */
+export function compareWaitlistNameRank(
+  a: WaitlistNameRankFields,
+  b: WaitlistNameRankFields,
+): number {
+  const aAdjusted = a.basePosition - waitlistReferralAdjustment(a.directReferrals, a.indirectReferrals);
+  const bAdjusted = b.basePosition - waitlistReferralAdjustment(b.directReferrals, b.indirectReferrals);
+  if (aAdjusted !== bAdjusted) return aAdjusted - bAdjusted;
+  if (a.basePosition !== b.basePosition) return a.basePosition - b.basePosition;
+  return a.id.localeCompare(b.id);
+}
+
 export function reservedReferralSpotPhrase(
   kind: "direct" | "indirect",
   count: number = kind === "direct"

@@ -7,7 +7,21 @@ export {
   normalizeHumanReferralCode,
 } from "./referral-code-core";
 
-// Extracts a referral code from a URL (via `ref` query param) or raw string.
+function extractLeadersRefCode(pathname: string): string {
+  const match = pathname.trim().match(/(?:^|\/)leaders\/ref\/([^/?#]+)/i);
+  if (!match?.[1]) return "";
+  try {
+    return decodeURIComponent(match[1]).trim();
+  } catch {
+    return match[1].trim();
+  }
+}
+
+function extractQueryReferralCode(query: string): string {
+  return new URLSearchParams(query).get("ref")?.trim() ?? "";
+}
+
+// Extracts a referral code from a reflink (`?ref=` or `/leaders/ref/...`) or raw string.
 // Falls back to the raw trimmed value when no URL structure is detected.
 export function extractReferralCode(value: string): string {
   const trimmed = value.trim();
@@ -15,13 +29,23 @@ export function extractReferralCode(value: string): string {
 
   try {
     const url = new URL(trimmed);
-    return url.searchParams.get("ref")?.trim() ?? "";
+    const fromQuery = url.searchParams.get("ref")?.trim();
+    if (fromQuery) return fromQuery;
+    const fromPath = extractLeadersRefCode(url.pathname);
+    if (fromPath) return fromPath;
+    return "";
   } catch {}
 
-  const query = trimmed.startsWith("?") ? trimmed.slice(1) : trimmed.split("?")[1];
-  if (query !== undefined) {
-    return new URLSearchParams(query).get("ref")?.trim() ?? "";
+  const queryIndex = trimmed.indexOf("?");
+  if (queryIndex >= 0) {
+    const fromQuery = extractQueryReferralCode(trimmed.slice(queryIndex + 1));
+    if (fromQuery) return fromQuery;
+    const fromPath = extractLeadersRefCode(trimmed.slice(0, queryIndex));
+    if (fromPath) return fromPath;
   }
+
+  const fromPath = extractLeadersRefCode(trimmed);
+  if (fromPath) return fromPath;
 
   return trimmed;
 }

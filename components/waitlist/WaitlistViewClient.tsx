@@ -8,6 +8,7 @@ import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { useCopy } from "@/components/hooks/useCopy";
 import PaginationControls from "@/components/PaginationControls";
 import { InlineSearchField } from "@/components/search/InlineSearchField";
+import { extractReferralCode } from "@/lib/referral-code";
 import DataViewTabs from "@/components/table/DataViewTabs";
 import SearchResultsSummary from "@/components/table/SearchResultsSummary";
 import { TableRowsMenu, TableSortMenu } from "@/components/table/TableIconMenus";
@@ -667,12 +668,17 @@ export default function WaitlistViewClient({
     if (!openMatchingDetails || autoOpenedDetailsRef.current) return;
     const query = (appliedSearch || initialSearchQuery).trim().toLowerCase();
     if (!query) return;
+    const extractedCode = extractReferralCode(query).trim().toLowerCase();
+    const needles = [...new Set([query, extractedCode].filter(Boolean))];
     const rows = viewData.rows.length > 0 ? viewData.rows : initialRows;
+    const rowValues = (row: PublicWaitlistViewRow) => [
+      row.name.toLowerCase(),
+      (row.displayReferralCode ?? "").toLowerCase(),
+      (row.canonicalReferralCode ?? "").toLowerCase(),
+    ];
     const match =
-      rows.find((row) => row.name.toLowerCase() === query)
-      ?? rows.find((row) => (row.displayReferralCode ?? "").toLowerCase() === query)
-      ?? rows.find((row) => row.name.toLowerCase().includes(query))
-      ?? rows.find((row) => (row.displayReferralCode ?? "").toLowerCase().includes(query))
+      rows.find((row) => needles.some((needle) => rowValues(row).includes(needle)))
+      ?? rows.find((row) => needles.some((needle) => rowValues(row).some((value) => value.includes(needle))))
       ?? null;
     if (!match) return;
     setDetailsRow(match);
@@ -845,8 +851,8 @@ export default function WaitlistViewClient({
               onChange={setDraftSearch}
               onSubmit={applySearch}
               variant="table"
-              placeholder="Names or referral codes"
-              ariaLabel="Search waitlist names or referral codes"
+              placeholder="Name, refcode, or reflink"
+              ariaLabel="Search waitlist names, referral codes, or referral links"
               searchMode={searchMode}
               onSearchModeChange={(value) => setSearchMode(value as WaitlistViewSearchMode)}
               onClear={() => {
@@ -887,7 +893,7 @@ export default function WaitlistViewClient({
             },
             {
               key: "reserved",
-              label: `Reserved only (${viewData.reservedOnlyCount})`,
+              label: `Reserved (${viewData.reservedOnlyCount})`,
               active: reservedOnly,
               onClick: () => {
                 setPage(1);
