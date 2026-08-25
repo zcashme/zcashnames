@@ -1,3 +1,5 @@
+import type { ReserveinfoPostTemplateVariant } from "@/lib/reserveinfo-post/template-variant";
+
 export const RESERVEINFO_POST_DESTINATIONS = ["telegram", "x", "both"] as const;
 
 export type ReserveinfoPostDestination = (typeof RESERVEINFO_POST_DESTINATIONS)[number];
@@ -45,6 +47,7 @@ export type ReserveinfoPlannedPost = {
 export type ReserveinfoPostScheduleState = {
   enabled: boolean;
   destination: ReserveinfoPostDestination;
+  templateVariant: ReserveinfoPostTemplateVariant;
   weeklyTimezone: string;
   lastRunStartedAt: string | null;
   lastRunCompletedAt: string | null;
@@ -56,6 +59,7 @@ export type ReserveinfoPostScheduleState = {
 export const DEFAULT_RESERVEINFO_POST_SCHEDULE: ReserveinfoPostScheduleState = {
   enabled: false,
   destination: "both",
+  templateVariant: "original",
   weeklyTimezone: "America/New_York",
   lastRunStartedAt: null,
   lastRunCompletedAt: null,

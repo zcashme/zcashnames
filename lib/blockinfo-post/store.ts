@@ -11,6 +11,7 @@ import {
   isBlockinfoPostDestination,
   isBlockinfoPostRenderMode,
 } from "@/lib/blockinfo-post/types";
+import { normalizeBlockinfoPostTemplateVariant } from "@/lib/blockinfo-post/template-variant";
 
 const SCHEDULE_ROW_ID = "default";
 const LOCK_TTL_MS = 30 * 60 * 1000;
@@ -19,6 +20,7 @@ type ScheduleRow = {
   enabled: boolean | null;
   destination: string | null;
   render_mode: string | null;
+  template_variant: string | null;
   schedule_mode: string | null;
   interval_hours: number | null;
   daily_hour: number | null;
@@ -73,6 +75,10 @@ function normalizeRenderMode(value: string | null | undefined): BlockinfoPostRen
   return isBlockinfoPostRenderMode(value) ? value : DEFAULT_SCHEDULE.renderMode;
 }
 
+function normalizeTemplateVariant(value: string | null | undefined) {
+  return normalizeBlockinfoPostTemplateVariant(value);
+}
+
 function normalizeScheduleMode(value: string | null | undefined): BlockinfoPostScheduleState["scheduleMode"] {
   return value === "daily_time" || value === "interval" ? value : DEFAULT_SCHEDULE.scheduleMode;
 }
@@ -106,6 +112,7 @@ function mapScheduleRow(row: ScheduleRow | null | undefined): BlockinfoPostSched
     enabled: row.enabled ?? DEFAULT_SCHEDULE.enabled,
     destination: normalizeDestination(row.destination),
     renderMode: normalizeRenderMode(row.render_mode),
+    templateVariant: normalizeTemplateVariant(row.template_variant),
     scheduleMode: normalizeScheduleMode(row.schedule_mode),
     intervalHours:
       typeof row.interval_hours === "number" && Number.isInteger(row.interval_hours) && row.interval_hours > 0
@@ -184,7 +191,7 @@ function zonedMinutes(date: Date, timeZone: string): { dateKey: string; minutes:
 export async function getBlockinfoPostScheduleState(): Promise<BlockinfoPostScheduleState> {
   const { data, error } = await db
     .from("blockinfo_post_schedule")
-    .select("enabled, destination, render_mode, schedule_mode, interval_hours, daily_hour, daily_minute, daily_timezone, last_run_started_at, last_run_completed_at, last_run_status, last_error, lock_expires_at")
+    .select("enabled, destination, render_mode, template_variant, schedule_mode, interval_hours, daily_hour, daily_minute, daily_timezone, last_run_started_at, last_run_completed_at, last_run_status, last_error, lock_expires_at")
     .eq("id", SCHEDULE_ROW_ID)
     .maybeSingle();
 
@@ -200,6 +207,7 @@ export async function saveBlockinfoPostScheduleSettings(
 ): Promise<BlockinfoPostScheduleState> {
   const destination = normalizeDestination(input.destination);
   const renderMode = normalizeRenderMode(input.renderMode);
+  const templateVariant = normalizeTemplateVariant(input.templateVariant);
   const intervalHours = normalizeIntervalHours(input.intervalHours);
   const { scheduleMode, dailyHour, dailyMinute, dailyTimezone } = normalizeDailyScheduleInput(input);
   const nowIso = new Date().toISOString();
@@ -210,6 +218,7 @@ export async function saveBlockinfoPostScheduleSettings(
       enabled: !!input.enabled,
       destination,
       render_mode: renderMode,
+      template_variant: templateVariant,
       schedule_mode: scheduleMode,
       interval_hours: intervalHours,
       daily_hour: dailyHour,

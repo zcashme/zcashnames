@@ -10,6 +10,7 @@ import type {
   ReferinfoPostScheduleInput,
   ReferinfoPostScheduleState,
 } from "@/lib/referinfo-post/types";
+import type { ReferinfoPostTemplateVariant } from "@/lib/referinfo-post/template-variant";
 import { isReferinfoPostDestination, isReferinfoPostRenderMode } from "@/lib/referinfo-post/types";
 import {
   saveReferinfoDeterministicLayout,
@@ -28,22 +29,26 @@ function normalizeRenderMode(renderMode: ReferinfoPostRenderMode): ReferinfoPost
 export async function runReferinfoPostAction(
   destination: ReferinfoPostDestination,
   renderMode: ReferinfoPostRenderMode,
+  templateVariant: ReferinfoPostTemplateVariant,
 ): Promise<ReferinfoPostResult> {
   return runReferinfoPost({
     mode: "run",
     destination: normalizeDestination(destination),
     renderMode: normalizeRenderMode(renderMode),
+    templateVariant,
   });
 }
 
 export async function dryRunReferinfoPostAction(
   destination: ReferinfoPostDestination,
   renderMode: ReferinfoPostRenderMode,
+  templateVariant: ReferinfoPostTemplateVariant,
 ): Promise<ReferinfoPostResult> {
   return runReferinfoPost({
     mode: "dry-run",
     destination: normalizeDestination(destination),
     renderMode: normalizeRenderMode(renderMode),
+    templateVariant,
   });
 }
 

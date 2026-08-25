@@ -826,8 +826,8 @@ export default function BlockinfoPostTool(props: {
     startTransition(async () => {
       setPendingLabel(`${mode}-${destination}-${renderMode}`);
       const nextResult = mode === "run"
-        ? await runBlockinfoPostAction(destination, renderMode)
-        : await dryRunBlockinfoPostAction(destination, renderMode);
+        ? await runBlockinfoPostAction(destination, renderMode, templateVariant)
+        : await dryRunBlockinfoPostAction(destination, renderMode, templateVariant);
       setResult(nextResult);
       if (nextResult.schedule) {
         setSchedule(nextResult.schedule);
@@ -854,6 +854,7 @@ export default function BlockinfoPostTool(props: {
         enabled: schedule.enabled,
         destination: schedule.destination,
         renderMode: schedule.renderMode,
+        templateVariant,
         scheduleMode: schedule.scheduleMode,
         intervalHours,
         dailyHour: parsedDailyTime.hour,
@@ -1153,7 +1154,7 @@ export default function BlockinfoPostTool(props: {
                 );
               })}
             </div>
-            <span className="text-xs font-medium text-fg-muted">Original is the active renderer default. This control only changes the preview; selecting Light does not change posts.</span>
+            <span className="text-xs font-medium text-fg-muted">This template is used for previews and posts when you save the schedule.</span>
           </div>
 
           <DeterministicPreview layout={layout} captionPolicy={captionPolicy} snapshot={snapshot} backgroundUrl={backgroundPreviewUrl} templateVariant={templateVariant} />

@@ -29,7 +29,7 @@ export default async function ReferinfoPostPage() {
   const initialSchedule: ReferinfoPostScheduleState = await getReferinfoPostScheduleState().catch(() => ({
     ...DEFAULT_REFERINFO_POST_SCHEDULE,
   }));
-  const assets = getReferinfoDeterministicAssetConfig();
+  const assets = getReferinfoDeterministicAssetConfig(initialSchedule.templateVariant);
   const hostedFilesystemReadonly = isEphemeralReferinfoFilesystemRuntime();
   const [top10Layout, top5Layout, topIndirectLayout, leaderChangesLayout] = await Promise.all([
     loadReferinfoDeterministicLayout(getReferinfoDeterministicLayoutPathForEditorKind("top10", assets), ["rank", "name", "direct", "indirect", "reward", "total"]),

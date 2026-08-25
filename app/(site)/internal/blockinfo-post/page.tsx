@@ -44,7 +44,7 @@ export default async function BlockinfoPostPage() {
   const initialSchedule: BlockinfoPostScheduleState = await getBlockinfoPostScheduleState().catch(() => ({
     ...DEFAULT_BLOCKINFO_POST_SCHEDULE,
   }));
-  const deterministicPaths = getDeterministicAssetConfig();
+  const deterministicPaths = getDeterministicAssetConfig(initialSchedule.templateVariant);
   const initialLayout: BlockinfoPostDeterministicLayout = await loadDeterministicLayout(deterministicPaths.layoutPath).catch(() =>
     getDefaultDeterministicLayout(),
   );

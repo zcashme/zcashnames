@@ -1,3 +1,5 @@
+import type { ReferinfoPostTemplateVariant } from "@/lib/referinfo-post/template-variant";
+
 export const REFERINFO_POST_KINDS = [
   "summary_top10",
   "top_movers",
@@ -138,6 +140,7 @@ export type ReferinfoPostScheduleState = {
   enabled: boolean;
   destination: ReferinfoPostDestination;
   renderMode: ReferinfoPostRenderMode;
+  templateVariant: ReferinfoPostTemplateVariant;
   scheduleMode: "weekly_time";
   weeklyWeekday: number;
   weeklyHour: number;
@@ -154,6 +157,7 @@ export const DEFAULT_REFERINFO_POST_SCHEDULE: ReferinfoPostScheduleState = {
   enabled: false,
   destination: "both",
   renderMode: "deterministic",
+  templateVariant: "original",
   scheduleMode: "weekly_time",
   weeklyWeekday: 1,
   weeklyHour: 11,
@@ -170,6 +174,7 @@ export type ReferinfoPostScheduleInput = {
   enabled: boolean;
   destination: ReferinfoPostDestination;
   renderMode: ReferinfoPostRenderMode;
+  templateVariant: ReferinfoPostTemplateVariant;
   scheduleMode: "weekly_time";
   weeklyWeekday: number;
   weeklyHour: number;
@@ -200,6 +205,7 @@ export type ReferinfoPostRunArgs = {
   mode: ReferinfoPostMode;
   destination: ReferinfoPostDestination;
   renderMode: ReferinfoPostRenderMode;
+  templateVariant?: ReferinfoPostTemplateVariant;
   scheduled?: boolean;
 };
 

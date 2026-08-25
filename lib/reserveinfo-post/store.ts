@@ -11,12 +11,13 @@ import {
   type ReserveinfoPostScheduleState,
   type ReserveinfoReportWindow,
 } from "@/lib/reserveinfo-post/types";
+import { normalizeReserveinfoPostTemplateVariant } from "@/lib/reserveinfo-post/template-variant";
 
 const SCHEDULE_ROW_ID = "default";
 const LOCK_TTL_MS = 30 * 60 * 1000;
 
 type ScheduleRow = {
-  enabled: boolean | null; destination: string | null; weekly_timezone: string | null;
+  enabled: boolean | null; destination: string | null; template_variant: string | null; weekly_timezone: string | null;
   last_run_started_at: string | null; last_run_completed_at: string | null; last_run_status: string | null;
   last_error: string | null; lock_expires_at: string | null;
 };
@@ -46,7 +47,7 @@ function setupError(message: string): string {
 function mapSchedule(row: ScheduleRow | null): ReserveinfoPostScheduleState {
   if (!row) return { ...DEFAULT_RESERVEINFO_POST_SCHEDULE };
   return {
-    enabled: row.enabled ?? false, destination: destination(row.destination), weeklyTimezone: timezone(row.weekly_timezone),
+    enabled: row.enabled ?? false, destination: destination(row.destination), templateVariant: normalizeReserveinfoPostTemplateVariant(row.template_variant), weeklyTimezone: timezone(row.weekly_timezone),
     lastRunStartedAt: row.last_run_started_at, lastRunCompletedAt: row.last_run_completed_at, lastRunStatus: row.last_run_status,
     lastError: row.last_error, lockExpiresAt: row.lock_expires_at,
   };
@@ -65,13 +66,13 @@ function mapQueue(row: QueueRow): ReserveinfoPlannedPost {
 }
 
 export async function getReserveinfoPostScheduleState(): Promise<ReserveinfoPostScheduleState> {
-  const { data, error } = await db.from("reserveinfo_post_schedule").select("enabled, destination, weekly_timezone, last_run_started_at, last_run_completed_at, last_run_status, last_error, lock_expires_at").eq("id", SCHEDULE_ROW_ID).maybeSingle();
+  const { data, error } = await db.from("reserveinfo_post_schedule").select("enabled, destination, template_variant, weekly_timezone, last_run_started_at, last_run_completed_at, last_run_status, last_error, lock_expires_at").eq("id", SCHEDULE_ROW_ID).maybeSingle();
   if (error) throw new Error(`Failed to load reserveinfo-post schedule state: ${setupError(error.message)}`);
   return mapSchedule(data as ScheduleRow | null);
 }
 
-export async function saveReserveinfoPostScheduleSettings(input: Pick<ReserveinfoPostScheduleState, "enabled" | "destination" | "weeklyTimezone">): Promise<ReserveinfoPostScheduleState> {
-  const { error } = await db.from("reserveinfo_post_schedule").upsert({ id: SCHEDULE_ROW_ID, enabled: input.enabled, destination: destination(input.destination), weekly_timezone: timezone(input.weeklyTimezone), updated_at: new Date().toISOString() }, { onConflict: "id" });
+export async function saveReserveinfoPostScheduleSettings(input: Pick<ReserveinfoPostScheduleState, "enabled" | "destination" | "templateVariant" | "weeklyTimezone">): Promise<ReserveinfoPostScheduleState> {
+  const { error } = await db.from("reserveinfo_post_schedule").upsert({ id: SCHEDULE_ROW_ID, enabled: input.enabled, destination: destination(input.destination), template_variant: normalizeReserveinfoPostTemplateVariant(input.templateVariant), weekly_timezone: timezone(input.weeklyTimezone), updated_at: new Date().toISOString() }, { onConflict: "id" });
   if (error) throw new Error(`Failed to save reserveinfo-post schedule: ${setupError(error.message)}`);
   return getReserveinfoPostScheduleState();
 }

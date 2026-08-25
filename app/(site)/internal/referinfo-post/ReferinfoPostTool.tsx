@@ -816,8 +816,8 @@ export default function ReferinfoPostTool(props: {
       setPendingLabel(mode === "run" ? `Run ${destination === "both" ? "Both" : destination === "x" ? "X" : "Telegram"} Deterministic` : "Dry Run Deterministic");
       setStatus(null);
       const nextResult = mode === "run"
-        ? await runReferinfoPostAction(destination, "deterministic")
-        : await dryRunReferinfoPostAction(destination, "deterministic");
+        ? await runReferinfoPostAction(destination, "deterministic", templateVariant)
+        : await dryRunReferinfoPostAction(destination, "deterministic", templateVariant);
       setResult(nextResult);
       setPendingLabel(null);
       setStatus(nextResult.ok ? (mode === "run" ? "Referinfo run completed." : "Dry run completed.") : nextResult.error ?? "Referinfo workflow failed.");
@@ -837,6 +837,7 @@ export default function ReferinfoPostTool(props: {
         enabled: schedule.enabled,
         destination,
         renderMode: "deterministic",
+        templateVariant,
         scheduleMode: "weekly_time",
         weeklyWeekday: 1,
         weeklyHour: parsed.hour,
@@ -955,7 +956,7 @@ export default function ReferinfoPostTool(props: {
               );
             })}
           </div>
-          <span className="text-xs font-medium text-fg-muted">Original is the active renderer default. This control only changes the preview; selecting Light does not change posts.</span>
+          <span className="text-xs font-medium text-fg-muted">This template is used for previews and posts when you save the schedule.</span>
         </div>
 
         <div className="flex flex-wrap gap-3">

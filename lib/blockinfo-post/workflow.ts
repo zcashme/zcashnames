@@ -969,7 +969,7 @@ export async function runBlockinfoPost(run: BlockinfoPostRunArgs): Promise<Block
     const dataFreshness = evaluateDataFreshness(summary);
 
     const openAiConfig = run.renderMode === "openai" ? getOpenAiConfig() : null;
-    const deterministicAssets = run.renderMode === "deterministic" ? getDeterministicAssetConfig() : null;
+    const deterministicAssets = run.renderMode === "deterministic" ? getDeterministicAssetConfig(run.templateVariant) : null;
     const prompt = renderPrompt(
       promptTemplate,
       buildPromptTokens({

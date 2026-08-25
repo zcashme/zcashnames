@@ -26,6 +26,7 @@ import {
   type ReferinfoPostResult,
   type ReferinfoPostRunArgs,
 } from "@/lib/referinfo-post/types";
+import type { ReferinfoPostTemplateVariant } from "@/lib/referinfo-post/template-variant";
 
 const LOG_PREFIX = "[referinfo-post]";
 
@@ -398,8 +399,8 @@ function emptyDelivery() {
   } satisfies ReferinfoPlannedPost["delivery"];
 }
 
-async function buildReferinfoPlannedPosts(shared: SharedConfig, now?: Date) {
-  const assets = getReferinfoDeterministicAssetConfig();
+async function buildReferinfoPlannedPosts(shared: SharedConfig, now?: Date, templateVariant?: ReferinfoPostTemplateVariant) {
+  const assets = getReferinfoDeterministicAssetConfig(templateVariant);
   const policy = await loadReferinfoCaptionPolicy(assets.captionPolicyPath);
   const bundle = await buildReferinfoDraftBundle({
     policy,
@@ -530,7 +531,7 @@ export async function runReferinfoPost(run: ReferinfoPostRunArgs): Promise<Refer
   try {
     const shared = getSharedConfig();
     validateDeliveryConfiguration(run.destination);
-    const preview = await buildReferinfoPlannedPosts(shared);
+    const preview = await buildReferinfoPlannedPosts(shared, undefined, run.templateVariant);
 
     partialResult = {
       ok: true,

@@ -14,6 +14,7 @@ import {
   isBlockinfoPostDestination,
   isBlockinfoPostRenderMode,
 } from "@/lib/blockinfo-post/types";
+import type { BlockinfoPostTemplateVariant } from "@/lib/blockinfo-post/template-variant";
 import { runBlockinfoPost } from "@/lib/blockinfo-post/workflow";
 
 function normalizeDestination(destination: BlockinfoPostDestination): BlockinfoPostDestination {
@@ -27,22 +28,26 @@ function normalizeRenderMode(renderMode: BlockinfoPostRenderMode): BlockinfoPost
 export async function runBlockinfoPostAction(
   destination: BlockinfoPostDestination,
   renderMode: BlockinfoPostRenderMode,
+  templateVariant: BlockinfoPostTemplateVariant,
 ): Promise<BlockinfoPostResult> {
   return runBlockinfoPost({
     mode: "run",
     destination: normalizeDestination(destination),
     renderMode: normalizeRenderMode(renderMode),
+    templateVariant,
   });
 }
 
 export async function dryRunBlockinfoPostAction(
   destination: BlockinfoPostDestination,
   renderMode: BlockinfoPostRenderMode,
+  templateVariant: BlockinfoPostTemplateVariant,
 ): Promise<BlockinfoPostResult> {
   return runBlockinfoPost({
     mode: "dry-run",
     destination: normalizeDestination(destination),
     renderMode: normalizeRenderMode(renderMode),
+    templateVariant,
   });
 }
 

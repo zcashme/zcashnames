@@ -4,7 +4,6 @@ import { buildCompletedReserveinfoWindow } from "@/lib/reserveinfo-post/planning
 import { getReserveinfoPostScheduleState, getReserveinfoQueue } from "@/lib/reserveinfo-post/store";
 import { DEFAULT_RESERVEINFO_POST_SCHEDULE, type ReserveinfoPlannedPost, type ReserveinfoReportWindow } from "@/lib/reserveinfo-post/types";
 import { buildReserveinfoPreview } from "@/lib/reserveinfo-post/workflow";
-import { getReserveinfoAssetConfig } from "@/lib/reserveinfo-post/deterministic";
 import ReserveinfoPostTool from "./ReserveinfoPostTool";
 
 export const metadata: Metadata = { title: "Reserveinfo Post | ZcashNames", description: "Preview and publish the weekly reserved-names queue.", robots: { index: false, follow: false } };
@@ -25,5 +24,5 @@ export default async function ReserveinfoPostPage() {
       previewError = [previewError, error instanceof Error ? error.message : String(error)].filter(Boolean).join(" ");
     }
   }
-  return <main className="w-full"><SiteRouteTitle title="Reserveinfo Post" /><ReserveinfoPostTool initialSchedule={initialSchedule} initialQueue={initialQueue} initialPreview={initialPreview} reportWindow={previewWindow} previewError={previewError} initialTemplateVariant={getReserveinfoAssetConfig().templateVariant} /></main>;
+  return <main className="w-full"><SiteRouteTitle title="Reserveinfo Post" /><ReserveinfoPostTool initialSchedule={initialSchedule} initialQueue={initialQueue} initialPreview={initialPreview} reportWindow={previewWindow} previewError={previewError} initialTemplateVariant={initialSchedule.templateVariant} /></main>;
 }

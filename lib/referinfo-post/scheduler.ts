@@ -38,6 +38,7 @@ export async function runReferinfoPostScheduleHeartbeat(): Promise<ReferinfoPost
     mode: "run",
     destination: schedule.destination,
     renderMode: schedule.renderMode,
+    templateVariant: schedule.templateVariant,
     scheduled: true,
   });
 }

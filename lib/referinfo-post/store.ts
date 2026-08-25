@@ -11,6 +11,7 @@ import {
   isReferinfoPostDestination,
   isReferinfoPostRenderMode,
 } from "@/lib/referinfo-post/types";
+import { normalizeReferinfoPostTemplateVariant } from "@/lib/referinfo-post/template-variant";
 
 const SCHEDULE_ROW_ID = "default";
 const LOCK_TTL_MS = 30 * 60 * 1000;
@@ -19,6 +20,7 @@ type ScheduleRow = {
   enabled: boolean | null;
   destination: string | null;
   render_mode: string | null;
+  template_variant: string | null;
   schedule_mode: string | null;
   weekly_weekday: number | null;
   weekly_hour: number | null;
@@ -37,6 +39,10 @@ function normalizeDestination(value: string | null | undefined): ReferinfoPostDe
 
 function normalizeRenderMode(value: string | null | undefined): ReferinfoPostRenderMode {
   return isReferinfoPostRenderMode(value) ? value : DEFAULT_REFERINFO_POST_SCHEDULE.renderMode;
+}
+
+function normalizeTemplateVariant(value: string | null | undefined) {
+  return normalizeReferinfoPostTemplateVariant(value);
 }
 
 function normalizeWeekday(value: number | null | undefined): number {
@@ -100,6 +106,7 @@ function mapScheduleRow(row: ScheduleRow | null | undefined): ReferinfoPostSched
     enabled: row.enabled ?? DEFAULT_REFERINFO_POST_SCHEDULE.enabled,
     destination: normalizeDestination(row.destination),
     renderMode: normalizeRenderMode(row.render_mode),
+    templateVariant: normalizeTemplateVariant(row.template_variant),
     scheduleMode: "weekly_time",
     weeklyWeekday: normalizeWeekday(row.weekly_weekday),
     weeklyHour: normalizeHour(row.weekly_hour),
@@ -156,7 +163,7 @@ function zonedMinutes(date: Date, timeZone: string): { dateKey: string; minutes:
 export async function getReferinfoPostScheduleState(): Promise<ReferinfoPostScheduleState> {
   const { data, error } = await db
     .from("referinfo_post_schedule")
-    .select("enabled, destination, render_mode, schedule_mode, weekly_weekday, weekly_hour, weekly_minute, weekly_timezone, last_run_started_at, last_run_completed_at, last_run_status, last_error, lock_expires_at")
+    .select("enabled, destination, render_mode, template_variant, schedule_mode, weekly_weekday, weekly_hour, weekly_minute, weekly_timezone, last_run_started_at, last_run_completed_at, last_run_status, last_error, lock_expires_at")
     .eq("id", SCHEDULE_ROW_ID)
     .maybeSingle();
 
@@ -174,6 +181,7 @@ export async function saveReferinfoPostScheduleSettings(input: ReferinfoPostSche
   const weeklyMinute = normalizeMinute(input.weeklyMinute);
   const destination = normalizeDestination(input.destination);
   const renderMode = normalizeRenderMode(input.renderMode);
+  const templateVariant = normalizeTemplateVariant(input.templateVariant);
   const nowIso = new Date().toISOString();
 
   const { error } = await db.from("referinfo_post_schedule").upsert(
@@ -182,6 +190,7 @@ export async function saveReferinfoPostScheduleSettings(input: ReferinfoPostSche
       enabled: !!input.enabled,
       destination,
       render_mode: renderMode,
+      template_variant: templateVariant,
       schedule_mode: "weekly_time",
       weekly_weekday: weeklyWeekday,
       weekly_hour: weeklyHour,

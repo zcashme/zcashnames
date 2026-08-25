@@ -46,6 +46,7 @@ export async function runBlockinfoPostScheduleHeartbeat(): Promise<BlockinfoPost
     mode: "run",
     destination: schedule.destination,
     renderMode: schedule.renderMode,
+    templateVariant: schedule.templateVariant,
     scheduled: true,
   });
 }

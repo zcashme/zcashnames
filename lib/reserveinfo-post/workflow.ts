@@ -5,6 +5,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { db } from "@/lib/db";
 import { renderReserveinfoImage, reserveinfoCaption } from "@/lib/reserveinfo-post/deterministic";
+import type { ReserveinfoPostTemplateVariant } from "@/lib/reserveinfo-post/template-variant";
 import { buildCompletedReserveinfoWindow, buildReserveinfoSchedule, normalizeReservedNames, paginateReservedNames, parseReservedNameMemo } from "@/lib/reserveinfo-post/planning";
 import {
   acquireReserveinfoPostRunLock, createReserveinfoBatch, getReserveinfoBatch, getReserveinfoPostScheduleState,
@@ -151,7 +152,7 @@ function isWeekdayInZone(now: Date, timeZone: string): boolean {
   return weekday !== "Sat" && weekday !== "Sun";
 }
 
-export async function runReserveinfoPost(args: { mode: "run" | "dry-run"; destination?: ReserveinfoPostDestination; scheduled?: boolean; now?: Date }): Promise<ReserveinfoPostResult> {
+export async function runReserveinfoPost(args: { mode: "run" | "dry-run"; destination?: ReserveinfoPostDestination; templateVariant?: ReserveinfoPostTemplateVariant; scheduled?: boolean; now?: Date }): Promise<ReserveinfoPostResult> {
   const now = args.now ?? new Date(); const schedule = args.mode === "dry-run"
     ? await getReserveinfoPostScheduleState().catch(() => ({ ...DEFAULT_RESERVEINFO_POST_SCHEDULE }))
     : await getReserveinfoPostScheduleState();
@@ -184,7 +185,7 @@ export async function runReserveinfoPost(args: { mode: "run" | "dry-run"; destin
       return { ok: true, mode: "run", destinationsRequested: requested, scheduled: !!args.scheduled, skipped: true, skipReason: "The preceding X thread page has not been published yet.", reportWindow: report, totalNames: post.totalNames, plannedPosts: queue, schedule: released };
     }
     const output = config();
-    const buffer = await renderReserveinfoImage(post); const fileName = path.basename(post.localFilePath || `reserveinfo-post-${report.weekStartDateKey}-${String(post.pageIndex + 1).padStart(2, "0")}.png`);
+    const buffer = await renderReserveinfoImage(post, args.templateVariant ?? schedule.templateVariant); const fileName = path.basename(post.localFilePath || `reserveinfo-post-${report.weekStartDateKey}-${String(post.pageIndex + 1).padStart(2, "0")}.png`);
     const localPath = post.localFilePath || path.join(output.outputDir, fileName); const storagePath = post.storageObjectPath || `${output.prefix}/${report.weekStartDateKey}/${fileName}`;
     await mkdir(path.dirname(localPath), { recursive: true }); await writeFile(localPath, buffer);
     const { error: storageError } = await db.storage.from(output.bucket).upload(storagePath, buffer, { contentType: "image/png", upsert: true });

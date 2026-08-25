@@ -1,3 +1,5 @@
+import type { BlockinfoPostTemplateVariant } from "@/lib/blockinfo-post/template-variant";
+
 export const BLOCKINFO_POST_DESTINATIONS = ["telegram", "x", "both"] as const;
 export const BLOCKINFO_POST_RENDER_MODES = ["openai", "deterministic"] as const;
 export const BLOCKINFO_POST_DELTA_WINDOWS = ["1d", "7d", "30d"] as const;
@@ -173,6 +175,7 @@ export type BlockinfoPostScheduleState = {
   enabled: boolean;
   destination: BlockinfoPostDestination;
   renderMode: BlockinfoPostRenderMode;
+  templateVariant: BlockinfoPostTemplateVariant;
   scheduleMode: "interval" | "daily_time";
   intervalHours: number;
   dailyHour: number;
@@ -189,6 +192,7 @@ export const DEFAULT_BLOCKINFO_POST_SCHEDULE: BlockinfoPostScheduleState = {
   enabled: false,
   destination: "both",
   renderMode: "deterministic",
+  templateVariant: "original",
   scheduleMode: "daily_time",
   intervalHours: 24,
   dailyHour: 11,
@@ -239,6 +243,7 @@ export type BlockinfoPostRunArgs = {
   mode: BlockinfoPostMode;
   destination: BlockinfoPostDestination;
   renderMode: BlockinfoPostRenderMode;
+  templateVariant?: BlockinfoPostTemplateVariant;
   scheduled?: boolean;
 };
 
@@ -246,6 +251,7 @@ export type BlockinfoPostScheduleInput = {
   enabled: boolean;
   destination: BlockinfoPostDestination;
   renderMode: BlockinfoPostRenderMode;
+  templateVariant: BlockinfoPostTemplateVariant;
   scheduleMode: "interval" | "daily_time";
   intervalHours: number;
   dailyHour: number;
