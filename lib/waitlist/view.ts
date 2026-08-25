@@ -618,16 +618,14 @@ export async function getPublicWaitlistViewData(args?: {
     protectedCountQuery = applyWaitlistSearch(protectedCountQuery, searchQuery, searchMode);
   }
 
+  // Tab filters apply only to the visible rows. Tab badge counts stay independent
+  // of the selected tab so they do not collapse to the reserved∩protected overlap.
   if (reservedOnly) {
     query = query.eq("is_reserved", true);
-    reservedCountQuery = reservedCountQuery.eq("is_reserved", true);
-    protectedCountQuery = protectedCountQuery.eq("is_reserved", true);
   }
 
   if (protectedOnly) {
     query = query.eq("is_protected", true);
-    reservedCountQuery = reservedCountQuery.eq("is_protected", true);
-    protectedCountQuery = protectedCountQuery.eq("is_protected", true);
   }
 
   if (sortKey === "line") {

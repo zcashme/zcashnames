@@ -17,6 +17,7 @@ import CopyIconButton from "@/components/CopyIconButton";
 import SearchResultsSummary from "@/components/table/SearchResultsSummary";
 import { getResumeToReplace, clearResume } from "@/lib/purchases/resume";
 import { nameActionHref } from "@/lib/purchases/nameActionHref";
+import { isFullTxidQuery, isResolvedAddressQuery } from "@/lib/zns/utils";
 import type { ResumeSnapshot } from "@/lib/purchases/resume";
 import type { ResolveName, ZnsEvent } from "@/lib/types";
 import type { Action } from "@/lib/types";
@@ -226,7 +227,9 @@ export default function ExplorerView({
   function handleSearchSubmit() {
     const query = searchQuery.trim();
     if (!query) return;
-    if (searchMode === "exact") {
+    const useNameDetail =
+      searchMode === "exact" && !isFullTxidQuery(query) && !isResolvedAddressQuery(query);
+    if (useNameDetail) {
       startTransition(() => {
         router.push(buildUrl({ name: query, search: null, searchMode: "exact", page: 1 }));
       });

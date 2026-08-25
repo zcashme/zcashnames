@@ -2,6 +2,7 @@ import { getChainStats } from "@/lib/network-stats";
 import type { Listing, Network, Registration, ZnsEvent } from "@/lib/types";
 import { getCurrentRegistrations, getEvents, getListings } from "@/lib/zns/resolve";
 import { ACTIONS } from "@/lib/types";
+import { filterEvents, filterListings, filterRegistrations } from "@/lib/zns/utils";
 import type {
   ExplorerSearchMode,
   ExplorerSortDirection,
@@ -116,25 +117,7 @@ function paginateRows<T>(rows: T[], page: number, pageSize: number) {
 }
 
 function normalizeSearchQuery(searchQuery: string) {
-  return searchQuery.trim().toLowerCase();
-}
-
-function filterRegistrations(rows: Registration[], searchQuery: string) {
-  const normalized = normalizeSearchQuery(searchQuery);
-  if (!normalized) return rows;
-  return rows.filter((row) => row.name.toLowerCase().includes(normalized));
-}
-
-function filterListings(rows: Listing[], searchQuery: string) {
-  const normalized = normalizeSearchQuery(searchQuery);
-  if (!normalized) return rows;
-  return rows.filter((row) => row.name.toLowerCase().includes(normalized));
-}
-
-function filterEvents(rows: ZnsEvent[], searchQuery: string) {
-  const normalized = normalizeSearchQuery(searchQuery);
-  if (!normalized) return rows;
-  return rows.filter((row) => (row.name ?? "").toLowerCase().includes(normalized));
+  return searchQuery.trim();
 }
 
 const EVENTS_BATCH_SIZE = 500;

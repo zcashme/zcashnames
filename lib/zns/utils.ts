@@ -1,5 +1,5 @@
 import { ZNS } from "zcashname-sdk";
-import type { Network, Registration, ResolveName, NameAvailabilityState } from "@/lib/types";
+import type { Listing, Network, Registration, ResolveName, NameAvailabilityState, ZnsEvent } from "@/lib/types";
 import {
   validateAddress,
   isValidTransparentAddress,
@@ -34,20 +34,128 @@ export function isValidUsername(name: string): boolean {
   return NAME_RE.test(name);
 }
 
-// Filter a registration list by name substring, or by exact-match for unified
-// addresses (transparent/sapling substrings still match against the address
-// column). Case-insensitive.
+// Explorer / registration search. Name always uses a case-insensitive substring.
+// Txids only participate when the query looks like hex (avoids "a" matching every
+// hash). Addresses only participate when the query itself is a valid address:
+// unified addresses exact-match, transparent/sapling still allow substrings.
+const TXID_SEARCH_RE = /^(0x)?[0-9a-f]{8,64}$/i;
+const FULL_TXID_RE = /^(0x)?[0-9a-f]{64}$/i;
+
+export function isFullTxidQuery(value: string): boolean {
+  return FULL_TXID_RE.test(value.trim());
+}
+
+export function isResolvedAddressQuery(value: string): boolean {
+  const status = validateAddress(value.trim()).status;
+  return status === "unified" || status === "sapling" || status === "transparent";
+}
+
+function txidSearchNeedle(query: string): string | null {
+  const trimmed = query.trim();
+  if (!TXID_SEARCH_RE.test(trimmed)) return null;
+  return trimmed.toLowerCase().replace(/^0x/, "");
+}
+
+function matchesNameField(value: string | null | undefined, needle: string) {
+  return (value ?? "").toLowerCase().includes(needle);
+}
+
+function matchesTxidField(value: string | null | undefined, needle: string | null) {
+  if (!needle || !value) return false;
+  return value.toLowerCase().includes(needle);
+}
+
+function matchesAddressField(
+  value: string | null | undefined,
+  addressNeedle: string,
+  addressStatus: AddressStatus,
+) {
+  if (!value) return false;
+  if (addressStatus === "unified") return value.toLowerCase() === addressNeedle;
+  if (addressStatus === "sapling" || addressStatus === "transparent") {
+    return value.toLowerCase().includes(addressNeedle);
+  }
+  return false;
+}
+
+type ExplorerSearchIndex = {
+  nameNeedle: string;
+  txidNeedle: string | null;
+  addressNeedle: string;
+  addressStatus: AddressStatus;
+};
+
+function buildExplorerSearchIndex(query: string): ExplorerSearchIndex | null {
+  const trimmed = query.trim();
+  if (!trimmed) return null;
+  return {
+    nameNeedle: trimmed.toLowerCase(),
+    txidNeedle: txidSearchNeedle(trimmed),
+    addressNeedle: trimmed.toLowerCase(),
+    addressStatus: validateAddress(trimmed).status,
+  };
+}
+
+function matchesExplorerSearch(
+  index: ExplorerSearchIndex,
+  fields: {
+    names?: Array<string | null | undefined>;
+    txids?: Array<string | null | undefined>;
+    addresses?: Array<string | null | undefined>;
+  },
+) {
+  if (fields.names?.some((name) => matchesNameField(name, index.nameNeedle))) return true;
+  if (fields.txids?.some((txid) => matchesTxidField(txid, index.txidNeedle))) return true;
+  if (fields.addresses?.some((address) => matchesAddressField(address, index.addressNeedle, index.addressStatus))) {
+    return true;
+  }
+  return false;
+}
+
 export function filterRegistrations(
   registrations: Registration[],
   searchQuery: string,
 ): Registration[] {
-  const q = searchQuery.toLowerCase().trim();
-  if (!q) return registrations;
-  const isUAddress = validateAddress(q).status === "unified";
+  const index = buildExplorerSearchIndex(searchQuery);
+  if (!index) return registrations;
   return registrations.filter((registration) =>
-    registration.name.toLowerCase().includes(q) ||
-    (!isUAddress && registration.address.toLowerCase().includes(q)) ||
-    (isUAddress && registration.address.toLowerCase() === q)
+    matchesExplorerSearch(index, {
+      names: [registration.name],
+      txids: [
+        registration.txid,
+        registration.listing?.txid,
+        registration.listing?.pendingBuy?.txid,
+      ],
+      addresses: [
+        registration.address,
+        registration.listing?.payTaddr,
+        registration.listing?.pendingBuy?.buyer,
+      ],
+    }),
+  );
+}
+
+export function filterListings(listings: Listing[], searchQuery: string): Listing[] {
+  const index = buildExplorerSearchIndex(searchQuery);
+  if (!index) return listings;
+  return listings.filter((listing) =>
+    matchesExplorerSearch(index, {
+      names: [listing.name],
+      txids: [listing.txid, listing.pendingBuy?.txid],
+      addresses: [listing.payTaddr, listing.pendingBuy?.buyer],
+    }),
+  );
+}
+
+export function filterEvents(events: ZnsEvent[], searchQuery: string): ZnsEvent[] {
+  const index = buildExplorerSearchIndex(searchQuery);
+  if (!index) return events;
+  return events.filter((event) =>
+    matchesExplorerSearch(index, {
+      names: [event.name],
+      txids: [event.txid],
+      addresses: [event.ua],
+    }),
   );
 }
 
