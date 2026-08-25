@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { zip321Uri } from "@/lib/purchases/zip321";
 import { useCopy } from "@/components/hooks/useCopy";
@@ -76,6 +76,7 @@ type QrBlockProps = {
   size?: number;
   layout?: "default" | "verify";
   downloadFilename?: string;
+  belowQr?: ReactNode;
 };
 
 function DownloadIcon() {
@@ -95,6 +96,7 @@ export function QrBlock({
   size = 200,
   layout = "default",
   downloadFilename = "zns-payment.png",
+  belowQr,
 }: QrBlockProps) {
   const [expanded, setExpanded] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -171,6 +173,7 @@ export function QrBlock({
               </p>
             </div>
           </div>
+          {belowQr}
           <div className="flex flex-col gap-3">
             <CopyRow label="Address" value={address} copied={addrCopied} onCopy={() => copyAddr(address)} variant="verify" />
             {hasAmount && (

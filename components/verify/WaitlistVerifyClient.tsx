@@ -18,6 +18,7 @@ import { useCopy } from "@/components/hooks/useCopy";
 import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { QrBlock } from "@/components/ui/QrBlock";
+import PayWithNoirButton from "@/components/verify/PayWithNoirButton";
 import HeroShareButton from "@/components/HeroShareButton";
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import {
@@ -4165,6 +4166,14 @@ function VerifyPaymentCard({
                       downloadFilename={`zcashnames-reserve-${(card.name?.trim() || "name").toLowerCase()}.png`}
                       layout="verify"
                       size={184}
+                      belowQr={
+                        <PayWithNoirButton
+                          to={paymentAddress}
+                          amount={selectedAmountText}
+                          memo={card.memo ?? ""}
+                          onSent={() => setActiveTab("sent")}
+                        />
+                      }
                     />
                   </div>
                 </div>
