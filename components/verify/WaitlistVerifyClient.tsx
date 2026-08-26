@@ -2635,6 +2635,32 @@ function PaymentTabButton({
   );
 }
 
+type ReservationStatusPayload =
+  | {
+      ok: true;
+      requestId?: string;
+      checkedAt: string;
+      card: {
+        reserved: boolean;
+        reservedAt: string | null;
+        reservedTxid: string | null;
+        totalForName: number;
+        positionForName: number | null;
+      };
+    }
+  | { ok: false; error?: string; requestId?: string };
+
+function parseReservationStatusPayload(rawBody: string): ReservationStatusPayload | null {
+  if (!rawBody) return null;
+  try {
+    const parsed: unknown = JSON.parse(rawBody);
+    if (!parsed || typeof parsed !== "object" || !("ok" in parsed)) return null;
+    return parsed as ReservationStatusPayload;
+  } catch {
+    return null;
+  }
+}
+
 function buildReservationSupportMessage(args: {
   name: string;
   rowId: string;
@@ -2732,27 +2758,7 @@ function ReservationStatusPane({
         }),
       });
 
-      const rawBody = await response.text();
-      let payload:
-        | {
-            ok: true;
-            requestId?: string;
-            checkedAt: string;
-            card: {
-              reserved: boolean;
-              reservedAt: string | null;
-              reservedTxid: string | null;
-              totalForName: number;
-              positionForName: number | null;
-            };
-          }
-        | { ok: false; error?: string; requestId?: string }
-        | null = null;
-      try {
-        payload = rawBody ? (JSON.parse(rawBody) as NonNullable<typeof payload>) : null;
-      } catch {
-        payload = null;
-      }
+      const payload = parseReservationStatusPayload(await response.text());
 
       if (!payload) {
         throw new Error(
@@ -2762,11 +2768,10 @@ function ReservationStatusPane({
         );
       }
 
-      if (!response.ok || !payload.ok) {
-        const requestId = "requestId" in payload ? payload.requestId ?? null : null;
-        setSupportRequestId(requestId);
+      if (!response.ok || payload.ok !== true) {
+        setSupportRequestId(payload.requestId ?? null);
         throw new Error(
-          "error" in payload && payload.error
+          payload.ok === false && payload.error
             ? payload.error
             : "Reservation status could not be refreshed.",
         );
