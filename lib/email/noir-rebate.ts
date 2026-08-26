@@ -4,7 +4,7 @@ import NoirReservationRebateEmail from "@/components/emails/NoirReservationRebat
 import { FROM_EMAIL } from "@/lib/email/constants";
 import { sendEmail } from "@/lib/email/client";
 
-export const NOIR_REBATE_EMAIL = "contact@zknoir.com";
+export const NOIR_REBATE_EMAIL = "support@zknoir.com";
 
 export type NoirReservationRebateNotice = {
   unifiedAddress: string;
