@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 import fs from "fs/promises";
 import path from "path";
+import { headers } from "next/headers";
 import WaitlistVerifyClient, { HeroHowReservationsWork } from "@/components/verify/WaitlistVerifyClient";
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import WaitlistReservationResendForm from "@/components/verify/WaitlistReservationResendForm";
@@ -42,6 +43,57 @@ export const metadata = RESERVE_METADATA;
 
 export const dynamic = "force-dynamic";
 const SHAREKIT_PATH = path.join(process.cwd(), "content", "sharekit.md");
+const LOCAL_ZN_PRIORITY_PREVIEW_TOKEN = "preview-zn-priority";
+
+function isLocalPreviewHost(hostHeader: string | null): boolean {
+  const host = (hostHeader ?? "").split(",")[0]?.trim().toLowerCase() ?? "";
+  const hostname = host.split(":")[0];
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
+function buildZnPriorityPreviewCards(): ReservePageCard[] {
+  return [
+    {
+      id: "preview-zn-priority",
+      name: "Zcash",
+      collapsed: false,
+      reserved: false,
+      protectedName: true,
+      zmPriorityClaim: true,
+      protectedExpiresAt: "2027-01-01T00:00:00.000Z",
+      deleteRequestStatus: "none",
+      deleteRequestId: null,
+      deleteRequestRequestedAt: null,
+      deleteRequestExpiresAt: null,
+      protectedRequestStatus: "not_submitted",
+      protectedRequestId: null,
+      protectedRequestReferenceNumber: null,
+      protectedRequestSubmittedAt: null,
+      protectedRequestPreferredContactKind: null,
+      protectedRequestPreferredContactValue: null,
+      protectedRequestContactMethods: [],
+      protectedRequestRelationship: null,
+      protectedRequestSupportingLink: null,
+      protectedRequestAdditionalContext: null,
+      protectedRequestApprovedAt: null,
+      protectedRequestDeniedAt: null,
+      reservedAt: null,
+      reservedTxid: null,
+      totalForName: 1,
+      positionForName: null,
+      waitlistLinePosition: null,
+      totalReferrals: 0,
+      reservedReferrals: 0,
+      potentialRewards: 0,
+      referralCode: null,
+      waitlistHref: "/waitlist/view?search=Zcash&searchMode=exact",
+      memo: null,
+      memoError: null,
+      rebateEnabled: false,
+      rebateUnifiedAddress: null,
+    },
+  ];
+}
 
 async function getReserveShareDraftPosts(): Promise<string[]> {
   try {
@@ -167,6 +219,32 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
         </div>
       </>
     );
+  }
+
+  if (token === LOCAL_ZN_PRIORITY_PREVIEW_TOKEN) {
+    const host = (await headers()).get("host");
+    if (isLocalPreviewHost(host)) {
+      const paymentAddress =
+        getWaitlistReservePaymentAddress() ?? "u1preview0000000000000000000000000000000000";
+      const baseAmountZec = getWaitlistReserveFeeZec() ?? "0.01";
+      const shareDraftPosts = await getReserveShareDraftPosts();
+
+      return (
+        <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
+          <WaitlistVerifyClient
+            verifyToken={token}
+            paymentAddress={paymentAddress}
+            baseAmountZec={baseAmountZec}
+            cards={buildZnPriorityPreviewCards()}
+            displayEmail="preview@localhost"
+            normalizedEmail="preview@localhost"
+            earlyAccessStartAt={WAITLIST_VIEW_EARLY_ACCESS_START_AT}
+            earlyAccessLabel={WAITLIST_VIEW_EARLY_ACCESS_LABEL}
+            shareDraftPosts={shareDraftPosts}
+          />
+        </div>
+      );
+    }
   }
 
   const parsed = parseWaitlistVerifyToken(token);
@@ -425,6 +503,8 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
         collapsed: rowPreferences.get(row.id) ?? false,
         reserved: row.name_reserved === true,
         protectedName: protectedName?.isProtected ?? false,
+        zmPriorityClaim: protectedName?.zmPriorityClaim === true,
+        protectedExpiresAt: protectedName?.expiresAt ?? null,
         deleteRequestStatus: activeDeleteRequest ? "pending" : "none",
         deleteRequestId: activeDeleteRequest?.id ?? null,
         deleteRequestRequestedAt: activeDeleteRequest?.requestedAt ?? null,
@@ -465,6 +545,8 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
         collapsed: rowPreferences.get(row.id) ?? false,
         reserved: row.name_reserved === true,
         protectedName: protectedName?.isProtected ?? false,
+        zmPriorityClaim: protectedName?.zmPriorityClaim === true,
+        protectedExpiresAt: protectedName?.expiresAt ?? null,
         deleteRequestStatus: activeDeleteRequest ? "pending" : "none",
         deleteRequestId: activeDeleteRequest?.id ?? null,
         deleteRequestRequestedAt: activeDeleteRequest?.requestedAt ?? null,

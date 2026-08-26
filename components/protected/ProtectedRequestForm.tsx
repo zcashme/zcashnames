@@ -144,11 +144,30 @@ function categoryLabel(value: string): string {
     .join(" ");
 }
 
+function findMatchingNameOption(
+  query: string,
+  options: ProtectedRequestNameOption[],
+): ProtectedRequestNameOption | null {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return null;
+
+  return (
+    options.find(
+      (option) =>
+        option.value.toLowerCase() === needle
+        || option.normalizedName.toLowerCase() === needle
+        || option.label.toLowerCase() === needle,
+    ) ?? null
+  );
+}
+
 function SearchableNameInput({
   id,
   value,
   onChange,
   onSelect,
+  onDismiss,
+  onRequireSelection,
   options,
   loading,
   invalid = false,
@@ -159,6 +178,8 @@ function SearchableNameInput({
   value: string;
   onChange: (next: string) => void;
   onSelect: (next: ProtectedRequestNameOption) => void;
+  onDismiss: () => void;
+  onRequireSelection: () => void;
   options: ProtectedRequestNameOption[];
   loading: boolean;
   invalid?: boolean;
@@ -167,8 +188,22 @@ function SearchableNameInput({
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const shouldShowMenu =
-    !locked && open && (loading || options.length > 0 || value.trim().length > 0);
+  const onDismissRef = useRef(onDismiss);
+  const shouldShowMenu = !locked && open;
+
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
+
+  function closeWithoutSelecting() {
+    setOpen(false);
+    onDismissRef.current();
+  }
+
+  function selectOption(option: ProtectedRequestNameOption) {
+    onSelect(option);
+    setOpen(false);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -176,12 +211,14 @@ function SearchableNameInput({
     function handlePointerDown(event: PointerEvent) {
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
+        onDismissRef.current();
       }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setOpen(false);
+        onDismissRef.current();
       }
     }
 
@@ -206,23 +243,50 @@ function SearchableNameInput({
       <p className="mb-2 text-xs leading-6" style={{ color: "var(--fg-muted)" }}>
         {locked
           ? "This request is locked to the name you selected."
-          : "Search and select a non-redeemed protected name from the list."}
+          : "Search the list and select a non-redeemed protected name. Custom names are not accepted."}
       </p>
       <div className="relative">
         <input
           id={id}
           type="text"
+          role="combobox"
           value={value}
           onFocus={() => {
             if (!locked) setOpen(true);
+          }}
+          onClick={() => {
+            if (!locked) setOpen(true);
+          }}
+          onBlur={(event) => {
+            if (locked) return;
+            if (rootRef.current?.contains(event.relatedTarget as Node)) return;
+            closeWithoutSelecting();
           }}
           onChange={(event) => {
             if (locked) return;
             onChange(sanitizeNameInput(event.target.value));
             setOpen(true);
           }}
-          placeholder="Search protected names"
+          onKeyDown={(event) => {
+            if (locked) return;
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+
+            const match =
+              findMatchingNameOption(value, options)
+              ?? (options.length === 1 ? options[0] : null);
+
+            if (match) {
+              selectOption(match);
+              return;
+            }
+
+            setOpen(true);
+            onRequireSelection();
+          }}
+          placeholder="Select a protected name"
           autoComplete="off"
+          spellCheck={false}
           readOnly={locked}
           disabled={locked}
           className="w-full rounded-2xl px-4 py-2.5 pr-11 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-70"
@@ -230,6 +294,7 @@ function SearchableNameInput({
           aria-autocomplete="list"
           aria-expanded={shouldShowMenu}
           aria-haspopup="listbox"
+          aria-controls={`${id}-options`}
           aria-disabled={locked}
         />
         {locked ? null : (
@@ -242,6 +307,7 @@ function SearchableNameInput({
         )}
         {shouldShowMenu ? (
           <div
+            id={`${id}-options`}
             role="listbox"
             className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-20 max-h-72 overflow-y-auto overflow-x-hidden rounded-2xl border border-border-muted bg-[var(--color-raised)] p-1.5 shadow-2xl"
           >
@@ -255,9 +321,11 @@ function SearchableNameInput({
                   key={option.normalizedName}
                   type="button"
                   role="option"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                  }}
                   onClick={() => {
-                    onSelect(option);
-                    setOpen(false);
+                    selectOption(option);
                   }}
                   className="zns-menu-hover flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-fg-body transition-colors"
                 >
@@ -619,6 +687,34 @@ export default function ProtectedRequestForm({
     applyContactsForName(next);
   }
 
+  function dismissNameInput() {
+    const typed = nameInput.trim();
+    if (selectedName && typed.toLowerCase() === selectedName.value.toLowerCase()) {
+      if (nameInput !== selectedName.value) {
+        setNameInput(selectedName.value);
+      }
+      setNameError(null);
+      return;
+    }
+
+    const match = findMatchingNameOption(typed, nameOptions);
+    if (match) {
+      selectNameOption(match);
+      return;
+    }
+
+    if (selectedName) {
+      setNameInput(selectedName.value);
+      setNameError(null);
+      return;
+    }
+
+    if (typed) {
+      setNameInput("");
+      setNameError("Select a non-redeemed protected name from the list.");
+    }
+  }
+
   useEffect(() => {
     if (hasAppliedPrefill || !prefilledName || isNameLoading) return;
 
@@ -642,7 +738,6 @@ export default function ProtectedRequestForm({
 
   function handleNameInputChange(next: string) {
     setNameInput(next);
-    setSelectedName(null);
     setNameError(null);
     setErrorMessage(null);
   }
@@ -729,12 +824,22 @@ export default function ProtectedRequestForm({
 
   function handleSubmit() {
     if (isSubmitting || captchaOpen) return;
-    if (selectedName?.zmPriorityClaim) return;
 
-    if (!selectedName || nameInput.trim() !== selectedName.value) {
+    const committedName =
+      selectedName && nameInput.trim() === selectedName.value
+        ? selectedName
+        : findMatchingNameOption(nameInput, nameOptions);
+
+    if (!committedName) {
       setNameError("Select a non-redeemed protected name from the list.");
       return;
     }
+
+    if (committedName !== selectedName) {
+      selectNameOption(committedName);
+    }
+
+    if (committedName.zmPriorityClaim) return;
 
     const nextContactError = validateContacts();
     setContactError(nextContactError);
@@ -759,8 +864,8 @@ export default function ProtectedRequestForm({
       filledContacts.find((contact) => contact.uid === preferredContactUid) ?? filledContacts[0];
 
     const payload: ProtectedRequestPayload = {
-      name: selectedName.value,
-      normalizedName: selectedName.normalizedName,
+      name: committedName.value,
+      normalizedName: committedName.normalizedName,
       contactMethods: filledContacts.map((contact) => ({
         kind: contact.kind,
         value: contact.value,
@@ -883,6 +988,10 @@ export default function ProtectedRequestForm({
               value={nameInput}
               onChange={handleNameInputChange}
               onSelect={selectNameOption}
+              onDismiss={dismissNameInput}
+              onRequireSelection={() => {
+                setNameError("Select a non-redeemed protected name from the list.");
+              }}
               options={nameOptions}
               loading={isNameLoading}
               invalid={!!nameError}

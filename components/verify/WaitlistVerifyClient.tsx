@@ -54,6 +54,8 @@ type VerifyCard = {
   collapsed: boolean;
   reserved: boolean;
   protectedName: boolean;
+  zmPriorityClaim: boolean;
+  protectedExpiresAt: string | null;
   deleteRequestStatus: DeleteRequestStatus;
   deleteRequestId: string | null;
   deleteRequestRequestedAt: string | null;
@@ -956,6 +958,78 @@ function formatReservedDate(value: string | null): string {
     year: "numeric",
     timeZone: "America/New_York",
   }).format(new Date(value));
+}
+
+function formatProtectionExpiryDate(value: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+function buildProtectedDisputeHref(name: string | null): string {
+  const trimmed = name?.trim() ?? "";
+  if (!trimmed) return "/protected/dispute";
+  return `/protected/dispute?${new URLSearchParams({ name: trimmed }).toString()}`;
+}
+
+function ProtectedCardDisputeFooter({ name }: { name: string | null }) {
+  return (
+    <p
+      className="border-t px-5 py-4 text-sm leading-6 sm:px-6"
+      style={{
+        borderColor: "var(--faq-border)",
+        color: "var(--fg-muted)",
+      }}
+    >
+      Think this name shouldn’t be protected?{" "}
+      <Link
+        href={buildProtectedDisputeHref(name)}
+        className="font-semibold no-underline transition-[filter] duration-200 hover:brightness-110"
+        style={{ color: "var(--color-accent-interactive)" }}
+      >
+        Dispute it
+      </Link>
+      .
+    </p>
+  );
+}
+
+function ZcashMePriorityCardCopy({
+  name,
+  expiresAt,
+}: {
+  name: string;
+  expiresAt: string | null;
+}) {
+  const expiryLabel = formatProtectionExpiryDate(expiresAt) ?? "this protection expires";
+  const profileHref = `https://zcash.me/${encodeURIComponent(name)}`;
+
+  return (
+    <div className="space-y-3 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
+      <p>
+        The Zcash.me user “{name}” has priority access to this name until {expiryLabel}.
+      </p>
+      <p>
+        If this is you, no request is necessary. We will send an access code to claim your name via
+        shielded memo to the address listed at{" "}
+        <a
+          href={profileHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold no-underline transition-[filter] duration-200 hover:brightness-110"
+          style={{ color: "var(--color-accent-interactive)" }}
+        >
+          Zcash.me/{name}
+        </a>.
+      </p>
+    </div>
+  );
 }
 
 function formatReservedTime(value: string | null): string {
@@ -3986,6 +4060,9 @@ function VerifyPaymentCard({
   }, [baseAmountValue, selectedAmount]);
 
   if (card.protectedName && !card.reserved) {
+    const displayName = card.name?.trim() || "Protected name";
+    const isZmPriority = card.zmPriorityClaim;
+
     return (
       <article
         className={compactCardClassName}
@@ -3995,7 +4072,7 @@ function VerifyPaymentCard({
             "linear-gradient(135deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 70%, transparent) 0%, color-mix(in srgb, var(--color-card) 96%, transparent) 100%)",
         }}
       >
-        <div className={card.collapsed ? "" : "grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,0.92fr)]"}>
+        <div className={card.collapsed || isZmPriority ? "" : "grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,0.92fr)]"}>
           <section className="px-5 py-5 sm:px-6 sm:py-6">
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-4">
@@ -4003,7 +4080,7 @@ function VerifyPaymentCard({
                   <div className="flex min-w-0 items-start gap-2">
                     <div className="min-w-0">
                       <h2 className="min-w-0 text-[1.65rem] font-bold tracking-tight" style={{ color: "var(--fg-heading)" }}>
-                        {card.name?.trim() || "Protected name"}
+                        {displayName}
                       </h2>
                     </div>
                     <VerifyCardActionMenu
@@ -4016,9 +4093,18 @@ function VerifyPaymentCard({
                   </div>
                   <div className="min-w-0">
                     {!card.collapsed ? (
-                      <p className="mt-1 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-                        This name is protected to reduce impersonation. Request access if you represent the person, organization, or identity associated with this name.
-                      </p>
+                      isZmPriority ? (
+                        <div className="mt-3">
+                          <ZcashMePriorityCardCopy
+                            name={displayName}
+                            expiresAt={card.protectedExpiresAt}
+                          />
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
+                          This name is protected to reduce impersonation. Request access if you represent the person, organization, or identity associated with this name.
+                        </p>
+                      )
                     ) : null}
                   </div>
                 </div>
@@ -4028,14 +4114,14 @@ function VerifyPaymentCard({
               </div>
             </div>
 
-            {!card.collapsed ? (
+            {!card.collapsed && !isZmPriority ? (
               <div className="mt-6">
                 <ProtectedHowAccessWorks firstStepComplete={card.protectedRequestStatus !== "not_submitted"} />
               </div>
             ) : null}
           </section>
 
-          {!card.collapsed ? (
+          {!card.collapsed && !isZmPriority ? (
             <section className="px-5 py-5 sm:px-6 sm:py-6">
               <ProtectedAccessRequestPanel
                 card={card}
@@ -4047,6 +4133,7 @@ function VerifyPaymentCard({
             </section>
           ) : null}
         </div>
+        {!card.collapsed ? <ProtectedCardDisputeFooter name={card.name} /> : null}
       </article>
     );
   }
@@ -4810,9 +4897,16 @@ export default function WaitlistVerifyClient({
         <SummaryDetailModal
           eyebrow="Protected"
           title={protectedInfoCard.name?.trim() || "Protected name"}
-          paragraphs={[
-            "Some names are protected because they are strongly associated with a person, organization, brand, or public identity. This review helps reduce impersonation and misleading claims.",
-          ]}
+          paragraphs={
+            protectedInfoCard.zmPriorityClaim
+              ? [
+                  `The Zcash.me user “${protectedInfoCard.name?.trim() || "this name"}” has priority access to this name until ${formatProtectionExpiryDate(protectedInfoCard.protectedExpiresAt) ?? "this protection expires"}.`,
+                  `If this is you, no request is necessary. We will send an access code to claim your name via shielded memo to the address listed at Zcash.me/${protectedInfoCard.name?.trim() || "this name"}.`,
+                ]
+              : [
+                  "Some names are protected because they are strongly associated with a person, organization, brand, or public identity. This review helps reduce impersonation and misleading claims.",
+                ]
+          }
           actions={[
             { label: "Frequently Asked Questions", href: "/faq#protected", icon: <DocumentIcon className="h-4 w-4" /> },
             { label: "Discord", href: "https://discord.gg/z2H23QgAGf", external: true, icon: <DiscordIcon className="h-4 w-4" /> },

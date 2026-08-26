@@ -18,6 +18,8 @@ type ProtectedNameLookupRow = {
   normalized_name: string;
   category: string | null;
   redeemed: boolean | null;
+  zm_priority_claim?: boolean | null;
+  expires_at?: string | null;
 };
 
 type WaitlistProtectedAccessRequestRow = {
@@ -44,6 +46,8 @@ export type ProtectedNameInfo = {
   category: string | null;
   redeemed: boolean;
   isProtected: boolean;
+  zmPriorityClaim: boolean;
+  expiresAt: string | null;
 };
 
 export type WaitlistProtectedAccessRequest = {
@@ -133,11 +137,27 @@ export async function getProtectedNameInfoByName(
     return protectedByName;
   }
 
-  const { data, error } = await db
+  const selectWithPriority = "name, normalized_name, category, redeemed, zm_priority_claim, expires_at";
+  const selectBasic = "name, normalized_name, category, redeemed";
+
+  let { data, error } = await db
     .from("zn_protected_names")
-    .select("name, normalized_name, category, redeemed")
+    .select(selectWithPriority)
     .in("normalized_name", normalizedNames)
     .eq("status", "protected");
+
+  if (
+    error
+    && (error.message.includes("zm_priority_claim") || error.message.includes("expires_at"))
+  ) {
+    const fallback = await db
+      .from("zn_protected_names")
+      .select(selectBasic)
+      .in("normalized_name", normalizedNames)
+      .eq("status", "protected");
+    data = (fallback.data ?? null) as typeof data;
+    error = fallback.error;
+  }
 
   if (error) {
     throw new Error(error.message);
@@ -159,6 +179,8 @@ export async function getProtectedNameInfoByName(
       category: row.category,
       redeemed,
       isProtected: !redeemed,
+      zmPriorityClaim: row.zm_priority_claim === true,
+      expiresAt: row.expires_at ?? null,
     });
   }
 
