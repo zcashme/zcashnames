@@ -18,6 +18,7 @@ import {
 import { ensureHumanReferralCode } from "@/lib/referrals";
 import { resolveSiteUrl } from "@/lib/site-url";
 import { fetchAllSupabaseRows } from "@/lib/supabase/fetch-all";
+import { sendDueNoirReservationRebateEmails } from "@/lib/waitlist/rebates";
 import { getWaitlistReservationResendCampaignId } from "@/lib/waitlist/reservation-resend";
 
 const WAITLIST_RESERVES_PAGE_SIZE = 1000;
@@ -280,9 +281,99 @@ export async function syncWaitlistReservationFieldsFromReserves(): Promise<{
     matchedCount += 1;
   }
 
-  const pendingConfirmationRows = await fetchReservedWaitlistRowsPendingConfirmation(
-    reservationEntries.map(([uuid]) => uuid),
-  );
+  const reservedIds = reservationEntries.map(([uuid]) => uuid);
+  await sendPendingReservationFollowupEmails(reservedIds);
+
+  return { matchedCount };
+}
+
+async function findQualifyingReserveForUuid(rowId: string): Promise<{
+  createdAt: string;
+  txid: string | null;
+} | null> {
+  const minimumAmount = getWaitlistReserveFeeZec();
+  const minimumZats = minimumAmount ? parseZecToZats(minimumAmount) : null;
+  if (!minimumAmount || minimumZats == null) {
+    throw new Error("WAITLIST_RESERVE_FEE_ZEC is missing or invalid.");
+  }
+
+  const paymentAddress = getWaitlistReservePaymentAddress()?.trim() || null;
+  let query = db
+    .from("zn_waitlist_reserves_transactions")
+    .select("amount_zats, detected_at, memo, txid, is_outgoing, status, recipient_address")
+    .eq("is_outgoing", false)
+    .in("status", ["mempool", "confirmed"])
+    .ilike("memo", `%UUID::${rowId}%`)
+    .order("detected_at", { ascending: true })
+    .limit(25);
+
+  if (paymentAddress) {
+    query = query.eq("recipient_address", paymentAddress);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  for (const row of (data ?? []) as WaitlistReserveTransactionRow[]) {
+    const parsed = parseWaitlistReserveMemo(row.memo);
+    if (parsed?.uuid !== rowId || !row.detected_at) continue;
+    const amountZats = coerceAmountZats(row.amount_zats);
+    if (amountZats == null || amountZats < minimumZats) continue;
+    return {
+      createdAt: row.detected_at,
+      txid: row.txid?.trim() || null,
+    };
+  }
+
+  return null;
+}
+
+export async function applyWaitlistReservationFromReserves(rowId: string): Promise<{
+  reserved: boolean;
+  reservedAt: string | null;
+  reservedTxid: string | null;
+}> {
+  const reservation = await findQualifyingReserveForUuid(rowId);
+  if (!reservation) {
+    const { data, error } = await db
+      .from("zn_waitlist")
+      .select("name_reserved, name_reserved_at, name_reserved_txid")
+      .eq("id", rowId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (data?.name_reserved === true) {
+      await sendPendingReservationFollowupEmails([rowId]);
+    }
+    return {
+      reserved: data?.name_reserved === true,
+      reservedAt: data?.name_reserved_at ?? null,
+      reservedTxid: data?.name_reserved_txid ?? null,
+    };
+  }
+
+  const { error } = await db
+    .from("zn_waitlist")
+    .update({
+      name_reserved: true,
+      name_reserved_at: reservation.createdAt,
+      name_reserved_txid: reservation.txid,
+    })
+    .eq("id", rowId);
+  if (error) throw new Error(error.message);
+
+  await sendPendingReservationFollowupEmails([rowId]);
+
+  return {
+    reserved: true,
+    reservedAt: reservation.createdAt,
+    reservedTxid: reservation.txid,
+  };
+}
+
+async function sendPendingReservationFollowupEmails(rowIds: string[]): Promise<void> {
+  if (rowIds.length === 0) return;
+
+  const pendingConfirmationRows = await fetchReservedWaitlistRowsPendingConfirmation(rowIds);
 
   for (const row of pendingConfirmationRows) {
     const trimmedEmail = row.email?.trim();
@@ -342,5 +433,11 @@ export async function syncWaitlistReservationFieldsFromReserves(): Promise<{
     }
   }
 
-  return { matchedCount };
+  try {
+    await sendDueNoirReservationRebateEmails(rowIds);
+  } catch (error) {
+    console.error("[waitlist-reserves] noir rebate emails failed", {
+      error: error instanceof Error ? error.message : "Unknown error.",
+    });
+  }
 }

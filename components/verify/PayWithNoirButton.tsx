@@ -8,20 +8,27 @@ type PayWithNoirButtonProps = {
   to: string;
   amount: string;
   memo: string;
+  forceVisible?: boolean;
+  joined?: boolean;
   onSent?: (txid: string) => void;
+  onError?: (message: string) => void;
 };
 
 export default function PayWithNoirButton({
   to,
   amount,
   memo,
+  forceVisible = false,
+  joined = false,
   onSent,
+  onError,
 }: PayWithNoirButtonProps) {
-  const [available, setAvailable] = useState(false);
+  const [available, setAvailable] = useState(forceVisible);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (forceVisible) return;
     let cancelled = false;
     void detectNoirWallet().then((found) => {
       if (!cancelled) setAvailable(found);
@@ -29,18 +36,21 @@ export default function PayWithNoirButton({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [forceVisible]);
 
   if (!available) return null;
 
   async function handleClick() {
     setError("");
+    onError?.("");
     setBusy(true);
     try {
       const txid = await payWithNoir({ to, amount, memo });
       onSent?.(txid);
     } catch (err) {
-      setError(formatNoirWalletError(err));
+      const message = formatNoirWalletError(err);
+      setError(message);
+      onError?.(message);
     } finally {
       setBusy(false);
     }
@@ -53,14 +63,17 @@ export default function PayWithNoirButton({
   const punchRadius = logoSize / 2 + 2;
   const punchMask = `radial-gradient(circle ${punchRadius}px at ${capRadius}px 50%, transparent ${punchRadius - 0.5}px, #000 ${punchRadius}px)`;
 
-  return (
-    <div className="flex w-full flex-col items-center gap-2">
+  const button = (
       <button
         type="button"
         onClick={() => void handleClick()}
         disabled={busy}
         aria-busy={busy}
-        className="relative isolate inline-flex h-[46px] cursor-pointer items-center whitespace-nowrap rounded-full pr-5 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:brightness-100"
+        className={`relative isolate inline-flex h-[46px] cursor-pointer items-center whitespace-nowrap pr-5 text-sm font-semibold transition-[filter,transform] duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100 ${
+          joined
+            ? "rounded-none"
+            : "rounded-l-full rounded-r-none hover:-translate-y-0.5 disabled:hover:translate-y-0"
+        }`}
         style={{
           color: "var(--home-result-primary-fg)",
           paddingLeft: buttonHeight + 10,
@@ -69,10 +82,12 @@ export default function PayWithNoirButton({
       >
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-full"
+          className={`pointer-events-none absolute inset-0 ${
+            joined ? "rounded-none" : "rounded-l-full rounded-r-none"
+          }`}
           style={{
             background: "var(--home-result-primary-bg)",
-            filter: "drop-shadow(var(--home-result-primary-shadow))",
+            filter: joined ? undefined : "drop-shadow(var(--home-result-primary-shadow))",
             WebkitMaskImage: punchMask,
             WebkitMaskRepeat: "no-repeat",
             maskImage: punchMask,
@@ -96,6 +111,13 @@ export default function PayWithNoirButton({
           {busy ? <AnimatedLoadingLabel label="Opening Noir" active /> : "Pay with Noir Wallet"}
         </span>
       </button>
+  );
+
+  if (joined) return button;
+
+  return (
+    <div className="flex flex-col items-stretch gap-2">
+      {button}
       {error ? (
         <p className="text-center text-sm" style={{ color: "var(--accent-red, #e05252)" }}>
           {error}

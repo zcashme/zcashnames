@@ -52,13 +52,13 @@ export function detectNoirWallet(): Promise<boolean> {
 export function formatNoirWalletError(error: unknown): string {
   if (error && typeof error === "object" && "code" in error) {
     const code = (error as { code?: unknown }).code;
-    if (code === 4001 || code === "4001") return "Payment cancelled in Noir Wallet.";
+    if (code === 4001 || code === "4001") return "Request cancelled in Noir Wallet.";
   }
   const message = error instanceof Error ? error.message.trim() : "";
-  if (!message) return "Noir Wallet could not send this payment.";
+  if (!message) return "Noir Wallet could not complete this request.";
   const lower = message.toLowerCase();
   if (lower.includes("reject") || lower.includes("denied") || lower.includes("cancel")) {
-    return "Payment cancelled in Noir Wallet.";
+    return "Request cancelled in Noir Wallet.";
   }
   if (lower.includes("not installed")) {
     return "Noir Wallet is not available.";
@@ -91,4 +91,18 @@ export async function payWithNoir(payment: NoirPayment): Promise<string> {
     ...(memo ? { memo } : {}),
     fundingSource: "shielded",
   });
+}
+
+export async function getNoirShieldedAddress(): Promise<string> {
+  const { getNoirWallet } = await loadSdk();
+  const wallet = getNoirWallet();
+  if (!wallet) throw new Error("Noir Wallet is not available.");
+
+  const existing = await wallet.zcash.getAccounts();
+  const connection = existing ?? (await wallet.zcash.connect());
+  const shielded = connection.shielded?.trim() || "";
+  if (!shielded) {
+    throw new Error("Noir Wallet did not return a shielded address.");
+  }
+  return shielded;
 }

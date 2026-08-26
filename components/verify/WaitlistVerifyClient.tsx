@@ -18,7 +18,7 @@ import { useCopy } from "@/components/hooks/useCopy";
 import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { QrBlock } from "@/components/ui/QrBlock";
-import PayWithNoirButton from "@/components/verify/PayWithNoirButton";
+import NoirReservePaymentActions from "@/components/verify/NoirReservePaymentActions";
 import HeroShareButton from "@/components/HeroShareButton";
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import {
@@ -82,6 +82,8 @@ type VerifyCard = {
   waitlistHref: string | null;
   memo: string | null;
   memoError: string | null;
+  rebateEnabled: boolean;
+  rebateUnifiedAddress: string | null;
 };
 
 type VerifyCardStatusUpdate = Pick<
@@ -112,6 +114,8 @@ type VerifyCardPreferenceUpdate = Partial<
   >
 >;
 
+type VerifyCardRebateUpdate = Pick<VerifyCard, "rebateEnabled" | "rebateUnifiedAddress">;
+
 type WaitlistVerifyClientProps = {
   verifyToken: string;
   paymentAddress: string;
@@ -126,7 +130,8 @@ type WaitlistVerifyClientProps = {
 
 type SummaryCardKind = "reserved" | "referrals" | "position" | "rewards";
 
-const STATUS_REFRESH_COOLDOWN_MS = 75_000;
+const STATUS_POLL_INTERVAL_MS = 10_000;
+const STATUS_POLL_WINDOW_MS = 120_000;
 const MINUTE_MS = 60_000;
 
 function ClockIcon({ className = "h-4 w-4" }: { className?: string }) {
@@ -2630,6 +2635,27 @@ function PaymentTabButton({
   );
 }
 
+function buildReservationSupportMessage(args: {
+  name: string;
+  rowId: string;
+  memo: string | null;
+  error: string;
+  requestId: string | null;
+  checkedAt: string;
+}): string {
+  return [
+    "Zcash Names reservation check failed",
+    `Please email this to support@zcashnames.com`,
+    "",
+    `Time: ${args.checkedAt}`,
+    `Name: ${args.name || "(missing)"}`,
+    `Waitlist UUID: ${args.rowId}`,
+    `Memo: ${args.memo?.trim() || "(none)"}`,
+    `Request ID: ${args.requestId || "(none)"}`,
+    `Error: ${args.error}`,
+  ].join("\n");
+}
+
 function ReservationStatusPane({
   card,
   verifyToken,
@@ -2644,24 +2670,57 @@ function ReservationStatusPane({
   const [hasOpened, setHasOpened] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
-  const [cooldownUntil, setCooldownUntil] = useState<number>(0);
+  const [nextCheckAt, setNextCheckAt] = useState(0);
+  const [autoUntil, setAutoUntil] = useState(0);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [errorMessage, setErrorMessage] = useState("");
+  const [supportRequestId, setSupportRequestId] = useState<string | null>(null);
+  const { copied: supportCopied, copy: copySupport } = useCopy();
+  const checkingRef = useRef(false);
+  const autoUntilRef = useRef(0);
+  const runStatusCheckRef = useRef<(source: "auto" | "manual") => Promise<void>>(async () => {});
+
+  const remainingMs = Math.max(0, nextCheckAt - nowMs);
+  const autoWindowActive = !card.reserved && autoUntil > nowMs;
+  const waitingForNextCheck = autoWindowActive && remainingMs > 0;
+  const refreshDisabled = isChecking || waitingForNextCheck;
+
+  function clearAutoWindow() {
+    autoUntilRef.current = 0;
+    setAutoUntil(0);
+    setNextCheckAt(0);
+  }
+
+  function beginAutoWindow(fromMs: number) {
+    autoUntilRef.current = fromMs + STATUS_POLL_WINDOW_MS;
+    setAutoUntil(autoUntilRef.current);
+    setNextCheckAt(fromMs + STATUS_POLL_INTERVAL_MS);
+    setNowMs(fromMs);
+  }
+
+  function scheduleNextCheck(fromMs: number) {
+    if (fromMs >= autoUntilRef.current) {
+      setNextCheckAt(0);
+      return;
+    }
+    setNextCheckAt(fromMs + STATUS_POLL_INTERVAL_MS);
+    setNowMs(fromMs);
+  }
 
   useEffect(() => {
-    if (cooldownUntil <= Date.now()) return;
-    const interval = window.setInterval(() => setNowMs(Date.now()), 1000);
+    if (nextCheckAt <= Date.now()) return;
+    const interval = window.setInterval(() => setNowMs(Date.now()), 250);
     return () => window.clearInterval(interval);
-  }, [cooldownUntil]);
+  }, [nextCheckAt]);
 
-  const remainingMs = Math.max(0, cooldownUntil - nowMs);
-  const isCoolingDown = remainingMs > 0;
+  async function runStatusCheck(source: "auto" | "manual") {
+    if (checkingRef.current) return;
+    if (source === "manual" && waitingForNextCheck) return;
 
-  async function runStatusCheck() {
-    if (isChecking || isCoolingDown) return;
-
+    checkingRef.current = true;
     setIsChecking(true);
     setErrorMessage("");
+    setSupportRequestId(null);
 
     try {
       const response = await fetch("/api/waitlist/reservation-status", {
@@ -2673,9 +2732,11 @@ function ReservationStatusPane({
         }),
       });
 
-      const payload = (await response.json()) as
+      const rawBody = await response.text();
+      let payload:
         | {
             ok: true;
+            requestId?: string;
             checkedAt: string;
             card: {
               reserved: boolean;
@@ -2685,9 +2746,25 @@ function ReservationStatusPane({
               positionForName: number | null;
             };
           }
-        | { ok: false; error?: string };
+        | { ok: false; error?: string; requestId?: string }
+        | null = null;
+      try {
+        payload = rawBody ? (JSON.parse(rawBody) as NonNullable<typeof payload>) : null;
+      } catch {
+        payload = null;
+      }
+
+      if (!payload) {
+        throw new Error(
+          response.ok
+            ? "Reservation status returned an unreadable response."
+            : "The reservation checker hit an internal error. Try again after the server is ready.",
+        );
+      }
 
       if (!response.ok || !payload.ok) {
+        const requestId = "requestId" in payload ? payload.requestId ?? null : null;
+        setSupportRequestId(requestId);
         throw new Error(
           "error" in payload && payload.error
             ? payload.error
@@ -2706,25 +2783,51 @@ function ReservationStatusPane({
       });
       if (transitionedToReserved) {
         onReservationConfirmed(card);
+        clearAutoWindow();
       }
     } catch (error) {
-      setErrorMessage(
+      const message =
         error instanceof Error
           ? error.message
-          : "Reservation status could not be refreshed.",
-      );
+          : "Reservation status could not be refreshed.";
+      const friendly =
+        /fetch failed|unexpected token|internal server error|unreadable response/i.test(message)
+          ? "The reservation checker hit an internal error. Try again after the server is ready."
+          : message;
+      setErrorMessage(friendly);
     } finally {
-      setCooldownUntil(Date.now() + STATUS_REFRESH_COOLDOWN_MS);
-      setNowMs(Date.now());
+      checkingRef.current = false;
       setIsChecking(false);
+      const now = Date.now();
+      if (source === "manual") {
+        beginAutoWindow(now);
+      } else {
+        scheduleNextCheck(now);
+      }
     }
   }
+
+  runStatusCheckRef.current = runStatusCheck;
 
   useEffect(() => {
     if (hasOpened) return;
     setHasOpened(true);
-    void runStatusCheck();
+    beginAutoWindow(Date.now());
+    void runStatusCheckRef.current("auto");
   }, [hasOpened]);
+
+  useEffect(() => {
+    if (card.reserved) {
+      clearAutoWindow();
+      return;
+    }
+    if (nextCheckAt <= 0) return;
+    const delay = Math.max(0, nextCheckAt - Date.now());
+    const timeout = window.setTimeout(() => {
+      void runStatusCheckRef.current("auto");
+    }, delay);
+    return () => window.clearTimeout(timeout);
+  }, [card.reserved, nextCheckAt]);
 
   return (
     <div className="space-y-5">
@@ -2746,12 +2849,16 @@ function ReservationStatusPane({
         <p className="mt-4 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
           {card.reserved
             ? "A reservation was found for this UUID."
-            : "No qualifying transaction has been detected for this name yet."}
+            : isChecking
+              ? "Looking for a matching payment in the mempool watcher..."
+              : autoWindowActive
+                ? "No qualifying transaction has been detected for this name yet. We'll keep checking for a couple of minutes."
+                : "No qualifying transaction has been detected for this name yet. Tap Refresh Status to check again."}
         </p>
         <button
           type="button"
-          onClick={() => void runStatusCheck()}
-          disabled={isChecking || isCoolingDown}
+          onClick={() => void runStatusCheck("manual")}
+          disabled={refreshDisabled}
           className="mt-4 inline-flex h-[42px] items-center justify-center rounded-full px-5 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0 disabled:hover:brightness-100"
           style={{
             background: "var(--home-result-primary-bg)",
@@ -2761,7 +2868,7 @@ function ReservationStatusPane({
         >
           {isChecking
             ? <AnimatedLoadingLabel label="Checking" active />
-            : isCoolingDown
+            : waitingForNextCheck
               ? `Refresh Status (${formatCooldownCountdown(remainingMs)})`
               : "Refresh Status"}
         </button>
@@ -2783,9 +2890,33 @@ function ReservationStatusPane({
       </div>
 
       {errorMessage ? (
-        <p className="text-sm" style={{ color: "var(--accent-red, #e05252)" }}>
-          {errorMessage}
-        </p>
+        <div className="space-y-3">
+          <p className="text-sm" style={{ color: "var(--accent-red, #e05252)" }}>
+            {errorMessage}
+          </p>
+          <button
+            type="button"
+            onClick={() =>
+              void copySupport(
+                buildReservationSupportMessage({
+                  name: card.name?.trim() || "",
+                  rowId: card.id,
+                  memo: card.memo,
+                  error: errorMessage,
+                  requestId: supportRequestId,
+                  checkedAt: new Date().toISOString(),
+                }),
+              )
+            }
+            className="inline-flex h-10 cursor-pointer items-center justify-center rounded-full px-4 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
+            style={{
+              background: "transparent",
+              border: "1.5px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
+            }}
+          >
+            {supportCopied ? "Copied" : "Copy details for support@zcashnames.com"}
+          </button>
+        </div>
       ) : null}
     </div>
   );
@@ -3671,6 +3802,7 @@ function VerifyPaymentCard({
   onToggleCollapsed,
   onRequestDelete,
   onReservationConfirmed,
+  onRebateEnabled,
 }: {
   verifyToken: string;
   paymentAddress: string;
@@ -3689,8 +3821,11 @@ function VerifyPaymentCard({
   onToggleCollapsed: (card: VerifyCard) => void;
   onRequestDelete: (card: VerifyCard) => void;
   onReservationConfirmed: (card: VerifyCard) => void;
+  onRebateEnabled: (cardId: string, update: VerifyCardRebateUpdate) => void;
 }) {
   const prefersReducedMotion = usePrefersReducedMotion();
+  const rebateEnabledRef = useRef(card.rebateEnabled);
+  rebateEnabledRef.current = card.rebateEnabled;
   const [activeTab, setActiveTab] = useState<"payment" | "sent">("payment");
   const baseAmountValue = roundPendingZecAmount(parseZecAmount(baseAmountZec));
   const [selectedAmount, setSelectedAmount] = useState(baseAmountValue);
@@ -4167,11 +4302,42 @@ function VerifyPaymentCard({
                       layout="verify"
                       size={184}
                       belowQr={
-                        <PayWithNoirButton
+                        <NoirReservePaymentActions
                           to={paymentAddress}
                           amount={selectedAmountText}
                           memo={card.memo ?? ""}
-                          onSent={() => setActiveTab("sent")}
+                          name={card.name?.trim() || "this name"}
+                          paymentAddress={paymentAddress}
+                          verifyToken={verifyToken}
+                          rowId={card.id}
+                          rebateEnabled={card.rebateEnabled}
+                          rebateUnifiedAddress={card.rebateUnifiedAddress}
+                          onRebateEnabled={(unifiedAddress) =>
+                            onRebateEnabled(card.id, {
+                              rebateEnabled: true,
+                              rebateUnifiedAddress: unifiedAddress,
+                            })
+                          }
+                          onRebateDisabled={() =>
+                            onRebateEnabled(card.id, {
+                              rebateEnabled: false,
+                              rebateUnifiedAddress: card.rebateUnifiedAddress,
+                            })
+                          }
+                          onSent={(txid) => {
+                            if (rebateEnabledRef.current && txid) {
+                              void fetch("/api/waitlist/rebate", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  token: verifyToken,
+                                  rowId: card.id,
+                                  txid,
+                                }),
+                              });
+                            }
+                            setActiveTab("sent");
+                          }}
                         />
                       }
                     />
@@ -4336,6 +4502,22 @@ export default function WaitlistVerifyClient({
     );
   }
 
+  function updateCardRebate(
+    cardId: string,
+    update: VerifyCardRebateUpdate,
+  ) {
+    setCardState((current) =>
+      current.map((card) =>
+        card.id === cardId
+          ? {
+              ...card,
+              ...update,
+            }
+          : card,
+      ),
+    );
+  }
+
   function handleReservationConfirmed(card: VerifyCard) {
     setCelebrationCard({
       ...card,
@@ -4484,6 +4666,7 @@ export default function WaitlistVerifyClient({
           setDeleteCard(deleteTarget);
         }}
         onReservationConfirmed={handleReservationConfirmed}
+        onRebateEnabled={updateCardRebate}
       />
     );
   }

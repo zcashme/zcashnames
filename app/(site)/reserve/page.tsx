@@ -20,6 +20,7 @@ import {
 } from "@/lib/campaigns/waitlist-verify";
 import { getActiveWaitlistRowDeleteRequests } from "@/lib/campaigns/waitlist-row-delete";
 import { getWaitlistVerifyRowPreferences } from "@/lib/campaigns/waitlist-verify-preferences";
+import { getNoirReservationRebatesByRowId } from "@/lib/waitlist/rebates";
 import {
   getLatestProtectedAccessRequestsByRowId,
   getProtectedNameInfoByName,
@@ -390,11 +391,26 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
 
   const shareDraftPosts = await getReserveShareDraftPosts();
 
+  let rebatesByRowId = new Map<string, { unifiedAddress: string }>();
+  try {
+    rebatesByRowId = await getNoirReservationRebatesByRowId({
+      normalizedEmail: parsed.normalizedEmail,
+      rowIds: rows.map((row) => row.id),
+    });
+  } catch (error) {
+    console.error("[waitlist-reserve-page] rebate lookup failed", {
+      normalizedEmail: parsed.normalizedEmail,
+      campaignId: parsed.campaignId,
+      error: error instanceof Error ? error.message : "Failed to load rebate opt-ins.",
+    });
+  }
+
   const cards: ReservePageCard[] = rows.map((row): ReservePageCard => {
     const stats = nameStats.get(row.id);
     const rowReferralStats = referralStats.get(row.id);
     const preferredReferralCode =
       row.human_referral_code?.trim() || row.referral_code?.trim() || null;
+    const rebate = rebatesByRowId.get(row.id) ?? null;
     const protectedName = row.name?.trim()
       ? protectedNamesByName.get(row.name.trim().toLowerCase())
       : null;
@@ -439,6 +455,8 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
           : null,
         memo: buildWaitlistVerifyMemo(row.name, row.id),
         memoError: null,
+        rebateEnabled: Boolean(rebate),
+        rebateUnifiedAddress: rebate?.unifiedAddress ?? null,
       };
     } catch (error) {
       return {
@@ -480,6 +498,8 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
           error instanceof Error
             ? error.message
             : "This row is missing a usable name, so a payment request could not be generated.",
+        rebateEnabled: Boolean(rebate),
+        rebateUnifiedAddress: rebate?.unifiedAddress ?? null,
       };
     }
   });
