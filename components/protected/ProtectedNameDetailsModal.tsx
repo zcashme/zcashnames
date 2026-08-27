@@ -287,6 +287,16 @@ function DisputeCard({
             <UrlList urls={dispute.evidence} />
           </FieldBlock>
         </div>
+        {dispute.decision ? (
+          <div
+            className="col-span-2 mt-1 border-t pt-3"
+            style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}
+          >
+            <FieldBlock label="Decision reason">
+              {renderDetailValue(dispute.decision.reason)}
+            </FieldBlock>
+          </div>
+        ) : null}
       </dl>
     </article>
   );

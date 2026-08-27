@@ -22,6 +22,7 @@ export interface WaitlistReferralRow {
   referred_by: string | null;
   created_at: string;
   email_verified: boolean;
+  name_reserved: boolean;
   cabal: boolean;
 }
 
@@ -50,6 +51,8 @@ export interface ReferralDashboardBaseData {
 
 export interface ReferralDashboardData extends ReferralDashboardBaseData {
   leaderboardRank: number | null;
+  nameQueuePosition: number | null;
+  nameQueueTotal: number;
   commissionUnlocked: boolean;
   referralsUnlocked: boolean;
 }

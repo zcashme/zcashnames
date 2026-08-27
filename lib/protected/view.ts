@@ -53,6 +53,11 @@ export type ProtectedViewDispute = {
   evidence: string[];
   name_status_at_submission: string;
   created_at: string;
+  decision: {
+    outcome: string;
+    reason: string;
+    decided_at: string;
+  } | null;
 };
 
 export type ProtectedViewRow = {
@@ -114,6 +119,13 @@ type ProtectedDisputeDbRow = {
   evidence: unknown;
   name_status_at_submission: string;
   created_at: string;
+};
+
+type ProtectedDisputeDecisionDbRow = {
+  source_id: string;
+  decision: string;
+  reason: string;
+  decided_at: string;
 };
 
 export type ProtectedViewData = {
@@ -205,6 +217,44 @@ function isMissingDisputesTableError(error: { message?: string; code?: string } 
   );
 }
 
+function isMissingDecisionsTableError(error: { message?: string; code?: string } | null | undefined) {
+  if (!error) return false;
+  return (
+    !!error.message?.includes("zn_protected_name_decisions")
+    || !!error.message?.includes("does not exist")
+    || error.code === "42P01"
+  );
+}
+
+async function loadDisputeDecisions(
+  disputeIds: string[],
+): Promise<Map<string, ProtectedViewDispute["decision"]>> {
+  const map = new Map<string, ProtectedViewDispute["decision"]>();
+  if (disputeIds.length === 0) return map;
+
+  const { data, error } = await db
+    .from("zn_protected_name_decisions")
+    .select("source_id, decision, reason, decided_at")
+    .eq("workflow", "dispute")
+    .in("source_id", disputeIds);
+
+  if (error) {
+    // Public view remains available before the decision-audit migration is applied.
+    if (isMissingDecisionsTableError(error)) return map;
+    throw new Error(error.message);
+  }
+
+  for (const row of (data ?? []) as ProtectedDisputeDecisionDbRow[]) {
+    map.set(row.source_id, {
+      outcome: row.decision,
+      reason: row.reason,
+      decided_at: row.decided_at,
+    });
+  }
+
+  return map;
+}
+
 /**
  * Distinct protected names that have at least one dispute row.
  * Soft-fails to [] when the disputes table is missing.
@@ -250,7 +300,10 @@ async function loadDisputesByProtectedNames(
     throw new Error(error.message);
   }
 
-  for (const row of (data ?? []) as ProtectedDisputeDbRow[]) {
+  const disputeRows = (data ?? []) as ProtectedDisputeDbRow[];
+  const decisions = await loadDisputeDecisions(disputeRows.map((row) => row.id));
+
+  for (const row of disputeRows) {
     const dispute: ProtectedViewDispute = {
       id: row.id,
       protected_name: row.protected_name,
@@ -262,6 +315,7 @@ async function loadDisputesByProtectedNames(
       evidence: normalizeEvidenceUrls(row.evidence),
       name_status_at_submission: row.name_status_at_submission,
       created_at: row.created_at,
+      decision: decisions.get(row.id) ?? null,
     };
     const existing = map.get(row.protected_name) ?? [];
     existing.push(dispute);

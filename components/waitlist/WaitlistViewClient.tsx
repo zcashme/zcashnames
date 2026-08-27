@@ -1061,9 +1061,9 @@ export default function WaitlistViewClient({
                           <span className="block" style={{ color: "var(--fg-body)" }} title={row.name}>
                             {row.name}
                           </span>
-                          {row.displayReferralCode ? (
-                            <span className="mt-1 block text-xs" style={{ color: "var(--fg-muted)" }} title={row.displayReferralCode}>
-                              {row.displayReferralCode}
+                          {row.canonicalReferralCode ? (
+                            <span className="mt-1 block text-xs" style={{ color: "var(--fg-muted)" }} title={row.canonicalReferralCode}>
+                              {row.canonicalReferralCode}
                             </span>
                           ) : null}
                         </td>

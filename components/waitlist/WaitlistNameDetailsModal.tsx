@@ -172,7 +172,7 @@ function ShieldIcon() {
   );
 }
 
-function ChevronDownIcon() {
+function ChevronIcon({ direction }: { direction: "down" | "right" }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -184,7 +184,7 @@ function ChevronDownIcon() {
       className="h-4 w-4 shrink-0"
       aria-hidden="true"
     >
-      <path d="m6 9 6 6 6-6" />
+      <path d={direction === "right" ? "m9 6 6 6-6 6" : "m6 9 6 6 6-6"} />
     </svg>
   );
 }
@@ -404,7 +404,7 @@ export default function WaitlistNameDetailsModal({
           }}
         >
           <div
-            className="min-h-0 overflow-y-auto overscroll-contain px-6 pb-6 pt-12 sm:px-8 [scrollbar-gutter:stable]"
+            className="min-h-0 overflow-y-auto overscroll-contain px-6 pb-6 pt-12 sm:px-8"
             onWheel={(event) => event.stopPropagation()}
           >
             <div
@@ -562,18 +562,11 @@ export default function WaitlistNameDetailsModal({
                 </p>
               </div>
               {row.leaderHref || shareUrl ? (
-                <div className="flex items-stretch gap-2 pt-1">
-                  {row.leaderHref ? (
-                    <Link href={row.leaderHref} className={`min-w-0 flex-1 ${referralActionClassName}`}>
-                      <BarChartIcon />
-                      <span className="min-w-0 truncate text-center">View Dashboard</span>
-                      <span aria-hidden="true" className="h-4 w-4" />
-                    </Link>
-                  ) : null}
+                <div className="flex items-stretch justify-center gap-2 pt-1">
                   {shareUrl ? (
-                    <div className="min-w-0 flex-1">
+                    <div className="w-48 shrink-0">
                       <ShareDropdown
-                        label="Share Reflink"
+                        label="Reflink"
                         shareUrl={shareUrl}
                         message={`Join the Zcash Names waitlist with my referral link: ${shareUrl}`}
                         xMessage={`Join the Zcash Names waitlist with my referral link: ${shareUrl}`}
@@ -586,15 +579,26 @@ export default function WaitlistNameDetailsModal({
                         renderTriggerContent={(open) => (
                           <>
                             <ShareTriggerIcon />
-                            <span className="min-w-0 truncate text-center">Share Reflink</span>
+                            <span className="min-w-0 truncate text-center">Reflink</span>
                             <span
                               className={`inline-flex transition-transform duration-200 ${open ? "rotate-180" : ""}`}
                             >
-                              <ChevronDownIcon />
+                              <ChevronIcon direction="down" />
                             </span>
                           </>
                         )}
                       />
+                    </div>
+                  ) : null}
+                  {row.leaderHref ? (
+                    <div className="w-48 shrink-0">
+                      <Link href={row.leaderHref} className={referralActionClassName}>
+                        <BarChartIcon />
+                        <span className="min-w-0 truncate text-center">Dashboard</span>
+                        <span aria-hidden="true" className="inline-flex">
+                          <ChevronIcon direction="right" />
+                        </span>
+                      </Link>
                     </div>
                   ) : null}
                 </div>

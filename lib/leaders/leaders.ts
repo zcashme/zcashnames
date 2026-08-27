@@ -29,6 +29,7 @@ import {
 } from "@/lib/leaders/rankings";
 import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
 import { resolveSiteUrl } from "@/lib/site-url";
+import { getWaitlistVerifyNameStats } from "@/lib/campaigns/waitlist-verify";
 
 export type { DailyRow, RankingEntry, WeeklyRow } from "@/lib/leaders/rankings";
 export type { ReferralDashboardData } from "@/lib/leaders/referral-dashboard";
@@ -137,6 +138,7 @@ function toWaitlistReferralRows(data: Record<string, unknown>[]): WaitlistReferr
       referred_by: (row.referred_by as string | null) ?? null,
       created_at: row.created_at as string,
       email_verified: Boolean(row.email_verified),
+      name_reserved: Boolean(row.name_reserved),
       cabal: Boolean(row.cabal),
     }))
     .filter((row) => Boolean(row.referral_code));
@@ -212,7 +214,7 @@ async function fetchAllWaitlistRows(): Promise<Record<string, unknown>[] | null>
     while (true) {
       const { data, error } = await db
         .from("zn_waitlist")
-        .select("name, referral_code, human_referral_code, referred_by, created_at, email_verified, cabal")
+        .select("name, referral_code, human_referral_code, referred_by, created_at, email_verified, name_reserved, cabal")
         .order("created_at", { ascending: true })
         .range(offset, offset + WAITLIST_PAGE_SIZE - 1);
 
@@ -357,6 +359,7 @@ function buildLeadersTimeSeriesFromData(
       referred_by: (rawRow.referred_by as string | null) ?? null,
       created_at: rawRow.created_at as string,
       email_verified: Boolean(rawRow.email_verified),
+      name_reserved: Boolean(rawRow.name_reserved),
       cabal: Boolean(rawRow.cabal),
     };
     const date = row.created_at.slice(0, 10);
@@ -676,14 +679,45 @@ export async function getReferralDashboard(
     const leaderboard = buildLeaderboardFromRows(rows);
     const leaderboardRank =
       leaderboard.find((entry) => entry.canonical_referral_code === dashboard.canonicalReferralCode)?.rank ?? null;
-    const [commissionUnlocked, referralsUnlocked] = await Promise.all([
+    const [commissionUnlocked, referralsUnlocked, nameStatsById] = await Promise.all([
       dashboard.root?.cabal
         ? hasCommissionAccess(dashboard.canonicalReferralCode).catch(() => false)
         : false,
       hasReferralTableAccess(dashboard.canonicalReferralCode).catch(() => false),
+      getWaitlistVerifyNameStats([
+        {
+          id: resolved.row.id,
+          email: null,
+          name: dashboard.root?.name ?? resolved.row.name,
+          created_at: dashboard.root?.created_at ?? null,
+          referral_code: dashboard.canonicalReferralCode,
+          human_referral_code: resolved.row.human_referral_code,
+          email_verified: dashboard.root?.email_verified ?? true,
+          email_verified_at: null,
+          name_reserved: dashboard.root?.name_reserved ?? false,
+          name_reserved_at: null,
+          name_reserved_txid: null,
+          campaign_email_confirm_response: null,
+        },
+      ]).catch((error) => {
+        console.error(`${REFERRAL_DASHBOARD_LOG_PREFIX} name queue stats failed`, {
+          referralCode: normalizedCode,
+          error: formatUnknownError(error),
+        });
+        return new Map();
+      }),
     ]);
 
-    return { ...dashboard, leaderboardRank, commissionUnlocked, referralsUnlocked };
+    const nameStats = nameStatsById.get(resolved.row.id);
+
+    return {
+      ...dashboard,
+      leaderboardRank,
+      nameQueuePosition: nameStats?.reservedPosition ?? null,
+      nameQueueTotal: nameStats?.totalCount ?? 0,
+      commissionUnlocked,
+      referralsUnlocked,
+    };
   } catch (error) {
     console.error(`${REFERRAL_DASHBOARD_LOG_PREFIX} getReferralDashboard failed`, {
       referralCode: normalizedCode,

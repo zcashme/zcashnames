@@ -249,6 +249,7 @@ export default function StatsGridCard() {
               fontSize: "0.78rem",
               fontWeight: 500,
               lineHeight: 1.5,
+              textAlign: "center",
               margin: 0,
             }}
           >

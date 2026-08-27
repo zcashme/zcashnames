@@ -134,22 +134,6 @@ async function fetchAllWaitlistReserveTransactions(): Promise<WaitlistReserveTra
   });
 }
 
-async function fetchExistingReservedWaitlistIds(): Promise<string[]> {
-  const rows = await fetchAllSupabaseRows<{ id: string }>({
-    pageSize: WAITLIST_RESERVES_PAGE_SIZE,
-    fetchPage: async (from, to) =>
-      await db
-        .from("zn_waitlist")
-        .select("id")
-        .eq("name_reserved", true)
-        .order("created_at", { ascending: true })
-        .order("id", { ascending: true })
-        .range(from, to),
-  });
-
-  return rows.map((row) => row.id);
-}
-
 async function fetchReservedWaitlistRowsPendingConfirmation(
   rowIds: string[],
 ): Promise<ReservedWaitlistEmailRow[]> {
@@ -223,10 +207,7 @@ export async function syncWaitlistReservationFieldsFromReserves(): Promise<{
     throw new Error("WAITLIST_RESERVE_FEE_ZEC is missing or invalid.");
   }
 
-  const [reserveRows, existingReservedIds] = await Promise.all([
-    fetchAllWaitlistReserveTransactions(),
-    fetchExistingReservedWaitlistIds(),
-  ]);
+  const reserveRows = await fetchAllWaitlistReserveTransactions();
   const firstValidReservationByUuid = new Map<
     string,
     { createdAt: string; txid: string | null }
@@ -247,21 +228,6 @@ export async function syncWaitlistReservationFieldsFromReserves(): Promise<{
   }
 
   const reservationEntries = [...firstValidReservationByUuid.entries()];
-  const currentReservedIds = new Set(reservationEntries.map(([uuid]) => uuid));
-
-  const staleReservedIds = existingReservedIds.filter((id) => !currentReservedIds.has(id));
-  if (staleReservedIds.length > 0) {
-    const { error } = await db
-      .from("zn_waitlist")
-      .update({
-        name_reserved: false,
-        name_reserved_at: null,
-        name_reserved_txid: null,
-        reservation_confirmed_email_sent_at: null,
-      })
-      .in("id", staleReservedIds);
-    if (error) throw new Error(error.message);
-  }
 
   if (reservationEntries.length === 0) {
     return { matchedCount: 0 };

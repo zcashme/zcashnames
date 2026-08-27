@@ -766,7 +766,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
           }`}
         >
           <p
-            className="rounded-xl border px-4 py-2 text-[0.78rem] font-medium leading-relaxed sm:text-sm"
+            className="rounded-xl border px-4 py-2 text-center text-[0.78rem] font-medium leading-relaxed sm:text-sm"
             style={{
               background: "var(--market-stats-help-bg)",
               borderColor: "var(--market-stats-help-border)",

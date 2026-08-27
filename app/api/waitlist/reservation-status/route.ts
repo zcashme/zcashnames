@@ -7,6 +7,10 @@ import {
   getWaitlistVerifyNameStats,
 } from "@/lib/campaigns/waitlist-verify";
 import { applyWaitlistReservationFromReserves } from "@/lib/waitlist/reserves";
+import {
+  markPublicWaitlistSnapshotReserved,
+  triggerPublicWaitlistViewSnapshotRefresh,
+} from "@/lib/waitlist/view";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -50,6 +54,14 @@ export async function POST(request: Request) {
         { ok: false, error: "Waitlist row not found for this reservation link.", requestId },
         { status: 404 },
       );
+    }
+
+    if (applied.reserved) {
+      row.name_reserved = true;
+      row.name_reserved_at = row.name_reserved_at ?? applied.reservedAt;
+      row.name_reserved_txid = row.name_reserved_txid ?? applied.reservedTxid;
+      await markPublicWaitlistSnapshotReserved(row.id);
+      triggerPublicWaitlistViewSnapshotRefresh();
     }
 
     const nameStats = await getWaitlistVerifyNameStats(rows);

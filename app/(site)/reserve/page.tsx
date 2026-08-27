@@ -31,6 +31,7 @@ import { RESERVE_METADATA } from "@/lib/reserve-metadata";
 import {
   WAITLIST_VIEW_EARLY_ACCESS_LABEL,
   WAITLIST_VIEW_EARLY_ACCESS_START_AT,
+  markPublicWaitlistSnapshotReserved,
 } from "@/lib/waitlist/view";
 
 type ReservePageProps = {
@@ -313,6 +314,12 @@ export default async function ReservePage({ searchParams }: ReservePageProps) {
       </div>
     );
   }
+
+  void Promise.all(
+    rows
+      .filter((row) => row.name_reserved === true)
+      .map((row) => markPublicWaitlistSnapshotReserved(row.id)),
+  );
 
   let nameStats;
   try {

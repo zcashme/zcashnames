@@ -2,6 +2,7 @@ import type { MetaRecord } from "nextra";
 
 const meta: MetaRecord = {
   index: "Users",
+  "noir-wallet": "Noir Wallet and Shielded Names",
   "mainnet-beta-roundup": "Mainnet Beta Roundup",
   "early-access": "Early Access",
   "how-protected-names-work": "How Protected Names Work",

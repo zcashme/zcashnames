@@ -62,6 +62,37 @@ function normalizeReferralCodeValue(value: string | null | undefined): string | 
   return trimmed && trimmed.length > 0 ? trimmed : null;
 }
 
+function liveReservedByTargetId(targetRows: WaitlistVerifyRow[]): Map<string, boolean> {
+  return new Map(targetRows.map((row) => [row.id, row.name_reserved === true]));
+}
+
+async function fetchLiveReservedByIds(ids: string[]): Promise<Map<string, boolean>> {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  const reservedById = new Map<string, boolean>();
+  if (uniqueIds.length === 0) return reservedById;
+
+  for (let start = 0; start < uniqueIds.length; start += WAITLIST_PAGE_SIZE) {
+    const batch = uniqueIds.slice(start, start + WAITLIST_PAGE_SIZE);
+    const { data, error } = await db.from("zn_waitlist").select("id, name_reserved").in("id", batch);
+    if (error) throw new Error(error.message);
+    for (const row of data ?? []) {
+      reservedById.set(row.id, row.name_reserved === true);
+    }
+  }
+
+  return reservedById;
+}
+
+function snapshotPeerIsReserved(
+  row: WaitlistNameQueueSnapshotRow,
+  liveReservedById: Map<string, boolean>,
+): boolean {
+  if (liveReservedById.has(row.source_waitlist_id)) {
+    return liveReservedById.get(row.source_waitlist_id) === true;
+  }
+  return row.is_reserved === true;
+}
+
 export function buildWaitlistVerifyMemo(
   name: string | null | undefined,
   waitlistId: string,
@@ -212,6 +243,13 @@ export async function getWaitlistVerifyNameStats(
     }
   }
 
+  const liveReservedById = await fetchLiveReservedByIds(
+    snapshotRows.map((row) => row.source_waitlist_id),
+  );
+  for (const [id, reserved] of liveReservedByTargetId(targetRows)) {
+    liveReservedById.set(id, reserved);
+  }
+
   for (const peers of snapshotByName.values()) {
     const orderedPeers = [...peers].sort((a, b) =>
       compareWaitlistNameRank(
@@ -236,16 +274,17 @@ export async function getWaitlistVerifyNameStats(
         basePosition: row.base_position,
         directReferrals: row.direct_referrals,
         indirectReferrals: row.indirect_referrals,
-        reserved: row.is_reserved === true,
+        reserved: snapshotPeerIsReserved(row, liveReservedById),
       })),
     );
 
     for (const row of orderedPeers) {
       const waitlistPosition = positionById.get(row.source_waitlist_id) ?? null;
       const reservedRank = ranks.get(row.source_waitlist_id)?.position ?? 0;
+      const reserved = snapshotPeerIsReserved(row, liveReservedById);
       statsByRowId.set(row.source_waitlist_id, {
         totalCount: orderedPeers.length,
-        reservedPosition: row.is_reserved && reservedRank > 0 ? reservedRank : null,
+        reservedPosition: reserved && reservedRank > 0 ? reservedRank : null,
         waitlistPosition,
       });
     }
@@ -395,6 +434,7 @@ export async function getWaitlistVerifyPotentialRewards(
           referred_by: normalizeReferralCodeValue(row.referred_by),
           created_at: row.created_at ?? new Date(0).toISOString(),
           email_verified: row.email_verified === true,
+          name_reserved: false,
           cabal: false,
         };
       })

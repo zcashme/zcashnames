@@ -313,16 +313,17 @@ export default function ReferralDashboardPage() {
     0,
     referralLevelOptions.findIndex((option) => option === referralLevelFilter),
   );
-  const leaderboardRank =
-    data && "leaderboardRank" in data
-      ? (data as ReferralDashboardData & { leaderboardRank?: number | null }).leaderboardRank
-      : null;
-  const waitlistTotal =
-    data && "waitlistTotal" in data
-      ? (data as ReferralDashboardData & { waitlistTotal?: number }).waitlistTotal ?? null
-      : null;
-  const referralRank =
-    data && data.totalAttributedReferrals > 0 ? (leaderboardRank ?? data.waitlistPosition) : data?.waitlistPosition ?? null;
+  const nameQueuePosition = data?.nameQueuePosition ?? null;
+  const nameQueueTotal = data?.nameQueueTotal ?? 0;
+  const waitlistDetailsSearch =
+    data?.canonicalReferralCode || data?.referralCode || data?.root?.name || "";
+  const waitlistDetailsHref = waitlistDetailsSearch
+    ? `/waitlist/view?${new URLSearchParams({
+        search: waitlistDetailsSearch,
+        searchMode: "exact",
+        details: "1",
+      }).toString()}`
+    : null;
 
   useEffect(() => {
     setVisibleReferralRows(10);
@@ -668,17 +669,35 @@ export default function ReferralDashboardPage() {
           </div>
           <div className="text-right">
             <div className="text-sm text-fg-muted">
-              <span>Rank </span>
-              <span className="font-medium text-fg-body">
-                {referralRank && waitlistTotal
-                  ? `${referralRank.toLocaleString()} of ${waitlistTotal.toLocaleString()}`
-                  : "-"}
-              </span>
+              {waitlistDetailsHref ? (
+                <Link
+                  href={waitlistDetailsHref}
+                  className="font-medium text-fg-body no-underline transition-colors hover:text-[var(--color-accent-interactive)]"
+                >
+                  Position{" "}
+                  {nameQueueTotal > 0
+                    ? nameQueuePosition
+                      ? `${nameQueuePosition.toLocaleString()} of ${nameQueueTotal.toLocaleString()}`
+                      : `N/A of ${nameQueueTotal.toLocaleString()}`
+                    : "-"}
+                </Link>
+              ) : (
+                <>
+                  Position{" "}
+                  <span className="font-medium text-fg-body">
+                    {nameQueueTotal > 0
+                      ? nameQueuePosition
+                        ? `${nameQueuePosition.toLocaleString()} of ${nameQueueTotal.toLocaleString()}`
+                        : `N/A of ${nameQueueTotal.toLocaleString()}`
+                      : "-"}
+                  </span>
+                </>
+              )}
             </div>
             <div className="mt-2 text-sm text-fg-muted">
               {data.root ? (
                 <>
-                  Joined <span className="font-medium text-fg-body">{formatDate(data.root.created_at)}</span>
+                  Joined on <span className="font-medium text-fg-body">{formatDate(data.root.created_at)}</span>
                 </>
               ) : (
                 "Referral code not found as a waitlist member."
@@ -693,7 +712,7 @@ export default function ReferralDashboardPage() {
             style={{ borderColor: "var(--leaders-card-border)" }}
           >
             <label className="block text-sm font-semibold text-fg-heading" htmlFor="commission-access-code">
-              Enter access code
+              Enter pin code
             </label>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <input
@@ -777,64 +796,67 @@ export default function ReferralDashboardPage() {
         <ReferralGrowthChart data={chartSeries} chartRange={chartRange} setChartRange={setChartRange} />
       </section>
 
-      <section className="mb-8 grid grid-cols-3 gap-3">
-        <MetricCard
-          label="Referrals"
-          value={data.totalAttributedReferrals.toLocaleString()}
-          active={activeMetricKey === "referrals"}
-          onClick={() => setActiveMetricKey((current) => (current === "referrals" ? null : "referrals"))}
-        />
-        <MetricCard
-          label={directMetricFace === "direct" ? "Direct" : "Indirect"}
-          value={(directMetricFace === "direct" ? data.directReferrals.length : indirectReferrals).toLocaleString()}
-          ariaLabel={`${directMetricFace === "direct" ? "Direct" : "Indirect"} referral help`}
-          actionAriaLabel={directMetricFace === "direct" ? "Show indirect referrals" : "Show direct referrals"}
-          flipState={directMetricFace}
-          actionIcon={<MetricFlipIcon />}
-          active={activeMetricKey === "direct"}
-          onClick={() => {
-            setActiveMetricKey((current) => (current === "direct" ? null : "direct"));
-          }}
-          onActionClick={() => {
-            setDirectMetricFace((current) => (current === "direct" ? "indirect" : "direct"));
-          }}
-        />
-        <MetricCard
-          label="Rewards"
-          value={projection ? <><ZecSymbol className="mr-0.5 inline-block" /> {formatZec(projection.projectedPayout)}</> : "-"}
-          active={activeMetricKey === "payout"}
-          onClick={() => setActiveMetricKey((current) => (current === "payout" ? null : "payout"))}
-        />
-      </section>
-      <div
-        aria-live="polite"
-        className={`overflow-hidden transition-all duration-300 ease-out ${
-          activeMetricKey ? "-mt-5 mb-8 max-h-32 translate-y-0 opacity-100" : "pointer-events-none max-h-0 -translate-y-1 opacity-0"
-        }`}
-      >
-        <p
-          className="rounded-xl border px-4 py-2 text-[0.78rem] font-medium leading-relaxed sm:text-sm"
-          style={{
-            background: "var(--market-stats-help-bg)",
-            borderColor: "var(--market-stats-help-border)",
-            color: "var(--market-stats-help-text)",
-          }}
+      <section className="mb-8">
+        <div className="grid grid-cols-3 gap-3">
+          <MetricCard
+            label="Referrals"
+            value={data.totalAttributedReferrals.toLocaleString()}
+            active={activeMetricKey === "referrals"}
+            onClick={() => setActiveMetricKey((current) => (current === "referrals" ? null : "referrals"))}
+          />
+          <MetricCard
+            label={directMetricFace === "direct" ? "Direct" : "Indirect"}
+            value={(directMetricFace === "direct" ? data.directReferrals.length : indirectReferrals).toLocaleString()}
+            ariaLabel={`${directMetricFace === "direct" ? "Direct" : "Indirect"} referral help`}
+            actionAriaLabel={directMetricFace === "direct" ? "Show indirect referrals" : "Show direct referrals"}
+            flipState={directMetricFace}
+            actionIcon={<MetricFlipIcon />}
+            active={activeMetricKey === "direct"}
+            onClick={() => {
+              setActiveMetricKey((current) => (current === "direct" ? null : "direct"));
+            }}
+            onActionClick={() => {
+              setDirectMetricFace((current) => (current === "direct" ? "indirect" : "direct"));
+            }}
+          />
+          <MetricCard
+            label="Rewards"
+            value={projection ? <><ZecSymbol className="mr-0.5 inline-block" /> {formatZec(projection.projectedPayout)}</> : "-"}
+            active={activeMetricKey === "payout"}
+            onClick={() => setActiveMetricKey((current) => (current === "payout" ? null : "payout"))}
+          />
+        </div>
+        <div
+          id="referral-dashboard-stats-help"
+          aria-live="polite"
+          className={`overflow-hidden transition-all duration-300 ease-out ${
+            activeMetricKey ? "mt-3 max-h-32 translate-y-0 opacity-100" : "pointer-events-none max-h-0 -translate-y-1 opacity-0"
+          }`}
         >
-          {activeMetricKey === "referrals" && "All referrals connected to this code across every level."}
-          {activeMetricKey === "direct" &&
-            (directMetricFace === "direct"
-              ? "Direct referrals signed up with this referral code."
-              : "Indirect referrals signed up through this code's referral tree.")}
-          {activeMetricKey === "payout" && (
-            <>
-              Projected rewards if all referrals purchase names during early access.{" "}
-              <Link href="/leaders/terms" className="underline underline-offset-2">
-                See terms.
-              </Link>
-            </>
-          )}
-        </p>
-      </div>
+          <p
+            className="rounded-xl border px-4 py-2 text-center text-[0.78rem] font-medium leading-relaxed sm:text-sm"
+            style={{
+              background: "var(--market-stats-help-bg)",
+              borderColor: "var(--market-stats-help-border)",
+              color: "var(--market-stats-help-text)",
+            }}
+          >
+            {activeMetricKey === "referrals" && "All referrals connected to this code across every level."}
+            {activeMetricKey === "direct" &&
+              (directMetricFace === "direct"
+                ? "Direct referrals signed up with this referral code."
+                : "Indirect referrals signed up through this code's referral tree.")}
+            {activeMetricKey === "payout" && (
+              <>
+                Projected rewards if all referrals purchase names during early access.{" "}
+                <Link href="/leaders/terms" className="underline underline-offset-2">
+                  See terms.
+                </Link>
+              </>
+            )}
+          </p>
+        </div>
+      </section>
 
       <section className="mb-8 grid gap-6">
         <RewardSchedule
@@ -890,12 +912,13 @@ export default function ReferralDashboardPage() {
             }}
           >
             <div className="max-w-full overflow-x-auto">
-              <table className="w-full min-w-[420px] text-left text-sm">
+              <table className="w-full min-w-[520px] text-left text-sm">
                 <thead>
                   <tr className="border-b text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted" style={{ borderColor: "var(--leaders-card-border)" }}>
                     <th className="py-2 pr-3">Lvl</th>
                     <th className="px-3 py-2">ZcashName</th>
                     <th className="w-[6.5rem] px-2 py-2">Joined</th>
+                    <th className="w-[5.25rem] px-2 py-2">Reserved</th>
                     <th className="w-[3.5rem] px-2 py-2 text-right">Refs</th>
                     <th className="py-2 pl-3 text-right">Reward</th>
                   </tr>
@@ -903,14 +926,14 @@ export default function ReferralDashboardPage() {
                 <tbody className="transition-opacity duration-300">
                   {referralsTableLocked ? (
                     <tr>
-                      <td colSpan={5} className="py-10 text-center">
+                      <td colSpan={6} className="py-10 text-center">
                         {accessPromptMode === "referrals" ? (
                           <form
                             onSubmit={submitAccessPin}
                             className="mx-auto flex w-full max-w-xs flex-col items-center text-center"
                           >
                             <label className="block text-sm font-semibold text-fg-heading" htmlFor="referrals-access-code">
-                              Enter access code
+                              Enter pin code
                             </label>
                             <input
                               id="referrals-access-code"
@@ -1008,7 +1031,7 @@ export default function ReferralDashboardPage() {
                     </tr>
                   ) : visibleReferrals.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-10 text-center text-fg-muted">No referrals at this level.</td>
+                      <td colSpan={6} className="py-10 text-center text-fg-muted">No referrals at this level.</td>
                     </tr>
                   ) : (
                     visibleReferralTableRows.map((entry) => (
@@ -1023,6 +1046,12 @@ export default function ReferralDashboardPage() {
                           </Link>
                         </td>
                         <td className="w-[6.5rem] whitespace-nowrap px-2 py-2 text-fg-body">{formatDate(entry.created_at)}</td>
+                        <td
+                          className="w-[5.25rem] whitespace-nowrap px-2 py-2 font-semibold"
+                          style={{ color: entry.name_reserved ? "var(--fg-heading)" : "var(--fg-muted)" }}
+                        >
+                          {entry.name_reserved ? "Yes" : "No"}
+                        </td>
                         <td className="w-[3.5rem] px-2 py-2 text-right font-semibold tabular-nums text-fg-heading">{entry.initiated_referrals}</td>
                         <td className="py-2 pl-3 text-right font-semibold tabular-nums text-fg-heading">
                           <ZecSymbol className="mr-0.5 inline-block" /> {formatZec(projectedReferralPayout(entry.name, entry.depth))}
@@ -1875,6 +1904,8 @@ function MetricCard({
       <button
         type="button"
         aria-label={ariaLabel}
+        aria-pressed={active}
+        aria-controls="referral-dashboard-stats-help"
         onClick={onClick}
         className="flex h-full w-full cursor-pointer flex-col items-center gap-1 px-6 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--partner-card-border-hover)]"
       >

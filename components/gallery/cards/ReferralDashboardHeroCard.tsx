@@ -90,8 +90,23 @@ function ReferralDashboardHeroView() {
     >
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem" }}>
         <div>
-          <h2 style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: 0, color: "var(--fg-heading)", fontSize: "1.9rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
+          <h2 style={{ display: "inline-flex", flexWrap: "wrap", alignItems: "center", gap: 8, margin: 0, color: "var(--fg-heading)", fontSize: "1.9rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
             atlas.zcash
+            <span
+              style={{
+                display: "inline-block",
+                padding: "0.25rem 0.75rem",
+                borderRadius: 999,
+                border: "1px solid var(--leaders-card-border)",
+                color: "var(--fg-muted)",
+                fontSize: "0.72rem",
+                fontWeight: 600,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              #218
+            </span>
           </h2>
           <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: "0.875rem", color: "var(--fg-muted)" }}>ZQR42X</span>
@@ -104,25 +119,17 @@ function ReferralDashboardHeroView() {
             </button>
           </div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <p
-            style={{
-              display: "inline-block",
-              margin: 0,
-              padding: "0.25rem 0.75rem",
-              borderRadius: 999,
-              border: "1px solid var(--leaders-card-border)",
-              color: "var(--fg-muted)",
-              fontSize: "0.72rem",
-              fontWeight: 600,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            #218
-          </p>
-          <div style={{ marginTop: 8, color: "var(--fg-muted)", fontSize: "0.875rem" }}>
-            Joined <span style={{ color: "var(--fg-body)", fontWeight: 500 }}>April 14, 2026</span>
+        <div style={{ textAlign: "right", color: "var(--fg-muted)", fontSize: "0.875rem" }}>
+          <div>
+            <a
+              href="/waitlist/view?search=ZQR42X&searchMode=exact&details=1"
+              style={{ color: "var(--fg-body)", fontWeight: 500, textDecoration: "none" }}
+            >
+              Position 1 of 3
+            </a>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            Joined on <span style={{ color: "var(--fg-body)", fontWeight: 500 }}>April 14, 2026</span>
           </div>
         </div>
       </div>
@@ -250,9 +257,8 @@ function buildSnippet(t: ThemeName): string {
   }
   .copy svg { width: 14px; height: 14px; }
   .meta { text-align: right; }
-  .rank {
+  .pill {
     display: inline-block;
-    margin: 0;
     padding: 0.25rem 0.75rem;
     border-radius: 999px;
     border: 1px solid ${p.leadersCardBorder};
@@ -262,14 +268,24 @@ function buildSnippet(t: ThemeName): string {
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
-  .joined {
-    margin-top: 8px;
+  .meta-line {
     color: ${p.fgMuted};
     font-size: 0.875rem;
   }
-  .joined strong {
+  .meta-line + .meta-line {
+    margin-top: 8px;
+  }
+  .meta-line strong {
     color: ${p.fgBody};
     font-weight: 500;
+  }
+  .position-link {
+    color: ${p.fgBody};
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .position-link:hover {
+    color: ${p.leadersAreaReferred};
   }
   .chart-block {
     margin-top: 1.5rem;
@@ -329,7 +345,7 @@ function buildSnippet(t: ThemeName): string {
     <section class="panel">
       <div class="head">
         <div>
-          <h1>atlas.zcash</h1>
+          <h1>atlas.zcash <span class="pill">#218</span></h1>
           <div class="code-row">
             <span class="code">ZQR42X</span>
             <button type="button" class="copy" title="Copy referral link">
@@ -341,8 +357,8 @@ function buildSnippet(t: ThemeName): string {
           </div>
         </div>
         <div class="meta">
-          <p class="rank">#218</p>
-          <div class="joined">Joined <strong>April 14, 2026</strong></div>
+          <div class="meta-line"><a class="position-link" href="/waitlist/view?search=ZQR42X&searchMode=exact&details=1">Position 1 of 3</a></div>
+          <div class="meta-line">Joined on <strong>April 14, 2026</strong></div>
         </div>
       </div>
 

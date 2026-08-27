@@ -343,6 +343,66 @@ async function fetchRankPeerRows(normalizedNames: string[]): Promise<RankPeerSna
   });
 }
 
+async function fetchLiveReservedByIds(ids: string[]): Promise<Map<string, boolean>> {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  const reservedById = new Map<string, boolean>();
+  if (uniqueIds.length === 0) return reservedById;
+
+  for (let start = 0; start < uniqueIds.length; start += WAITLIST_VIEW_SNAPSHOT_WRITE_BATCH_SIZE) {
+    const batch = uniqueIds.slice(start, start + WAITLIST_VIEW_SNAPSHOT_WRITE_BATCH_SIZE);
+    const { data, error } = await db.from("zn_waitlist").select("id, name_reserved").in("id", batch);
+    if (error) throw new Error(error.message);
+    for (const row of data ?? []) {
+      reservedById.set(row.id, row.name_reserved === true);
+    }
+  }
+
+  return reservedById;
+}
+
+function snapshotPeerIsReserved(
+  row: Pick<RankPeerSnapshotRow, "source_waitlist_id" | "is_reserved">,
+  liveReservedById: Map<string, boolean>,
+): boolean {
+  if (liveReservedById.has(row.source_waitlist_id)) {
+    return liveReservedById.get(row.source_waitlist_id) === true;
+  }
+  return row.is_reserved === true;
+}
+
+async function reconcileSnapshotReservedFromLive(): Promise<void> {
+  const liveReservedIds = await fetchAllSupabaseRows<{ id: string }>({
+    pageSize: WAITLIST_VIEW_SOURCE_BATCH_SIZE,
+    fetchPage: async (from, to) =>
+      await db
+        .from("zn_waitlist")
+        .select("id")
+        .eq("name_reserved", true)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+  });
+
+  const ids = liveReservedIds.map((row) => row.id).filter(Boolean);
+  if (ids.length === 0) return;
+
+  const nowIso = new Date().toISOString();
+  for (let start = 0; start < ids.length; start += WAITLIST_VIEW_SNAPSHOT_WRITE_BATCH_SIZE) {
+    const batch = ids.slice(start, start + WAITLIST_VIEW_SNAPSHOT_WRITE_BATCH_SIZE);
+    const { error } = await db
+      .from("public_waitlist_view_snapshots")
+      .update({ is_reserved: true, updated_at: nowIso })
+      .in("source_waitlist_id", batch)
+      .eq("is_reserved", false);
+    if (error) {
+      console.error("[public-waitlist-view-snapshot] failed to reconcile reserved flags", {
+        error: error.message,
+      });
+      return;
+    }
+  }
+}
+
 function buildSnapshotRows(args: {
   waitlistRows: WaitlistViewDbRow[];
   protectedNames: ProtectedNameRow[];
@@ -501,8 +561,8 @@ function buildSnapshotRows(args: {
 }
 
 export async function rebuildPublicWaitlistViewSnapshot(): Promise<{ rowCount: number }> {
-  const [, waitlistRows, protectedNames, existingSnapshotIds] = await Promise.all([
-    syncWaitlistReservationFieldsFromReserves(),
+  await syncWaitlistReservationFieldsFromReserves();
+  const [waitlistRows, protectedNames, existingSnapshotIds] = await Promise.all([
     fetchAllWaitlistRows(),
     fetchAllProtectedNames(),
     fetchAllSnapshotIds(),
@@ -566,7 +626,7 @@ async function ensurePublicWaitlistViewSnapshotFresh(): Promise<void> {
   await publicWaitlistSnapshotRefreshPromise;
 }
 
-function triggerPublicWaitlistViewSnapshotRefresh(): void {
+export function triggerPublicWaitlistViewSnapshotRefresh(): void {
   if (publicWaitlistSnapshotRefreshPromise) return;
 
   publicWaitlistSnapshotRefreshPromise = (async () => {
@@ -580,6 +640,22 @@ function triggerPublicWaitlistViewSnapshotRefresh(): void {
     .finally(() => {
       publicWaitlistSnapshotRefreshPromise = null;
     });
+}
+
+export async function markPublicWaitlistSnapshotReserved(sourceWaitlistId: string): Promise<void> {
+  const trimmed = sourceWaitlistId.trim();
+  if (!trimmed) return;
+
+  const { error } = await db
+    .from("public_waitlist_view_snapshots")
+    .update({ is_reserved: true, updated_at: new Date().toISOString() })
+    .eq("source_waitlist_id", trimmed);
+  if (error) {
+    console.error("[public-waitlist-view-snapshot] failed to mark reserved", {
+      sourceWaitlistId: trimmed,
+      error: error.message,
+    });
+  }
 }
 
 export async function refreshPublicWaitlistViewSnapshotSafe(): Promise<void> {
@@ -603,6 +679,7 @@ export async function getPublicWaitlistViewData(args?: {
   protectedOnly?: boolean | null;
 }): Promise<PublicWaitlistViewData> {
   await ensurePublicWaitlistViewSnapshot();
+  await reconcileSnapshotReservedFromLive();
   triggerPublicWaitlistViewSnapshotRefresh();
 
   const page = sanitizePage(args?.page ?? 1);
@@ -730,6 +807,10 @@ export async function getPublicWaitlistViewData(args?: {
     fetchRankPeerRows(snapshotRows.map((row) => row.normalized_name)),
     fetchProtectedPriorityFlags(snapshotRows.map((row) => row.normalized_name)),
   ]);
+  const liveReservedById = await fetchLiveReservedByIds([
+    ...snapshotRows.map((row) => row.source_waitlist_id),
+    ...rankPeers.map((peer) => peer.source_waitlist_id),
+  ]);
   const rankById = new Map<string, { position: number; total: number }>();
   const peersByName = new Map<string, RankPeerSnapshotRow[]>();
 
@@ -746,7 +827,7 @@ export async function getPublicWaitlistViewData(args?: {
         basePosition: peer.base_position,
         directReferrals: peer.direct_referrals,
         indirectReferrals: peer.indirect_referrals,
-        reserved: peer.is_reserved === true,
+        reserved: snapshotPeerIsReserved(peer, liveReservedById),
       })),
     );
     for (const [id, rank] of ranks) {
@@ -757,6 +838,8 @@ export async function getPublicWaitlistViewData(args?: {
   const rows = snapshotRows.map((row) => {
     const adjustedLineNumber =
       row.base_position - waitlistReferralAdjustment(row.direct_referrals, row.indirect_referrals);
+    const reserved = snapshotPeerIsReserved(row, liveReservedById);
+    const rank = rankById.get(row.source_waitlist_id);
 
     return {
       id: row.source_waitlist_id,
@@ -764,12 +847,12 @@ export async function getPublicWaitlistViewData(args?: {
       createdAt: row.source_created_at,
       basePosition: row.base_position,
       adjustedLineNumber,
-      reservedPosition: row.is_reserved ? row.adjusted_position : null,
+      reservedPosition: reserved ? row.adjusted_position : null,
       interestCount: row.interest_count,
-      rankPosition: rankById.get(row.source_waitlist_id)?.position ?? 1,
-      rankTotal: rankById.get(row.source_waitlist_id)?.total ?? 1,
+      rankPosition: rank?.position ?? (reserved ? 1 : 0),
+      rankTotal: rank?.total ?? 1,
       protected: row.is_protected,
-      reserved: row.is_reserved,
+      reserved,
       directReferrals: row.direct_referrals,
       reservedReferrals: row.reserved_referrals,
       indirectReferrals: row.indirect_referrals,

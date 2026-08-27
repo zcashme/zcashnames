@@ -1,0 +1,111 @@
+---
+date: 2026-08-26
+---
+
+import { WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL, WAITLIST_VIEW_EARLY_ACCESS_LABEL } from "@/lib/waitlist/early-access";
+import {
+  RESERVED_DIRECT_REFERRAL_SPOT_PHRASE,
+  RESERVED_INDIRECT_REFERRAL_SPOT_PHRASE,
+} from "@/lib/waitlist/referral-spots";
+
+# Noir Wallet and Shielded Names
+
+A Zcash unified address is a long string. A shielded name like `alice.zcash` is something you can say, share, and type. [Noir](https://www.zknoir.com/) is a Chrome wallet for shielded Zcash. It runs in the same browser as zcashnames.com, so you can try a name, reserve one, and pay from the page.
+
+## What a shielded name is
+
+Zcash Names lets you publish a human-readable name that points at a unified address. A wallet looks up `alice.zcash` and sends to the address behind it.
+
+The registry comes from ordinary shielded Zcash transactions. The memo carries the name action, and anyone running an indexer can rebuild the list from the chain. `.zcash` and `.zec` are the same name underneath.
+
+Once a name is live, lookup is public on purpose. Anyone who knows the name can find the address. On Zcash that address still hides your balance, history, and counterparties. Choose a name you are comfortable showing, and consider a dedicated unified address for it.
+
+Registering also creates a matching [zcash.me](https://zcash.me) profile.
+
+## Why get one
+
+You can receive as `you.zcash`. In Noir you can keep names in contacts and send with a payment request. For DeFi, you can point a flow at a name.
+
+Early Access starts on **{WAITLIST_VIEW_EARLY_ACCESS_LABEL}**. That window is for waitlist people who finished a reservation. Open registration comes after. If you want a specific name, get in that name's line now.
+
+## How Noir uses names
+
+Noir is a [Chrome extension](https://chromewebstore.google.com/detail/noir-wallet/mfoghjbpfanobmnoemoepenjjcmfpmdn). It is built for shielded Zcash and native DeFi: swaps, bridges, lending.
+
+You can:
+
+- Receive on a unified address (Zcash Names needs this, with an Orchard receiver)
+- Send from shielded funds
+- Tap, paste, or upload a ZIP-321 payment request (the same format the site uses for claims and reservations)
+- Import and export contacts
+
+When you claim or reserve on zcashnames.com, Noir can open a prepared send: address, amount, and memo already filled. You review and sign.
+
+Name typing in the send field is still rolling out across wallets. If a claim confirmed and the name does not resolve in the recipient box yet, the registration can still be live. Check the [Explorer](/explorer).
+
+## Try a temporary name in beta
+
+Beta is the place to practice. Claim prices are currently 1% of planned launch pricing.
+
+1. Install Noir from the [Chrome Web Store](https://chromewebstore.google.com/detail/noir-wallet/mfoghjbpfanobmnoemoepenjjcmfpmdn) and pin the extension.
+2. Unlock it and fund a shielded balance.
+3. Open the [Noir beta brief](/beta/noir), search a name, and claim it.
+
+Beta names reset before Early Access. Treat them as a dry run. For the name you want to keep, join the waitlist and finish a reservation.
+
+## Why reserve
+
+After you [join the waitlist](/waitlist) and confirm your email, we send a reservation link.
+
+A reservation is an on-chain ZEC payment tied to your waitlist entry. It puts you in that name's Early Access queue and gives you the option to buy the name when codes go out. A shielded payment per name keeps fake signups from flooding the line.
+
+Each name has its own queue. Confirm your email and complete the payment. Until both are done, your position shows as N/A.
+
+Reservations close when Early Access begins on {WAITLIST_VIEW_EARLY_ACCESS_LABEL}. Access codes go to the email on your waitlist entry at that time.
+
+Noir can open the payment for you, and you can opt into a rebate on the fee.
+
+## Pay the reservation with Noir
+
+1. Install Noir in Chrome if you have not already. Unlock the wallet.
+2. Open the reservation link from email, or recover it on [/reserve](/reserve).
+3. Refresh the page. **Pay with Noir** appears when the extension is detected.
+4. Send at least the amount on the card. Leave the address and memo as they are. The memo is how we match your waitlist UUID.
+5. Tap **Rebate** if you want the fee back. Enter a shielded unified address (`u1…`), or tap **Paste from Noir**. Hit **Consent** so the Noir team can process it. Paste your Noir receive address, the one that should get the rebate.
+6. Tap **Pay with Noir**. Review the send in the extension and sign.
+7. Open the **I Sent It!** tab and tap it. If Pay with Noir already handed us a txid, we may switch you there. That tap starts status checks.
+
+When the payment confirms and matches, the name shows as Reserved on your page and on the [waitlist view](/waitlist/view). Your Early Access code is emailed later, when the window opens.
+
+If **Pay with Noir** is missing, stay in Chrome with Noir enabled and refresh. You can still scan the QR or paste the ZIP-321 URI into Noir. Keep the memo the same.
+
+If status stays pending, wait a bit and tap Refresh. Payments below the minimum, or with an edited memo, will not match. If you need a hand, email [support@zcashnames.com](mailto:support@zcashnames.com) with the name, amount, and txid.
+
+## Jump the line and earn rewards
+
+Watch your place on [/waitlist/view](/waitlist/view):
+
+- **#** is your original line for that name
+- **Adj#** is the line after referral jumps
+- **Rank** is how you compare with everyone else waiting for the same name
+
+Share the referral link from your welcome email or dashboard. Your adjusted line moves when people who used the link finish their own reservations.
+
+- **{RESERVED_DIRECT_REFERRAL_SPOT_PHRASE}** improves your adjusted line by 1
+- **{RESERVED_INDIRECT_REFERRAL_SPOT_PHRASE}** improve it by 1
+- Partial counts wait until they hit the full number
+- If two people land on the same Adj#, the earlier original line wins
+
+During Early Access you can earn up to 0.05 ZEC for each referred person who claims a name. That amount tracks the lowest claim price at purchase time. Payouts go to your Zcash Name once you have reserved it. Numbers in the dashboard are estimates until we review and pay. Details live on the [leaderboard terms](/leaders/terms).
+
+## Do this before {WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL}
+
+1. [Download Noir](https://chromewebstore.google.com/detail/noir-wallet/mfoghjbpfanobmnoemoepenjjcmfpmdn) and unlock it.
+2. [Claim a temporary name in beta](/beta/noir).
+3. [Join the waitlist](/waitlist) for the name you want.
+4. Reserve with **Pay with Noir**, turn on **Rebate**, sign, and tap **I Sent It!**.
+5. Share your referral link.
+
+Use beta to learn the flow. Finish a reservation for the name you want. Do both in Noir from Chrome.
+
+For the Early Access schedule, see [Early Access](/blogs/users/early-access).
