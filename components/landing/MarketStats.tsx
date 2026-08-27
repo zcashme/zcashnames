@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import LandingActionLink from "@/components/landing/LandingActionLink";
 import type { NetworkStats } from "@/lib/network-stats";
 
 type StatKey = "claimed" | "forSale" | "syncedHeight" | "waitlist" | "referred" | "rewardsPot";
@@ -14,6 +15,76 @@ type StatItem = {
   deltaWeekValue?: string | null;
   deltaMonthValue?: string | null;
 };
+
+function LeaderboardLink() {
+  return (
+    <LandingActionLink
+      proximityId="leaderboard-link"
+      href="/leaders"
+      label="Leaderboard"
+      variant="text"
+      showArrow
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
+          <path d="M8 21L12 17L16 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M8 21V14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M16 21V14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <circle cx="12" cy="10" r="6" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M12 6.5L13.1 8.8L15.6 9.1L13.8 10.8L14.2 13.3L12 12.1L9.8 13.3L10.2 10.8L8.4 9.1L10.9 8.8L12 6.5Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
+        </svg>
+      }
+    />
+  );
+}
+
+function DashboardLink() {
+  return (
+    <LandingActionLink
+      proximityId="dashboard-link"
+      href="/leaders/ref"
+      label="Dashboard"
+      variant="text"
+      showArrow
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
+          <rect x="3" y="4" width="8" height="7" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="13" y="4" width="8" height="11" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="3" y="13" width="8" height="7" rx="1.8" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="13" y="17" width="8" height="3" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      }
+    />
+  );
+}
+
+function WaitlistLink() {
+  return (
+    <LandingActionLink
+      proximityId="waitlist-link"
+      href="/waitlist/view"
+      label="Waitlist"
+      variant="text"
+      showArrow
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
+          <path d="M8 6H20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M8 12H20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M8 18H20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M4 6H4.01" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M4 12H4.01" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M4 18H4.01" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+        </svg>
+      }
+    />
+  );
+}
+
+function actionLinkForStat(key: StatKey) {
+  if (key === "waitlist") return <WaitlistLink />;
+  if (key === "referred") return <LeaderboardLink />;
+  if (key === "rewardsPot") return <DashboardLink />;
+  return null;
+}
 
 function formatSignedCount(value: number | null): string {
   if (value === null) return "--";
@@ -93,6 +164,7 @@ export default function MarketStats({
   const deltaSideWidthCh = Math.max(deltaValueWidthCh, 3);
   const activeItem = items.find((item) => item.key === activeKey);
   const isHelpVisible = Boolean(activeItem);
+  const activeAction = activeItem ? actionLinkForStat(activeItem.key) : null;
 
   return (
     <section
@@ -190,7 +262,7 @@ export default function MarketStats({
         <div
           id="market-stats-help"
           aria-live="polite"
-          className={`overflow-hidden transition-all duration-300 ease-out ${isHelpVisible ? "mt-3 max-h-32 translate-y-0 opacity-100" : "max-h-0 -translate-y-1 opacity-0 pointer-events-none"}`}
+          className={`overflow-hidden transition-all duration-300 ease-out ${isHelpVisible ? (activeAction ? "mt-3 max-h-48 translate-y-0 opacity-100" : "mt-3 max-h-32 translate-y-0 opacity-100") : "max-h-0 -translate-y-1 opacity-0 pointer-events-none"}`}
         >
           <p
             className="px-4 py-2 text-center text-[0.78rem] font-medium leading-relaxed sm:text-sm"
@@ -198,6 +270,11 @@ export default function MarketStats({
           >
             {activeItem?.helpText}
           </p>
+          {activeAction ? (
+            <div className="flex justify-center px-4 pb-2">
+              {activeAction}
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

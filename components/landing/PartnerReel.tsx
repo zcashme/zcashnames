@@ -376,7 +376,7 @@ function MarqueeRow({
   );
 }
 
-export default function PartnerReel() {
+export default function PartnerReel({ compactTopSpacing = false }: { compactTopSpacing?: boolean }) {
   const partners = useMemo(
     () =>
       [...WALLET_BRANDS.filter(isPartnerWithAppIcon).map(toPartnerReelItem), ...EXTRA_PARTNERS].sort(
@@ -390,7 +390,10 @@ export default function PartnerReel() {
   if (partners.length === 0) return null;
 
   return (
-    <section id="supporters" className="relative z-[2] my-24 w-full px-5">
+    <section
+      id="supporters"
+      className={`relative z-[2] mb-24 w-full px-5 ${compactTopSpacing ? "mt-4 sm:mt-16" : "mt-24"}`}
+    >
       <div className="mb-6 text-center">
         <SectionHeaderPill id="supported-by-pill" title="Partners" />
       </div>

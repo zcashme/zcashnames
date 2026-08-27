@@ -42,7 +42,7 @@ const PhoneStage = dynamic(() => import("@/components/landing/PhoneStage"), {
 
 type Props = {
   form: React.ReactNode;
-  actionLink: React.ReactNode;
+  actionLink?: React.ReactNode;
   stats: Stats;
   subtitle?: React.ReactNode;
   collapsed?: boolean;
@@ -107,20 +107,20 @@ export default function HomePage({
         </div>
       </section>
 
-      {actionLinkPosition === "aboveStats" ? (
+      {actionLink && actionLinkPosition === "aboveStats" ? (
         <div className="relative z-[2] mt-2 -mb-4 flex justify-center">
           {actionLink}
         </div>
       ) : null}
       <MarketStats stats={stats} sectionId="stats" />
-      {actionLinkPosition === "belowStats" ? (
+      {actionLink && actionLinkPosition === "belowStats" ? (
         // Match Partners: carousel → Wallets is mt-5. MarketStats uses pb-10/sm:pb-12;
         // pull Explorer up so the gap under the counter is ~mt-5, not the full section pad.
         <div className="relative z-[2] -mt-5 mb-8 flex justify-center sm:-mt-7 sm:mb-10">
           {actionLink}
         </div>
       ) : null}
-      <PartnerReel />
+      <PartnerReel compactTopSpacing={!actionLink} />
       <HowItWorks />
       <FAQ />
       <LandingRecentBlogs posts={recentBlogPosts} />
