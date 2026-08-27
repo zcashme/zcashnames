@@ -20,7 +20,7 @@ export type WaitlistNameRankFields = {
   indirectReferrals: number;
 };
 
-/** Per-name Early Access rank: adjusted line, then original waitlist line, then id. */
+/** Per-name Early Access rank among reserved peers: adjusted line, then original waitlist line, then id. */
 export function compareWaitlistNameRank(
   a: WaitlistNameRankFields,
   b: WaitlistNameRankFields,
@@ -30,6 +30,35 @@ export function compareWaitlistNameRank(
   if (aAdjusted !== bAdjusted) return aAdjusted - bAdjusted;
   if (a.basePosition !== b.basePosition) return a.basePosition - b.basePosition;
   return a.id.localeCompare(b.id);
+}
+
+export type WaitlistNameRankResult = {
+  position: number;
+  total: number;
+};
+
+/**
+ * Rank only completed reservations for a name. `total` is everyone interested;
+ * unreserved peers stay at position 0 so the UI can show N/A of `total`.
+ */
+export function assignWaitlistNameRanks(
+  peers: Array<WaitlistNameRankFields & { reserved: boolean }>,
+): Map<string, WaitlistNameRankResult> {
+  const total = peers.length;
+  const ranks = new Map<string, WaitlistNameRankResult>();
+
+  for (const peer of peers) {
+    ranks.set(peer.id, { position: 0, total });
+  }
+
+  [...peers]
+    .filter((peer) => peer.reserved)
+    .sort(compareWaitlistNameRank)
+    .forEach((peer, index) => {
+      ranks.set(peer.id, { position: index + 1, total });
+    });
+
+  return ranks;
 }
 
 export function reservedReferralSpotPhrase(

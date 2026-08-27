@@ -287,8 +287,8 @@ export const FAQ_SECTIONS: FaqSection[] = [
                 <strong>Name</strong> — the waitlisted name and its referral code.
               </li>
               <li>
-                <strong>Position</strong> — place among everyone waitlisting the same name, or N/A
-                until reserved.
+                <strong>Position</strong> — place among completed reservations for the same name, or
+                N/A until reserved.
               </li>
               <li>
                 <strong>Status</strong> — Protected names are held back; Reserved names have completed
@@ -340,9 +340,9 @@ export const FAQ_SECTIONS: FaqSection[] = [
           <>
             Position is the name-specific reserved queue. Until you verify your email and complete an
             on-chain reservation, there is no reserved rank to show. After both are done, Position
-            compares your adjusted line against everyone else waiting for the same name. That same
-            waitlist priority — not who paid first — is what the reserve page shows and what drives
-            Early Access order.
+            compares your adjusted line against other completed reservations for the same name. That
+            same waitlist priority — not who paid first — is what the reserve page shows and what
+            drives Early Access order.
           </>
         ),
       },
@@ -508,7 +508,7 @@ export const FAQ_SECTIONS: FaqSection[] = [
         id: "leaders-hash-adj-rank",
         question: "What is the difference between #, Adj#, and Rank?",
         answer:
-          "# is your original waitlist line number. Adj# is your adjusted line number after referral-based jumps are applied. Rank compares your adjusted line number against everyone else waiting for the same name and is shown as a value like 1 of 4.",
+          "# is your original waitlist line number. Adj# is your adjusted line number after referral-based jumps are applied. Rank compares your adjusted line number against other completed reservations for the same name and is shown as a value like 1 of 4.",
       },
       {
         id: "leaders-how-referrals-improve",

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import ShareDropdown, { ShareTriggerIcon } from "@/components/ShareDropdown";
 import { useAppRouter } from "@/components/hooks/useAppRouter";
@@ -15,6 +15,7 @@ type WaitlistNameDetailsModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onProtect: (row: PublicWaitlistViewRow) => void;
+  onViewAll: (row: PublicWaitlistViewRow) => void;
 };
 
 function CloseIcon({ className }: { className?: string }) {
@@ -202,7 +203,14 @@ function SectionEyebrow({ icon, children }: { icon: ReactNode; children: ReactNo
   );
 }
 
-function othersInterestedSentence(interestCount: number) {
+function buildWaitlistNameSearchHref(name: string) {
+  return `/waitlist/view?${new URLSearchParams({
+    search: name,
+    searchMode: "exact",
+  }).toString()}`;
+}
+
+function othersInterestedCopy(interestCount: number) {
   const others = Math.max(0, interestCount - 1);
   if (others === 0) return "No others are interested in this name.";
   if (others === 1) return "1 other is interested in this name.";
@@ -303,7 +311,7 @@ function buildProtectedDetailsHref(name: string) {
 }
 
 function positionLabel(row: PublicWaitlistViewRow) {
-  if (row.reserved) {
+  if (row.reserved && row.rankPosition > 0) {
     return `Position for Name: ${row.rankPosition.toLocaleString()} of ${row.rankTotal.toLocaleString()}`;
   }
   return `Position for Name: N/A of ${row.rankTotal.toLocaleString()}`;
@@ -320,8 +328,14 @@ export default function WaitlistNameDetailsModal({
   isOpen,
   onClose,
   onProtect,
+  onViewAll,
 }: WaitlistNameDetailsModalProps) {
   const router = useAppRouter();
+  const [positionHelpOpen, setPositionHelpOpen] = useState(false);
+
+  useEffect(() => {
+    setPositionHelpOpen(false);
+  }, [isOpen, row?.id]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -349,6 +363,7 @@ export default function WaitlistNameDetailsModal({
   const shareUrl = referralCode ? buildReferralUrl(referralCode) : null;
   const isPriorityClaim = row.ensPriorityClaim || row.zmPriorityClaim;
   const requestHref = buildProtectedRequestHref(row);
+  const othersInterested = Math.max(0, row.interestCount - 1);
 
   return createPortal(
     <div
@@ -433,7 +448,34 @@ export default function WaitlistNameDetailsModal({
                 <p>
                   {row.name} was #{row.basePosition.toLocaleString()} to join the waitlist.
                 </p>
-                <p>{othersInterestedSentence(row.interestCount)}</p>
+                <p>
+                  {othersInterestedCopy(row.interestCount)}
+                  {othersInterested > 0 ? (
+                    <>
+                      {" "}
+                      <Link
+                        href={buildWaitlistNameSearchHref(row.name)}
+                        onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+                          if (
+                            event.metaKey
+                            || event.ctrlKey
+                            || event.shiftKey
+                            || event.altKey
+                            || event.button !== 0
+                          ) {
+                            return;
+                          }
+                          event.preventDefault();
+                          onViewAll(row);
+                        }}
+                        className={inlineLinkClassName}
+                        style={{ color: "var(--color-accent-interactive)" }}
+                      >
+                        View all.
+                      </Link>
+                    </>
+                  ) : null}
+                </p>
                 {row.reserved ? (
                   <p>
                     This name is reserved and ready to receive an Early Access code and referral
@@ -478,17 +520,45 @@ export default function WaitlistNameDetailsModal({
             </section>
 
             <section className="mt-6 space-y-3 pt-5" style={sectionDividerStyle}>
-              <SectionEyebrow icon={<BarChartIcon />}>Referrals</SectionEyebrow>
+              <div className="flex items-center justify-between gap-3">
+                <SectionEyebrow icon={<BarChartIcon />}>Referrals</SectionEyebrow>
+                <button
+                  type="button"
+                  onClick={() => setPositionHelpOpen((open) => !open)}
+                  className="shrink-0 text-[0.72rem] font-semibold tracking-wide transition-colors duration-200 hover:brightness-110"
+                  style={{ color: "var(--color-accent-interactive)" }}
+                  aria-expanded={positionHelpOpen}
+                  aria-controls="waitlist-name-position-help"
+                >
+                  Help
+                </button>
+              </div>
               <div className="text-center">
                 <p className="text-base font-semibold" style={{ color: "var(--fg-heading)" }}>
                   {positionLabel(row)}
                 </p>
+                <div
+                  id="waitlist-name-position-help"
+                  className="grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none"
+                  style={{
+                    gridTemplateRows: positionHelpOpen ? "1fr" : "0fr",
+                    opacity: positionHelpOpen ? 1 : 0,
+                  }}
+                  aria-hidden={!positionHelpOpen}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <p className="pt-2 text-sm leading-6" style={{ color: "var(--fg-muted)" }}>
+                      Only completed reservations are ranked. Your position may change when your
+                      referrals complete their reservations.
+                    </p>
+                  </div>
+                </div>
                 <p className="mt-1 text-sm" style={{ color: "var(--fg-muted)" }}>
                   {row.directReferrals.toLocaleString()} direct
                   <span aria-hidden="true">{"  •  "}</span>
-                  {row.reservedReferrals.toLocaleString()} reserved
-                  <span aria-hidden="true">{"  •  "}</span>
                   {row.indirectReferrals.toLocaleString()} indirect
+                  <span aria-hidden="true">{"  •  "}</span>
+                  {row.reservedReferrals.toLocaleString()} reserved
                 </p>
               </div>
               {row.leaderHref || shareUrl ? (

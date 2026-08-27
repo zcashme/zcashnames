@@ -956,7 +956,7 @@ export default function WaitlistViewClient({
                       info: `Referral-adjusted waitlist line number. This is the original line number minus one spot for ${reservedReferralSpotPhrase("direct", viewData.referralsPerSpot)} and minus one spot for ${reservedReferralSpotPhrase("indirect", viewData.indirectReferralsPerSpot)}.`,
                     },
                     { label: "Name", info: "The waitlisted name and its referral code." },
-                    { label: "Position", info: "Position among verified entries with the same name, ordered by referral-adjusted line number and then original line number as the tie-breaker." },
+                    { label: "Position", info: "Only completed reservations are ranked. Position is among reserved entries with the same name, ordered by referral-adjusted line number and then original line number as the tie-breaker. Your position may change when your referrals complete their reservations." },
                     { label: "Status", info: "Protected names are held back, reserved names have paid, pending names are waiting on reservation, and available names have no current conflict or hold." },
                     { label: "Refs", info: "Reserved referral totals. When both direct and indirect counts exist, both are shown together." },
                   ].map((column, index) => (
@@ -1076,7 +1076,7 @@ export default function WaitlistViewClient({
                           }}
                         >
                           <span className="font-mono font-semibold" style={{ color: "var(--fg-heading)" }}>
-                            {row.reserved ? `${row.rankPosition} of ${row.rankTotal}` : `N/A of ${row.rankTotal}`}
+                            {row.reserved && row.rankPosition > 0 ? `${row.rankPosition} of ${row.rankTotal}` : `N/A of ${row.rankTotal}`}
                           </span>
                         </td>
                         <td
@@ -1149,6 +1149,13 @@ export default function WaitlistViewClient({
         row={detailsRow}
         isOpen={!!detailsRow}
         onClose={() => setDetailsRow(null)}
+        onViewAll={(row) => {
+          setDetailsRow(null);
+          setDraftSearch(row.name);
+          setSearchMode("exact");
+          setAppliedSearch(row.name);
+          setPage(1);
+        }}
         onProtect={(row) => {
           setDetailsRow(null);
           router.push(

@@ -3,7 +3,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { buildFixedDepthReferralSummaries } from "@/lib/leaders/referral-dashboard";
 import { fetchAllSupabaseRows } from "@/lib/supabase/fetch-all";
-import { compareWaitlistNameRank } from "@/lib/waitlist/referral-spots";
+import { assignWaitlistNameRanks, compareWaitlistNameRank } from "@/lib/waitlist/referral-spots";
 
 export type WaitlistVerifyRow = {
   id: string;
@@ -230,12 +230,22 @@ export async function getWaitlistVerifyNameStats(
       ),
     );
     const positionById = new Map(orderedPeers.map((row, index) => [row.source_waitlist_id, index + 1]));
+    const ranks = assignWaitlistNameRanks(
+      peers.map((row) => ({
+        id: row.source_waitlist_id,
+        basePosition: row.base_position,
+        directReferrals: row.direct_referrals,
+        indirectReferrals: row.indirect_referrals,
+        reserved: row.is_reserved === true,
+      })),
+    );
 
     for (const row of orderedPeers) {
       const waitlistPosition = positionById.get(row.source_waitlist_id) ?? null;
+      const reservedRank = ranks.get(row.source_waitlist_id)?.position ?? 0;
       statsByRowId.set(row.source_waitlist_id, {
         totalCount: orderedPeers.length,
-        reservedPosition: row.is_reserved ? waitlistPosition : null,
+        reservedPosition: row.is_reserved && reservedRank > 0 ? reservedRank : null,
         waitlistPosition,
       });
     }
@@ -270,13 +280,19 @@ export async function getWaitlistVerifyNameStats(
       .sort(compareWaitlistRows);
     const rankedRows = queueRows.length > 0 ? queueRows : [...rows].sort(compareWaitlistRows);
     const positionById = new Map(rankedRows.map((row, index) => [row.id, index + 1]));
+    const reservedPositionById = new Map(
+      rankedRows
+        .filter((row) => row.name_reserved === true)
+        .map((row, index) => [row.id, index + 1] as const),
+    );
 
     for (const row of rows) {
       if (statsByRowId.has(row.id)) continue;
       const waitlistPosition = positionById.get(row.id) ?? null;
       statsByRowId.set(row.id, {
         totalCount: rankedRows.length,
-        reservedPosition: row.name_reserved === true ? waitlistPosition : null,
+        reservedPosition:
+          row.name_reserved === true ? reservedPositionById.get(row.id) ?? null : null,
         waitlistPosition,
       });
     }

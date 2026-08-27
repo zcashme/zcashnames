@@ -10,7 +10,7 @@ import {
 import {
   WAITLIST_VIEW_INDIRECT_REFERRALS_PER_SPOT,
   WAITLIST_VIEW_REFERRALS_PER_SPOT,
-  compareWaitlistNameRank,
+  assignWaitlistNameRanks,
   waitlistReferralAdjustment,
 } from "@/lib/waitlist/referral-spots";
 import { extractReferralCode, getPreferredReferralCode } from "@/lib/referral-code";
@@ -129,7 +129,12 @@ export interface PublicWaitlistViewData {
 
 type RankPeerSnapshotRow = Pick<
   PublicWaitlistViewSnapshotRow,
-  "source_waitlist_id" | "normalized_name" | "base_position" | "direct_referrals" | "indirect_referrals"
+  | "source_waitlist_id"
+  | "normalized_name"
+  | "base_position"
+  | "direct_referrals"
+  | "indirect_referrals"
+  | "is_reserved"
 >;
 
 function displayName(name: string | null, id: string): string {
@@ -329,7 +334,7 @@ async function fetchRankPeerRows(normalizedNames: string[]): Promise<RankPeerSna
     fetchPage: async (from, to) =>
       await db
         .from("public_waitlist_view_snapshots")
-        .select("source_waitlist_id, normalized_name, base_position, direct_referrals, indirect_referrals")
+        .select("source_waitlist_id, normalized_name, base_position, direct_referrals, indirect_referrals, is_reserved")
         .in("normalized_name", uniqueNames)
         .order("normalized_name", { ascending: true })
         .order("base_position", { ascending: true })
@@ -735,26 +740,18 @@ export async function getPublicWaitlistViewData(args?: {
   }
 
   for (const peers of peersByName.values()) {
-    const orderedPeers = [...peers].sort((a, b) =>
-      compareWaitlistNameRank(
-        {
-          id: a.source_waitlist_id,
-          basePosition: a.base_position,
-          directReferrals: a.direct_referrals,
-          indirectReferrals: a.indirect_referrals,
-        },
-        {
-          id: b.source_waitlist_id,
-          basePosition: b.base_position,
-          directReferrals: b.direct_referrals,
-          indirectReferrals: b.indirect_referrals,
-        },
-      ),
+    const ranks = assignWaitlistNameRanks(
+      peers.map((peer) => ({
+        id: peer.source_waitlist_id,
+        basePosition: peer.base_position,
+        directReferrals: peer.direct_referrals,
+        indirectReferrals: peer.indirect_referrals,
+        reserved: peer.is_reserved === true,
+      })),
     );
-
-    orderedPeers.forEach((peer, index) => {
-      rankById.set(peer.source_waitlist_id, { position: index + 1, total: orderedPeers.length });
-    });
+    for (const [id, rank] of ranks) {
+      rankById.set(id, rank);
+    }
   }
 
   const rows = snapshotRows.map((row) => {
