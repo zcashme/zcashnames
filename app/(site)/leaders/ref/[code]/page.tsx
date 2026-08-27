@@ -129,6 +129,51 @@ function AxisEndpointGuideLine({
   );
 }
 
+type ReferralChartSeriesKey = "rewards" | "direct" | "referrals";
+
+function ChartLegendItem({
+  tag: Tag = "span",
+  label,
+  color,
+  visible,
+  onToggle,
+}: {
+  tag?: "div" | "span";
+  label: string;
+  color: string;
+  visible: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Tag
+      className="inline-flex cursor-pointer items-center gap-1.5 select-none transition-colors hover:text-[var(--color-accent-interactive)]"
+      role="button"
+      tabIndex={0}
+      aria-pressed={visible}
+      onClick={onToggle}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onToggle();
+        }
+      }}
+    >
+      <span
+        className="h-2.5 w-2.5 shrink-0 rounded-full"
+        style={
+          visible
+            ? { background: color }
+            : {
+                background: "transparent",
+                border: "1px solid color-mix(in srgb, var(--fg-muted) 55%, transparent)",
+              }
+        }
+      />
+      {label}
+    </Tag>
+  );
+}
+
 interface ReferralChartPoint {
   date: string;
   direct: number;
@@ -1305,11 +1350,19 @@ function ReferralGrowthChart({
   setChartRange: (range: "7d" | "30d" | "allTime") => void;
 }) {
   const [activeChartPoint, setActiveChartPoint] = useState<ReferralChartPoint | null>(null);
+  const [visibleChartSeries, setVisibleChartSeries] = useState<Record<ReferralChartSeriesKey, boolean>>({
+    rewards: true,
+    direct: true,
+    referrals: true,
+  });
   const chartGuidePoint =
     (activeChartPoint && data.some((point) => point.date === activeChartPoint.date) ? activeChartPoint : null) ??
     data[data.length - 1] ??
     null;
-  const chartGuideReferrals = chartGuidePoint ? chartGuidePoint.direct + chartGuidePoint.indirect : 0;
+  const chartGuideReferrals = chartGuidePoint
+    ? (visibleChartSeries.direct ? chartGuidePoint.direct : 0) +
+      (visibleChartSeries.referrals ? chartGuidePoint.indirect : 0)
+    : 0;
   const chartSummaryText = useMemo(() => {
     if (data.length === 0) return "No change yet";
 
@@ -1325,20 +1378,41 @@ function ReferralGrowthChart({
     return `${delta >= 0 ? "+" : ""}${delta.toLocaleString()} over ${rangeLabel}`;
   }, [chartRange, data]);
   const rewardsDomain = useMemo(
-    () => calculateNumericDomain(data.map((point) => point.rewards), { floorAtZero: true }),
-    [data],
-  );
-  const referralsDomain = useMemo(
     () =>
-      calculateStackedDomain(
+      calculateNumericDomain(
+        visibleChartSeries.rewards ? data.map((point) => point.rewards) : [],
+        { floorAtZero: true },
+      ),
+    [data, visibleChartSeries.rewards],
+  );
+  const referralsDomain = useMemo(() => {
+    if (visibleChartSeries.direct && visibleChartSeries.referrals) {
+      return calculateStackedDomain(
         data.map((point) => ({
           base: point.direct,
           total: point.direct + point.indirect,
         })),
         { integer: true },
-      ),
-    [data],
-  );
+      );
+    }
+    if (visibleChartSeries.direct) {
+      return calculateNumericDomain(
+        data.map((point) => point.direct),
+        { floorAtZero: true, integer: true },
+      );
+    }
+    if (visibleChartSeries.referrals) {
+      return calculateNumericDomain(
+        data.map((point) => point.indirect),
+        { floorAtZero: true, integer: true },
+      );
+    }
+    return calculateNumericDomain([], { integer: true });
+  }, [data, visibleChartSeries.direct, visibleChartSeries.referrals]);
+
+  const toggleChartSeries = (key: ReferralChartSeriesKey) => {
+    setVisibleChartSeries((current) => ({ ...current, [key]: !current[key] }));
+  };
 
   return (
     <div className="mt-6 border-t pt-5" style={{ borderColor: "var(--leaders-card-border)" }}>
@@ -1401,7 +1475,7 @@ function ReferralGrowthChart({
               />
               <YAxis
                 yAxisId="rewards"
-                tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
+                tick={visibleChartSeries.rewards ? { fill: "var(--fg-muted)", fontSize: 12 } : false}
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
                 domain={rewardsDomain}
@@ -1411,7 +1485,11 @@ function ReferralGrowthChart({
               <YAxis
                 yAxisId="referrals"
                 orientation="right"
-                tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
+                tick={
+                  visibleChartSeries.direct || visibleChartSeries.referrals
+                    ? { fill: "var(--fg-muted)", fontSize: 12 }
+                    : false
+                }
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
                 domain={referralsDomain}
@@ -1427,6 +1505,7 @@ function ReferralGrowthChart({
                 stroke={DIRECT_CHART_COLOR}
                 fill="url(#gradDashboardDirect)"
                 strokeWidth={2}
+                hide={!visibleChartSeries.direct}
               />
               <Area
                 yAxisId="referrals"
@@ -1436,6 +1515,7 @@ function ReferralGrowthChart({
                 stroke={INDIRECT_CHART_COLOR}
                 fill="url(#gradDashboardIndirect)"
                 strokeWidth={2}
+                hide={!visibleChartSeries.referrals}
               />
               <Line
                 yAxisId="rewards"
@@ -1445,31 +1525,45 @@ function ReferralGrowthChart({
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4, fill: REWARDS_CHART_COLOR }}
+                hide={!visibleChartSeries.rewards}
               />
               <AxisEndpointGuideLines
                 point={chartGuidePoint}
                 lines={[
-                  { yAxisId: "rewards", value: chartGuidePoint?.rewards ?? 0, color: REWARDS_CHART_COLOR, side: "left" },
-                  { yAxisId: "referrals", value: chartGuideReferrals, color: INDIRECT_CHART_COLOR, side: "right" },
-                  { yAxisId: "referrals", value: chartGuidePoint?.direct ?? 0, color: DIRECT_CHART_COLOR, side: "right" },
+                  ...(visibleChartSeries.rewards
+                    ? [{ yAxisId: "rewards", value: chartGuidePoint?.rewards ?? 0, color: REWARDS_CHART_COLOR, side: "left" as const }]
+                    : []),
+                  ...(visibleChartSeries.referrals
+                    ? [{ yAxisId: "referrals", value: chartGuideReferrals, color: INDIRECT_CHART_COLOR, side: "right" as const }]
+                    : []),
+                  ...(visibleChartSeries.direct
+                    ? [{ yAxisId: "referrals", value: chartGuidePoint?.direct ?? 0, color: DIRECT_CHART_COLOR, side: "right" as const }]
+                    : []),
                 ]}
               />
             </AreaChart>
           </ResponsiveContainer>
           <div className="mt-3 flex flex-wrap items-start justify-between gap-3 px-2 text-sm font-semibold text-fg-heading">
-            <div className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: REWARDS_CHART_COLOR }} />
-              Rewards
-            </div>
+            <ChartLegendItem
+              tag="div"
+              label="Rewards"
+              color={REWARDS_CHART_COLOR}
+              visible={visibleChartSeries.rewards}
+              onToggle={() => toggleChartSeries("rewards")}
+            />
             <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: DIRECT_CHART_COLOR }} />
-                Direct
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: INDIRECT_CHART_COLOR }} />
-                Referrals
-              </span>
+              <ChartLegendItem
+                label="Direct"
+                color={DIRECT_CHART_COLOR}
+                visible={visibleChartSeries.direct}
+                onToggle={() => toggleChartSeries("direct")}
+              />
+              <ChartLegendItem
+                label="Referrals"
+                color={INDIRECT_CHART_COLOR}
+                visible={visibleChartSeries.referrals}
+                onToggle={() => toggleChartSeries("referrals")}
+              />
             </div>
           </div>
         </>
@@ -1494,10 +1588,14 @@ function ReferralChartTooltip({
   const rewards = payload.find((p) => p.name === "rewards");
   const point = payload[0]?.payload;
   const referrals = (direct?.value ?? 0) + (indirect?.value ?? 0);
-  const referralsDelta =
-    point?.directDelta === undefined && point?.indirectDelta === undefined
-      ? undefined
-      : (point?.directDelta ?? 0) + (point?.indirectDelta ?? 0);
+  const referralsDelta = indirect
+    ? direct
+      ? point?.directDelta === undefined && point?.indirectDelta === undefined
+        ? undefined
+        : (point?.directDelta ?? 0) + (point?.indirectDelta ?? 0)
+      : point?.indirectDelta
+    : undefined;
+  if (!indirect && !direct && !rewards) return null;
 
   return (
     <div
@@ -1509,27 +1607,33 @@ function ReferralChartTooltip({
       }}
     >
       <p className="mb-1.5 font-semibold text-fg-heading">{label}</p>
-      <p>
-        Referrals:{" "}
-        <span className="font-semibold" style={{ color: INDIRECT_CHART_COLOR }}>
-          {referrals}
-        </span>
-        {formatCountDelta(referralsDelta)}
-      </p>
-      <p>
-        Direct:{" "}
-        <span className="font-semibold" style={{ color: DIRECT_CHART_COLOR }}>
-          {direct?.value ?? 0}
-        </span>
-        {formatCountDelta(point?.directDelta)}
-      </p>
-      <p>
-        Rewards:{" "}
-        <span className="font-semibold" style={{ color: REWARDS_CHART_COLOR }}>
-          <ZecSymbol className="mr-0.5 inline-block" /> {formatZec(rewards?.value ?? 0)}
-        </span>
-        {formatZecDelta(point?.rewardsDelta)}
-      </p>
+      {indirect && (
+        <p>
+          Referrals:{" "}
+          <span className="font-semibold" style={{ color: INDIRECT_CHART_COLOR }}>
+            {referrals}
+          </span>
+          {formatCountDelta(referralsDelta)}
+        </p>
+      )}
+      {direct && (
+        <p>
+          Direct:{" "}
+          <span className="font-semibold" style={{ color: DIRECT_CHART_COLOR }}>
+            {direct.value}
+          </span>
+          {formatCountDelta(point?.directDelta)}
+        </p>
+      )}
+      {rewards && (
+        <p>
+          Rewards:{" "}
+          <span className="font-semibold" style={{ color: REWARDS_CHART_COLOR }}>
+            <ZecSymbol className="mr-0.5 inline-block" /> {formatZec(rewards.value ?? 0)}
+          </span>
+          {formatZecDelta(point?.rewardsDelta)}
+        </p>
+      )}
     </div>
   );
 }

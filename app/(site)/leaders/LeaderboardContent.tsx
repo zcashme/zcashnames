@@ -125,6 +125,51 @@ function AxisEndpointGuideLine({
   );
 }
 
+type LeadersChartSeriesKey = "rewards" | "waitlist" | "referred";
+
+function ChartLegendItem({
+  tag: Tag = "span",
+  label,
+  color,
+  visible,
+  onToggle,
+}: {
+  tag?: "div" | "span";
+  label: string;
+  color: string;
+  visible: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Tag
+      className="inline-flex cursor-pointer items-center gap-1.5 select-none transition-colors hover:text-[var(--color-accent-interactive)]"
+      role="button"
+      tabIndex={0}
+      aria-pressed={visible}
+      onClick={onToggle}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onToggle();
+        }
+      }}
+    >
+      <span
+        className="h-2.5 w-2.5 shrink-0 rounded-full"
+        style={
+          visible
+            ? { background: color }
+            : {
+                background: "transparent",
+                border: "1px solid color-mix(in srgb, var(--fg-muted) 55%, transparent)",
+              }
+        }
+      />
+      {label}
+    </Tag>
+  );
+}
+
 function ZecSymbol({ className }: { className?: string }) {
   return (
     <svg
@@ -275,6 +320,7 @@ function ChartTooltip({
   const totalVal = (total?.value ?? 0) + (referred?.value ?? 0);
   const point = payload[0]?.payload;
   const topReferrer = point?.topReferrer;
+  if (!total && !referred && !rewards) return null;
 
   const formatDelta = (d: number | undefined) => {
     if (d === undefined) return null;
@@ -306,27 +352,33 @@ function ChartTooltip({
       }}
     >
       <p className="mb-1.5 font-semibold text-fg-heading">{label}</p>
-      <p>
-        Total:{" "}
-        <span className="font-semibold" style={{ color: "var(--leaders-area-non-referred)" }}>
-          {totalVal}
-        </span>
-        {formatDelta(point?.totalDelta)}
-      </p>
-      <p>
-        Referred:{" "}
-        <span className="font-semibold" style={{ color: "var(--leaders-area-referred)" }}>
-          {referred?.value ?? 0}
-        </span>
-        {formatDelta(point?.referredDelta)}
-      </p>
-      <p>
-        Rewards:{" "}
-        <span className="font-semibold" style={{ color: REWARDS_CHART_COLOR }}>
-          <ZecSymbol className="mr-0.5 inline-block" /> {formatZec(rewards?.value ?? 0)}
-        </span>
-        {formatZecDelta(point?.rewardsDelta)}
-      </p>
+      {total && (
+        <p>
+          Total:{" "}
+          <span className="font-semibold" style={{ color: "var(--leaders-area-non-referred)" }}>
+            {totalVal}
+          </span>
+          {formatDelta(referred ? point?.totalDelta : point?.nonReferredDelta)}
+        </p>
+      )}
+      {referred && (
+        <p>
+          Referred:{" "}
+          <span className="font-semibold" style={{ color: "var(--leaders-area-referred)" }}>
+            {referred.value}
+          </span>
+          {formatDelta(point?.referredDelta)}
+        </p>
+      )}
+      {rewards && (
+        <p>
+          Rewards:{" "}
+          <span className="font-semibold" style={{ color: REWARDS_CHART_COLOR }}>
+            <ZecSymbol className="mr-0.5 inline-block" /> {formatZec(rewards.value ?? 0)}
+          </span>
+          {formatZecDelta(point?.rewardsDelta)}
+        </p>
+      )}
       {topReferrer && (
         <p className="mt-2 text-[0.78rem] text-fg-muted">
           Top: <span className="font-semibold text-fg-heading">{topReferrer.name}</span>
@@ -384,6 +436,11 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
   const [visibleDailyRows, setVisibleDailyRows] = useState(7);
   const [activeStatKey, setActiveStatKey] = useState<"waitlist" | "referred" | "rewards" | null>(null);
   const [activeChartPoint, setActiveChartPoint] = useState<TimeSeriesPoint | null>(null);
+  const [visibleChartSeries, setVisibleChartSeries] = useState<Record<LeadersChartSeriesKey, boolean>>({
+    rewards: true,
+    waitlist: true,
+    referred: true,
+  });
   const [copiedReferralCode, setCopiedReferralCode] = useState<string | null>(null);
   const copiedResetTimeoutRef = useRef<number | null>(null);
 
@@ -425,7 +482,10 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
     (activeChartPoint && chartTimeSeries.some((point) => point.date === activeChartPoint.date) ? activeChartPoint : null) ??
     chartTimeSeries[chartTimeSeries.length - 1] ??
     null;
-  const chartGuideWaitlist = chartGuidePoint ? chartGuidePoint.referred + chartGuidePoint.nonReferred : 0;
+  const chartGuideWaitlist = chartGuidePoint
+    ? (visibleChartSeries.referred ? chartGuidePoint.referred : 0) +
+      (visibleChartSeries.waitlist ? chartGuidePoint.nonReferred : 0)
+    : 0;
   const chartSummaryText = useMemo(() => {
     if (chartTimeSeries.length === 0) return "No change yet";
     const last = chartTimeSeries[chartTimeSeries.length - 1];
@@ -438,20 +498,41 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
     return `${delta >= 0 ? "+" : ""}${delta.toLocaleString()} over ${rangeLabel}`;
   }, [chartRange, chartTimeSeries]);
   const rewardsDomain = useMemo(
-    () => calculateNumericDomain(chartTimeSeries.map((point) => point.rewardsPot), { floorAtZero: true }),
-    [chartTimeSeries],
-  );
-  const waitlistDomain = useMemo(
     () =>
-      calculateStackedDomain(
+      calculateNumericDomain(
+        visibleChartSeries.rewards ? chartTimeSeries.map((point) => point.rewardsPot) : [],
+        { floorAtZero: true },
+      ),
+    [chartTimeSeries, visibleChartSeries.rewards],
+  );
+  const waitlistDomain = useMemo(() => {
+    if (visibleChartSeries.referred && visibleChartSeries.waitlist) {
+      return calculateStackedDomain(
         chartTimeSeries.map((point) => ({
           base: point.referred,
           total: point.referred + point.nonReferred,
         })),
         { integer: true },
-      ),
-    [chartTimeSeries],
-  );
+      );
+    }
+    if (visibleChartSeries.referred) {
+      return calculateNumericDomain(
+        chartTimeSeries.map((point) => point.referred),
+        { floorAtZero: true, integer: true },
+      );
+    }
+    if (visibleChartSeries.waitlist) {
+      return calculateNumericDomain(
+        chartTimeSeries.map((point) => point.nonReferred),
+        { floorAtZero: true, integer: true },
+      );
+    }
+    return calculateNumericDomain([], { integer: true });
+  }, [chartTimeSeries, visibleChartSeries.referred, visibleChartSeries.waitlist]);
+
+  const toggleChartSeries = (key: LeadersChartSeriesKey) => {
+    setVisibleChartSeries((current) => ({ ...current, [key]: !current[key] }));
+  };
 
   const canShowMoreLeaderboardRows = visibleLeaderboardRows < leaderboard.length;
   const canHideLeaderboardRows = visibleLeaderboardRows > 10;
@@ -649,7 +730,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
               />
               <YAxis
                 yAxisId="rewards"
-                tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
+                tick={visibleChartSeries.rewards ? { fill: "var(--fg-muted)", fontSize: 12 } : false}
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
                 domain={rewardsDomain}
@@ -659,7 +740,11 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
               <YAxis
                 yAxisId="waitlist"
                 orientation="right"
-                tick={{ fill: "var(--fg-muted)", fontSize: 12 }}
+                tick={
+                  visibleChartSeries.waitlist || visibleChartSeries.referred
+                    ? { fill: "var(--fg-muted)", fontSize: 12 }
+                    : false
+                }
                 tickLine={false}
                 axisLine={{ stroke: "var(--border)" }}
                 domain={waitlistDomain}
@@ -675,6 +760,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
                 stroke="var(--leaders-area-referred)"
                 fill="url(#gradReferred)"
                 strokeWidth={2}
+                hide={!visibleChartSeries.referred}
               />
               <Area
                 yAxisId="waitlist"
@@ -684,6 +770,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
                 stroke="var(--leaders-area-non-referred)"
                 fill="url(#gradNonReferred)"
                 strokeWidth={2}
+                hide={!visibleChartSeries.waitlist}
               />
               <Line
                 yAxisId="rewards"
@@ -693,41 +780,59 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4, fill: REWARDS_CHART_COLOR }}
+                hide={!visibleChartSeries.rewards}
               />
               <AxisEndpointGuideLines
                 point={chartGuidePoint}
                 lines={[
-                  { yAxisId: "rewards", value: chartGuidePoint?.rewardsPot ?? 0, color: REWARDS_CHART_COLOR, side: "left" },
-                  {
-                    yAxisId: "waitlist",
-                    value: chartGuideWaitlist,
-                    color: "var(--leaders-area-non-referred)",
-                    side: "right",
-                  },
-                  {
-                    yAxisId: "waitlist",
-                    value: chartGuidePoint?.referred ?? 0,
-                    color: "var(--leaders-area-referred)",
-                    side: "right",
-                  },
+                  ...(visibleChartSeries.rewards
+                    ? [{ yAxisId: "rewards", value: chartGuidePoint?.rewardsPot ?? 0, color: REWARDS_CHART_COLOR, side: "left" as const }]
+                    : []),
+                  ...(visibleChartSeries.waitlist
+                    ? [
+                        {
+                          yAxisId: "waitlist",
+                          value: chartGuideWaitlist,
+                          color: "var(--leaders-area-non-referred)",
+                          side: "right" as const,
+                        },
+                      ]
+                    : []),
+                  ...(visibleChartSeries.referred
+                    ? [
+                        {
+                          yAxisId: "waitlist",
+                          value: chartGuidePoint?.referred ?? 0,
+                          color: "var(--leaders-area-referred)",
+                          side: "right" as const,
+                        },
+                      ]
+                    : []),
                 ]}
               />
             </AreaChart>
           </ResponsiveContainer>
           <div className="mt-3 flex flex-wrap items-start justify-between gap-3 px-2 text-sm font-semibold text-fg-heading">
-            <div className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: REWARDS_CHART_COLOR }} />
-              Rewards
-            </div>
+            <ChartLegendItem
+              tag="div"
+              label="Rewards"
+              color={REWARDS_CHART_COLOR}
+              visible={visibleChartSeries.rewards}
+              onToggle={() => toggleChartSeries("rewards")}
+            />
             <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--leaders-area-non-referred)" }} />
-                Waitlist
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--leaders-area-referred)" }} />
-                Referred
-              </span>
+              <ChartLegendItem
+                label="Waitlist"
+                color="var(--leaders-area-non-referred)"
+                visible={visibleChartSeries.waitlist}
+                onToggle={() => toggleChartSeries("waitlist")}
+              />
+              <ChartLegendItem
+                label="Referred"
+                color="var(--leaders-area-referred)"
+                visible={visibleChartSeries.referred}
+                onToggle={() => toggleChartSeries("referred")}
+              />
             </div>
           </div>
           </>
