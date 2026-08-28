@@ -3,6 +3,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import {
   PROTECTED_NAME_CATEGORIES,
+  normalizeEvidenceUrls,
   type ProtectedNameCategory,
 } from "@/lib/protected/shared";
 import { expireProtectedNames } from "@/lib/zns/protected-claim";
@@ -199,13 +200,6 @@ function sanitizePageSize(value: number | string | null | undefined): number {
 
 function sanitizeBooleanFlag(value: boolean | string | null | undefined): boolean {
   return value === true || value === "true";
-}
-
-function normalizeEvidenceUrls(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
-    .filter(Boolean);
 }
 
 function isMissingDisputesTableError(error: { message?: string; code?: string } | null | undefined) {

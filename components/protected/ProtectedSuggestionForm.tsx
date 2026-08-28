@@ -11,6 +11,7 @@ import { buildVerifyTextFieldStyle } from "@/components/ui/formFieldStyles";
 import { getEmailAddressValidationMessage } from "@/lib/email-address";
 import {
   PROTECTED_NAME_CATEGORIES,
+  type ProtectedNameCategory,
   type ProtectedSuggestionContactMethod,
   type ProtectedSuggestionOption,
   type ProtectedSuggestionOptionKind,
@@ -23,6 +24,9 @@ import { validateAddress } from "@/lib/zns/address-validation";
 type ProtectedSuggestionFormProps = {
   returnHref?: string;
   initialName?: string | null;
+  initialParentName?: string | null;
+  initialCategory?: string | null;
+  initialSuggestionType?: ProtectedSuggestionType;
 };
 
 type ContactRow = {
@@ -558,16 +562,29 @@ function useSuggestionOptions(
 export default function ProtectedSuggestionForm({
   returnHref = "/protected",
   initialName = null,
+  initialParentName = null,
+  initialCategory = null,
+  initialSuggestionType = "canonical",
 }: ProtectedSuggestionFormProps) {
   const initialContact = useMemo(
     () => ({ uid: crypto.randomUUID(), kind: "email" as const, value: "" }),
     [],
   );
   const [name, setName] = useState(() => sanitizeNameInput((initialName ?? "").trim()));
-  const [suggestionType, setSuggestionType] = useState<ProtectedSuggestionType>("canonical");
-  const [canonicalInput, setCanonicalInput] = useState("");
-  const [selectedCanonicalName, setSelectedCanonicalName] = useState<string | null>(null);
-  const [category, setCategory] = useState("");
+  const initialVariantParentName =
+    initialSuggestionType === "variant" ? initialParentName?.trim() || null : null;
+  const initialVariantCategory =
+    initialSuggestionType === "variant"
+    && PROTECTED_NAME_CATEGORIES.includes(initialCategory as ProtectedNameCategory)
+      ? (initialCategory as ProtectedNameCategory)
+      : null;
+  const [suggestionType, setSuggestionType] = useState<ProtectedSuggestionType>(initialSuggestionType);
+  const [canonicalInput, setCanonicalInput] = useState(() => initialVariantParentName ?? "");
+  const [selectedCanonicalName, setSelectedCanonicalName] = useState<string | null>(
+    initialVariantParentName,
+  );
+  const hasInitialVariantParent = Boolean(initialVariantParentName);
+  const [category, setCategory] = useState(() => initialVariantCategory ?? "");
   const [reason, setReason] = useState("");
   const [evidenceLinks, setEvidenceLinks] = useState<string[]>([""]);
   const [contacts, setContacts] = useState<ContactRow[]>([initialContact]);
@@ -636,6 +653,24 @@ export default function ProtectedSuggestionForm({
       ),
     [variantCanonicalSuggestions],
   );
+  const variantCanonicalOptions = useMemo(() => {
+    if (!selectedCanonicalName) return visibleVariantCanonicalSuggestions;
+
+    const selectedOption = visibleVariantCanonicalSuggestions.find(
+      (option) => option.value.toLowerCase() === selectedCanonicalName.toLowerCase(),
+    );
+
+    return [
+      selectedOption ?? {
+        value: selectedCanonicalName,
+        label: selectedCanonicalName,
+        category: initialVariantCategory ?? undefined,
+      },
+      ...visibleVariantCanonicalSuggestions.filter(
+        (option) => option.value.toLowerCase() !== selectedCanonicalName.toLowerCase(),
+      ),
+    ];
+  }, [initialVariantCategory, selectedCanonicalName, visibleVariantCanonicalSuggestions]);
 
   function resetStepsAfterCanonicalChange() {
     setCategory("");
@@ -859,6 +894,9 @@ export default function ProtectedSuggestionForm({
       setNameStatusMessage(NAME_AVAILABLE_MESSAGE);
       setNameStatusTone("success");
       setNameConfirmed(true);
+      if (hasInitialVariantParent && suggestionType === "variant") {
+        setSuggestionTypeConfirmed(true);
+      }
       return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to validate name.";
@@ -1245,7 +1283,7 @@ export default function ProtectedSuggestionForm({
                   setNameStatusTone(null);
                   setErrorMessage(null);
                   setNameConfirmed(false);
-                  setSuggestionType("canonical");
+                  setSuggestionType(hasInitialVariantParent ? "variant" : "canonical");
                   setSuggestionTypeConfirmed(false);
                   setCanonicalConfirmed(false);
                   setShowCanonicalDropdown(false);
@@ -1264,7 +1302,7 @@ export default function ProtectedSuggestionForm({
                   setNameStatusTone(null);
                   setErrorMessage(null);
                   setNameConfirmed(false);
-                  setSuggestionType("canonical");
+                  setSuggestionType(hasInitialVariantParent ? "variant" : "canonical");
                   setSuggestionTypeConfirmed(false);
                   setCanonicalConfirmed(false);
                   setShowCanonicalDropdown(false);
@@ -1315,14 +1353,26 @@ export default function ProtectedSuggestionForm({
                 value={suggestionType}
                 onChange={(next) => {
                   setSuggestionType(next);
-                  setCanonicalInput("");
-                  setSelectedCanonicalName(null);
+                  setCanonicalInput(
+                    next === "variant" && hasInitialVariantParent
+                      ? initialVariantParentName ?? ""
+                      : "",
+                  );
+                  setSelectedCanonicalName(
+                    next === "variant" && hasInitialVariantParent
+                      ? initialVariantParentName
+                      : null,
+                  );
                   setCanonicalError(null);
                   setErrorMessage(null);
                   setSuggestionTypeConfirmed(false);
                   setCanonicalConfirmed(false);
                   setShowCanonicalDropdown(false);
-                  setCategory("");
+                  setCategory(
+                    next === "variant" && hasInitialVariantParent
+                      ? initialVariantCategory ?? ""
+                      : "",
+                  );
                   setCategoryConfirmed(false);
                   setReasonConfirmed(false);
                   setEvidenceConfirmed(false);
@@ -1337,7 +1387,7 @@ export default function ProtectedSuggestionForm({
 
           {showCanonical ? (
             <div>
-              {!isVariantCanonicalSuggestionsLoading && visibleVariantCanonicalSuggestions.length > 0 ? (
+              {!isVariantCanonicalSuggestionsLoading && variantCanonicalOptions.length > 0 ? (
                 <div className="mt-3">
                   <p
                     className="mb-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em]"
@@ -1358,7 +1408,7 @@ export default function ProtectedSuggestionForm({
                     </p>
                   ) : null}
                   <div className="flex flex-wrap gap-2">
-                    {visibleVariantCanonicalSuggestions.map((option) => {
+                    {variantCanonicalOptions.map((option) => {
                       const selected = selectedCanonicalName === option.value;
 
                       return (

@@ -1483,10 +1483,12 @@ function ReserveClaimHero({
   shareMessage,
   shareUrl,
   emailSubject,
+  reservationStepComplete,
 }: {
   shareMessage: string;
   shareUrl: string;
   emailSubject: string;
+  reservationStepComplete: boolean;
 }) {
   const [stepsOpen, setStepsOpen] = useState(true);
 
@@ -1532,7 +1534,9 @@ function ReserveClaimHero({
                 stepsOpen ? "opacity-100 delay-75" : "opacity-0"
               }`}
             >
-              <HeroHowReservationsWork />
+              <HeroHowReservationsWork
+                reservationStepComplete={reservationStepComplete}
+              />
             </div>
           </div>
         </div>
@@ -1556,8 +1560,12 @@ function ReserveClaimHero({
   );
 }
 
-/** Three-step row matching landing "Get yours", with step-1 title strike/check animation. */
-export function HeroHowReservationsWork() {
+/** Three-step row matching landing "Get yours", with completed title strike/check states. */
+export function HeroHowReservationsWork({
+  reservationStepComplete = false,
+}: {
+  reservationStepComplete?: boolean;
+}) {
   const [firstStepTitleStruck, setFirstStepTitleStruck] = useState(false);
   const [firstStepChecked, setFirstStepChecked] = useState(false);
   const animationTimersRef = useState<number[]>([])[0];
@@ -1615,6 +1623,9 @@ export function HeroHowReservationsWork() {
       {steps.map((item, index) => {
         const showChevron = index < steps.length - 1;
         const isFirst = index === 0;
+        const isCompleted =
+          isFirst ? firstStepChecked : index === 1 && reservationStepComplete;
+        const isTitleStruck = isFirst ? firstStepTitleStruck : isCompleted;
 
         return (
           <div
@@ -1649,7 +1660,7 @@ export function HeroHowReservationsWork() {
                           ? "transform 720ms cubic-bezier(0.2, 0.8, 0.2, 1)"
                           : undefined,
                         transform:
-                          isFirst && firstStepChecked ? "rotateY(180deg)" : "rotateY(0deg)",
+                          isCompleted ? "rotateY(180deg)" : "rotateY(0deg)",
                       }}
                     >
                       <span
@@ -1674,7 +1685,7 @@ export function HeroHowReservationsWork() {
                     </span>
                   </span>
                   <h3 className="type-section-subtitle min-w-0 flex-1 font-semibold leading-8 text-[var(--fg-heading)]">
-                    {isFirst ? (
+                    {isFirst || isCompleted ? (
                       <span className="relative inline-block">
                         <span>{item.title}</span>
                         <span
@@ -1685,7 +1696,7 @@ export function HeroHowReservationsWork() {
                             background: "currentColor",
                             transformOrigin: "left center",
                             transition: "transform 650ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-                            transform: firstStepTitleStruck ? "scaleX(1)" : "scaleX(0)",
+                            transform: isTitleStruck ? "scaleX(1)" : "scaleX(0)",
                           }}
                         />
                       </span>
@@ -4476,6 +4487,8 @@ export default function WaitlistVerifyClient({
   const pendingCount = cardState.filter((card) => !card.reserved && !card.protectedName).length;
   const reservedCount = cardState.filter((card) => card.reserved).length;
   const protectedCount = cardState.filter((card) => card.protectedName && !card.reserved).length;
+  const allLinkedNamesReserved =
+    cardState.length > 0 && cardState.every((card) => card.reserved);
   const filteredCards = cardState
     .filter((card) => {
       if (activeFilter === "pending") return !card.reserved && !card.protectedName;
@@ -4804,6 +4817,7 @@ export default function WaitlistVerifyClient({
               shareMessage="Get ready to claim your Zcash name — reserve your waitlist position at ZcashNames:"
               shareUrl="https://www.zcashnames.com/reserve"
               emailSubject="Reserve your Zcash name"
+              reservationStepComplete={allLinkedNamesReserved}
             />
           </section>
         }

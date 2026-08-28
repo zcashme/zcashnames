@@ -17,6 +17,7 @@ import {
   PROTECTED_NAME_CATEGORIES,
   PROTECTED_REQUEST_CONTACT_KINDS,
   PROTECTED_REQUEST_OPTION_LIMIT,
+  normalizeEvidenceUrls,
   type ProtectedAccessRelationship,
   type ProtectedNameCategory,
   type ProtectedRequestContactKind,
@@ -43,13 +44,6 @@ type ProtectedRequestNameRow = {
 
 const REQUEST_NAME_SELECT =
   "name, normalized_name, parent_name, category, status, reason, protected_at, redeemed, ens_priority_claim, zm_priority_claim, evidence, created_at, updated_at";
-
-function normalizeEvidenceUrls(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
-    .filter(Boolean);
-}
 
 function isRequestContactKind(value: string): value is ProtectedRequestContactKind {
   return (PROTECTED_REQUEST_CONTACT_KINDS as readonly string[]).includes(value);

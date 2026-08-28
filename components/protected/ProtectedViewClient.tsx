@@ -446,6 +446,17 @@ export default function ProtectedViewClient({
     !categoryOnly &&
     !ensOnly &&
     !zmOnly;
+  const searchFilterDescription = redeemedOnly
+    ? "Status=Redeemed"
+    : underReviewOnly
+      ? "Status=Under Review"
+      : rejectedOnly
+        ? "Status=Rejected"
+        : disputedOnly
+          ? "Status=Disputed"
+          : categoryOnly
+            ? `Category=${formatCategoryLabel(categoryOnly)}`
+            : null;
 
   function clearTabFilters() {
     setRedeemedOnly(false);
@@ -604,6 +615,7 @@ export default function ProtectedViewClient({
       {appliedSearch.trim() ? (
         <SearchResultsSummary
           query={appliedSearch}
+          filterDescription={searchFilterDescription}
           matchCount={isRefreshing ? null : data.totalCount}
           onClear={() => {
             setDraftSearch("");

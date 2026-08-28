@@ -7,31 +7,32 @@ export const FROM_EMAIL = "zechariah@updates.zcashnames.com";
 export const TO_EMAIL = "partner@zcash.me";
 
 const EMAIL_ICON_BASE = "https://www.zcashnames.com/icons/email-footer";
+const EMAIL_ICON_VERSION = "20260828";
 
 export const SOCIALS = [
   {
     href: "https://x.com/zcashnames",
     iconKey: "x",
     alt: "X / Twitter",
-    iconSrc: `${EMAIL_ICON_BASE}/x.png`,
+    iconSrc: `${EMAIL_ICON_BASE}/x.png?v=${EMAIL_ICON_VERSION}`,
   },
   {
     href: "https://discord.gg/z2H23QgAGf",
     iconKey: "discord",
     alt: "Discord",
-    iconSrc: `${EMAIL_ICON_BASE}/discord.png`,
+    iconSrc: `${EMAIL_ICON_BASE}/discord.png?v=${EMAIL_ICON_VERSION}`,
   },
   {
     href: "https://signal.group/#CjQKIKDM76KMttnFqmbtbKzcfDrGeLtR6wWQq82YM8LWdyNhEhBGKNSZVjTREwDLqhatYhLH",
     iconKey: "signal",
     alt: "Signal",
-    iconSrc: `${EMAIL_ICON_BASE}/signal.png`,
+    iconSrc: `${EMAIL_ICON_BASE}/signal.png?v=${EMAIL_ICON_VERSION}`,
   },
   {
     href: "https://t.me/zcashnames",
     iconKey: "telegram",
     alt: "Telegram",
-    iconSrc: `${EMAIL_ICON_BASE}/telegram.png`,
+    iconSrc: `${EMAIL_ICON_BASE}/telegram.png?v=${EMAIL_ICON_VERSION}`,
   },
 ] as const satisfies ReadonlyArray<{
   href: string;

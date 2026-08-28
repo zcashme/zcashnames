@@ -55,6 +55,10 @@ function ArrowLeftIcon({ className }: { className?: string }) {
 type ProtectedSuggestPageProps = {
   searchParams?: Promise<{
     name?: string;
+    parent?: string;
+    category?: string;
+    type?: string;
+    source?: string;
   }>;
 };
 
@@ -63,6 +67,13 @@ export default async function ProtectedSuggestPage({
 }: ProtectedSuggestPageProps) {
   const params = (await searchParams) ?? {};
   const initialName = typeof params.name === "string" ? params.name : null;
+  const isProtectedVariantAddFlow = params.source === "protected-variant-add";
+  const initialParentName =
+    isProtectedVariantAddFlow && typeof params.parent === "string" ? params.parent : null;
+  const initialCategory =
+    isProtectedVariantAddFlow && typeof params.category === "string" ? params.category : null;
+  const initialSuggestionType =
+    isProtectedVariantAddFlow && params.type === "variant" ? "variant" : "canonical";
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
@@ -121,7 +132,13 @@ export default async function ProtectedSuggestPage({
             className="pointer-events-none absolute right-0 top-[-1rem] z-10 block h-8 w-px"
             style={{ background: "var(--faq-border)" }}
           />
-          <ProtectedSuggestionForm returnHref="/protected" initialName={initialName} />
+          <ProtectedSuggestionForm
+            returnHref="/protected"
+            initialName={initialName}
+            initialParentName={initialParentName}
+            initialCategory={initialCategory}
+            initialSuggestionType={initialSuggestionType}
+          />
         </div>
       </div>
     </div>

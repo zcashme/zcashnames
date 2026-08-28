@@ -21,11 +21,13 @@ function ClearIcon() {
 
 export default function SearchResultsSummary({
   query,
+  filterDescription = null,
   matchCount,
   onClear,
   clearLabel = "Clear results",
 }: {
   query: string;
+  filterDescription?: string | null;
   matchCount: number | null;
   onClear: () => void;
   clearLabel?: string;
@@ -35,6 +37,7 @@ export default function SearchResultsSummary({
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-base font-semibold" style={{ color: "var(--fg-heading)" }}>
           Results for "{query}"
+          {filterDescription ? ` where ${filterDescription}` : ""}
         </span>
         {matchCount != null ? (
           <span className="text-sm" style={{ color: "var(--fg-muted)" }}>

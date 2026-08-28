@@ -411,12 +411,42 @@ export default function ProtectedNameDetailsModal({
 
             <dl className="grid grid-cols-2 gap-4">
               {row.parent_name ? (
-                <FieldBlock label="Parent name">{renderDetailValue(row.parent_name)}</FieldBlock>
+                <FieldBlock label="Parent name">
+                  <Link
+                    href={`/protected?${new URLSearchParams({
+                      search: row.parent_name,
+                      searchMode: "exact",
+                      details: "1",
+                    }).toString()}`}
+                    className="font-medium underline underline-offset-2 transition-[filter] duration-200 hover:brightness-110"
+                    style={{ color: "var(--color-accent-interactive)" }}
+                  >
+                    {row.parent_name}
+                  </Link>
+                </FieldBlock>
               ) : (
                 <FieldBlock label="Variant name(s)">
-                  {(row.variant_names ?? []).length > 0
-                    ? row.variant_names.join(", ")
-                    : "—"}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span>
+                      {(row.variant_names ?? []).length > 0
+                        ? row.variant_names.join(", ")
+                        : "—"}
+                    </span>
+                    {status === "protected" ? (
+                      <Link
+                        href={`/protected/suggest?${new URLSearchParams({
+                          type: "variant",
+                          parent: row.normalized_name || row.name,
+                          category: row.category,
+                          source: "protected-variant-add",
+                        }).toString()}`}
+                        className="font-medium transition-[filter] duration-200 hover:brightness-110"
+                        style={{ color: "var(--color-accent-interactive)" }}
+                      >
+                        Add +
+                      </Link>
+                    ) : null}
+                  </div>
                 </FieldBlock>
               )}
               <FieldBlock label="Category">{renderDetailValue(row.category)}</FieldBlock>

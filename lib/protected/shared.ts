@@ -162,6 +162,46 @@ export type ProtectedRequestPayload = {
   additionalContext: string | null;
 };
 
+function normalizeEvidenceUrlEntry(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const markdownMatch = trimmed.match(/^\[[^\]]*]\((https?:\/\/[^)\s]+)\)$/i);
+  if (markdownMatch?.[1]) {
+    return markdownMatch[1];
+  }
+
+  const directMatch = trimmed.match(/^<?(https?:\/\/[^\s>]+)>?$/i);
+  if (directMatch?.[1]) {
+    return directMatch[1];
+  }
+
+  return null;
+}
+
+export function normalizeEvidenceUrls(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  const normalized = new Set<string>();
+
+  for (const entry of value) {
+    const candidate =
+      typeof entry === "string"
+        ? normalizeEvidenceUrlEntry(entry)
+        : entry && typeof entry === "object" && "url" in entry
+          ? normalizeEvidenceUrlEntry(entry.url)
+          : null;
+
+    if (candidate) {
+      normalized.add(candidate);
+    }
+  }
+
+  return Array.from(normalized);
+}
+
 export function extractZcashMeProfileHref(evidence: string[]): string | null {
   for (const entry of evidence) {
     const trimmed = entry.trim();
