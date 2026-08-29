@@ -16,7 +16,7 @@ export default function FAQ() {
   return (
     <section className="w-full max-w-3xl mx-auto px-6 pt-0 pb-24">
       <div className="mb-6 text-center">
-        <SectionHeaderPill id="faq" title="FAQs" />
+        <SectionHeaderPill id="faq" title="FAQs" variant="pill" />
       </div>
 
       <div className="flex flex-col gap-10">

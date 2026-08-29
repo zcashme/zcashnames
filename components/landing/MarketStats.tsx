@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import LandingActionLink from "@/components/landing/LandingActionLink";
+import SectionHeaderPill from "@/components/landing/SectionHeaderPill";
 import type { NetworkStats } from "@/lib/network-stats";
 
 type StatKey = "claimed" | "forSale" | "syncedHeight" | "waitlist" | "referred" | "rewardsPot";
@@ -171,6 +172,9 @@ export default function MarketStats({
       id={sectionId}
       className="relative z-[2] w-full px-4 pb-10 sm:px-6 sm:pb-12 max-[700px]:pb-8"
     >
+      <div className="mb-3 text-center">
+        <SectionHeaderPill title="Network" variant="pill" />
+      </div>
       <div className="mx-auto w-full max-w-2xl rounded-[24px] p-3 sm:max-w-3xl sm:p-4 xl:max-w-4xl">
         <div className="relative grid grid-cols-3">
           <div

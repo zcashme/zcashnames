@@ -108,6 +108,8 @@
   --features-blob-b: rgba(167,151,255,0.25);
   --features-pattern-bg: repeating-radial-gradient(ellipse at center, rgba(227,190,95,0.36) 0 1.2px, rgba(227,190,95,0) 1.2px 15px);
   --features-pattern-mask: radial-gradient(ellipse at center, rgba(0,0,0,0.85) 20%, rgba(0,0,0,0) 88%);
+  --features-intro-pill-bg: rgba(244, 183, 40, 0.16);
+  --features-intro-pill-fg: #ffd764;
 
   /* FAQ */
   --faq-border: #2a2a2a;
@@ -348,6 +350,8 @@ html.light,
   --features-blob-b: rgba(167,151,255,0.25);
   --features-pattern-bg: repeating-radial-gradient(ellipse at center, rgba(227,190,95,0.36) 0 1.2px, rgba(227,190,95,0) 1.2px 15px);
   --features-pattern-mask: radial-gradient(ellipse at center, rgba(0,0,0,0.85) 20%, rgba(0,0,0,0) 88%);
+  --features-intro-pill-bg: #edf4ff;
+  --features-intro-pill-fg: #1d4ed8;
 
   /* FAQ */
   --faq-border: #d6dce8;
@@ -515,6 +519,8 @@ html.light,
   --features-blob-b: rgba(139,172,15,0.22);
   --features-pattern-bg: repeating-radial-gradient(ellipse at center, rgba(155,188,15,0.32) 0 1.2px, rgba(155,188,15,0) 1.2px 15px);
   --features-pattern-mask: radial-gradient(ellipse at center, rgba(0,0,0,0.85) 20%, rgba(0,0,0,0) 88%);
+  --features-intro-pill-bg: rgba(155, 188, 15, 0.2);
+  --features-intro-pill-fg: var(--mono-3);
 
   /* FAQ */
   --faq-border: rgba(139, 172, 15, 0.38);
@@ -1054,6 +1060,86 @@ body {
   font-size: var(--type-section-subtitle);
   font-weight: 400;
   line-height: 1.55;
+}
+
+/* Landing Features intro and Get yours cards. */
+.features-intro {
+  margin: 0 auto 2.5rem;
+  max-width: 54rem;
+  padding-top: 0.5rem;
+  text-align: center;
+}
+
+.features-intro-eyebrow,
+.landing-section-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--features-intro-pill-bg);
+  color: var(--features-intro-pill-fg);
+  padding: 0.45rem 1.4rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.features-intro h2 {
+  margin: 1.4rem 0 0;
+  color: var(--fg-heading);
+  font-size: clamp(2.7rem, 5.8vw, 4.45rem);
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  line-height: 1.04;
+}
+
+.features-intro p,
+.features-intro-copy {
+  margin: 1.3rem auto 0;
+  max-width: 42rem;
+  color: var(--fg-muted);
+  font-size: clamp(1.08rem, 1.8vw, 1.35rem);
+  line-height: 1.5;
+}
+
+.features-intro-copy.mt-1 {
+  margin-top: 0.5rem;
+}
+
+.features-group-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.9rem;
+  border: 1px solid var(--border-muted);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-heading);
+  padding: 0.5rem 1.55rem;
+  transition: color 140ms ease-out;
+}
+
+.features-group-pill:hover {
+  color: var(--color-accent-interactive);
+}
+
+.features-group-pill h3 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+@media (max-width: 767px) {
+  .features-intro h2 {
+    letter-spacing: -0.045em;
+  }
+
 }
 
 @utility type-card-title {

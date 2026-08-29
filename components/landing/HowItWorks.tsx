@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import SectionHeaderPill from "@/components/landing/SectionHeaderPill";
 
 type Benefit = {
   title: string;
@@ -77,7 +76,7 @@ const benefitGroups: BenefitGroup[] = [
       {
         title: "Update once, everywhere",
         description: "Change your address without informing all of your contacts.",
-        span: "sm:col-span-2",
+        span: "lg:col-span-2",
       },
     ],
   },
@@ -89,7 +88,7 @@ const benefitGroups: BenefitGroup[] = [
       {
         title: "On-chain and tamper-resistant",
         description: "Records cannot be altered or removed behind your back.",
-        span: "sm:col-span-2",
+        span: "lg:col-span-2",
       },
       {
         title: "Control your name",
@@ -123,18 +122,6 @@ const benefitGroups: BenefitGroup[] = [
   },
 ];
 
-const sectionHeading = (
-  id: string,
-  title: string,
-  align: "center" | "left" = "center",
-) => (
-  <div className={`mb-6 ${align === "center" ? "text-center" : "text-left"}`}>
-    <div className={`flex items-center ${align === "center" ? "justify-center" : "justify-start"}`}>
-      <SectionHeaderPill id={id} title={title} />
-    </div>
-  </div>
-);
-
 const rowHeading = (title: string, prefix?: ReactNode) => (
   // mb-2 + type/color/hover match Features item titles (parent uses group/step).
   <div className="mb-2 text-center lg:text-left">
@@ -156,15 +143,14 @@ const rowHeading = (title: string, prefix?: ReactNode) => (
   </div>
 );
 
-const benefitGroupHeading = (title: string, description: string) => (
+const benefitGroupHeading = (group: BenefitGroup) => (
   <div className="mb-4 px-1">
-    {/* Always centered above the group's items, including when two groups sit side by side. */}
     <div className="mx-auto flex max-w-xl flex-col items-center text-center">
-      <h3 className="type-kicker" style={{ color: "var(--section-title-accent)" }}>
-        {title}
-      </h3>
-      <p className="mt-1 type-section-subtitle" style={{ color: "var(--fg-body)" }}>
-        {description}
+      <span className="features-group-pill">
+        <h3>{group.title}</h3>
+      </span>
+      <p className="features-intro-copy mt-1">
+        {group.description}
       </p>
     </div>
   </div>
@@ -173,17 +159,28 @@ const benefitGroupHeading = (title: string, description: string) => (
 type GridSpanItem = { span?: string };
 
 /** CSS-grid auto-placement for fixed columns (row-major, wrap when span does not fit). */
-function placeGridItems(items: readonly GridSpanItem[], columns: number) {
+function gridItemSpan(item: GridSpanItem, breakpoint: "mobile" | "sm" | "lg") {
+  const span = item.span ?? "";
+  const baseSpan = span.match(/(?:^|\s)col-span-(\d+)/)?.[1];
+  const smSpan = span.match(/(?:^|\s)sm:col-span-(\d+)/)?.[1];
+  const lgSpan = span.match(/(?:^|\s)lg:col-span-(\d+)/)?.[1];
+
+  if (breakpoint === "lg") return Number(lgSpan ?? smSpan ?? baseSpan ?? 1);
+  if (breakpoint === "sm") return Number(smSpan ?? baseSpan ?? 1);
+  return Number(baseSpan ?? 1);
+}
+
+function placeGridItems(
+  items: readonly GridSpanItem[],
+  columns: number,
+  breakpoint: "mobile" | "sm" | "lg",
+) {
   const placed: Array<{ index: number; row: number; col: number; colSpan: number }> = [];
   let row = 0;
   let col = 0;
 
   for (let index = 0; index < items.length; index += 1) {
-    const rawSpan = items[index]?.span?.includes("col-span-3")
-      ? 3
-      : items[index]?.span?.includes("col-span-2")
-        ? 2
-        : 1;
+    const rawSpan = gridItemSpan(items[index]!, breakpoint);
     const colSpan = Math.min(rawSpan, columns);
 
     if (col + colSpan > columns) {
@@ -203,8 +200,12 @@ function placeGridItems(items: readonly GridSpanItem[], columns: number) {
 }
 
 /** Minimal separators: vertical only between side-by-side peers; bottom only when a lower row exists. */
-function gridSeparatorFlags(items: readonly GridSpanItem[], columns: number) {
-  const placed = placeGridItems(items, columns);
+function gridSeparatorFlags(
+  items: readonly GridSpanItem[],
+  columns: number,
+  breakpoint: "mobile" | "sm" | "lg",
+) {
+  const placed = placeGridItems(items, columns, breakpoint);
   const maxRow = placed.reduce((max, cell) => Math.max(max, cell.row), 0);
 
   return placed.map((cell) => ({
@@ -218,7 +219,7 @@ function gridSeparatorFlags(items: readonly GridSpanItem[], columns: number) {
 function benefitGridClassName(group: BenefitGroup) {
   if (group.title === "Sign with Zcash") return "lg:grid-cols-3";
   if (group.span === "lg:col-span-12") return "sm:grid-cols-3";
-  return "sm:grid-cols-2";
+  return "lg:grid-cols-2";
 }
 
 function benefitGridColumns(group: BenefitGroup) {
@@ -229,7 +230,7 @@ function benefitGridColumns(group: BenefitGroup) {
   if (group.span === "lg:col-span-12") {
     return { mobile: 1, sm: 3, lg: 3 };
   }
-  return { mobile: 1, sm: 2, lg: 2 };
+  return { mobile: 1, sm: 1, lg: 2 };
 }
 
 function separatorClassName(flags: {
@@ -252,16 +253,16 @@ function BenefitsBento() {
     <div className="grid grid-cols-1 gap-x-5 gap-y-10 lg:grid-cols-12">
       {benefitGroups.map((group) => {
         const cols = benefitGridColumns(group);
-        const mobileFlags = gridSeparatorFlags(group.items, cols.mobile);
-        const smFlags = gridSeparatorFlags(group.items, cols.sm);
-        const lgFlags = gridSeparatorFlags(group.items, cols.lg);
+        const mobileFlags = gridSeparatorFlags(group.items, cols.mobile, "mobile");
+        const smFlags = gridSeparatorFlags(group.items, cols.sm, "sm");
+        const lgFlags = gridSeparatorFlags(group.items, cols.lg, "lg");
 
         return (
           <div
             key={group.title}
             className={`${group.span ?? "lg:col-span-6"}`}
           >
-            {benefitGroupHeading(group.title, group.description)}
+            {benefitGroupHeading(group)}
 
             <div className={`grid grid-cols-1 gap-0 ${benefitGridClassName(group)}`}>
               {group.items.map((b, index) => (
@@ -311,11 +312,22 @@ function BenefitsBento() {
 export default function HowItWorks() {
   return (
     <section className="mx-auto w-full max-w-6xl px-6 pb-24 pt-0">
-      {sectionHeading("benefits", "Features")}
+      <div id="benefits" className="features-intro scroll-mt-24">
+        <span className="features-intro-eyebrow">Features</span>
+        <h2>
+          Address people by name.
+        </h2>
+        <p>Zcash Names makes payments simpler, clearer, and built for everyday use.</p>
+      </div>
+
       <BenefitsBento />
 
       <div className="mt-24">
-        {sectionHeading("how-it-works", "Get yours")}
+        <div id="how-it-works" className="features-intro scroll-mt-24">
+          <span className="features-intro-eyebrow">Get your name</span>
+          <h2>Claim your name early.</h2>
+          <p>Reserve your spot, climb the queue through referrals, and choose your name when your invite arrives.</p>
+        </div>
 
         <div className="grid grid-cols-1 gap-0 lg:grid-cols-3">
           {steps.map((step, index) => {

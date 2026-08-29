@@ -395,7 +395,7 @@ export default function PartnerReel({ compactTopSpacing = false }: { compactTopS
       className={`relative z-[2] mb-24 w-full px-5 ${compactTopSpacing ? "mt-4 sm:mt-16" : "mt-24"}`}
     >
       <div className="mb-6 text-center">
-        <SectionHeaderPill id="supported-by-pill" title="Partners" />
+        <SectionHeaderPill id="supported-by-pill" title="Partners" variant="pill" />
       </div>
 
       <div className="mx-auto max-w-6xl">

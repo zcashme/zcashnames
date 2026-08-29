@@ -25,7 +25,7 @@ export default function LandingRecentBlogs({
       aria-labelledby="landing-blog-heading"
     >
       <div className="mb-6 text-center">
-        <SectionHeaderPill id="landing-blog-heading" title="Blog" />
+        <SectionHeaderPill id="landing-blog-heading" title="Blog" variant="pill" />
       </div>
 
       <ul className="m-0 grid list-none grid-cols-1 gap-0 p-0 sm:grid-cols-2 lg:grid-cols-4">

@@ -129,7 +129,7 @@ export default function LandingNewsletterSignup({
         onConfirm={completeSubmitAfterCaptcha}
       />
       <div className="mb-6 text-center">
-        <SectionHeaderPill title="Newsletter" />
+        <SectionHeaderPill title="Newsletter" variant="pill" />
       </div>
       <form onSubmit={onSubmit} className="mx-auto max-w-2xl">
           <label className="block min-w-0">
