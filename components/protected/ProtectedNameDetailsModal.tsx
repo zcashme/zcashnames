@@ -427,11 +427,9 @@ export default function ProtectedNameDetailsModal({
               ) : (
                 <FieldBlock label="Variant name(s)">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span>
-                      {(row.variant_names ?? []).length > 0
-                        ? row.variant_names.join(", ")
-                        : "—"}
-                    </span>
+                    {(row.variant_names ?? []).length > 0 ? (
+                      <span>{row.variant_names.join(", ")}</span>
+                    ) : null}
                     {status === "protected" ? (
                       <Link
                         href={`/protected/suggest?${new URLSearchParams({

@@ -15,17 +15,22 @@
 // On mount, reads ?ref= from URL params for referral attribution.
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import CaptchaChallengeModal, {
+  type CaptchaSolution,
+} from "@/components/captcha/CaptchaChallengeModal";
 import { normalizeUsername } from "@/lib/zns/utils";
 import AnimatedSuffix from "@/components/search/AnimatedSuffix";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import {
-  getWaitlistCaptcha,
-  getWaitlistCountForName,
+  getWaitlistNameStatus,
   submitWaitlist,
+  type WaitlistPayload,
 } from "@/lib/waitlist/waitlist";
 import SurveyForm from "@/components/SurveyForm";
+import { PROTECTED_REQUEST_SESSION_PREFILL_KEY } from "@/lib/protected/request-session-prefill";
 
 function isValidEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -66,6 +71,17 @@ type ModalView = "confirm" | "community" | "survey" | "thankyou";
 
 const TRANSITION = "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)";
 const RESULT_CARD_TRANSITION_MS = 280;
+
+type NameLookupState =
+  | { status: "idle" }
+  | { status: "loading"; name: string }
+  | { status: "resolved"; name: string; protected: boolean; waitlistCount: number }
+  | { status: "error"; name: string };
+
+type PendingWaitlistPayload = Omit<
+  WaitlistPayload,
+  "captcha_token" | "captcha_answer"
+>;
 
 function viewTransform(
   view: ModalView,
@@ -127,19 +143,17 @@ export default function WaitlistEntryForm({
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [captchaChallenge, setCaptchaChallenge] = useState<{
-    image: string;
-    token: string;
-  } | null>(null);
-  const [captchaAnswer, setCaptchaAnswer] = useState("");
-  const [captchaLoading, setCaptchaLoading] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
+  const [pendingWaitlistPayload, setPendingWaitlistPayload] =
+    useState<PendingWaitlistPayload | null>(null);
 
   // ── Modal state ──
   const [modalView, setModalView] = useState<ModalView>("confirm");
   const [myReferralCode, setMyReferralCode] = useState("");
 
   const [surveyContactMsg, setSurveyContactMsg] = useState(false);
-  const [waitlistCount, setWaitlistCount] = useState(0);
+  const [nameLookup, setNameLookup] = useState<NameLookupState>({ status: "idle" });
+  const [lookupAttempt, setLookupAttempt] = useState(0);
   const [renderResultCard, setRenderResultCard] = useState(false);
   const [resultCardOpen, setResultCardOpen] = useState(false);
   const [displayedConfirmedName, setDisplayedConfirmedName] = useState("");
@@ -149,6 +163,7 @@ export default function WaitlistEntryForm({
   const nameFieldTopRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
+  const lookupRequestRef = useRef(0);
 
   useEffect(() => {
     setMounted(true);
@@ -261,6 +276,11 @@ export default function WaitlistEntryForm({
 
   const confirmName = () => {
     if (name.length > 0) {
+      lookupRequestRef.current += 1;
+      setNameLookup({ status: "loading", name });
+      if (name === confirmedName) {
+        setLookupAttempt((attempt) => attempt + 1);
+      }
       setConfirmedName(name);
       return;
     }
@@ -269,29 +289,50 @@ export default function WaitlistEntryForm({
 
   useEffect(() => {
     if (!confirmedName) {
-      setWaitlistCount(0);
+      setNameLookup({ status: "idle" });
       return;
     }
-    let cancelled = false;
-    getWaitlistCountForName(confirmedName)
-      .then((count) => {
-        if (!cancelled) setWaitlistCount(count);
+
+    const requestId = ++lookupRequestRef.current;
+    setNameLookup({ status: "loading", name: confirmedName });
+    getWaitlistNameStatus(confirmedName)
+      .then((result) => {
+        if (lookupRequestRef.current !== requestId) return;
+        if (result.status === "error") {
+          setNameLookup({ status: "error", name: confirmedName });
+          return;
+        }
+        setNameLookup({
+          status: "resolved",
+          name: confirmedName,
+          protected: result.protected,
+          waitlistCount: result.waitlistCount,
+        });
       })
       .catch(() => {
-        if (!cancelled) setWaitlistCount(0);
+        if (lookupRequestRef.current !== requestId) return;
+        setNameLookup({ status: "error", name: confirmedName });
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [confirmedName]);
+  }, [confirmedName, lookupAttempt]);
+
+  const hasResolvedNameLookup =
+    nameLookup.status === "resolved" && nameLookup.name === confirmedName;
+  const isProtectedName = hasResolvedNameLookup && nameLookup.protected;
+  const displayedLookupCount = hasResolvedNameLookup ? nameLookup.waitlistCount : 0;
 
   useEffect(() => {
+    setDisplayedWaitlistCount(displayedLookupCount);
+  }, [displayedLookupCount]);
+
+  function retryNameLookup() {
     if (!confirmedName) return;
-    setDisplayedWaitlistCount(waitlistCount);
-  }, [confirmedName, waitlistCount]);
+    lookupRequestRef.current += 1;
+    setNameLookup({ status: "loading", name: confirmedName });
+    setLookupAttempt((attempt) => attempt + 1);
+  }
 
   useEffect(() => {
-    if (!confirmedName) return;
+    if (!confirmedName || !hasResolvedNameLookup) return;
 
     const focusEmail = () => {
       const emailEl = emailRef.current;
@@ -324,103 +365,100 @@ export default function WaitlistEntryForm({
       cancelAnimationFrame(rafId);
       window.clearTimeout(refocusTimer);
     };
-  }, [confirmedName]);
-
-  const loadCaptchaChallenge = useCallback(async () => {
-    setCaptchaLoading(true);
-    try {
-      const challenge = await getWaitlistCaptcha();
-      setCaptchaChallenge(challenge);
-      setCaptchaAnswer("");
-    } catch {
-      setCaptchaChallenge(null);
-    } finally {
-      setCaptchaLoading(false);
-    }
-  }, []);
+  }, [confirmedName, hasResolvedNameLookup]);
 
   const emailValid = isValidEmail(email);
-
-  // Load captcha only once a valid email is present; clear when it becomes invalid
-  // or when phase 2 is dismissed. Validity (not raw email) is the dependency so
-  // retyping within a still-valid address does not thrash the challenge.
-  useEffect(() => {
-    if (!showResult) {
-      setSubmitError("");
-      setCaptchaChallenge(null);
-      setCaptchaAnswer("");
-      return;
-    }
-    if (!emailValid) {
-      setCaptchaAnswer("");
-      // Keep the image through the collapse animation so the panel does not
-      // flash empty mid-transition, then drop the challenge.
-      const clearId = window.setTimeout(() => {
-        setCaptchaChallenge(null);
-      }, 320);
-      return () => window.clearTimeout(clearId);
-    }
-    void loadCaptchaChallenge();
-  }, [showResult, emailValid, loadCaptchaChallenge]);
 
   const canSubmit =
     confirmedName.length > 0 &&
     emailValid &&
-    Boolean(captchaChallenge?.token) &&
-    captchaAnswer.trim().length > 0 &&
-    !captchaLoading;
+    hasResolvedNameLookup &&
+    !submitting &&
+    !captchaOpen;
 
-  const submitWaitlistEntry = useCallback(async () => {
-    if (!captchaChallenge) {
-      setSubmitError("Please solve the human check above.");
+  function closeCaptchaModal() {
+    if (submitting) return;
+    setCaptchaOpen(false);
+    setPendingWaitlistPayload(null);
+  }
+
+  async function completeWaitlistSubmitAfterCaptcha(solution: CaptchaSolution) {
+    if (!pendingWaitlistPayload || submitting) return;
+
+    setSubmitting(true);
+    setSubmitError("");
+
+    try {
+      const result = await submitWaitlist({
+        ...pendingWaitlistPayload,
+        captcha_token: solution.captcha_token,
+        captcha_answer: solution.captcha_answer,
+      });
+
+      if (result.status === "error") {
+        if (result.error.toLowerCase().includes("human check")) {
+          throw new Error(result.error);
+        }
+        setSubmitError(result.error);
+        setCaptchaOpen(false);
+        setPendingWaitlistPayload(null);
+        return;
+      }
+
+      if (result.status === "resent" || result.status === "already") {
+        setSubmitError(result.message);
+        setCaptchaOpen(false);
+        setPendingWaitlistPayload(null);
+        return;
+      }
+
+      setMyReferralCode(pendingWaitlistPayload.referral_code);
+      setCaptchaOpen(false);
+      setPendingWaitlistPayload(null);
+      setSubmitted(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not submit the waitlist entry.";
+      if (message.toLowerCase().includes("human check")) {
+        throw error instanceof Error ? error : new Error(message);
+      }
+      setSubmitError(message);
+      setCaptchaOpen(false);
+      setPendingWaitlistPayload(null);
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    const referralCode = generateReferralCode();
-    const result = await submitWaitlist({
-      name: confirmedName,
-      email,
-      newsletter: showNewsletter ? newsletter : false,
-      referral_code: referralCode,
-      referred_by: referredByRef.current || null,
-      captcha_token: captchaChallenge.token,
-      captcha_answer: captchaAnswer,
-    });
-
-    if (result.status === "error") {
-      setSubmitError(result.error);
-      setSubmitting(false);
-      await loadCaptchaChallenge();
-      return;
-    }
-
-    if (result.status === "resent" || result.status === "already") {
-      setSubmitError(result.message);
-      setSubmitting(false);
-      await loadCaptchaChallenge();
-      return;
-    }
-
-    setMyReferralCode(referralCode);
-    setSubmitting(false);
-    setSubmitted(true);
-  }, [
-    captchaAnswer,
-    captchaChallenge,
-    confirmedName,
-    email,
-    loadCaptchaChallenge,
-    newsletter,
-    showNewsletter,
-  ]);
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit || submitting) return;
     setSubmitError("");
-    setSubmitting(true);
-    void submitWaitlistEntry();
+
+    if (!hasResolvedNameLookup) return;
+
+    if (isProtectedName) {
+      try {
+        window.sessionStorage.setItem(
+          PROTECTED_REQUEST_SESSION_PREFILL_KEY,
+          JSON.stringify({ name: confirmedName, email: email.trim() }),
+        );
+      } catch {
+        // The request form still works if browser storage is unavailable.
+      }
+      window.location.assign(
+        `/protected/request?${new URLSearchParams({ name: confirmedName }).toString()}`,
+      );
+      return;
+    }
+
+    setPendingWaitlistPayload({
+      name: confirmedName,
+      email: email.trim(),
+      newsletter: showNewsletter ? newsletter : false,
+      referral_code: generateReferralCode(),
+      referred_by: referredByRef.current || null,
+    });
+    setCaptchaOpen(true);
   };
 
   const handleClose = () => {
@@ -434,9 +472,8 @@ export default function WaitlistEntryForm({
     setSubmitting(false);
     setModalView("confirm");
     setSurveyContactMsg(false);
-    setCaptchaChallenge(null);
-    setCaptchaAnswer("");
-    setCaptchaLoading(false);
+    setCaptchaOpen(false);
+    setPendingWaitlistPayload(null);
   };
 
   const inputBase: React.CSSProperties = {
@@ -454,6 +491,15 @@ export default function WaitlistEntryForm({
   return (
     <>
       {/* ── Post-submit modal ── */}
+      <CaptchaChallengeModal
+        isOpen={captchaOpen}
+        title="Confirm you're human"
+        description="Complete this quick check to join the waitlist."
+        confirmLabel="Submit"
+        submitting={submitting}
+        onCancel={closeCaptchaModal}
+        onConfirm={completeWaitlistSubmitAfterCaptcha}
+      />
       {mounted && submitted
         ? createPortal(
             <div
@@ -697,6 +743,8 @@ export default function WaitlistEntryForm({
                 type="text"
                 value={nameInput}
                 onChange={(e) => {
+                  lookupRequestRef.current += 1;
+                  setNameLookup({ status: "idle" });
                   setNameInput(normalizeUsername(e.target.value));
                   setConfirmedName("");
                 }}
@@ -773,80 +821,134 @@ export default function WaitlistEntryForm({
                     style={{ minWidth: 0, flex: "1 1 0" }}
                   >
                     <p className="home-result-name">{displayedConfirmedName}.zcash</p>
-                    <span className="home-result-status is-positive">
-                      <svg
-                        viewBox="0 0 16 16"
-                        className="h-3.5 w-3.5"
-                        aria-hidden="true"
-                      >
-                        <circle
-                          cx="8"
-                          cy="8"
-                          r="7"
-                          fill="currentColor"
-                          opacity="0.16"
-                        />
-                        <path
-                          d="M4.6 8.1 7 10.4l4.5-4.8"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      Available
-                    </span>
-                    {displayedWaitlistCount > 0 && (
-                      <span
-                        className="inline-flex min-h-[26px] items-center rounded-[10px] border px-2.5 text-[0.78rem] font-extrabold leading-none"
+                    {!hasResolvedNameLookup ? (
+                      nameLookup.status === "error" ? (
+                        <button
+                          type="button"
+                          onClick={retryNameLookup}
+                          className="rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-red, #e05252)]"
+                          style={{
+                            color: "var(--accent-red, #d67452)",
+                            background: "color-mix(in srgb, var(--accent-red, #d67452) 12%, transparent)",
+                          }}
+                        >
+                          Couldn&apos;t check name. Retry
+                        </button>
+                      ) : (
+                        <span
+                          className="inline-flex items-center self-center text-xs font-semibold leading-none"
+                          style={{ color: "var(--fg-muted)" }}
+                        >
+                          Checking name...
+                        </span>
+                      )
+                    ) : isProtectedName ? (
+                      <Link
+                        href={`/protected?${new URLSearchParams({
+                          search: displayedConfirmedName,
+                          searchMode: "exact",
+                          details: "true",
+                        }).toString()}`}
+                        className="rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-interactive)]"
                         style={{
-                          borderColor: "var(--feature-chip-border-color)",
-                          background: "var(--feature-chip-bg)",
-                          color: "var(--home-result-link-fg)",
-                          marginLeft: "0.5rem",
+                          color: "var(--color-accent-interactive)",
+                          background: "color-mix(in srgb, var(--color-accent-interactive) 12%, transparent)",
+                        }}
+                      >
+                        Protected
+                      </Link>
+                    ) : (
+                      <span
+                        className="rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
+                        style={{
+                          color: "var(--accent-green, #27b36a)",
+                          background: "color-mix(in srgb, var(--accent-green, #27b36a) 12%, transparent)",
+                        }}
+                      >
+                        Available
+                      </span>
+                    )}
+                    {hasResolvedNameLookup && displayedWaitlistCount > 0 && (
+                      <Link
+                        href={`/waitlist/view?${new URLSearchParams({
+                          search: displayedConfirmedName,
+                          searchMode: "exact",
+                        }).toString()}`}
+                        className="rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-interactive)]"
+                        style={{
+                          color: "var(--fg-muted)",
+                          background: "var(--market-stats-segment-active-bg)",
                         }}
                       >
                         {displayedWaitlistCount} waiting
-                      </span>
+                      </Link>
                     )}
                   </div>
                 </div>
 
-                {/* Form fields */}
-                <div
-                  className="flex flex-col gap-3 px-1 pb-1"
-                  style={{
-                    borderTop: "1px solid var(--home-result-trust-border)",
-                    paddingTop: "1rem",
-                    marginTop: "0.25rem",
-                  }}
-                >
+                {hasResolvedNameLookup ? (
+                  <>
+                    {/* Form fields */}
+                    <div
+                      className="flex flex-col gap-3 px-1 pb-1"
+                      style={{
+                        borderTop: "1px solid var(--home-result-trust-border)",
+                        paddingTop: "1rem",
+                        marginTop: "0.25rem",
+                      }}
+                    >
               {/* Email */}
-              <div className="relative w-full">
-                <input
-                  ref={emailRef}
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  required
-                  className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors"
-                  style={inputBase}
-                />
-                {email.length > 0 && !isValidEmail(email) && (
-                  <span
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
+              <div className="w-full">
+                <div className="waitlist-email-shell relative">
+                  <input
+                    ref={emailRef}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email address"
+                    required
+                    className="w-full rounded-xl py-3 pl-4 pr-28 text-sm outline-none transition-colors"
                     style={{
-                      color: "var(--home-result-status-negative-fg, #e53e3e)",
+                      ...inputBase,
+                      border: "none",
                     }}
-                  >
-                    Enter valid email address
+                  />
+                  <span className="absolute bottom-1 right-1 top-1 flex items-center">
+                    <button
+                      type="submit"
+                      disabled={!canSubmit}
+                      className="inline-flex h-full shrink-0 items-center justify-center rounded-[10px] px-4 text-sm font-semibold leading-none transition disabled:cursor-not-allowed"
+                      style={{
+                        background: canSubmit
+                          ? "var(--home-result-primary-bg)"
+                          : "color-mix(in srgb, var(--leaders-card-border, var(--border-muted)) 22%, transparent)",
+                        color: canSubmit ? "var(--home-result-primary-fg)" : "var(--fg-muted)",
+                        boxShadow: canSubmit ? "var(--home-result-primary-shadow)" : "none",
+                        cursor: submitting ? "progress" : canSubmit ? "pointer" : "not-allowed",
+                        opacity: captchaOpen || submitting ? 0.7 : 1,
+                      }}
+                    >
+                      {submitting ? (
+                        <AnimatedLoadingLabel label="Submitting" active />
+                      ) : isProtectedName ? (
+                        "Request"
+                      ) : (
+                        "Submit"
+                      )}
+                    </button>
                   </span>
-                )}
+                </div>
+                {email.length > 0 && !emailValid ? (
+                  <p
+                    className="mt-2 text-xs"
+                    style={{ color: "var(--home-result-status-negative-fg, #e05252)" }}
+                  >
+                    Enter a valid email address.
+                  </p>
+                ) : null}
               </div>
 
-              {showNewsletter && (
+              {showNewsletter && !isProtectedName && (
                 <div className="flex items-center gap-3">
                   <label
                     className="flex items-center gap-3 cursor-pointer select-none text-sm"
@@ -892,100 +994,6 @@ export default function WaitlistEntryForm({
                 </div>
               )}
 
-              {/* Human check — expands after a valid email; collapses if email goes invalid.
-                  Spacing lives inside the collapsible so a closed panel does not leave a double flex gap. */}
-              <div
-                className="-mt-3 grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none"
-                style={{
-                  gridTemplateRows: emailValid ? "1fr" : "0fr",
-                  opacity: emailValid ? 1 : 0,
-                }}
-                aria-hidden={!emailValid}
-              >
-                <div className="min-h-0 overflow-hidden">
-                  <div className="pt-3">
-                    <div
-                      className="flex flex-col gap-2 rounded-xl px-3 py-3"
-                      style={{
-                        background: "transparent",
-                        border: "1px solid var(--border-muted)",
-                      }}
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <label
-                          htmlFor="waitlist-captcha-answer"
-                          className="text-xs font-semibold"
-                          style={{ color: "var(--fg-muted)" }}
-                        >
-                          Type the characters you see
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => void loadCaptchaChallenge()}
-                          disabled={!emailValid || captchaLoading || submitting}
-                          tabIndex={emailValid ? 0 : -1}
-                          className="cursor-pointer text-xs font-semibold underline disabled:cursor-not-allowed disabled:opacity-50"
-                          style={{ color: "var(--fg-body)" }}
-                        >
-                          Refresh
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {captchaChallenge ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- captcha is an inline data URL
-                          <img
-                            src={captchaChallenge.image}
-                            alt="Captcha"
-                            width={150}
-                            height={50}
-                            className="rounded-md"
-                            style={{
-                              background: "#fff",
-                              border: "1px solid var(--border-muted)",
-                            }}
-                          />
-                        ) : (
-                          <div
-                            className="flex items-center justify-center rounded-md text-xs"
-                            style={{
-                              width: 150,
-                              height: 50,
-                              background: "transparent",
-                              border: "1px solid var(--border-muted)",
-                              color: "var(--fg-muted)",
-                            }}
-                          >
-                            {captchaLoading ? "Loading…" : "Unavailable"}
-                          </div>
-                        )}
-                        <input
-                          id="waitlist-captcha-answer"
-                          type="text"
-                          value={captchaAnswer}
-                          onChange={(e) => setCaptchaAnswer(e.target.value)}
-                          placeholder="Answer"
-                          autoComplete="off"
-                          autoCapitalize="off"
-                          autoCorrect="off"
-                          spellCheck={false}
-                          disabled={
-                            !emailValid ||
-                            !captchaChallenge ||
-                            captchaLoading ||
-                            submitting
-                          }
-                          required={emailValid}
-                          tabIndex={emailValid ? 0 : -1}
-                          className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none transition-colors disabled:opacity-70"
-                          style={inputBase}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Submit */}
               {submitError && (
                 <p
                   className="text-xs text-center"
@@ -994,34 +1002,24 @@ export default function WaitlistEntryForm({
                   {submitError}
                 </p>
               )}
-              <button
-                type="submit"
-                disabled={!canSubmit || submitting}
-                className="w-full rounded-xl py-3 text-sm font-bold transition-opacity"
-                style={{
-                  ...primaryBtnStyle,
-                  opacity: canSubmit && !submitting ? 1 : 0.4,
-                  cursor: canSubmit && !submitting ? "pointer" : "not-allowed",
-                }}
-              >
-                {submitting ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit"}
-              </button>
-                </div>
+                    </div>
 
-                {/* Fine print */}
-                <div className="home-result-trust">
-                  <p
-                    className="text-xs w-full"
-                    style={{
-                      color: "var(--fg-muted)",
-                      lineHeight: 1.5,
-                      textAlign: "center",
-                    }}
-                  >
-                    The waitlist only gives early notice and access. It does not
-                    reserve or guarantee names.
-                  </p>
-                </div>
+                    {/* Fine print */}
+                    <div className="home-result-trust">
+                      <p
+                        className="text-xs w-full"
+                        style={{
+                          color: "var(--fg-muted)",
+                          lineHeight: 1.5,
+                          textAlign: "center",
+                        }}
+                      >
+                        The waitlist only gives early notice and access. It does not
+                        reserve or guarantee names.
+                      </p>
+                    </div>
+                  </>
+                ) : null}
               </section>
             </div>
           </div>

@@ -603,17 +603,52 @@ export async function submitSurvey(
 }
 
 export async function getWaitlistCountForName(name: string): Promise<number> {
+  const result = await getWaitlistNameStatus(name);
+  return result.status === "resolved" ? result.waitlistCount : 0;
+}
+
+export type WaitlistNameStatus =
+  | { status: "resolved"; waitlistCount: number; protected: boolean }
+  | { status: "error" };
+
+export async function getWaitlistNameStatus(name: string): Promise<WaitlistNameStatus> {
   const normalized = normalizeUsername(name);
-  if (!isValidName(normalized)) return 0;
+  if (!isValidName(normalized)) {
+    return { status: "error" };
+  }
+
   try {
-    const { count } = await db
-      .from("zn_waitlist")
-      .select("id", { count: "exact", head: true })
-      .eq("name", normalized)
-      .eq("email_verified", true);
-    return count ?? 0;
-  } catch {
-    return 0;
+    const [waitlistResult, protectedResult] = await Promise.all([
+      db
+        .from("zn_waitlist")
+        .select("id", { count: "exact", head: true })
+        .eq("name", normalized)
+        .eq("email_verified", true),
+      db
+        .from("zn_protected_names")
+        .select("normalized_name")
+        .eq("status", "protected")
+        .eq("redeemed", false)
+        .or(`normalized_name.eq.${normalized},name.eq.${normalized}`)
+        .limit(1),
+    ]);
+
+    if (waitlistResult.error || protectedResult.error) {
+      console.error("Waitlist name status lookup failed", {
+        waitlistError: waitlistResult.error?.message,
+        protectedError: protectedResult.error?.message,
+      });
+      return { status: "error" };
+    }
+
+    return {
+      status: "resolved",
+      waitlistCount: waitlistResult.count ?? 0,
+      protected: (protectedResult.data?.length ?? 0) > 0,
+    };
+  } catch (error) {
+    console.error("Waitlist name status lookup failed", { error });
+    return { status: "error" };
   }
 }
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
+import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import WaitlistViewClient from "@/components/waitlist/WaitlistViewClient";
 import { getPublicWaitlistViewData } from "@/lib/waitlist/view";
 
@@ -76,6 +77,18 @@ export default async function WaitlistViewPage({ searchParams }: WaitlistViewPag
           || (typeof params.details === "string" && params.details.trim().length > 0)
         }
       />
+
+      <section className="mx-auto mt-10 max-w-[920px] border-t pt-10 sm:mt-12 sm:pt-12" style={{ borderColor: "var(--faq-border)" }}>
+        <h2
+          className="text-balance text-center text-[1.65rem] font-bold tracking-tight"
+          style={{ color: "var(--hero-headline-primary, var(--fg-heading))" }}
+        >
+          Add your name to the waitlist.
+        </h2>
+        <div className="mt-6 flex justify-center">
+          <WaitlistEntryForm showNewsletter={false} />
+        </div>
+      </section>
     </div>
   );
 }

@@ -1655,6 +1655,31 @@ body {
   border: 2.5px solid var(--sf-focus-border-color);
 }
 
+/* Keep the result-card email field visually connected to the name lookup field. */
+.waitlist-email-shell {
+  border-radius: 0.75rem;
+  background: transparent;
+  box-shadow: none;
+  transition: box-shadow 150ms ease;
+}
+
+.waitlist-email-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 1px solid var(--border-muted);
+  border-radius: inherit;
+}
+
+.waitlist-email-shell:focus-within {
+  box-shadow: var(--sf-focus-shadow);
+}
+
+.waitlist-email-shell:focus-within::before {
+  border: 2.5px solid var(--sf-focus-border-color);
+}
+
 .searchform-main {
   position: relative;
   z-index: 1;

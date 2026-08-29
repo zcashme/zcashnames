@@ -8,6 +8,7 @@ import ProtectedRequestSuccessModal from "@/components/protected/ProtectedReques
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { buildVerifyTextFieldStyle } from "@/components/ui/formFieldStyles";
 import { getEmailAddressValidationMessage } from "@/lib/email-address";
+import { PROTECTED_REQUEST_SESSION_PREFILL_KEY } from "@/lib/protected/request-session-prefill";
 import {
   PROTECTED_ACCESS_RELATIONSHIP_OPTIONS,
   PROTECTED_REQUEST_CONTACT_KINDS,
@@ -129,7 +130,7 @@ function ZcashMePriorityNotice({ profileHref }: { profileHref: string }) {
         .
       </p>
       <p>
-        We plan to contact you during early access, targeted for{" "}
+        We plan to contact you before the priority access period, targeted for{" "}
         <strong>September 15, 2026</strong>.
       </p>
       <p>Thanks for your support.</p>
@@ -617,8 +618,29 @@ export default function ProtectedRequestForm({
   const [submittedName, setSubmittedName] = useState<string | null>(null);
   const [referenceNumber, setReferenceNumber] = useState<string | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [sessionPrefillEmail, setSessionPrefillEmail] = useState<string | null>(null);
+  const [hasReadSessionPrefill, setHasReadSessionPrefill] = useState(false);
 
   const { options: nameOptions, isLoading: isNameLoading } = useRequestNameOptions(nameInput);
+
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(PROTECTED_REQUEST_SESSION_PREFILL_KEY);
+      window.sessionStorage.removeItem(PROTECTED_REQUEST_SESSION_PREFILL_KEY);
+      if (!raw || !prefilledName) return;
+
+      const parsed = JSON.parse(raw) as { name?: unknown; email?: unknown };
+      const storedName = typeof parsed.name === "string" ? parsed.name.trim() : "";
+      const storedEmail = typeof parsed.email === "string" ? parsed.email.trim() : "";
+      if (storedEmail && storedName.toLowerCase() === prefilledName.toLowerCase()) {
+        setSessionPrefillEmail(storedEmail);
+      }
+    } catch {
+      // Ignore malformed or inaccessible browser-session prefill data.
+    } finally {
+      setHasReadSessionPrefill(true);
+    }
+  }, [prefilledName]);
 
   const filledContacts = useMemo(
     () =>
@@ -629,11 +651,13 @@ export default function ProtectedRequestForm({
   );
 
   function applyContactsForName(next: ProtectedRequestNameOption) {
+    const effectiveContactKind = sessionPrefillEmail ? "email" : prefilledContactKind;
+    const effectiveContactValue = sessionPrefillEmail ?? prefilledContactValue;
     if (next.zmPriorityClaim) {
       const profileHref =
         extractZcashMeProfileHref(next.evidence)
-        ?? (prefilledContactKind === "other" && prefilledContactValue
-          ? prefilledContactValue
+        ?? (effectiveContactKind === "other" && effectiveContactValue
+          ? effectiveContactValue
           : `https://zcash.me/${next.normalizedName}`);
       const otherUid = crypto.randomUUID();
       const emailUid = crypto.randomUUID();
@@ -659,14 +683,14 @@ export default function ProtectedRequestForm({
       return;
     }
 
-    if (prefilledContactKind && prefilledContactValue) {
+    if (effectiveContactKind && effectiveContactValue) {
       const prefillUid = crypto.randomUUID();
       const emailUid = crypto.randomUUID();
       setContacts(
-        prefilledContactKind === "email"
-          ? [{ uid: prefillUid, kind: "email", value: prefilledContactValue }]
+        effectiveContactKind === "email"
+          ? [{ uid: prefillUid, kind: "email", value: effectiveContactValue }]
           : [
-              { uid: prefillUid, kind: prefilledContactKind, value: prefilledContactValue },
+              { uid: prefillUid, kind: effectiveContactKind, value: effectiveContactValue },
               { uid: emailUid, kind: "email", value: "" },
             ],
       );
@@ -716,7 +740,7 @@ export default function ProtectedRequestForm({
   }
 
   useEffect(() => {
-    if (hasAppliedPrefill || !prefilledName || isNameLoading) return;
+    if (hasAppliedPrefill || !prefilledName || isNameLoading || !hasReadSessionPrefill) return;
 
     const match =
       nameOptions.find(
@@ -734,7 +758,7 @@ export default function ProtectedRequestForm({
 
     selectNameOption(match);
     setHasAppliedPrefill(true);
-  }, [hasAppliedPrefill, prefilledName, isNameLoading, nameOptions]);
+  }, [hasAppliedPrefill, prefilledName, isNameLoading, nameOptions, hasReadSessionPrefill, sessionPrefillEmail]);
 
   function handleNameInputChange(next: string) {
     setNameInput(next);
