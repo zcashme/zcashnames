@@ -11,7 +11,7 @@
  * marketing page.  SEO metadata (OpenGraph, Twitter, JSON‑LD) is defined
  * alongside the layout so it applies globally.
  */
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "next-themes";
 import { cookies } from "next/headers";
 import { NetworkProvider } from "@/components/hooks/useZns";
@@ -70,6 +70,13 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   alternates: { canonical: BRAND.url },
+};
+
+// The public site starts in light mode. Declare that before the client theme
+// script runs so embedded browsers do not paint their chrome as dark first.
+export const viewport: Viewport = {
+  themeColor: "#fefcf7",
+  colorScheme: "light",
 };
 
 /* ── Layout ─────────────────────────────────────────────────────────── */
