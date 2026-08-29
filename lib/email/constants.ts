@@ -7,7 +7,7 @@ export const FROM_EMAIL = "zechariah@updates.zcashnames.com";
 export const TO_EMAIL = "partner@zcash.me";
 
 const EMAIL_ICON_BASE = "https://www.zcashnames.com/icons/email-footer";
-const EMAIL_ICON_VERSION = "20260828";
+const EMAIL_ICON_VERSION = "20260829-transparent-hd";
 
 export const SOCIALS = [
   {

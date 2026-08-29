@@ -148,25 +148,25 @@ export function EmailLayout({
 
           <Hr style={{ ...dividerStyle, margin: "0 40px 24px" }} />
 
-          <Section style={{ textAlign: "center" as const, padding: "0 40px 12px" }}>
-            <Text style={{ margin: "0 0 12px", fontSize: 13, color: "#d4d4d8" }}>
+          <Section style={{ textAlign: "center" as const, padding: "0 40px 16px" }}>
+            <Text style={{ margin: "0 0 16px", fontSize: 13, color: "#d4d4d8" }}>
               Join the community
             </Text>
             <table role="presentation" style={{ margin: "0 auto", borderCollapse: "collapse" }}>
               <tbody>
                 <tr>
                   {SOCIALS.map(({ href, iconSrc, alt }) => (
-                    <td key={alt} style={{ padding: "0 6px" }}>
+                    <td key={alt} style={{ padding: "0 8px" }}>
                       <Link href={href} style={{ textDecoration: "none", display: "inline-block" }}>
                         <Img
                           src={iconSrc}
                           alt={alt}
-                          width="60"
-                          height="60"
+                          width="25"
+                          height="25"
                           style={{
                             display: "block",
-                            width: 60,
-                            height: 60,
+                            width: 25,
+                            height: 25,
                             border: 0,
                           }}
                         />
