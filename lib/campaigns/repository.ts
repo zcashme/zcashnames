@@ -3,6 +3,8 @@ import "server-only";
 import { db } from "@/lib/db";
 import {
   campaignTextUsesWaitlistConfirmResponseToken,
+  campaignTextUsesWaitlistNameInterestToken,
+  campaignTextUsesWaitlistReserveToken,
   campaignDraftUsesBetaInviteTokens,
   defaultCampaignBodyText,
   defaultCampaignSubject,
@@ -22,6 +24,7 @@ import {
 } from "@/lib/email/campaign";
 import { cancelScheduledEmail } from "@/lib/email/client";
 import {
+  enrichWaitlistNameInterestCounts,
   estimateWaitlistRecipients,
   getWaitlistRecipientSample,
   listWaitlistPersonalizationsByEmail,
@@ -31,7 +34,10 @@ import { listActiveSuppressedEmailSet } from "@/lib/campaigns/suppression";
 import { getProviderManagedScheduleState } from "@/lib/campaigns/provider-schedule";
 import { buildCampaignReferralStatsContext, withCampaignReferralStats } from "@/lib/campaigns/referral-stats";
 import { getDefaultCampaignSeries, isSupportedCampaignSeries } from "@/lib/campaigns/series";
-import { buildWaitlistConfirmResponseTrackingUrl } from "@/lib/campaigns/waitlist-confirm-response";
+import {
+  buildWaitlistConfirmResponseTrackingUrl,
+  buildWaitlistReserveUrl,
+} from "@/lib/campaigns/waitlist-confirm-response";
 import { resolveSiteUrl } from "@/lib/site-url";
 import {
   WAITLIST_CAMPAIGN_SERIES,
@@ -211,9 +217,11 @@ function buildMinimalRecipient(
       humanReferralUrl: null,
       humanDashboardUrl: null,
       confirmResponseUrl: null,
+      reserveUrl: null,
       betaDisplayName: null,
       betaInviteCode: null,
       betaInviteLink: null,
+      otherInterestedCount: null,
       referralStats: null,
       relatedNames: [fallbackName],
       ...personalizationOverrides,
@@ -323,6 +331,13 @@ function validateRequiredCampaignTokens(args: {
   if (usesConfirmResponseToken && !args.personalization.confirmResponseUrl) {
     return "Waitlist confirm response tracking URL is unavailable. Ensure the recipient is waitlist-backed and the production click route is deployed on zcashnames.com.";
   }
+  const usesReserveToken =
+    campaignTextUsesWaitlistReserveToken(args.subject) ||
+    campaignTextUsesWaitlistReserveToken(args.bodyText) ||
+    campaignTextUsesWaitlistReserveToken(args.headingText ?? "");
+  if (usesReserveToken && !args.personalization.reserveUrl) {
+    return "Waitlist reserve URL is unavailable. Ensure the recipient is waitlist-backed.";
+  }
   if (
     args.betaTokenUsage.usesBetaDisplayName &&
     !args.personalization.betaDisplayName
@@ -353,6 +368,11 @@ function withWaitlistConfirmResponseUrl(args: {
       baseUrl: args.baseUrl ?? baseUrl(),
       fallbackToSample: args.fallbackToSample,
     }),
+    reserveUrl: buildWaitlistReserveUrl({
+      normalizedEmail: args.normalizedEmail,
+      campaignId: args.campaignId,
+      fallbackToSample: args.fallbackToSample,
+    }),
   };
 }
 
@@ -360,32 +380,57 @@ async function enrichPendingSnapshotPersonalization(
   campaignId: string,
   draft: CampaignDraftRecord | null,
 ): Promise<void> {
-  if (
-    !draft ||
-    !campaignDraftUsesBetaInviteTokens({
-      subject: draft.subject,
-      bodyText: draft.body_text,
-      headingText: draft.heading_text,
-    })
-  ) {
-    return;
-  }
+  if (!draft) return;
+  const usesBetaInviteTokens = campaignDraftUsesBetaInviteTokens({
+    subject: draft.subject,
+    bodyText: draft.body_text,
+    headingText: draft.heading_text,
+  });
+  const usesNameInterestCount =
+    campaignTextUsesWaitlistNameInterestToken(draft.subject) ||
+    campaignTextUsesWaitlistNameInterestToken(draft.body_text) ||
+    campaignTextUsesWaitlistNameInterestToken(draft.heading_text ?? "");
+  if (!usesBetaInviteTokens && !usesNameInterestCount) return;
 
   const snapshots = (await listCampaignRecipientSnapshots(campaignId)).filter(
     (snapshot) => snapshot.send_status === "pending",
   );
   if (snapshots.length === 0) return;
 
-  const betaInviteByEmail = await getBetaInviteDataByEmail({
-    emails: snapshots.map((snapshot) => snapshot.normalized_email),
-    baseUrl: baseUrl(),
-  });
+  const betaInviteByEmail = usesBetaInviteTokens
+    ? await getBetaInviteDataByEmail({
+        emails: snapshots.map((snapshot) => snapshot.normalized_email),
+        baseUrl: baseUrl(),
+      })
+    : null;
+  const nameInterestBySnapshotId = usesNameInterestCount
+    ? new Map(
+        (
+          await enrichWaitlistNameInterestCounts(
+            snapshots.map((snapshot) => ({
+              id: snapshot.id,
+              normalizedEmail: snapshot.normalized_email,
+              personalization: snapshot.personalization,
+            })),
+          )
+        ).map((snapshot) => [snapshot.id, snapshot.personalization.otherInterestedCount]),
+      )
+    : null;
 
   for (const snapshot of snapshots) {
-    const nextPersonalization = withBetaInvitePersonalization(
-      snapshot.personalization,
-      betaInviteByEmail.get(snapshot.normalized_email) ?? null,
-    );
+    let nextPersonalization = snapshot.personalization;
+    if (betaInviteByEmail) {
+      nextPersonalization = withBetaInvitePersonalization(
+        nextPersonalization,
+        betaInviteByEmail.get(snapshot.normalized_email) ?? null,
+      );
+    }
+    if (nameInterestBySnapshotId) {
+      nextPersonalization = {
+        ...nextPersonalization,
+        otherInterestedCount: nameInterestBySnapshotId.get(snapshot.id) ?? null,
+      };
+    }
     const { error } = await db
       .from("campaign_recipient_snapshots")
       .update({
@@ -820,6 +865,11 @@ async function resolveCampaignRecipientEstimate(
     bodyText: draft?.body_text ?? defaultCampaignBodyText(),
     headingText: draft?.heading_text ?? null,
   });
+  const usesNameInterestCount = draft
+    ? campaignTextUsesWaitlistNameInterestToken(draft.subject) ||
+      campaignTextUsesWaitlistNameInterestToken(draft.body_text) ||
+      campaignTextUsesWaitlistNameInterestToken(draft.heading_text ?? "")
+    : false;
   if (campaign.source_kind === "zn_waitlist") {
     const waitlistEstimate = await estimateWaitlistRecipients({
       audienceScope: campaign.audience_scope,
@@ -841,9 +891,12 @@ async function resolveCampaignRecipientEstimate(
       !betaTokenUsage.usesBetaInviteCode &&
       !betaTokenUsage.usesBetaInviteLink
     ) {
+      const sample = usesNameInterestCount
+        ? await enrichWaitlistNameInterestCounts(sampleWithConfirmUrl)
+        : sampleWithConfirmUrl;
       return {
         ...waitlistEstimate,
-        sample: sampleWithConfirmUrl,
+        sample,
       };
     }
 
@@ -854,7 +907,7 @@ async function resolveCampaignRecipientEstimate(
       selectedEmailsText: draft?.custom_emails_text,
       series: waitlistDeliverySeries(),
     });
-    return applyBetaInviteTokenRules({
+    const waitlistEstimateWithBeta = await applyBetaInviteTokenRules({
       estimate: {
         count: waitlistRecipients.length,
         sample: waitlistRecipients.map((recipient) => ({
@@ -870,6 +923,11 @@ async function resolveCampaignRecipientEstimate(
       betaTokenUsage,
       baseUrl: baseUrl(),
     });
+    if (!usesNameInterestCount) return waitlistEstimateWithBeta;
+    return {
+      ...waitlistEstimateWithBeta,
+      sample: await enrichWaitlistNameInterestCounts(waitlistEstimateWithBeta.sample),
+    };
   }
 
   if (campaign.source_kind === "email_subscribers") {
@@ -901,11 +959,16 @@ async function resolveCampaignRecipientEstimate(
       campaignId: campaign.id,
     }),
   }));
-  return applyBetaInviteTokenRules({
+  const customEstimateWithBeta = await applyBetaInviteTokenRules({
     estimate: { count: recipients.length, sample: sampleWithConfirmUrl, blocked },
     betaTokenUsage,
     baseUrl: baseUrl(),
   });
+  if (!usesNameInterestCount) return customEstimateWithBeta;
+  return {
+    ...customEstimateWithBeta,
+    sample: await enrichWaitlistNameInterestCounts(customEstimateWithBeta.sample),
+  };
 }
 
 async function resolveCampaignPreviewRecipient(

@@ -131,9 +131,11 @@ export interface CampaignRecipientPersonalization {
   humanReferralUrl: string | null;
   humanDashboardUrl: string | null;
   confirmResponseUrl: string | null;
+  reserveUrl: string | null;
   betaDisplayName: string | null;
   betaInviteCode: string | null;
   betaInviteLink: string | null;
+  otherInterestedCount: number | null;
   referralStats: CampaignReferralStats | null;
   relatedNames: string[];
 }

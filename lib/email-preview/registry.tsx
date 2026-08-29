@@ -417,9 +417,11 @@ export function getEmailPreviewRegistry(): EmailPreviewRegistryEntry[] {
               humanReferralUrl: null,
               humanDashboardUrl: null,
               confirmResponseUrl: "https://zcashnames.com/api/campaign-click/waitlist-confirm?token=sample-token",
+              reserveUrl: "https://zcashnames.com/reserve?token=sample-token",
               betaDisplayName: null,
               betaInviteCode: null,
               betaInviteLink: null,
+              otherInterestedCount: null,
               referralStats: null,
               relatedNames: ["Josh", "Jswihart"],
             }}

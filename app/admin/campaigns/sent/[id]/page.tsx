@@ -83,9 +83,11 @@ export default async function CampaignSentDetailPage({
     humanReferralUrl: "https://zcashnames.com/?ref=josh",
     humanDashboardUrl: "https://zcashnames.com/leaders/ref/josh",
     confirmResponseUrl: "https://zcashnames.com/api/campaign-click/waitlist-confirm?token=sample-token",
+    reserveUrl: "https://zcashnames.com/reserve?token=sample-token",
     betaDisplayName: null,
     betaInviteCode: null,
     betaInviteLink: null,
+    otherInterestedCount: null,
     referralStats: null,
     relatedNames: ["Josh"],
   };

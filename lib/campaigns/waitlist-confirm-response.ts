@@ -5,8 +5,14 @@ import { resolveSecret, safeEqual, signHmac } from "@/lib/hmac";
 const PRODUCTION_TRACKING_BASE_URL = "https://zcashnames.com";
 const SAMPLE_TRACKING_URL =
   "https://zcashnames.com/api/campaign-click/waitlist-confirm?token=sample-token";
+const SAMPLE_RESERVE_URL = "https://zcashnames.com/reserve?token=sample-token";
 
 export interface WaitlistConfirmResponseTokenPayload {
+  normalizedEmail: string;
+  campaignId: string;
+}
+
+export interface WaitlistVerifyTokenPayload {
   normalizedEmail: string;
   campaignId: string;
 }
@@ -15,6 +21,15 @@ function getSecret(): string {
   return resolveSecret(
     process.env.WAITLIST_CONFIRM_RESPONSE_SECRET,
     process.env.WAITLIST_CONFIRM_SECRET ?? process.env.RESEND_API_KEY,
+  );
+}
+
+function getVerifySecret(): string {
+  return resolveSecret(
+    process.env.WAITLIST_VERIFY_TOKEN_SECRET,
+    process.env.WAITLIST_CONFIRM_RESPONSE_SECRET ??
+      process.env.WAITLIST_CONFIRM_SECRET ??
+      process.env.RESEND_API_KEY,
   );
 }
 
@@ -49,6 +64,10 @@ function signPayload(payload: string): string {
   return signHmac(getSecret(), payload);
 }
 
+function signVerifyPayload(payload: string): string {
+  return signHmac(getVerifySecret(), payload);
+}
+
 export function getWaitlistConfirmResponseRedirectUrl(): string | null {
   const value = process.env.WAITLIST_CONFIRM_RESPONSE_REDIRECT_URL?.trim();
   if (!value) return null;
@@ -71,6 +90,23 @@ export function buildWaitlistConfirmResponseToken(args: {
   const encodedPayload = base64UrlEncode(JSON.stringify(payload));
   const signature = signPayload(encodedPayload);
   return `${encodedPayload}.${signature}`;
+}
+
+export function buildWaitlistVerifyToken(args: {
+  normalizedEmail: string;
+  campaignId: string;
+}): string {
+  const normalizedEmail = args.normalizedEmail.trim().toLowerCase();
+  if (!normalizedEmail) {
+    throw new Error("Waitlist reserve token requires a normalized email.");
+  }
+
+  const payload: WaitlistVerifyTokenPayload = {
+    normalizedEmail,
+    campaignId: args.campaignId.trim(),
+  };
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  return `${encodedPayload}.${signVerifyPayload(encodedPayload)}`;
 }
 
 export function parseWaitlistConfirmResponseToken(
@@ -174,4 +210,21 @@ export function buildWaitlistConfirmResponseTrackingUrl(args: {
     campaignId: args.campaignId,
   });
   return `${PRODUCTION_TRACKING_BASE_URL}/api/campaign-click/waitlist-confirm?token=${encodeURIComponent(token)}`;
+}
+
+export function buildWaitlistReserveUrl(args: {
+  normalizedEmail: string | null | undefined;
+  campaignId: string;
+  fallbackToSample?: boolean;
+}): string | null {
+  const normalizedEmail = args.normalizedEmail?.trim().toLowerCase();
+  if (!normalizedEmail) {
+    return args.fallbackToSample ? SAMPLE_RESERVE_URL : null;
+  }
+
+  const token = buildWaitlistVerifyToken({
+    normalizedEmail,
+    campaignId: args.campaignId,
+  });
+  return `${PRODUCTION_TRACKING_BASE_URL}/reserve?token=${encodeURIComponent(token)}`;
 }

@@ -5,8 +5,10 @@ import CampaignQuickActions from "@/components/admin/campaigns/CampaignQuickActi
 import {
   campaignDraftUsesBetaInviteTokens,
   campaignDraftUsesLiveStats,
+  campaignTextUsesWaitlistNameInterestToken,
 } from "@/lib/campaigns/content";
 import { sampleBetaInviteData } from "@/lib/campaigns/beta-invite";
+import { enrichWaitlistNameInterestCounts } from "@/lib/campaigns/waitlist";
 import {
   defaultScheduledSendIso,
   formatEasternDateTimeInput,
@@ -84,12 +86,23 @@ export default async function CampaignDraftDetailPage({
     humanReferralUrl: "https://zcashnames.com/?ref=josh",
     humanDashboardUrl: "https://zcashnames.com/leaders/ref/josh",
     confirmResponseUrl: "https://zcashnames.com/api/campaign-click/waitlist-confirm?token=sample-token",
+    reserveUrl: "https://zcashnames.com/reserve?token=sample-token",
     betaDisplayName: null,
     betaInviteCode: null,
     betaInviteLink: null,
+    otherInterestedCount: null,
     referralStats: null,
     relatedNames: ["Josh"],
   };
+  if (
+    previewRecipient &&
+    (campaignTextUsesWaitlistNameInterestToken(draft.subject) ||
+      campaignTextUsesWaitlistNameInterestToken(draft.body_text) ||
+      campaignTextUsesWaitlistNameInterestToken(draft.heading_text ?? ""))
+  ) {
+    const enrichedRecipient = (await enrichWaitlistNameInterestCounts([previewRecipient]))[0];
+    if (enrichedRecipient) personalization = enrichedRecipient.personalization;
+  }
   if (
     campaign.source_kind === "zn_waitlist" &&
     campaignDraftUsesLiveStats({

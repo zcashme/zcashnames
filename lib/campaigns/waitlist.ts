@@ -25,6 +25,7 @@ interface WaitlistRow {
 
 const WAITLIST_PAGE_SIZE = 1000;
 const WAITLIST_ESTIMATE_CACHE_TTL_MS = 60 * 1000;
+const WAITLIST_NAME_INTEREST_CHUNK_SIZE = 200;
 
 type CachedWaitlistEstimate = {
   estimate: CampaignRecipientEstimate;
@@ -71,6 +72,11 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+function normalizeName(name: string | null | undefined): string | null {
+  const trimmed = name?.trim();
+  return trimmed ? trimmed.toLowerCase() : null;
+}
+
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -105,9 +111,11 @@ function buildPersonalization(
     humanReferralUrl: code ? `${baseUrl}/?ref=${encodeURIComponent(code)}` : null,
     humanDashboardUrl: code ? `${baseUrl}/leaders/ref/${encodeURIComponent(code)}` : null,
     confirmResponseUrl: null,
+    reserveUrl: null,
     betaDisplayName: null,
     betaInviteCode: null,
     betaInviteLink: null,
+    otherInterestedCount: null,
     referralStats: null,
     relatedNames: sorted
       .map((row) => row.name?.trim())
@@ -294,9 +302,11 @@ function sampleRowToRecipient(
         ? `${baseUrl}/leaders/ref/${encodeURIComponent(humanCode)}`
         : null,
       confirmResponseUrl: null,
+      reserveUrl: null,
       betaDisplayName: null,
       betaInviteCode: null,
       betaInviteLink: null,
+      otherInterestedCount: null,
       referralStats: null,
       relatedNames: Array.isArray(row.related_names)
         ? row.related_names.filter((value): value is string => Boolean(value?.trim()))
@@ -575,6 +585,57 @@ export async function listWaitlistPersonalizationsByEmail(args: {
   }
 
   return personalizations;
+}
+
+export async function enrichWaitlistNameInterestCounts<
+  T extends { normalizedEmail: string; personalization: CampaignRecipientPersonalization },
+>(items: T[]): Promise<T[]> {
+  const normalizedNames = [
+    ...new Set(
+      items
+        .map((item) => normalizeName(item.personalization.name))
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+  if (normalizedNames.length === 0) return items;
+
+  const emailsByName = new Map<string, Set<string>>();
+  for (
+    let index = 0;
+    index < normalizedNames.length;
+    index += WAITLIST_NAME_INTEREST_CHUNK_SIZE
+  ) {
+    const chunk = normalizedNames.slice(index, index + WAITLIST_NAME_INTEREST_CHUNK_SIZE);
+    const { data, error } = await db
+      .from("zn_waitlist")
+      .select("name, email")
+      .in("name", chunk);
+    if (error) throw new Error(error.message);
+
+    for (const row of (data ?? []) as Array<{ name?: string | null; email?: string | null }>) {
+      const name = normalizeName(row.name);
+      const email = row.email?.trim();
+      if (!name || !email) continue;
+      const existing = emailsByName.get(name);
+      if (existing) existing.add(normalizeEmail(email));
+      else emailsByName.set(name, new Set([normalizeEmail(email)]));
+    }
+  }
+
+  return items.map((item) => {
+    const name = normalizeName(item.personalization.name);
+    if (!name) return item;
+    const matchingEmails = emailsByName.get(name);
+    const totalInterested = matchingEmails?.size ?? 0;
+    const selfIncluded = matchingEmails?.has(normalizeEmail(item.normalizedEmail)) ?? false;
+    return {
+      ...item,
+      personalization: {
+        ...item.personalization,
+        otherInterestedCount: Math.max(0, totalInterested - (selfIncluded ? 1 : 0)),
+      },
+    };
+  });
 }
 
 export async function listWaitlistRecipients(args?: {

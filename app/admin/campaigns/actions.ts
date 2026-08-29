@@ -35,9 +35,13 @@ import {
   clearCampaignSuppression,
   suppressCampaignEmail,
 } from "@/lib/campaigns/suppression";
-import { campaignDraftUsesLiveStats } from "@/lib/campaigns/content";
-import { campaignDraftUsesBetaInviteTokens } from "@/lib/campaigns/content";
+import {
+  campaignDraftUsesLiveStats,
+  campaignDraftUsesBetaInviteTokens,
+  campaignTextUsesWaitlistNameInterestToken,
+} from "@/lib/campaigns/content";
 import { sampleBetaInviteData } from "@/lib/campaigns/beta-invite";
+import { enrichWaitlistNameInterestCounts } from "@/lib/campaigns/waitlist";
 import {
   renderCampaignPreview,
   enrichCampaignPreviewPersonalization,
@@ -319,15 +323,25 @@ export async function renderCampaignPreviewAction(
     humanReferralUrl: "https://zcashnames.com/?ref=josh",
     humanDashboardUrl: "https://zcashnames.com/leaders/ref/josh",
     confirmResponseUrl: "https://zcashnames.com/api/campaign-click/waitlist-confirm?token=sample-token",
+    reserveUrl: "https://zcashnames.com/reserve?token=sample-token",
     betaDisplayName: null,
     betaInviteCode: null,
     betaInviteLink: null,
+    otherInterestedCount: null,
     referralStats: null,
     relatedNames: ["Josh"],
   };
   try {
     const previewRecipient = await getCampaignPreviewRecipient(campaignId);
-    personalization = previewRecipient?.personalization ?? personalization;
+    if (previewRecipient) {
+      const enrichedRecipient =
+        campaignTextUsesWaitlistNameInterestToken(draft.subject) ||
+        campaignTextUsesWaitlistNameInterestToken(draft.bodyText) ||
+        campaignTextUsesWaitlistNameInterestToken(draft.headingText ?? "")
+          ? (await enrichWaitlistNameInterestCounts([previewRecipient]))[0] ?? previewRecipient
+          : previewRecipient;
+      personalization = enrichedRecipient.personalization;
+    }
   } catch {
     // Keep preview usable while source-specific recipient validation is being edited.
   }

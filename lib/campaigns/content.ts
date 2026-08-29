@@ -85,6 +85,8 @@ const BETA_TOKEN_NAMES = new Set([
 ]);
 
 const WAITLIST_CONFIRM_RESPONSE_TOKEN = "confirm_response_url";
+const WAITLIST_RESERVE_TOKEN = "reserve_url";
+const WAITLIST_NAME_INTEREST_TOKEN = "other_interested_count";
 
 export interface CampaignBetaTokenUsage {
   usesBetaDisplayName: boolean;
@@ -124,6 +126,22 @@ export function campaignTextUsesWaitlistConfirmResponseToken(text: string): bool
   for (const match of text.matchAll(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi)) {
     const key = String(match[1] ?? "").toLowerCase();
     if (key === WAITLIST_CONFIRM_RESPONSE_TOKEN) return true;
+  }
+  return false;
+}
+
+export function campaignTextUsesWaitlistReserveToken(text: string): boolean {
+  for (const match of text.matchAll(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi)) {
+    const key = String(match[1] ?? "").toLowerCase();
+    if (key === WAITLIST_RESERVE_TOKEN) return true;
+  }
+  return false;
+}
+
+export function campaignTextUsesWaitlistNameInterestToken(text: string): boolean {
+  for (const match of text.matchAll(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi)) {
+    const key = String(match[1] ?? "").toLowerCase();
+    if (key === WAITLIST_NAME_INTEREST_TOKEN) return true;
   }
   return false;
 }
@@ -199,9 +217,11 @@ export function resolveCampaignTokens(
     human_referral_url: personalization.humanReferralUrl ?? "",
     human_dashboard_url: personalization.humanDashboardUrl ?? "",
     confirm_response_url: personalization.confirmResponseUrl ?? "",
+    reserve_url: personalization.reserveUrl ?? "",
     beta_display_name: personalization.betaDisplayName ?? "",
     beta_invite_code: personalization.betaInviteCode ?? "",
     beta_invite_link: personalization.betaInviteLink ?? "",
+    other_interested_count: statText(personalization.otherInterestedCount),
     direct_referrals: statText(stats?.directReferrals),
     indirect_referrals: statText(stats?.indirectReferrals),
     attributed_referrals: statText(stats?.attributedReferrals),
