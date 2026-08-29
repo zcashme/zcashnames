@@ -1,0 +1,7 @@
+import type { ProtectedNameDecision } from "@/lib/protected-names/types";
+import RetryDecisionEmailButton from "@/components/admin/protected-names/RetryDecisionEmailButton";
+
+export default function DecisionHistory({ decisions }: { decisions: ProtectedNameDecision[] }) {
+  if (decisions.length === 0) return null;
+  return <section className="rounded-md border border-zinc-800 bg-zinc-950/40 p-4"><h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Decision history</h2><div className="mt-3 space-y-3">{decisions.map((decision) => <article key={decision.id} className="rounded border border-zinc-800 p-3 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium text-zinc-100">{decision.decision}</span><span className="text-xs text-zinc-500">{new Date(decision.decided_at).toLocaleString()}</span></div><p className="mt-2 whitespace-pre-wrap text-zinc-300">{decision.reason}</p><p className="mt-2 text-xs text-zinc-500">Email: {decision.recipient_email ?? "none"} · delivery: {decision.notification_status}{decision.notification_status === "failed" ? <RetryDecisionEmailButton decisionId={decision.id} /> : null}</p>{decision.notification_error ? <p className="mt-1 text-xs text-red-300">{decision.notification_error}</p> : null}<ul className="mt-2 text-xs text-zinc-400">{decision.contact_methods.map((contact, index) => <li key={`${contact.kind}-${contact.value}-${index}`}>{contact.kind}: {contact.value}{contact.preferred ? " (preferred)" : ""}</li>)}</ul></article>)}</div></section>;
+}

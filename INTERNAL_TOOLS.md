@@ -51,8 +51,18 @@ Primary support code:
 - `/admin/beta`
 - `/admin/beta-v2`
 - `/admin/campaigns`
+- `/admin/protected-names`
 
 These routes remain local-only and are the main reason this repo exists.
+
+#### Protected names admin
+
+- Queue: `/admin/protected-names` (default: `under_review` or open disputes)
+- Name review: `/admin/protected-names/:name`
+- Dispute review: `/admin/protected-names/:name/disputes/:disputeId`
+- SQL (apply in Supabase before mutations work):
+  `sql/2026-08-06-protected-names-admin-ops.sql`
+- Public suggestion/dispute forms stay in `dotzcash_main`.
 
 ### Internal
 

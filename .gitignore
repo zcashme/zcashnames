@@ -12,6 +12,7 @@ dist
 .next
 .next-dev
 out
+output/
 
 # OS files
 .DS_Store
@@ -26,6 +27,7 @@ data/*.db-journal
 
 # Vercel
 .vercel
+.vercel.production.env
 
 # IDE
 .idea/
@@ -63,6 +65,9 @@ beta-testers.json
 sql/*
 !sql/2026-07-01-referinfo-post-schedule.sql
 !sql/2026-08-24-reserveinfo-post-schedule.sql
+!sql/2026-08-25-ens-outreach.sql
+!sql/2026-08-25-ens-outreach-review-reason.sql
+!sql/2026-08-25-ens-outreach-rejected.sql
 
 
 # temporary internal preview QA page

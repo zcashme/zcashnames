@@ -51,6 +51,11 @@ const tools = [
     label: "Reserveinfo Post",
     description: "Preview the weekly reserved-names queue and publish its persistent Telegram and X pages.",
   },
+  {
+    href: "/internal/ens-outreach",
+    label: "ENS Outreach",
+    description: "Build manual X outreach drafts for ENS-priority protected names, including popup assets.",
+  },
 ] as const;
 
 export default function InternalToolsIndexPage() {

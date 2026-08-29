@@ -53,6 +53,17 @@ const sections = [
       },
     ],
   },
+  {
+    title: "Protected Names",
+    links: [
+      {
+        href: "/admin/protected-names",
+        label: "Review Queue",
+        description:
+          "Approve or reject suggestions, manage evidence, redeem names, and review disputes.",
+      },
+    ],
+  },
 ] as const;
 
 export default function AdminHomePage() {
@@ -62,8 +73,9 @@ export default function AdminHomePage() {
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Authenticated Access</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-100">Admin Tools</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">
-          Private operational views for beta invites, beta feedback reporting, and campaigns.
-          These routes are available on localhost and on deployed hosts protected by shared admin credentials.
+          Private operational views for beta invites, beta feedback reporting, campaigns,
+          and protected-name review. These routes are available on localhost and on deployed
+          hosts protected by shared admin credentials.
         </p>
       </header>
 

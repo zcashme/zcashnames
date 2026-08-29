@@ -34,7 +34,7 @@ if (isWindows) {
 }
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["svg-captcha"],
+  serverExternalPackages: ["svg-captcha", "playwright"],
   outputFileTracingIncludes: {
     // These deterministic blockinfo assets are loaded from the filesystem at runtime.
     // Include them in every server trace so Vercel functions can read the checked-in files.
@@ -70,12 +70,21 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     const isDev = process.env.NODE_ENV === "development";
+    const supabaseAssetOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
     const connectSrc = [
       "'self'",
       "https://vitals.vercel-insights.com",
       "https://light.zcash.me",
       "https://www.google.com/recaptcha/",
       ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*", "ws://localhost:*"] : []),
+    ].join(" ");
+    const imgSrc = [
+      "'self'",
+      "data:",
+      "https://www.zcashnames.com",
+      "https://hackmd.io",
+      "https://dl.edge.app",
+      ...(supabaseAssetOrigin ? [supabaseAssetOrigin] : []),
     ].join(" ");
 
     return [
@@ -92,7 +101,7 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https://www.zcashnames.com https://hackmd.io https://dl.edge.app",
+              `img-src ${imgSrc}`,
               "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
               `connect-src ${connectSrc}`,
               "frame-src 'self' https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/",
