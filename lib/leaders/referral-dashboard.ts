@@ -1,5 +1,3 @@
-import { roundZec } from "@/lib/zns/utils";
-
 // Referral tree algorithms for the retained referral dashboard support code.
 //
 // Core operations:
@@ -103,6 +101,10 @@ export const DEFAULT_CONVERSION_BY_BUCKET: ConversionByBucket = {
   "6": 100,
   "7+": 100,
 };
+
+function roundZec(value: number): number {
+  return Math.round(value * 10000) / 10000;
+}
 
 export function getNameLengthBucket(name: string): NameLengthBucket {
   const length = name.trim().replace(/\.(zcash|zec)$/i, "").length;
