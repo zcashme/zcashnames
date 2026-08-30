@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
 
 type Benefit = {
   title: string;
@@ -61,7 +61,7 @@ function StepNumberBadge({ n }: { n: number }) {
 
 const benefitGroups: BenefitGroup[] = [
   {
-    title: "Easy-to-use",
+    title: "Easier-to-use",
     description: "Payments without addresses",
     span: "lg:col-span-6",
     items: [
@@ -143,19 +143,6 @@ const rowHeading = (title: string, prefix?: ReactNode) => (
   </div>
 );
 
-const benefitGroupHeading = (group: BenefitGroup) => (
-  <div className="mb-4 px-1">
-    <div className="mx-auto flex max-w-xl flex-col items-center text-center">
-      <span className="features-group-pill">
-        <h3>{group.title}</h3>
-      </span>
-      <p className="features-intro-copy mt-1">
-        {group.description}
-      </p>
-    </div>
-  </div>
-);
-
 type GridSpanItem = { span?: string };
 
 /** CSS-grid auto-placement for fixed columns (row-major, wrap when span does not fit). */
@@ -216,23 +203,6 @@ function gridSeparatorFlags(
   }));
 }
 
-function benefitGridClassName(group: BenefitGroup) {
-  if (group.title === "Sign with Zcash") return "lg:grid-cols-3";
-  if (group.span === "lg:col-span-12") return "sm:grid-cols-3";
-  return "lg:grid-cols-2";
-}
-
-function benefitGridColumns(group: BenefitGroup) {
-  // Column counts must match the responsive grid classes above.
-  if (group.title === "Sign with Zcash") {
-    return { mobile: 1, sm: 1, lg: 3 };
-  }
-  if (group.span === "lg:col-span-12") {
-    return { mobile: 1, sm: 3, lg: 3 };
-  }
-  return { mobile: 1, sm: 1, lg: 2 };
-}
-
 function separatorClassName(flags: {
   mobile: { borderBottom: boolean; borderRight: boolean };
   sm: { borderBottom: boolean; borderRight: boolean };
@@ -248,63 +218,211 @@ function separatorClassName(flags: {
   ].join(" ");
 }
 
-function BenefitsBento() {
+const FEATURE_ROTATION_DURATION = 10_000;
+type FeatureTransitionDirection = "forward" | "backward";
+
+function BenefitPanel({
+  group,
+  isExiting,
+  transitionDirection,
+}: {
+  group: BenefitGroup;
+  isExiting?: boolean;
+  transitionDirection?: FeatureTransitionDirection;
+}) {
+  const mobileFlags = gridSeparatorFlags(group.items, 1, "mobile");
+  const smFlags = gridSeparatorFlags(group.items, 1, "sm");
+  const lgFlags = gridSeparatorFlags(group.items, 3, "lg");
+
   return (
-    <div className="grid grid-cols-1 gap-x-5 gap-y-10 lg:grid-cols-12">
-      {benefitGroups.map((group) => {
-        const cols = benefitGridColumns(group);
-        const mobileFlags = gridSeparatorFlags(group.items, cols.mobile, "mobile");
-        const smFlags = gridSeparatorFlags(group.items, cols.sm, "sm");
-        const lgFlags = gridSeparatorFlags(group.items, cols.lg, "lg");
+    <div
+      className={`features-content-panel${
+        isExiting ? ` features-content-panel--exiting-${transitionDirection}` : ""
+      }`}
+    >
+      <div className="mb-4 px-1">
+        <div className="mx-auto flex max-w-xl flex-col items-center text-center">
+          <p className="features-intro-copy mt-1">{group.description}</p>
+        </div>
+      </div>
 
-        return (
+      <div className="grid grid-cols-1 gap-0 lg:grid-cols-3">
+        {group.items.map((benefit, index) => (
           <div
-            key={group.title}
-            className={`${group.span ?? "lg:col-span-6"}`}
+            key={benefit.title}
+            className={[
+              "group bg-transparent p-5",
+              separatorClassName({
+                mobile: mobileFlags[index]!,
+                sm: smFlags[index]!,
+                lg: lgFlags[index]!,
+              }),
+            ].join(" ")}
           >
-            {benefitGroupHeading(group)}
-
-            <div className={`grid grid-cols-1 gap-0 ${benefitGridClassName(group)}`}>
-              {group.items.map((b, index) => (
-                <div
-                  key={b.title}
-                  className={[
-                    "group bg-transparent p-5",
-                    b.span ?? "",
-                    separatorClassName({
-                      mobile: mobileFlags[index]!,
-                      sm: smFlags[index]!,
-                      lg: lgFlags[index]!,
-                    }),
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <h4 className="type-section-subtitle font-semibold text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]">
+                {benefit.title}
+              </h4>
+              {benefit.soon ? (
+                <span
+                  className="rounded-full px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
+                  style={{
+                    background: "color-mix(in srgb, #eab308 16%, transparent)",
+                    color: "#eab308",
+                  }}
                 >
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <h4 className="type-section-subtitle font-semibold text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]">
-                      {b.title}
-                    </h4>
-                    {b.soon && (
-                      <span
-                        className="rounded-full px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] [[data-theme=monochrome]_&]:!text-[var(--fg-heading)]"
-                        style={{
-                          background: "color-mix(in srgb, #eab308 16%, transparent)",
-                          color: "#eab308",
-                        }}
-                      >
-                        Soon
-                      </span>
-                    )}
-                  </div>
-                  <p className="type-section-subtitle" style={{ color: "var(--fg-muted)" }}>
-                    {b.description}
-                  </p>
-                </div>
-              ))}
+                  Soon
+                </span>
+              ) : null}
             </div>
+            <p className="type-section-subtitle" style={{ color: "var(--fg-muted)" }}>
+              {benefit.description}
+            </p>
           </div>
-        );
-      })}
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BenefitsBento() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [previousIndex, setPreviousIndex] = useState<number | null>(null);
+  const [wrappingPillIndex, setWrappingPillIndex] = useState<number | null>(null);
+  const [transitionDirection, setTransitionDirection] = useState<FeatureTransitionDirection>("forward");
+  const [progress, setProgress] = useState(0);
+  const [autoRotateEnabled, setAutoRotateEnabled] = useState(true);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
+    updatePreference();
+    mediaQuery.addEventListener("change", updatePreference);
+    return () => mediaQuery.removeEventListener("change", updatePreference);
+  }, []);
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setPreviousIndex(null);
+      setWrappingPillIndex(null);
+    }
+  }, [prefersReducedMotion, previousIndex]);
+
+  useEffect(() => {
+    if (!autoRotateEnabled) return;
+
+    let animationFrame = 0;
+    const startedAt = performance.now();
+    const tick = (now: number) => {
+      const elapsed = now - startedAt;
+      const completion = Math.min(elapsed / FEATURE_ROTATION_DURATION, 1);
+
+      if (!prefersReducedMotion) setProgress(completion * 100);
+
+      if (completion === 1) {
+        setPreviousIndex(activeIndex);
+        setWrappingPillIndex((activeIndex - 1 + benefitGroups.length) % benefitGroups.length);
+        setTransitionDirection("forward");
+        setActiveIndex((index) => (index + 1) % benefitGroups.length);
+        setProgress(0);
+        return;
+      }
+
+      animationFrame = window.requestAnimationFrame(tick);
+    };
+
+    animationFrame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [activeIndex, autoRotateEnabled, prefersReducedMotion]);
+
+  const activate = (index: number, manually = false) => {
+    if (manually) {
+      setAutoRotateEnabled(false);
+      setProgress(0);
+    }
+    if (index === activeIndex) return;
+    const movesForward = index === (activeIndex + 1) % benefitGroups.length;
+    setPreviousIndex(activeIndex);
+    setWrappingPillIndex(
+      movesForward
+        ? (activeIndex - 1 + benefitGroups.length) % benefitGroups.length
+        : null,
+    );
+    setTransitionDirection(movesForward ? "forward" : "backward");
+    setActiveIndex(index);
+  };
+
+  const handlePillKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % benefitGroups.length;
+    if (event.key === "ArrowLeft") nextIndex = (index - 1 + benefitGroups.length) % benefitGroups.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = benefitGroups.length - 1;
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    activate(nextIndex, true);
+    document.getElementById(`feature-pill-${nextIndex}`)?.focus();
+  };
+
+  return (
+    <div className="features-rotator">
+      <div className="features-pill-row" role="tablist" aria-label="Zcash Names features">
+        {benefitGroups.map((group, index) => {
+          const isActive = index === activeIndex;
+          const position = isActive
+            ? "center"
+            : (index - activeIndex + benefitGroups.length) % benefitGroups.length === 1
+              ? "right"
+              : "left";
+          return (
+            <button
+              key={group.title}
+              id={`feature-pill-${index}`}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`feature-panel-${index}`}
+              tabIndex={isActive ? 0 : -1}
+              className="features-group-pill"
+              data-active={isActive}
+              data-position={wrappingPillIndex === index ? "wrap" : position}
+              onClick={() => activate(index, true)}
+              onKeyDown={(event) => handlePillKeyDown(event, index)}
+              onAnimationEnd={() => {
+                if (wrappingPillIndex === index) setWrappingPillIndex(null);
+              }}
+            >
+              {isActive && autoRotateEnabled ? (
+                <span className="features-group-pill-fill" style={{ width: `${progress}%` }} aria-hidden="true" />
+              ) : null}
+              <span className="features-group-pill-label">{group.title}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="features-content-stage">
+        {previousIndex !== null ? (
+          <BenefitPanel
+            key={`exiting-${previousIndex}`}
+            group={benefitGroups[previousIndex]!}
+            isExiting
+            transitionDirection={transitionDirection}
+          />
+        ) : null}
+        <div
+          key={activeIndex}
+          id={`feature-panel-${activeIndex}`}
+          role="tabpanel"
+          aria-labelledby={`feature-pill-${activeIndex}`}
+          className={`features-content-panel features-content-panel--entering-${transitionDirection}`}
+          onAnimationEnd={() => setPreviousIndex(null)}
+        >
+          <BenefitPanel group={benefitGroups[activeIndex]!} />
+        </div>
+      </div>
     </div>
   );
 }
