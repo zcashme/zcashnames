@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from "react";
+import LandingActionLink from "@/components/landing/LandingActionLink";
 
 type Benefit = {
   title: string;
@@ -101,7 +102,7 @@ const benefitGroups: BenefitGroup[] = [
     ],
   },
   {
-    title: "Sign with Zcash",
+    title: "Login with Zcash",
     description: "Your Zcash name can be used across apps.",
     span: "lg:col-span-12",
     items: [
@@ -123,7 +124,7 @@ const benefitGroups: BenefitGroup[] = [
 ];
 
 const rowHeading = (title: string, prefix?: ReactNode) => (
-  // mb-2 + type/color/hover match Features item titles (parent uses group/step).
+  // mb-2 + type/color match the Features item titles (parent uses group/step).
   <div className="mb-2 text-center lg:text-left">
     {/*
       Stacked: title is page-centered; badge hangs to the left of the title
@@ -136,7 +137,7 @@ const rowHeading = (title: string, prefix?: ReactNode) => (
           {prefix}
         </span>
       ) : null}
-      <h3 className="type-section-subtitle font-semibold text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover/step:text-[var(--color-accent-interactive,var(--fg-heading))]">
+      <h3 className="type-section-subtitle font-semibold text-[var(--color-accent-interactive,var(--fg-heading))]">
         {title}
       </h3>
     </div>
@@ -221,6 +222,41 @@ function separatorClassName(flags: {
 const FEATURE_ROTATION_DURATION = 10_000;
 type FeatureTransitionDirection = "forward" | "backward";
 
+function TryBetaLink() {
+  return (
+    <LandingActionLink
+      proximityId="try-beta-link"
+      href="/beta/"
+      label="Try it in beta"
+      variant="text"
+      showArrow
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
+          <path d="M9 3h6M10 3v5.25l-4.9 7.85A3.25 3.25 0 0 0 7.86 21h8.28a3.25 3.25 0 0 0 2.76-4.9L14 8.25V3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M8.1 16h7.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      }
+    />
+  );
+}
+
+function ViewWaitlistLink() {
+  return (
+    <LandingActionLink
+      proximityId="view-waitlist-link"
+      href="/waitlist"
+      label="View Waitlist"
+      variant="text"
+      showArrow
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
+          <path d="M8 6h11M8 12h11M8 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      }
+    />
+  );
+}
+
 function BenefitPanel({
   group,
   isExiting,
@@ -230,9 +266,11 @@ function BenefitPanel({
   isExiting?: boolean;
   transitionDirection?: FeatureTransitionDirection;
 }) {
-  const mobileFlags = gridSeparatorFlags(group.items, 1, "mobile");
-  const smFlags = gridSeparatorFlags(group.items, 1, "sm");
-  const lgFlags = gridSeparatorFlags(group.items, 3, "lg");
+  // Feature lists now always use equal-width items, regardless of legacy spans.
+  const uniformGridItems = group.items.map(() => ({}));
+  const mobileFlags = gridSeparatorFlags(uniformGridItems, 1, "mobile");
+  const smFlags = gridSeparatorFlags(uniformGridItems, 1, "sm");
+  const lgFlags = gridSeparatorFlags(uniformGridItems, 3, "lg");
 
   return (
     <div
@@ -260,7 +298,7 @@ function BenefitPanel({
             ].join(" ")}
           >
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <h4 className="type-section-subtitle font-semibold text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]">
+              <h4 className="type-section-subtitle font-semibold text-[var(--color-accent-interactive,var(--fg-heading))]">
                 {benefit.title}
               </h4>
               {benefit.soon ? (
@@ -293,6 +331,7 @@ function BenefitsBento() {
   const [progress, setProgress] = useState(0);
   const [autoRotateEnabled, setAutoRotateEnabled] = useState(true);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -366,6 +405,22 @@ function BenefitsBento() {
     document.getElementById(`feature-pill-${nextIndex}`)?.focus();
   };
 
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const startX = touchStartX.current;
+    const endX = event.changedTouches[0]?.clientX;
+    touchStartX.current = null;
+    if (startX === null || endX === undefined || Math.abs(endX - startX) < 48) return;
+
+    const nextIndex = endX < startX
+      ? (activeIndex + 1) % benefitGroups.length
+      : (activeIndex - 1 + benefitGroups.length) % benefitGroups.length;
+    activate(nextIndex, true);
+  };
+
   return (
     <div className="features-rotator">
       <div className="features-pill-row" role="tablist" aria-label="Zcash Names features">
@@ -403,7 +458,11 @@ function BenefitsBento() {
         })}
       </div>
 
-      <div className="features-content-stage">
+      <div
+        className="features-content-stage"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {previousIndex !== null ? (
           <BenefitPanel
             key={`exiting-${previousIndex}`}
@@ -433,17 +492,23 @@ export default function HowItWorks() {
       <div id="benefits" className="features-intro scroll-mt-24">
         <span className="features-intro-eyebrow">Features</span>
         <h2>
-          Address people by name.
+          <span className="hero-identity-text">Address people by name.</span>
         </h2>
         <p>Zcash Names makes payments simpler, clearer, and built for everyday use.</p>
       </div>
 
       <BenefitsBento />
 
+      <div className="mt-5 flex justify-center">
+        <TryBetaLink />
+      </div>
+
       <div className="mt-24">
         <div id="how-it-works" className="features-intro scroll-mt-24">
           <span className="features-intro-eyebrow">Get your name</span>
-          <h2>Claim your name early.</h2>
+          <h2>
+            <span className="hero-activity-text">Claim your name early.</span>
+          </h2>
           <p>Reserve your spot, climb the queue through referrals, and choose your name when your invite arrives.</p>
         </div>
 
@@ -524,6 +589,10 @@ export default function HowItWorks() {
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-5 flex justify-center">
+          <ViewWaitlistLink />
         </div>
       </div>
     </section>

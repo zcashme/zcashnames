@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import CaptchaChallengeModal, {
   type CaptchaSolution,
 } from "@/components/captcha/CaptchaChallengeModal";
+import LandingActionLink from "@/components/landing/LandingActionLink";
 import SectionHeaderPill from "@/components/landing/SectionHeaderPill";
 import {
   submitBlogSubscription,
@@ -16,6 +17,23 @@ type LandingNewsletterSignupProps = {
 
 const DEFAULT_BUTTON_LABEL = "Email me";
 const ACTION_INSET_PX = 4;
+
+function ManagePreferencesLink() {
+  return (
+    <LandingActionLink
+      proximityId="manage-newsletter-preferences-link"
+      href="/unsubscribe"
+      label="Manage Preferences"
+      variant="text"
+      showArrow
+      icon={
+        <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
+          <path d="M5 7h14M5 17h14M9 7a2 2 0 1 0-4 0 2 2 0 0 0 4 0ZM19 17a2 2 0 1 0-4 0 2 2 0 0 0 4 0Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      }
+    />
+  );
+}
 
 export default function LandingNewsletterSignup({
   buttonLabel = DEFAULT_BUTTON_LABEL,
@@ -199,6 +217,10 @@ export default function LandingNewsletterSignup({
             We will email a confirmation link before sending updates.
           </p>
         </form>
+
+      <div className="mt-5 flex justify-center">
+        <ManagePreferencesLink />
+      </div>
     </section>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WALLET_BRANDS } from "@/lib/wallets/catalog";
 import { BRAND } from "@/lib/zns/brand";
 
 export const BETA_V2_SECTIONS: { id: string; label: string }[] = [
@@ -7,6 +8,7 @@ export const BETA_V2_SECTIONS: { id: string; label: string }[] = [
   { id: "you-should-know", label: "Before You Test" },
   { id: "ready", label: "Apply for Beta Access" },
   { id: "resources", label: "Resources" },
+  { id: "wallet-pages", label: "Wallet Pages" },
 ];
 
 const h2: React.CSSProperties = {
@@ -42,6 +44,8 @@ const linkStyle: React.CSSProperties = {
   color: "var(--fg-heading)",
   textDecoration: "underline",
 };
+
+const SEND_TO_NAME_WALLET_SLUGS = new Set(["edge", "cake", "unstoppable", "zingo", "noir"]);
 
 const summaryStyle: React.CSSProperties = {
   color: "var(--fg-heading)",
@@ -200,6 +204,23 @@ export default function BetaV2Brief() {
               Code
             </a>
           </li>
+        </ul>
+      </section>
+
+      <hr style={divider} />
+
+      <section id="wallet-pages">
+        <h2 style={h2}>Participating Wallets</h2>
+        <ul className="list-disc pl-5">
+          {WALLET_BRANDS
+            .filter((wallet) => SEND_TO_NAME_WALLET_SLUGS.has(wallet.slug))
+            .map((wallet) => (
+              <li key={wallet.slug} style={li}>
+                <Link href={`/beta/${wallet.slug}`} style={linkStyle}>
+                  {wallet.displayName}
+                </Link>
+              </li>
+            ))}
         </ul>
       </section>
     </article>

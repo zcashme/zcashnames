@@ -1133,7 +1133,13 @@ body {
 }
 
 .features-group-pill[data-active="true"] {
-  border-color: var(--color-accent-interactive);
+  border-color: var(--features-intro-pill-bg);
+}
+
+html.light .features-group-pill[data-active="true"],
+html:not([data-theme]) .features-group-pill[data-active="true"],
+[data-theme="light"] .features-group-pill[data-active="true"] {
+  border-color: var(--border-muted);
 }
 
 .features-group-pill-fill {
@@ -1141,7 +1147,7 @@ body {
   position: absolute;
   inset: 0 auto 0 0;
   z-index: 0;
-  background: color-mix(in srgb, var(--color-accent-interactive) 20%, transparent);
+  background: var(--features-intro-pill-bg);
 }
 
 .features-group-pill-label {
@@ -1200,6 +1206,7 @@ body {
 .features-content-stage {
   position: relative;
   overflow: hidden;
+  touch-action: pan-y;
 }
 
 .features-content-panel {

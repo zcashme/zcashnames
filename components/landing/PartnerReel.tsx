@@ -36,6 +36,7 @@ const EXTRA_PARTNERS: readonly PartnerReelItem[] = [
     id: "cipherscan",
     displayName: "Cipherscan",
     iconSrc: "/icons/cipherscan.png",
+    href: "https://cipherscan.app",
   },
   {
     id: "cyze",
@@ -75,19 +76,17 @@ function normalizeOffset(offset: number, width: number): number {
   return next;
 }
 
-function WalletsLink() {
+function IntegrateZnsLink() {
   return (
     <LandingActionLink
-      proximityId="wallets-link"
-      href="/beta/wallets"
-      label="Wallets"
+      proximityId="integrate-zns-link"
+      href="/docs/zns-developer-guide"
+      label="Integrate ZNS"
       variant="text"
       showArrow
       icon={
         <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
-          <path d="M4.75 7.25A2.25 2.25 0 0 1 7 5h10.25A1.75 1.75 0 0 1 19 6.75v1.5H8.25A2.25 2.25 0 0 0 6 10.5v3A2.25 2.25 0 0 0 8.25 15.75H19v1.5A1.75 1.75 0 0 1 17.25 19H7A2.25 2.25 0 0 1 4.75 16.75v-9.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-          <path d="M6 10.5A1.75 1.75 0 0 1 7.75 8.75H19.25V15.25H7.75A1.75 1.75 0 0 1 6 13.5v-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-          <circle cx="15.75" cy="12" r="1" fill="currentColor" />
+          <path d="m8.5 5-5 7 5 7M15.5 5l5 7-5 7M14 4l-4 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       }
     />
@@ -96,20 +95,6 @@ function WalletsLink() {
 
 function PartnerIcon({ item }: { item: PartnerReelItem }) {
   const [isHighlighted, setIsHighlighted] = useState(false);
-  const verticalAccents = isHighlighted ? (
-    <>
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 left-0 w-px"
-        style={{ background: "var(--color-accent-interactive)" }}
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-0 w-px"
-        style={{ background: "var(--color-accent-interactive)" }}
-      />
-    </>
-  ) : null;
 
   if (item.kind === "cta" && item.href) {
     return (
@@ -121,16 +106,19 @@ function PartnerIcon({ item }: { item: PartnerReelItem }) {
         onFocus={() => setIsHighlighted(true)}
         onBlur={() => setIsHighlighted(false)}
       >
-        {verticalAccents}
         <div
           className="flex h-16 w-16 items-center justify-center text-[2rem] font-semibold leading-none sm:h-20 sm:w-20 sm:text-[2.4rem]"
-          style={{ color: "var(--fg-body)" }}
+          style={{
+            color: "var(--fg-body)",
+            transform: `scale(${isHighlighted ? 1.16 : 1})`,
+            transition: "transform 200ms ease-out",
+          }}
         >
           +
         </div>
         <span
           className="text-xs font-semibold leading-tight transition-colors duration-200 sm:text-sm"
-          style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-muted)" }}
+          style={{ color: "var(--fg-muted)" }}
         >
           {item.displayName}
         </span>
@@ -139,7 +127,7 @@ function PartnerIcon({ item }: { item: PartnerReelItem }) {
   }
 
   const iconLayout = PARTNER_ICON_LAYOUT_BY_ID[item.id] ?? { scale: 1 };
-  const iconTransform = `translate(${iconLayout.x ?? 0}px, ${iconLayout.y ?? 0}px) scale(${iconLayout.scale})`;
+  const iconTransform = `translate(${iconLayout.x ?? 0}px, ${iconLayout.y ?? 0}px) scale(${iconLayout.scale * (isHighlighted ? 1.16 : 1)})`;
 
   const content = (
     <>
@@ -149,14 +137,14 @@ function PartnerIcon({ item }: { item: PartnerReelItem }) {
           alt=""
           aria-hidden="true"
           className="h-16 w-16 object-contain sm:h-20 sm:w-20"
-          style={{ transform: iconTransform }}
+          style={{ transform: iconTransform, transition: "transform 200ms ease-out" }}
           loading="lazy"
           decoding="async"
         />
       </div>
       <span
         className="text-xs font-semibold leading-tight transition-colors duration-200 sm:text-sm"
-        style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-muted)" }}
+        style={{ color: "var(--fg-muted)" }}
       >
         {item.displayName}
       </span>
@@ -176,7 +164,6 @@ function PartnerIcon({ item }: { item: PartnerReelItem }) {
         onFocus={() => setIsHighlighted(true)}
         onBlur={() => setIsHighlighted(false)}
       >
-        {verticalAccents}
         {content}
       </a>
     );
@@ -188,7 +175,6 @@ function PartnerIcon({ item }: { item: PartnerReelItem }) {
       onMouseEnter={() => setIsHighlighted(true)}
       onMouseLeave={() => setIsHighlighted(false)}
     >
-      {verticalAccents}
       {content}
     </div>
   );
@@ -403,7 +389,7 @@ export default function PartnerReel({ compactTopSpacing = false }: { compactTopS
       </div>
 
       <div className="mt-5 flex justify-center">
-        <WalletsLink />
+        <IntegrateZnsLink />
       </div>
     </section>
   );
