@@ -261,6 +261,7 @@
  * utilities) flip correctly when docs are in light mode.
  */
 html.light,
+html:not([data-theme]),
 [data-theme="light"] {
   /* Background */
   --color-background: #fefcf7;
