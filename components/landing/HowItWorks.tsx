@@ -137,7 +137,7 @@ const rowHeading = (title: string, prefix?: ReactNode) => (
           {prefix}
         </span>
       ) : null}
-      <h3 className="type-section-subtitle font-semibold text-[var(--color-accent-interactive,var(--fg-heading))]">
+      <h3 className="type-section-subtitle font-semibold text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover/step:text-[var(--color-accent-interactive,var(--fg-heading))]">
         {title}
       </h3>
     </div>
@@ -298,7 +298,7 @@ function BenefitPanel({
             ].join(" ")}
           >
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <h4 className="type-section-subtitle font-semibold text-[var(--color-accent-interactive,var(--fg-heading))]">
+              <h4 className="type-section-subtitle font-semibold text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]">
                 {benefit.title}
               </h4>
               {benefit.soon ? (
@@ -492,7 +492,7 @@ export default function HowItWorks() {
       <div id="benefits" className="features-intro scroll-mt-24">
         <span className="features-intro-eyebrow">Features</span>
         <h2>
-          <span className="hero-identity-text">Address people by name.</span>
+          Address people by name.
         </h2>
         <p>Zcash Names makes payments simpler, clearer, and built for everyday use.</p>
       </div>
@@ -506,9 +506,7 @@ export default function HowItWorks() {
       <div className="mt-24">
         <div id="how-it-works" className="features-intro scroll-mt-24">
           <span className="features-intro-eyebrow">Get your name</span>
-          <h2>
-            <span className="hero-activity-text">Claim your name early.</span>
-          </h2>
+          <h2>Claim your name early.</h2>
           <p>Reserve your spot, climb the queue through referrals, and choose your name when your invite arrives.</p>
         </div>
 
