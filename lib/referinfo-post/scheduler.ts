@@ -15,7 +15,7 @@ function emptyResult(schedule: Awaited<ReturnType<typeof getReferinfoPostSchedul
     skipReason,
     thread: {
       rootKind: "summary_top10",
-      xThreadMode: "quote_root",
+      xThreadMode: "linear",
       telegramDeliveryMode: "sequential",
     },
     schedule,

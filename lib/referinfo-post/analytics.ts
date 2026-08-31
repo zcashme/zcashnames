@@ -7,7 +7,6 @@ import type {
   ReferinfoPostTable,
   ReferinfoReportWindow,
 } from "@/lib/referinfo-post/types";
-import { formatReferinfoXThreadMode, type ReferinfoXThreadMode } from "@/lib/referinfo-post/x-delivery";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -78,7 +77,7 @@ export type ReferinfoDraftBundle = {
   reportWindow: ReferinfoReportWindow;
   thread: {
     rootKind: ReferinfoCaptionPolicy["rootKind"];
-    xThreadMode: ReferinfoXThreadMode;
+    xThreadMode: "linear" | "root_only";
     telegramDeliveryMode: ReferinfoCaptionPolicy["telegramDeliveryMode"];
   };
   posts: DraftPost[];
@@ -168,9 +167,9 @@ function buildConfigSummary(args: {
   policy: ReferinfoCaptionPolicy;
   kind: ReferinfoPostKind;
   order: number;
-  xThreadMode?: ReferinfoXThreadMode;
+  xThreadMode?: "linear" | "root_only";
 }): string {
-  return `Order ${args.order + 1}/${args.policy.postOrder.length}; root ${args.policy.rootKind}; X delivery ${formatReferinfoXThreadMode(args.xThreadMode ?? args.policy.xThreadMode)}; Telegram ${args.policy.telegramDeliveryMode}; template ${args.kind}`;
+  return `Order ${args.order + 1}/${args.policy.postOrder.length}; root ${args.policy.rootKind}; X thread ${args.xThreadMode ?? args.policy.xThreadMode}; Telegram ${args.policy.telegramDeliveryMode}; template ${args.kind}`;
 }
 
 function interpolateTemplate(template: string, tokens: Record<string, string>): string {
@@ -775,7 +774,7 @@ export async function buildReferinfoDraftBundle(args: {
     reportWindow,
   });
 
-  let xThreadMode: ReferinfoXThreadMode = args.policy.xThreadMode;
+  let xThreadMode: "linear" | "root_only" = args.policy.xThreadMode;
   const posts: DraftPost[] = [];
   const top10Template = pickTemplate(args.policy, "summary_top10");
   const top10Rows = rankingCurrent.slice(0, 10);
@@ -988,11 +987,9 @@ export async function buildReferinfoDraftBundle(args: {
   const qualifyingIndirectCandidates = indirectCandidates.filter((entry) => entry.metrics.indirectWeekly > 0);
   const topIndirectMeaningful = (topIndirect?.metrics.indirectWeekly ?? 0) >= 2 && qualifyingIndirectCandidates.length >= 2;
   const leaderChangesMeaningful = leaderChanges.weeklyLeaderDirectReferrals >= 3;
-  if (xThreadMode === "linear") {
-    xThreadMode = topMoversMeaningful && topNewcomersMeaningful && topIndirectMeaningful && leaderChangesMeaningful
-      ? "linear"
-      : "root_only";
-  }
+  xThreadMode = topMoversMeaningful && topNewcomersMeaningful && topIndirectMeaningful && leaderChangesMeaningful
+    ? "linear"
+    : "root_only";
   posts.push({
     kind: "top_indirect",
     order: 3,

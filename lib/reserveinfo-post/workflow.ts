@@ -5,6 +5,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { db } from "@/lib/db";
 import { renderReserveinfoImage, reserveinfoCaption } from "@/lib/reserveinfo-post/deterministic";
+import { buildReserveinfoXPostBody } from "@/lib/reserveinfo-post/x-delivery";
 import type { ReserveinfoPostTemplateVariant } from "@/lib/reserveinfo-post/template-variant";
 import { buildCompletedReserveinfoWindow, buildReserveinfoSchedule, normalizeReservedNames, paginateReservedNames, parseReservedNameMemo } from "@/lib/reserveinfo-post/planning";
 import {
@@ -61,29 +62,25 @@ async function sendTelegramReply(text: string, replyToMessageId: number): Promis
   return payload.result?.message_id ?? null;
 }
 
-async function createXPost(args: { text: string; mediaId?: string; replyTo?: string | null }): Promise<string | null> {
+async function createXPost(args: { text: string; mediaId?: string; replyTo?: string | null; quoteTweetId?: string | null }): Promise<string | null> {
   const auth = xConfig();
   const postUrl = "https://api.x.com/2/tweets";
   const response = await fetch(postUrl, {
     method: "POST",
     headers: { Authorization: oauthHeader({ url: postUrl, config: auth }), "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text: args.text,
-      ...(args.mediaId ? { media: { media_ids: [args.mediaId] } } : {}),
-      ...(args.replyTo ? { reply: { in_reply_to_tweet_id: args.replyTo } } : {}),
-    }),
+    body: JSON.stringify(buildReserveinfoXPostBody(args)),
   });
   const payload = await response.json().catch(() => ({})) as { data?: { id?: string }; detail?: string; title?: string };
   if (!response.ok || !payload.data?.id) throw new Error(`X post creation failure: ${payload.detail ?? payload.title ?? response.statusText}`);
   return payload.data.id ?? null;
 }
 
-async function sendX(buffer: Buffer, caption: string, replyTo: string | null): Promise<string | null> {
+async function sendX(buffer: Buffer, caption: string, quoteTweetId: string | null): Promise<string | null> {
   const auth = xConfig(); const uploadUrl = "https://upload.twitter.com/1.1/media/upload.json"; const params = { media_data: buffer.toString("base64") };
   const upload = await fetch(uploadUrl, { method: "POST", headers: { Authorization: oauthHeader({ url: uploadUrl, bodyParams: params, config: auth }), "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" }, body: new URLSearchParams(params).toString() });
   const uploadPayload = await upload.json().catch(() => ({})) as { media_id_string?: string; errors?: Array<{ message?: string }> };
   if (!upload.ok || !uploadPayload.media_id_string) throw new Error(`X media upload failure: ${uploadPayload.errors?.map((entry) => entry.message).filter(Boolean).join("; ") ?? upload.statusText}`);
-  return createXPost({ text: caption, mediaId: uploadPayload.media_id_string, replyTo });
+  return createXPost({ text: caption, mediaId: uploadPayload.media_id_string, quoteTweetId });
 }
 
 async function sendXProtectionReply(replyTo: string): Promise<string | null> {

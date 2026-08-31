@@ -27,13 +27,6 @@ import {
   type ReferinfoPostRunArgs,
 } from "@/lib/referinfo-post/types";
 import type { ReferinfoPostTemplateVariant } from "@/lib/referinfo-post/template-variant";
-import {
-  buildXPostRequestBody,
-  getReferinfoXPostTarget,
-  shouldBlockReferinfoXDeliveryAfterFailure,
-  type ReferinfoXPostTarget,
-  type ReferinfoXThreadMode,
-} from "@/lib/referinfo-post/x-delivery";
 
 const LOG_PREFIX = "[referinfo-post]";
 
@@ -349,12 +342,7 @@ async function uploadMediaToX(config: XConfig, buffer: Buffer): Promise<string> 
   return payload.media_id_string;
 }
 
-async function createXPost(
-  config: XConfig,
-  text: string,
-  mediaId?: string | null,
-  target?: ReferinfoXPostTarget,
-): Promise<string | null> {
+async function createXPost(config: XConfig, text: string, mediaId?: string | null, replyToTweetId?: string | null): Promise<string | null> {
   const url = "https://api.x.com/2/tweets";
   const response = await fetch(url, {
     method: "POST",
@@ -369,7 +357,11 @@ async function createXPost(
       }),
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(buildXPostRequestBody({ text, mediaId, target })),
+    body: JSON.stringify({
+      text,
+      ...(mediaId ? { media: { media_ids: [mediaId] } } : {}),
+      ...(replyToTweetId ? { reply: { in_reply_to_tweet_id: replyToTweetId } } : {}),
+    }),
   });
 
   const payload = (await response.json().catch(async () => ({ errors: [{ message: await response.text().catch(() => "") }] }))) as {
@@ -395,13 +387,9 @@ async function createXPost(
   return payload.data.id ?? null;
 }
 
-async function sendXPost(
-  config: XConfig,
-  artifact: GeneratedArtifact,
-  target?: ReferinfoXPostTarget,
-): Promise<string | null> {
+async function sendXPost(config: XConfig, artifact: GeneratedArtifact, replyToTweetId?: string | null): Promise<string | null> {
   const mediaId = await uploadMediaToX(config, artifact.buffer);
-  return createXPost(config, normalizeXPostText(artifact.post.caption), mediaId, target);
+  return createXPost(config, normalizeXPostText(artifact.post.caption), mediaId, replyToTweetId);
 }
 
 function emptyDelivery() {
@@ -486,44 +474,35 @@ async function dispatchTelegramArtifacts(artifacts: GeneratedArtifact[], planned
 async function dispatchXArtifacts(
   artifacts: GeneratedArtifact[],
   plannedPosts: ReferinfoPlannedPost[],
-  xThreadMode: ReferinfoXThreadMode,
+  xThreadMode: "linear" | "root_only",
 ): Promise<string | null> {
   const config = getXConfig();
-  let latestTopLevelTweetId: string | null = null;
+  let previousTweetId: string | null = null;
   let rootTweetId: string | null = null;
-  let xDeliveryBlocked = false;
+  let threadBroken = false;
   const artifactByKind = new Map(artifacts.map((artifact) => [artifact.post.kind, artifact]));
   const xPosts = xThreadMode === "root_only" ? plannedPosts.slice(0, 1) : plannedPosts;
 
   for (const post of xPosts) {
     post.delivery.x.attempted = true;
 
-    if (xDeliveryBlocked) {
-      post.delivery.x.error = "Cannot continue X delivery because a prior top-level post failed.";
+    if (threadBroken) {
+      post.delivery.x.error = "Cannot continue X thread because a previous X post failed.";
       continue;
     }
 
     try {
       const artifact = artifactByKind.get(post.kind);
-      const target = getReferinfoXPostTarget({
-        mode: xThreadMode,
-        kind: post.kind,
-        latestTopLevelTweetId,
-      });
       const postId: string | null = artifact
-        ? await sendXPost(config, artifact, target)
-        : await createXPost(config, normalizeXPostText(post.caption), null, target);
+        ? await sendXPost(config, artifact, previousTweetId)
+        : await createXPost(config, normalizeXPostText(post.caption), null, previousTweetId);
       post.delivery.x.ok = true;
       post.delivery.x.xPostId = postId;
-      if (post.kind !== "closing_note") {
-        latestTopLevelTweetId = postId ?? null;
-        if (!rootTweetId) rootTweetId = postId ?? null;
-      }
+      previousTweetId = postId ?? null;
+      if (!rootTweetId) rootTweetId = postId ?? null;
     } catch (error) {
       post.delivery.x.error = error instanceof Error ? error.message : String(error);
-      if (shouldBlockReferinfoXDeliveryAfterFailure(post.kind)) {
-        xDeliveryBlocked = true;
-      }
+      threadBroken = true;
     }
   }
 

@@ -28,7 +28,6 @@ import type {
   ReferinfoPostKind,
   ReferinfoReportWindow,
 } from "@/lib/referinfo-post/types";
-import { normalizeReferinfoXThreadMode } from "@/lib/referinfo-post/x-delivery";
 
 const DEFAULT_TEMPLATE_DIRECTORY = "templates/referinfo-post";
 const DEFAULT_TOP10_LAYOUT_PATH = path.resolve("templates/referinfo-post/layout.top10.json");
@@ -242,7 +241,7 @@ export async function loadReferinfoCaptionPolicy(
   const parsed = await loadJsonFile<Partial<ReferinfoCaptionPolicy>>(captionPolicyPath);
   const postOrder = Array.isArray(parsed.postOrder) && parsed.postOrder.length > 0 ? parsed.postOrder : [];
   const rootKind = typeof parsed.rootKind === "string" ? parsed.rootKind : "summary_top10";
-  const xThreadMode = normalizeReferinfoXThreadMode(parsed.xThreadMode);
+  const xThreadMode = parsed.xThreadMode === "linear" ? "linear" : "linear";
   const telegramDeliveryMode = parsed.telegramDeliveryMode === "sequential" ? "sequential" : "sequential";
   const templates = parsed.templates;
   if (!templates || typeof templates !== "object") {

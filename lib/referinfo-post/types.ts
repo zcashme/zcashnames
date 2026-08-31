@@ -1,5 +1,4 @@
 import type { ReferinfoPostTemplateVariant } from "@/lib/referinfo-post/template-variant";
-import type { ReferinfoXThreadMode } from "@/lib/referinfo-post/x-delivery";
 
 export const REFERINFO_POST_KINDS = [
   "summary_top10",
@@ -59,7 +58,7 @@ export type ReferinfoPostTable = {
 
 export type ReferinfoPostThreadMeta = {
   rootKind: ReferinfoPostKind;
-  xThreadMode: ReferinfoXThreadMode;
+  xThreadMode: "linear" | "root_only";
   telegramDeliveryMode: "sequential";
 };
 
@@ -132,7 +131,7 @@ export type ReferinfoPostTemplateConfig = {
 export type ReferinfoCaptionPolicy = {
   postOrder: ReferinfoPostKind[];
   rootKind: ReferinfoPostKind;
-  xThreadMode: ReferinfoXThreadMode;
+  xThreadMode: "linear" | "root_only";
   telegramDeliveryMode: "sequential";
   templates: Record<ReferinfoPostKind, ReferinfoPostTemplateConfig>;
 };
