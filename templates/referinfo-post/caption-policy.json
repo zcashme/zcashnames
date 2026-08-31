@@ -8,7 +8,7 @@
     "closing_note"
   ],
   "rootKind": "summary_top10",
-  "xThreadMode": "linear",
+  "xThreadMode": "quote_root",
   "telegramDeliveryMode": "sequential",
   "templates": {
     "summary_top10": {

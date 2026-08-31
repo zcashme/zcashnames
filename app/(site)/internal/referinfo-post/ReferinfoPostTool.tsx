@@ -22,6 +22,7 @@ import {
   type ReferinfoPostScheduleState,
   type ReferinfoReportWindow,
 } from "@/lib/referinfo-post/types";
+import { formatReferinfoXThreadMode } from "@/lib/referinfo-post/x-delivery";
 import {
   dryRunReferinfoPostAction,
   runReferinfoPostAction,
@@ -665,7 +666,7 @@ function ResultPanel({ result }: { result: ReferinfoPostResult | null }) {
   if (!result) {
     return (
       <div className="rounded-2xl border border-border-muted bg-[var(--color-card)] p-5 text-sm text-fg-muted">
-        Run or dry-run the workflow to inspect the weekly window, per-post delivery statuses, and X thread result.
+        Run or dry-run the workflow to inspect the weekly window, per-post delivery statuses, and X delivery result.
       </div>
     );
   }
@@ -698,7 +699,7 @@ function ResultPanel({ result }: { result: ReferinfoPostResult | null }) {
           <div>Week: <span className="font-semibold text-fg-heading">{result.reportWindow.weekLabel}</span></div>
           <div>Previous: <span className="font-semibold text-fg-heading">{result.reportWindow.prevWeekLabel}</span></div>
           <div>Timezone: <span className="font-semibold text-fg-heading">{result.reportWindow.timeZone}</span></div>
-          <div>X thread mode: <span className="font-semibold text-fg-heading">{result.thread?.xThreadMode ?? "N/A"}</span></div>
+          <div>X delivery: <span className="font-semibold text-fg-heading">{result.thread ? formatReferinfoXThreadMode(result.thread.xThreadMode) : "N/A"}</span></div>
           <div>Root X post ID: <span className="font-semibold text-fg-heading">{result.rootXPostId ?? "N/A"}</span></div>
         </div>
       ) : null}
