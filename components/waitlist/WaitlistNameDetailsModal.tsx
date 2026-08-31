@@ -310,6 +310,16 @@ function buildProtectedDetailsHref(name: string) {
   }).toString()}`;
 }
 
+function formatReferralCodeLabel(row: PublicWaitlistViewRow): string | null {
+  const displayCode = row.displayReferralCode?.trim() || "";
+  const canonicalCode = row.canonicalReferralCode?.trim() || "";
+
+  if (displayCode && canonicalCode && displayCode !== canonicalCode) {
+    return `${displayCode}, ${canonicalCode}`;
+  }
+  return displayCode || canonicalCode || null;
+}
+
 function positionLabel(row: PublicWaitlistViewRow) {
   if (row.reserved && row.rankPosition > 0) {
     return `Position for Name: ${row.rankPosition.toLocaleString()} of ${row.rankTotal.toLocaleString()}`;
@@ -359,7 +369,8 @@ export default function WaitlistNameDetailsModal({
   if (!isOpen || !row || typeof document === "undefined") return null;
 
   const status = getStatusLabel(row);
-  const referralCode = row.displayReferralCode?.trim() || null;
+  const referralCode = row.displayReferralCode?.trim() || row.canonicalReferralCode?.trim() || null;
+  const referralCodeLabel = formatReferralCodeLabel(row);
   const shareUrl = referralCode ? buildReferralUrl(referralCode) : null;
   const isPriorityClaim = row.ensPriorityClaim || row.zmPriorityClaim;
   const requestHref = buildProtectedRequestHref(row);
@@ -425,9 +436,9 @@ export default function WaitlistNameDetailsModal({
                     </h2>
                     <StatusBadge label={status} style={getStatusStyle(status)} />
                   </div>
-                  {referralCode ? (
+                  {referralCodeLabel ? (
                     <p className="mt-2 font-mono text-sm" style={{ color: "var(--fg-muted)" }}>
-                      {referralCode}
+                      {referralCodeLabel}
                     </p>
                   ) : null}
                 </div>

@@ -14,7 +14,6 @@ import {
   waitlistReferralAdjustment,
 } from "@/lib/waitlist/referral-spots";
 import { extractReferralCode, getPreferredReferralCode } from "@/lib/referral-code";
-import { syncWaitlistReservationFieldsFromReserves } from "@/lib/waitlist/reserves";
 
 export {
   WAITLIST_VIEW_EARLY_ACCESS_DATE_LABEL,
@@ -419,7 +418,12 @@ function buildSnapshotRows(args: {
       .map((row) => normalizeName(row.normalized_name) ?? normalizeName(row.name))
       .filter((value): value is string => Boolean(value)),
   );
+  const verifiedChildrenByParent = new Map<string, WaitlistViewDbRow[]>();
   const reservedChildrenByParent = new Map<string, WaitlistViewDbRow[]>();
+  const verifiedReferralSummaryByCode = new Map<
+    string,
+    { direct: number; attributed: number; indirect: number }
+  >();
   const reservedReferralSummaryByCode = new Map<
     string,
     { direct: number; reserved: number; indirect: number }
@@ -430,6 +434,12 @@ function buildSnapshotRows(args: {
     if (normalizedName) {
       nameCounts.set(normalizedName, (nameCounts.get(normalizedName) ?? 0) + 1);
     }
+
+    const referredBy = row.referred_by?.trim();
+    if (!referredBy) continue;
+    const children = verifiedChildrenByParent.get(referredBy) ?? [];
+    children.push(row);
+    verifiedChildrenByParent.set(referredBy, children);
   }
 
   for (const row of reservedVerifiedRows) {
@@ -438,6 +448,50 @@ function buildSnapshotRows(args: {
     const children = reservedChildrenByParent.get(referredBy) ?? [];
     children.push(row);
     reservedChildrenByParent.set(referredBy, children);
+  }
+
+  function summarizeVerifiedReferrals(referralCode: string): {
+    direct: number;
+    attributed: number;
+    indirect: number;
+  } {
+    const cached = verifiedReferralSummaryByCode.get(referralCode);
+    if (cached) return cached;
+
+    const directChildren = verifiedChildrenByParent.get(referralCode) ?? [];
+    const direct = directChildren.length;
+    let attributed = 0;
+    const visitedIds = new Set<string>();
+    const queue: Array<{ row: WaitlistViewDbRow; path: Set<string> }> = directChildren.map((row) => ({
+      row,
+      path: new Set([referralCode]),
+    }));
+
+    while (queue.length > 0) {
+      const next = queue.shift();
+      if (!next) break;
+      if (visitedIds.has(next.row.id)) continue;
+      visitedIds.add(next.row.id);
+      attributed += 1;
+
+      const nextCode = next.row.referral_code?.trim();
+      if (!nextCode || next.path.has(nextCode)) continue;
+
+      const childPath = new Set(next.path);
+      childPath.add(nextCode);
+
+      for (const child of verifiedChildrenByParent.get(nextCode) ?? []) {
+        queue.push({ row: child, path: childPath });
+      }
+    }
+
+    const summary = {
+      direct,
+      attributed,
+      indirect: Math.max(0, attributed - direct),
+    };
+    verifiedReferralSummaryByCode.set(referralCode, summary);
+    return summary;
   }
 
   function summarizeReservedReferrals(referralCode: string): {
@@ -488,12 +542,15 @@ function buildSnapshotRows(args: {
     const referralCode = row.referral_code?.trim() ?? "";
     const preferredReferralCode = getPreferredReferralCode(row);
     const normalizedName = normalizeName(row.name) ?? row.id.toLowerCase();
-    const referralSummary = referralCode
+    const verifiedReferralSummary = referralCode
+      ? summarizeVerifiedReferrals(referralCode)
+      : { direct: 0, attributed: 0, indirect: 0 };
+    const reservedReferralSummary = referralCode
       ? summarizeReservedReferrals(referralCode)
       : { direct: 0, reserved: 0, indirect: 0 };
-    const directReferrals = referralSummary.direct;
-    const reservedReferrals = referralSummary.reserved;
-    const indirectReferrals = referralSummary.indirect;
+    const directReferrals = verifiedReferralSummary.direct;
+    const reservedReferrals = reservedReferralSummary.reserved;
+    const indirectReferrals = verifiedReferralSummary.indirect;
     const interestCount = nameCounts.get(normalizedName) ?? 0;
     const basePosition = index + 1;
 
@@ -505,6 +562,8 @@ function buildSnapshotRows(args: {
       base_position: basePosition,
       interest_count: interestCount,
       is_protected: protectedNames.has(normalizedName),
+      reserved_direct_referrals: reservedReferralSummary.direct,
+      reserved_indirect_referrals: reservedReferralSummary.indirect,
       direct_referrals: directReferrals,
       reserved_referrals: reservedReferrals,
       indirect_referrals: indirectReferrals,
@@ -523,7 +582,10 @@ function buildSnapshotRows(args: {
     .map((row, index) => ({
       ...row,
       reservedBasePosition: index + 1,
-      reservedAdjustment: waitlistReferralAdjustment(row.direct_referrals, row.indirect_referrals),
+      reservedAdjustment: waitlistReferralAdjustment(
+        row.reserved_direct_referrals,
+        row.reserved_indirect_referrals,
+      ),
     }));
 
   const adjustedOrder = [...reservedEnriched].sort((a, b) => {
@@ -561,7 +623,6 @@ function buildSnapshotRows(args: {
 }
 
 export async function rebuildPublicWaitlistViewSnapshot(): Promise<{ rowCount: number }> {
-  await syncWaitlistReservationFieldsFromReserves();
   const [waitlistRows, protectedNames, existingSnapshotIds] = await Promise.all([
     fetchAllWaitlistRows(),
     fetchAllProtectedNames(),
@@ -679,15 +740,22 @@ export async function getPublicWaitlistViewData(args?: {
   protectedOnly?: boolean | null;
 }): Promise<PublicWaitlistViewData> {
   await ensurePublicWaitlistViewSnapshot();
+  const searchQuery = args?.searchQuery?.trim().toLowerCase() ?? "";
+  const searchMode = sanitizeSearchMode(args?.searchMode);
+  const needsFreshSnapshotForExactLookup = searchMode === "exact" && searchQuery.length > 0;
+
+  if (needsFreshSnapshotForExactLookup) {
+    await ensurePublicWaitlistViewSnapshotFresh();
+  } else {
+    triggerPublicWaitlistViewSnapshotRefresh();
+  }
+
   await reconcileSnapshotReservedFromLive();
-  triggerPublicWaitlistViewSnapshotRefresh();
 
   const page = sanitizePage(args?.page ?? 1);
   const pageSize = sanitizePageSize(args?.pageSize ?? WAITLIST_VIEW_PAGE_SIZE);
   const sortKey = sanitizeSortKey(args?.sortKey);
   const sortDirection = sanitizeSortDirection(args?.sortDirection);
-  const searchQuery = args?.searchQuery?.trim().toLowerCase() ?? "";
-  const searchMode = sanitizeSearchMode(args?.searchMode);
   const reservedOnly = args?.reservedOnly === true;
   const protectedOnly = args?.protectedOnly === true;
   const from = (page - 1) * pageSize;
@@ -836,8 +904,14 @@ export async function getPublicWaitlistViewData(args?: {
   }
 
   const rows = snapshotRows.map((row) => {
+    // A referral only moves a line after that referral has completed a reservation.
+    // The snapshot stores the reservation-qualified total, so never apply a
+    // visible verified-only referral when there are no reserved descendants.
     const adjustedLineNumber =
-      row.base_position - waitlistReferralAdjustment(row.direct_referrals, row.indirect_referrals);
+      row.base_position -
+      (row.reserved_referrals > 0
+        ? waitlistReferralAdjustment(row.direct_referrals, row.indirect_referrals)
+        : 0);
     const reserved = snapshotPeerIsReserved(row, liveReservedById);
     const rank = rankById.get(row.source_waitlist_id);
 
