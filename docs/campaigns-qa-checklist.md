@@ -110,7 +110,7 @@ from (
 
 ## Scenario 3b: Waitlist Verified Unreserved
 
-Requires `sql/2026-08-24-campaign-audience-verified-unreserved.sql` applied in Supabase.
+Requires `sql/2026-09-04-campaign-verified-unreserved-approved-access.sql` applied in Supabase.
 
 1. Set:
    - source kind: `zn_waitlist`
@@ -141,7 +141,23 @@ from (
 ) t;
 ```
 
-This count is an upper bound versus the campaign estimate: suppressions and waitlist unsubscribes are excluded at estimate time.
+This count is an upper bound versus the campaign estimate: suppressions, waitlist unsubscribes, and protected-name families with a currently approved access request are excluded at estimate time.
+
+Protected-name approved-access check:
+
+1. Find or create a verified, unreserved waitlist row for a protected parent name or one of its variants.
+2. Approve an access request for either that parent or any variant in the same family.
+3. Refresh `verified_unreserved` recipients and record the reduced count.
+4. Refresh `verified_only` recipients and verify its count is unchanged.
+5. If the same inbox has another eligible unreserved name, use `one_per_email` and verify the inbox remains included with only the blocked family removed from `related_names`.
+6. Correct the access request to denied, refresh recipients, and verify the family is included again.
+
+Expected:
+- an approved request for a parent excludes that parent and all variants in its family
+- an approved request for a variant excludes that variant and its parent family
+- only `verified_unreserved` changes; `verified_only`, `verified_newsletter`, and `all_rows` do not
+- `one_per_row` removes only matching rows
+- `one_per_email` removes an inbox only when no eligible unreserved row remains
 
 ## Scenario 4: Waitlist Selected Emails Happy Path
 
