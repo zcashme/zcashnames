@@ -4,7 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import ShareDropdown, { ShareTriggerIcon } from "@/components/ShareDropdown";
 import type { ProtectedViewDispute, ProtectedViewRow } from "@/lib/protected/view";
+import { buildReferralUrl, getPreferredReferralCode } from "@/lib/referral-code";
 
 type ProtectedNameDetailsModalProps = {
   row: ProtectedViewRow | null;
@@ -222,6 +224,45 @@ function FieldBlock({ label, children }: { label: string; children: ReactNode })
   );
 }
 
+function ChevronIcon({ direction }: { direction: "down" | "right" }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4 shrink-0"
+      aria-hidden="true"
+    >
+      <path d={direction === "right" ? "m9 6 6 6-6 6" : "m6 9 6 6 6-6"} />
+    </svg>
+  );
+}
+
+function BarChartIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <path d="M6 18V10" />
+      <path d="M12 18V6" />
+      <path d="M18 18v-8" />
+    </svg>
+  );
+}
+
+const referralActionClassName =
+  "grid min-h-11 w-full grid-cols-[1rem_minmax(0,1fr)_1rem] items-center gap-2 rounded-2xl border border-border-muted bg-transparent px-3 py-2 text-sm font-semibold text-fg-heading transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]";
+
 function UrlList({ urls }: { urls: string[] }) {
   if (urls.length === 0) {
     return <span style={{ color: "var(--fg-muted)" }}>—</span>;
@@ -333,6 +374,17 @@ export default function ProtectedNameDetailsModal({
   const status = row.status.toLowerCase();
   const canRequest = !row.redeemed && status === "protected";
   const canDispute = !row.redeemed && (status === "protected" || status === "rejected");
+  const referralCode = row.referral_code
+    ? getPreferredReferralCode({
+        referral_code: row.referral_code,
+        human_referral_code: row.human_referral_code,
+      })
+    : null;
+  const referralUrl = referralCode ? buildReferralUrl(referralCode) : null;
+  const referralDashboardHref = referralCode
+    ? `/leaders/ref/${encodeURIComponent(referralCode)}`
+    : null;
+  const hasFamilyVariants = Boolean(row.parent_name) || (row.variant_names?.length ?? 0) > 0;
 
   return createPortal(
     <div
@@ -486,6 +538,58 @@ export default function ProtectedNameDetailsModal({
               <FieldBlock label="Updated">{formatTimestamp(row.updated_at)}</FieldBlock>
               <FieldBlock label="Created">{formatTimestamp(row.created_at)}</FieldBlock>
             </dl>
+
+            {referralCode && referralUrl && referralDashboardHref ? (
+              <section
+                className="mt-6 space-y-3 pt-5"
+                style={{
+                  borderTop: "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
+                }}
+              >
+                <h3
+                  className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]"
+                  style={{ color: "var(--fg-muted)" }}
+                >
+                  {hasFamilyVariants ? "Family referrals" : "Referrals"}
+                </h3>
+                <div className="flex items-stretch justify-center gap-2 pt-1">
+                  <div className="w-48 shrink-0">
+                    <ShareDropdown
+                      label="Reflink"
+                      shareUrl={referralUrl}
+                      message={`Join Zcash Names with this referral link: ${referralUrl}`}
+                      xMessage={`Join Zcash Names with this referral link: ${referralUrl}`}
+                      emailSubject="Join Zcash Names"
+                      buttonClassName={referralActionClassName}
+                      menuAlign="left"
+                      menuDirection="down"
+                      portalMenu
+                      menuStyle={{ zIndex: 10050 }}
+                      renderTriggerContent={(open) => (
+                        <>
+                          <ShareTriggerIcon />
+                          <span className="min-w-0 truncate text-center">Reflink</span>
+                          <span
+                            className={`inline-flex transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+                          >
+                            <ChevronIcon direction="down" />
+                          </span>
+                        </>
+                      )}
+                    />
+                  </div>
+                  <div className="w-48 shrink-0">
+                    <Link href={referralDashboardHref} className={referralActionClassName}>
+                      <BarChartIcon />
+                      <span className="min-w-0 truncate text-center">Dashboard</span>
+                      <span aria-hidden="true" className="inline-flex">
+                        <ChevronIcon direction="right" />
+                      </span>
+                    </Link>
+                  </div>
+                </div>
+              </section>
+            ) : null}
 
             <section
               className="mt-6 pt-5"

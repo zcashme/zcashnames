@@ -192,7 +192,7 @@ export default function LeaderSnapshotPage() {
             No daily snapshot is available for <span className="font-mono">{selectedDate}</span>.
           </p>
           <Link href="/leaders" className="mt-4 inline-block text-sm font-semibold text-fg-heading underline underline-offset-4">
-            Back to Leaders
+            Leaderboard
           </Link>
         </div>
       </main>

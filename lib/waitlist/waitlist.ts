@@ -31,7 +31,7 @@ import {
   parseWaitlistConfirmToken,
 } from "@/lib/waitlist/confirm-token";
 import { sendWaitlistWelcomeEmail } from "@/lib/email/waitlist";
-import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
+import { ensureHumanReferralCode, referralCodeExists, resolveReferralIdentity } from "@/lib/referrals";
 import {
   CAPTCHA_ERROR_MESSAGE,
   CAPTCHA_FAILED_CODE,
@@ -294,11 +294,7 @@ function generateReferralCode(): string {
 async function generateUniqueReferralCode(): Promise<string> {
   for (let attempt = 0; attempt < MAX_REFERRAL_CODE_RETRIES; attempt += 1) {
     const candidate = generateReferralCode();
-    const { count, error } = await db
-      .from("zn_waitlist")
-      .select("id", { count: "exact", head: true })
-      .eq("referral_code", candidate);
-    if (!error && (count ?? 0) === 0) return candidate;
+    if (!(await referralCodeExists(candidate))) return candidate;
   }
   return generateReferralCode();
 }
@@ -309,8 +305,6 @@ function normalizeEmail(input: string): string {
 
 async function normalizeReferredBy(input: string | null): Promise<string | null> {
   const code = (input ?? "").trim();
-  if (isValidReferralCode(code)) return code;
-
   const resolved = await resolveReferralIdentity(code);
   return resolved?.canonicalCode ?? null;
 }

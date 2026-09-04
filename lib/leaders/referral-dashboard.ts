@@ -36,6 +36,8 @@ export interface DirectReferralEntry extends ReferralTreeEntry {
 }
 
 export interface ReferralDashboardBaseData {
+  ownerKind: "waitlist" | "protected_family";
+  protectedFamilyVariants: string[];
   root: WaitlistReferralRow | null;
   referralCode: string;
   canonicalReferralCode: string;
@@ -259,6 +261,8 @@ export function buildReferralDashboard(
     .map(([depth, count]) => ({ depth, count }));
 
   return {
+    ownerKind: "waitlist",
+    protectedFamilyVariants: [],
     root,
     referralCode: root?.preferred_referral_code ?? root?.human_referral_code ?? normalizedCode,
     canonicalReferralCode: normalizedCode,

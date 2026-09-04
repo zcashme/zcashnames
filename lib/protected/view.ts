@@ -7,6 +7,10 @@ import {
   type ProtectedNameCategory,
 } from "@/lib/protected/shared";
 import { expireProtectedNames } from "@/lib/zns/protected-claim";
+import {
+  getProtectedFamilyReferralProfiles,
+  getProtectedFamilyRootName,
+} from "@/lib/protected/referrals";
 
 const PROTECTED_VIEW_SELECT =
   "name, normalized_name, parent_name, category, status, redeemed, ens_priority_claim, zm_priority_claim, protected_at, expires_at, rejected_at, rejected_reason, updated_at, created_at, reason, evidence";
@@ -65,6 +69,9 @@ export type ProtectedViewRow = {
   name: string;
   normalized_name: string;
   parent_name: string | null;
+  /** Public family referral code shared by the parent and every variant. */
+  referral_code: string | null;
+  human_referral_code: string | null;
   /** Normalized names of variants when this row is a parent/canonical. Empty for variants. */
   variant_names: string[];
   category: string;
@@ -89,6 +96,8 @@ type ProtectedNameDbRow = Omit<
   | "disputes"
   | "expires_at"
   | "variant_names"
+  | "referral_code"
+  | "human_referral_code"
   | "ens_priority_claim"
   | "zm_priority_claim"
 > & {
@@ -780,12 +789,15 @@ export async function getProtectedViewData(args?: {
   const parentNamesOnPage = rawRows
     .filter((row) => !row.parent_name)
     .map((row) => row.name);
-  const [disputeMap, variantMap] = await Promise.all([
+  const [disputeMap, variantMap, referralProfiles] = await Promise.all([
     loadDisputesByProtectedNames(rawRows.map((row) => row.name)),
     loadVariantNamesByParentNames(parentNamesOnPage),
+    getProtectedFamilyReferralProfiles(rawRows.map(getProtectedFamilyRootName)),
   ]);
   const rows: ProtectedViewRow[] = rawRows.map((row) => ({
     ...row,
+    referral_code: referralProfiles.get(getProtectedFamilyRootName(row))?.referralCode ?? null,
+    human_referral_code: referralProfiles.get(getProtectedFamilyRootName(row))?.humanReferralCode ?? null,
     expires_at: row.expires_at ?? null,
     ens_priority_claim: priorityColumnsAvailable ? !!row.ens_priority_claim : false,
     zm_priority_claim: priorityColumnsAvailable ? !!row.zm_priority_claim : false,

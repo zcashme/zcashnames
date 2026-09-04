@@ -244,7 +244,7 @@ function ViewWaitlistLink() {
   return (
     <LandingActionLink
       proximityId="view-waitlist-link"
-      href="/waitlist"
+      href="/waitlist/view"
       label="View Waitlist"
       variant="text"
       showArrow

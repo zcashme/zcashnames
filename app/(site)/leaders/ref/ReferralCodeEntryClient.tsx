@@ -113,16 +113,16 @@ export default function ReferralCodeEntryPage() {
                 </button>
               </span>
             </div>
-            <ReferralCodeRecovery
-              className="text-center"
-              controlsId="leaders-ref-forgot-code"
-            />
             {error ? (
               <p className="text-sm" style={{ color: "var(--fg-muted)" }}>
                 {error}
               </p>
             ) : null}
           </form>
+          <ReferralCodeRecovery
+            className="text-center"
+            controlsId="leaders-ref-forgot-code"
+          />
         </div>
       </div>
 

@@ -360,6 +360,7 @@ export default function ReferralDashboardPage() {
   );
   const nameQueuePosition = data?.nameQueuePosition ?? null;
   const nameQueueTotal = data?.nameQueueTotal ?? 0;
+  const isProtectedFamily = data?.ownerKind === "protected_family";
   const waitlistDetailsSearch =
     data?.canonicalReferralCode || data?.referralCode || data?.root?.name || "";
   const waitlistDetailsHref = waitlistDetailsSearch
@@ -665,7 +666,7 @@ export default function ReferralDashboardPage() {
           <div>
             <h1 className="inline-flex flex-wrap items-center gap-2 text-3xl font-bold tracking-tight text-fg-heading">
               <span>{data.root?.name ?? data.referralCode}</span>
-              {data.root?.cabal ? (
+              {!isProtectedFamily && data.root?.cabal ? (
                 <button
                   type="button"
                   aria-label="Dashboard options"
@@ -675,15 +676,15 @@ export default function ReferralDashboardPage() {
                 >
                   {data.waitlistPosition ? `#${data.waitlistPosition.toLocaleString()}` : "-"}
                 </button>
-              ) : (
+              ) : !isProtectedFamily ? (
                 <span
                   className="inline-block rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
                   style={{ borderColor: "var(--leaders-card-border)" }}
                 >
                   {data.waitlistPosition ? `#${data.waitlistPosition.toLocaleString()}` : "-"}
                 </span>
-              )}
-              {data.rootBadge && (
+              ) : null}
+              {data.rootBadge && !isProtectedFamily && (
                 <img
                   src={data.rootBadge === "red" ? "/icons/fire-red.apng" : "/icons/fire-blue.apng"}
                   alt={data.rootBadge === "red" ? "streak" : "top 24h"}
@@ -713,41 +714,54 @@ export default function ReferralDashboardPage() {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-sm text-fg-muted">
-              {waitlistDetailsHref ? (
-                <Link
-                  href={waitlistDetailsHref}
-                  className="font-medium text-fg-body no-underline transition-colors hover:text-[var(--color-accent-interactive)]"
-                >
-                  Position{" "}
-                  {nameQueueTotal > 0
-                    ? nameQueuePosition
-                      ? `${nameQueuePosition.toLocaleString()} of ${nameQueueTotal.toLocaleString()}`
-                      : `N/A of ${nameQueueTotal.toLocaleString()}`
-                    : "-"}
-                </Link>
-              ) : (
-                <>
-                  Position{" "}
-                  <span className="font-medium text-fg-body">
-                    {nameQueueTotal > 0
-                      ? nameQueuePosition
-                        ? `${nameQueuePosition.toLocaleString()} of ${nameQueueTotal.toLocaleString()}`
-                        : `N/A of ${nameQueueTotal.toLocaleString()}`
-                      : "-"}
-                  </span>
-                </>
-              )}
-            </div>
-            <div className="mt-2 text-sm text-fg-muted">
-              {data.root ? (
-                <>
-                  Joined on <span className="font-medium text-fg-body">{formatDate(data.root.created_at)}</span>
-                </>
-              ) : (
-                "Referral code not found as a waitlist member."
-              )}
-            </div>
+            {isProtectedFamily ? (
+              <>
+                <div className="text-sm text-fg-muted">Protected family referral</div>
+                {data.protectedFamilyVariants.length > 0 ? (
+                  <div className="mt-2 max-w-xs text-sm text-fg-muted">
+                    Variants: <span className="font-medium text-fg-body">{data.protectedFamilyVariants.join(", ")}</span>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <div className="text-sm text-fg-muted">
+                  {waitlistDetailsHref ? (
+                    <Link
+                      href={waitlistDetailsHref}
+                      className="font-medium text-fg-body no-underline transition-colors hover:text-[var(--color-accent-interactive)]"
+                    >
+                      Position{" "}
+                      {nameQueueTotal > 0
+                        ? nameQueuePosition
+                          ? `${nameQueuePosition.toLocaleString()} of ${nameQueueTotal.toLocaleString()}`
+                          : `N/A of ${nameQueueTotal.toLocaleString()}`
+                        : "-"}
+                    </Link>
+                  ) : (
+                    <>
+                      Position{" "}
+                      <span className="font-medium text-fg-body">
+                        {nameQueueTotal > 0
+                          ? nameQueuePosition
+                            ? `${nameQueuePosition.toLocaleString()} of ${nameQueueTotal.toLocaleString()}`
+                            : `N/A of ${nameQueueTotal.toLocaleString()}`
+                          : "-"}
+                      </span>
+                    </>
+                  )}
+                </div>
+                <div className="mt-2 text-sm text-fg-muted">
+                  {data.root ? (
+                    <>
+                      Joined on <span className="font-medium text-fg-body">{formatDate(data.root.created_at)}</span>
+                    </>
+                  ) : (
+                    "Referral code not found as a waitlist member."
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
         {accessPromptMode === "commission" && (
@@ -1324,7 +1338,7 @@ function BackLink() {
   return (
     <Link href="/leaders" className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline">
       <DashboardIcon className="h-4 w-4 shrink-0" />
-      Back to Leaders
+      Leaderboard
     </Link>
   );
 }

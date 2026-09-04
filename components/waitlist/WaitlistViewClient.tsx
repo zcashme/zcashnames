@@ -178,7 +178,7 @@ function WaitlistFaq({
   maskedViewKey: string;
   onOpenViewKey: () => void;
 }) {
-  const [openId, setOpenId] = useState<string | null>(WAITLIST_VIEW_FAQ_ITEMS[0]?.id ?? null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const items = WAITLIST_VIEW_FAQ_ITEMS.map((item) => {
     if (item.id !== "waitlist-view-queue-key") return item;
     return {
@@ -748,11 +748,17 @@ export default function WaitlistViewClient({
     };
   }
 
-  function formatReferrals(row: PublicWaitlistViewRow): string {
+  function renderReferrals(row: PublicWaitlistViewRow) {
     if (row.directReferrals <= 0 && row.indirectReferrals <= 0) return "0";
     if (row.directReferrals <= 0) return `${row.indirectReferrals} indirect`;
     if (row.indirectReferrals <= 0) return `${row.directReferrals} direct`;
-    return `${row.directReferrals} direct Â· ${row.indirectReferrals} indirect`;
+
+    return (
+      <>
+        <span className="block whitespace-nowrap">{row.directReferrals} direct</span>
+        <span className="mt-1 block whitespace-nowrap">{row.indirectReferrals} indirect</span>
+      </>
+    );
   }
 
   return (
@@ -1098,11 +1104,10 @@ export default function WaitlistViewClient({
                           className="px-5 py-4 text-sm sm:px-6"
                           style={{
                             borderBottom: "1px solid color-mix(in srgb, var(--faq-border) 84%, transparent)",
-                            whiteSpace: "nowrap",
                           }}
                         >
                           <span className="font-mono tabular-nums" style={{ color: "var(--fg-body)" }}>
-                            {formatReferrals(row)}
+                            {renderReferrals(row)}
                           </span>
                         </td>
                       </tr>

@@ -233,13 +233,13 @@ export default function ShareKitClient({
                   </button>
                 </span>
               </div>
-              <ReferralCodeRecovery variant="sharekit" controlsId="sharekit-forgot-code" />
               {error ? (
                 <p className="text-sm" style={{ color: "var(--fg-muted)" }}>
                   {error}
                 </p>
               ) : null}
             </form>
+            <ReferralCodeRecovery variant="sharekit" controlsId="sharekit-forgot-code" />
           </div>
         </div>
 

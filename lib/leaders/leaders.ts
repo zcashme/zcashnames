@@ -30,6 +30,7 @@ import {
 import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referrals";
 import { resolveSiteUrl } from "@/lib/site-url";
 import { getWaitlistVerifyNameStats } from "@/lib/campaigns/waitlist-verify";
+import { getProtectedFamilyVariants } from "@/lib/protected/referrals";
 
 export type { DailyRow, RankingEntry, WeeklyRow } from "@/lib/leaders/rankings";
 export type { ReferralDashboardData } from "@/lib/leaders/referral-dashboard";
@@ -675,38 +676,67 @@ export async function getReferralDashboard(
     }
 
     const rows = toWaitlistReferralRows(data);
-    const dashboard: ReferralDashboardBaseData = buildReferralDashboard(resolved.canonicalCode, rows);
+    const waitlistDashboard: ReferralDashboardBaseData = buildReferralDashboard(resolved.canonicalCode, rows);
+    const isProtectedFamily = resolved.row.owner_kind === "protected_family";
+    const protectedFamilyVariants = isProtectedFamily && resolved.row.family_root_name
+      ? await getProtectedFamilyVariants(resolved.row.family_root_name)
+      : [];
+    const dashboard: ReferralDashboardBaseData = isProtectedFamily
+      ? {
+          ...waitlistDashboard,
+          ownerKind: "protected_family",
+          protectedFamilyVariants,
+          root: {
+            name: resolved.row.name ?? resolved.row.family_root_name ?? resolved.preferredCode,
+            referral_code: resolved.canonicalCode,
+            human_referral_code: resolved.row.human_referral_code,
+            preferred_referral_code: resolved.preferredCode,
+            referred_by: null,
+            created_at: resolved.row.created_at ?? new Date(0).toISOString(),
+            email_verified: true,
+            name_reserved: false,
+            cabal: false,
+          },
+          referralCode: resolved.preferredCode,
+          canonicalReferralCode: resolved.canonicalCode,
+          waitlistPosition: null,
+          waitlistTotal: 0,
+          rootBadge: null,
+        }
+      : waitlistDashboard;
     const leaderboard = buildLeaderboardFromRows(rows);
     const leaderboardRank =
       leaderboard.find((entry) => entry.canonical_referral_code === dashboard.canonicalReferralCode)?.rank ?? null;
-    const [commissionUnlocked, referralsUnlocked, nameStatsById] = await Promise.all([
-      dashboard.root?.cabal
-        ? hasCommissionAccess(dashboard.canonicalReferralCode).catch(() => false)
-        : false,
-      hasReferralTableAccess(dashboard.canonicalReferralCode).catch(() => false),
-      getWaitlistVerifyNameStats([
-        {
-          id: resolved.row.id,
-          email: null,
-          name: dashboard.root?.name ?? resolved.row.name,
-          created_at: dashboard.root?.created_at ?? null,
-          referral_code: dashboard.canonicalReferralCode,
-          human_referral_code: resolved.row.human_referral_code,
-          email_verified: dashboard.root?.email_verified ?? true,
-          email_verified_at: null,
-          name_reserved: dashboard.root?.name_reserved ?? false,
-          name_reserved_at: null,
-          name_reserved_txid: null,
-          campaign_email_confirm_response: null,
-        },
-      ]).catch((error) => {
-        console.error(`${REFERRAL_DASHBOARD_LOG_PREFIX} name queue stats failed`, {
-          referralCode: normalizedCode,
-          error: formatUnknownError(error),
-        });
-        return new Map();
-      }),
-    ]);
+    const [commissionUnlocked, referralsUnlocked, nameStatsById] = isProtectedFamily
+      ? [false, true, new Map()]
+      : await Promise.all([
+          dashboard.root?.cabal
+            ? hasCommissionAccess(dashboard.canonicalReferralCode).catch(() => false)
+            : false,
+          hasReferralTableAccess(dashboard.canonicalReferralCode).catch(() => false),
+          getWaitlistVerifyNameStats([
+            {
+              id: resolved.row.id,
+              email: null,
+              name: dashboard.root?.name ?? resolved.row.name,
+              created_at: dashboard.root?.created_at ?? null,
+              referral_code: dashboard.canonicalReferralCode,
+              human_referral_code: resolved.row.human_referral_code,
+              email_verified: dashboard.root?.email_verified ?? true,
+              email_verified_at: null,
+              name_reserved: dashboard.root?.name_reserved ?? false,
+              name_reserved_at: null,
+              name_reserved_txid: null,
+              campaign_email_confirm_response: null,
+            },
+          ]).catch((error) => {
+            console.error(`${REFERRAL_DASHBOARD_LOG_PREFIX} name queue stats failed`, {
+              referralCode: normalizedCode,
+              error: formatUnknownError(error),
+            });
+            return new Map();
+          }),
+        ]);
 
     const nameStats = nameStatsById.get(resolved.row.id);
 
