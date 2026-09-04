@@ -4,7 +4,7 @@ Operational review UI for protected-name suggestions, disputes, and access reque
 
 ## Setup
 
-1. Apply `sql/2026-08-06-protected-names-admin-ops.sql`, `sql/2026-08-25-protected-name-decision-dashboard.sql`, and `sql/2026-08-28-approved-protected-name-access-requests-view.sql` in the Supabase SQL editor, in that order.
+1. Apply `sql/2026-08-06-protected-names-admin-ops.sql`, `sql/2026-08-25-protected-name-decision-dashboard.sql`, `sql/2026-08-28-approved-protected-name-access-requests-view.sql`, `sql/2026-09-03-protected-name-decision-email-history.sql`, and `sql/2026-09-04-protected-name-access-decision-corrections.sql` in the Supabase SQL editor, in that order.
 2. Ensure `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured.
 3. Open `/admin/protected-names` (localhost bypasses basic auth; deployed hosts need `ADMIN_USERNAME` / `ADMIN_PASSWORD`).
 
@@ -18,6 +18,7 @@ Operational review UI for protected-name suggestions, disputes, and access reque
 | `/admin/protected-names/:name` | Name review, status, metadata, evidence, disputes |
 | `/admin/protected-names/:name/disputes/:disputeId` | Accept / dismiss dispute |
 | `/admin/protected-names/access/:requestId` | Approve / deny access request |
+| `/admin/protected-names/history` | Search all decisions, corrections, and email attempts |
 
 Public suggestion and dispute forms remain in `dotzcash_main`.
 
@@ -25,8 +26,9 @@ Public suggestion and dispute forms remain in `dotzcash_main`.
 
 - Suggestions, disputes, and access requests require an approval or denial reason.
 - Each decision is immutable in `zn_protected_name_decisions`, including a by-value snapshot of every submitted contact method and the preferred contact.
+- Later reason changes are immutable corrections, preserving the original reason and becoming the current rationale.
 - The dashboard sends the exact reason to the requester's email through Resend after the database decision commits.
-- Delivery state is recorded as pending, sent, or failed. Failed emails can be retried from the decision history without changing the underlying decision.
+- Every delivery attempt stores its exact subject and HTML. Sent emails can be viewed or resent, and failed emails can be retried without changing the underlying decision.
 - Decision panels include a preview toggle that renders the exact branded email and subject before sending.
 
 ## Manual access-code fulfillment

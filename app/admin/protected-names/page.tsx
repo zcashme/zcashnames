@@ -1,8 +1,10 @@
 import Link from "next/link";
+import QueueNavigation from "@/components/admin/protected-names/QueueNavigation";
 import QueueFilters from "@/components/admin/protected-names/QueueFilters";
 import QueueTable from "@/components/admin/protected-names/QueueTable";
 import {
   listProtectedNamesQueue,
+  getProtectedNameQueueCounts,
   parseQueueFilters,
 } from "@/lib/protected-names/queries";
 
@@ -19,6 +21,7 @@ export default async function ProtectedNamesQueuePage({
   const filters = parseQueueFilters(params);
   filters.status = "under_review";
   filters.dispute = "any";
+  const counts = await getProtectedNameQueueCounts();
 
   let result;
   let loadError: string | null = null;
@@ -58,11 +61,7 @@ export default async function ProtectedNamesQueuePage({
         </div>
       </section>
 
-      <nav className="flex flex-wrap gap-2 text-sm">
-        <Link href="/admin/protected-names" className="rounded bg-amber-500/15 px-3 py-1.5 text-amber-300">Suggestions</Link>
-        <Link href="/admin/protected-names/disputes" className="rounded border border-zinc-700 px-3 py-1.5 text-zinc-300 hover:border-zinc-500">Disputes</Link>
-        <Link href="/admin/protected-names/access" className="rounded border border-zinc-700 px-3 py-1.5 text-zinc-300 hover:border-zinc-500">Access requests</Link>
-      </nav>
+      <QueueNavigation counts={counts} active="suggestions" />
 
       <QueueFilters filters={filters} />
 

@@ -8,6 +8,10 @@ import type {
   EvidenceItem,
   ProtectedNameDetail,
   ProtectedNameDecision,
+  ProtectedNameDecisionAmendment,
+  ProtectedNameDecisionEmailAttempt,
+  ProtectedNameDecisionHistoryFilters,
+  ProtectedNameDecisionHistoryResult,
   ProtectedNameDispute,
   ProtectedNameAccessRequest,
   ProtectedNameQueueFilters,
@@ -31,6 +35,9 @@ const NAME_SELECT = [
   "submitted_by_email",
   "redeemed",
   "redeemed_at",
+  "expires_at",
+  "ens_priority_claim",
+  "zm_priority_claim",
   "protected_at",
   "rejected_at",
   "rejected_reason",
@@ -109,7 +116,80 @@ function mapDecisionRow(row: Record<string, unknown>): ProtectedNameDecision {
     name_status: typeof row.name_status === "string" ? row.name_status : null,
     name_did_transition: typeof row.name_did_transition === "boolean" ? row.name_did_transition : null,
     submitted_reason: typeof row.submitted_reason === "string" ? row.submitted_reason : null,
+    amendments: [],
+    email_attempts: [],
+    effective_reason: String(row.reason),
+    effective_decision: String(row.decision),
+    source_href: decisionSourceHref(String(row.workflow), String(row.source_id), String(row.protected_name)),
   };
+}
+
+function decisionSourceHref(workflow: string, sourceId: string, name: string): string {
+  if (workflow === "dispute") return `/admin/protected-names/${encodeURIComponent(name)}/disputes/${sourceId}`;
+  if (workflow === "access_request") return `/admin/protected-names/access/${sourceId}`;
+  return `/admin/protected-names/${encodeURIComponent(name)}`;
+}
+
+function mapDecisionAmendment(row: Record<string, unknown>): ProtectedNameDecisionAmendment {
+  return {
+    id: String(row.id),
+    decision_id: String(row.decision_id),
+    reason: String(row.reason),
+    corrected_decision: row.corrected_decision === "approved" || row.corrected_decision === "denied" ? row.corrected_decision : null,
+    created_at: String(row.created_at),
+  };
+}
+
+function mapDecisionEmailAttempt(row: Record<string, unknown>): ProtectedNameDecisionEmailAttempt {
+  return {
+    id: String(row.id), decision_id: String(row.decision_id),
+    amendment_id: typeof row.amendment_id === "string" ? row.amendment_id : null,
+    source_attempt_id: typeof row.source_attempt_id === "string" ? row.source_attempt_id : null,
+    send_kind: String(row.send_kind), recipient_email: String(row.recipient_email),
+    subject: typeof row.subject === "string" ? row.subject : null,
+    html: typeof row.html === "string" ? row.html : null,
+    delivery_status: String(row.delivery_status ?? "pending"), attempted_at: String(row.attempted_at),
+    sent_at: typeof row.sent_at === "string" ? row.sent_at : null,
+    provider_id: typeof row.provider_id === "string" ? row.provider_id : null,
+    error: typeof row.error === "string" ? row.error : null, created_at: String(row.created_at),
+  };
+}
+
+async function hydrateDecisionHistory(decisions: ProtectedNameDecision[]): Promise<ProtectedNameDecision[]> {
+  if (decisions.length === 0) return decisions;
+  const ids = decisions.map((decision) => decision.id);
+  const [amendmentsResult, attemptsResult] = await Promise.all([
+    db.from("zn_protected_name_decision_amendments").select("*").in("decision_id", ids).order("created_at", { ascending: true }),
+    db.from("zn_protected_name_decision_email_attempts").select("*").in("decision_id", ids).order("created_at", { ascending: true }),
+  ]);
+  const tablesMissing = (message: string | undefined) => Boolean(message && (message.includes("zn_protected_name_decision_amendments") || message.includes("zn_protected_name_decision_email_attempts")));
+  if (amendmentsResult.error && !tablesMissing(amendmentsResult.error.message)) throw new Error(amendmentsResult.error.message);
+  if (attemptsResult.error && !tablesMissing(attemptsResult.error.message)) throw new Error(attemptsResult.error.message);
+
+  const amendmentsByDecision = new Map<string, ProtectedNameDecisionAmendment[]>();
+  for (const row of amendmentsResult.data ?? []) {
+    const amendment = mapDecisionAmendment(row as Record<string, unknown>);
+    const items = amendmentsByDecision.get(amendment.decision_id) ?? [];
+    items.push(amendment);
+    amendmentsByDecision.set(amendment.decision_id, items);
+  }
+  const attemptsByDecision = new Map<string, ProtectedNameDecisionEmailAttempt[]>();
+  for (const row of attemptsResult.data ?? []) {
+    const attempt = mapDecisionEmailAttempt(row as Record<string, unknown>);
+    const items = attemptsByDecision.get(attempt.decision_id) ?? [];
+    items.push(attempt);
+    attemptsByDecision.set(attempt.decision_id, items);
+  }
+  return decisions.map((decision) => {
+    const amendments = amendmentsByDecision.get(decision.id) ?? [];
+    return {
+      ...decision,
+      amendments,
+      email_attempts: attemptsByDecision.get(decision.id) ?? [],
+      effective_reason: amendments.at(-1)?.reason ?? decision.reason,
+      effective_decision: amendments.reduce<string>((current, amendment) => amendment.corrected_decision ?? current, decision.decision),
+    };
+  });
 }
 
 function mapAccessRequest(row: Record<string, unknown>): ProtectedNameAccessRequest {
@@ -140,6 +220,9 @@ function mapNameRow(row: RawNameRow): ProtectedNameRow {
     submitted_by_email: row.submitted_by_email,
     redeemed: row.redeemed === true,
     redeemed_at: row.redeemed_at,
+    expires_at: row.expires_at,
+    ens_priority_claim: row.ens_priority_claim === true,
+    zm_priority_claim: row.zm_priority_claim === true,
     protected_at: row.protected_at,
     rejected_at: row.rejected_at,
     rejected_reason: row.rejected_reason,
@@ -606,6 +689,28 @@ export async function listProtectedNameDisputes(): Promise<ProtectedNameDispute[
   return ((data ?? []) as unknown as RawDisputeRow[]).map(mapDisputeRow);
 }
 
+export type ProtectedNameQueueCounts = {
+  suggestions: number;
+  disputes: number;
+  accessRequests: number;
+};
+
+export async function getProtectedNameQueueCounts(): Promise<ProtectedNameQueueCounts> {
+  const [suggestions, disputes, accessRequests] = await Promise.all([
+    db.from("zn_protected_names").select("name", { count: "exact", head: true }).eq("status", "under_review"),
+    db.from("zn_protected_names_disputes").select("id", { count: "exact", head: true }).eq("review_status", "under_review"),
+    db.from("waitlist_protected_name_access_requests").select("id", { count: "exact", head: true }).eq("status", "submitted"),
+  ]);
+  for (const result of [suggestions, disputes, accessRequests]) {
+    if (result.error) throw new Error(result.error.message);
+  }
+  return {
+    suggestions: suggestions.count ?? 0,
+    disputes: disputes.count ?? 0,
+    accessRequests: accessRequests.count ?? 0,
+  };
+}
+
 export async function listProtectedNameAccessRequests(): Promise<ProtectedNameAccessRequest[]> {
   const { data, error } = await db
     .from("waitlist_protected_name_access_requests")
@@ -639,5 +744,69 @@ export async function listProtectedNameDecisions(
     if (error.code === "42P01" || error.message.includes("zn_protected_name_decisions")) return [];
     throw new Error(error.message);
   }
-  return ((data ?? []) as Record<string, unknown>[]).map(mapDecisionRow);
+  return hydrateDecisionHistory(
+    ((data ?? []) as Record<string, unknown>[]).map(mapDecisionRow),
+  );
+}
+
+export function parseProtectedNameDecisionHistoryFilters(
+  searchParams: Record<string, string | string[] | undefined>,
+): ProtectedNameDecisionHistoryFilters {
+  const get = (key: string): string => {
+    const value = searchParams[key];
+    return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+  };
+  const workflow = get("workflow");
+  const delivery = get("delivery");
+  return {
+    workflow: workflow === "suggestion" || workflow === "dispute" || workflow === "access_request" ? workflow : "all",
+    delivery: delivery === "pending" || delivery === "sent" || delivery === "failed" ? delivery : "all",
+    q: get("q").trim(),
+    page: Math.max(1, Number.parseInt(get("page"), 10) || 1),
+    pageSize: 40,
+  };
+}
+
+export async function listProtectedNameDecisionHistory(
+  filters: ProtectedNameDecisionHistoryFilters,
+): Promise<ProtectedNameDecisionHistoryResult> {
+  let matchingIds: string[] | null = null;
+  if (filters.delivery !== "all") {
+    const { data, error } = await db
+      .from("zn_protected_name_decision_email_attempts")
+      .select("decision_id")
+      .eq("delivery_status", filters.delivery);
+    if (error) {
+      if (error.message.includes("zn_protected_name_decision_email_attempts")) {
+        return { decisions: [], totalCount: 0, page: filters.page, pageSize: filters.pageSize, hasMore: false, filters };
+      }
+      throw new Error(error.message);
+    }
+    matchingIds = [...new Set((data ?? []).map((row) => String((row as { decision_id: unknown }).decision_id)))];
+    if (matchingIds.length === 0) {
+      return { decisions: [], totalCount: 0, page: filters.page, pageSize: filters.pageSize, hasMore: false, filters };
+    }
+  }
+
+  let query = db.from("zn_protected_name_decisions").select("*", { count: "exact" }).order("decided_at", { ascending: false });
+  if (filters.workflow !== "all") query = query.eq("workflow", filters.workflow);
+  if (matchingIds) query = query.in("id", matchingIds);
+  if (filters.q) {
+    const escaped = filters.q.replace(/[%_]/g, "\\$&");
+    query = query.or(`protected_name.ilike.%${escaped}%,recipient_email.ilike.%${escaped}%`);
+  }
+  const from = (filters.page - 1) * filters.pageSize;
+  const { data, error, count } = await query.range(from, from + filters.pageSize - 1);
+  if (error) throw new Error(error.message);
+  const decisions = await hydrateDecisionHistory(
+    ((data ?? []) as Record<string, unknown>[]).map(mapDecisionRow),
+  );
+  return {
+    decisions,
+    totalCount: count ?? decisions.length,
+    page: filters.page,
+    pageSize: filters.pageSize,
+    hasMore: from + decisions.length < (count ?? 0),
+    filters,
+  };
 }

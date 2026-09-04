@@ -24,6 +24,9 @@ export default function ProtectedNamesAdminLayout({
           >
             Queue
           </Link>
+          <Link href="/admin/protected-names/history" className="text-zinc-300 hover:text-amber-400">
+            History
+          </Link>
           <Link href="/admin" className="text-zinc-500 hover:text-zinc-300">
             Admin home
           </Link>

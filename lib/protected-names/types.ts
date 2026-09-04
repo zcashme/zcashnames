@@ -58,6 +58,31 @@ export type ProtectedNameWorkflow = "suggestion" | "dispute" | "access_request";
 
 export type DecisionNotificationStatus = "pending" | "sent" | "failed" | string;
 
+export type ProtectedNameDecisionAmendment = {
+  id: string;
+  decision_id: string;
+  reason: string;
+  corrected_decision: "approved" | "denied" | null;
+  created_at: string;
+};
+
+export type ProtectedNameDecisionEmailAttempt = {
+  id: string;
+  decision_id: string;
+  amendment_id: string | null;
+  source_attempt_id: string | null;
+  send_kind: "initial" | "resend" | "retry" | "correction" | "legacy" | string;
+  recipient_email: string;
+  subject: string | null;
+  html: string | null;
+  delivery_status: DecisionNotificationStatus;
+  attempted_at: string;
+  sent_at: string | null;
+  provider_id: string | null;
+  error: string | null;
+  created_at: string;
+};
+
 export type ProtectedNameDecision = {
   id: string;
   workflow: ProtectedNameWorkflow | string;
@@ -78,6 +103,28 @@ export type ProtectedNameDecision = {
   name_status: string | null;
   name_did_transition: boolean | null;
   submitted_reason: string | null;
+  amendments: ProtectedNameDecisionAmendment[];
+  email_attempts: ProtectedNameDecisionEmailAttempt[];
+  effective_reason: string;
+  effective_decision: "approved" | "denied" | string;
+  source_href: string;
+};
+
+export type ProtectedNameDecisionHistoryFilters = {
+  workflow: ProtectedNameWorkflow | "all";
+  delivery: DecisionNotificationStatus | "all";
+  q: string;
+  page: number;
+  pageSize: number;
+};
+
+export type ProtectedNameDecisionHistoryResult = {
+  decisions: ProtectedNameDecision[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+  filters: ProtectedNameDecisionHistoryFilters;
 };
 
 export type ProtectedNameAccessRequest = {
@@ -109,6 +156,9 @@ export type ProtectedNameRow = {
   submitted_by_email: string | null;
   redeemed: boolean;
   redeemed_at: string | null;
+  expires_at: string | null;
+  ens_priority_claim: boolean;
+  zm_priority_claim: boolean;
   protected_at: string | null;
   rejected_at: string | null;
   rejected_reason: string | null;

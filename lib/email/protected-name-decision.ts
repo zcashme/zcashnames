@@ -29,15 +29,23 @@ export async function sendProtectedNameDecisionEmail(args: {
   nameStatus?: string | null;
   didTransition?: boolean;
   submittedReason?: string | null;
+  isCorrection?: boolean;
 }): Promise<string | null> {
-  const emailArgs = { ...args, detailsUrl: protectedNameDetailsUrl(args.name) };
-  const subject = protectedNameDecisionSubject(emailArgs);
+  const preview = await renderProtectedNameDecisionPreview(args);
+  return sendStoredProtectedNameDecisionEmail(args.to, preview.subject, preview.html);
+}
+
+export async function sendStoredProtectedNameDecisionEmail(
+  to: string,
+  subject: string,
+  html: string,
+): Promise<string | null> {
   const result = await sendEmail({
     from: FROM_EMAIL,
-    to: args.to,
+    to,
     cc: "support@zcashnames.com",
     subject,
-    react: ProtectedNameDecisionEmail(emailArgs),
+    html,
   });
   return typeof result.data?.id === "string" ? result.data.id : null;
 }
