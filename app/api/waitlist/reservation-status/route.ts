@@ -44,8 +44,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    const applied = await applyWaitlistReservationFromReserves(rowId);
-
     const rows = await findWaitlistRowsByNormalizedEmail(parsed.normalizedEmail);
     const row = rows.find((candidate) => candidate.id === rowId);
 
@@ -55,6 +53,8 @@ export async function POST(request: Request) {
         { status: 404 },
       );
     }
+
+    const applied = await applyWaitlistReservationFromReserves(rowId);
 
     if (applied.reserved) {
       row.name_reserved = true;

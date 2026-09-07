@@ -23,6 +23,7 @@
     "nextra": "^4.6.1",
     "nextra-theme-docs": "^4.6.1",
     "node-email-verifier": "^4.0.0",
+    "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -35,13 +36,18 @@
     "zcashname-sdk": "^0.10.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@playwright/test": "^1.59.1",
     "@react-email/preview-server": "^5.2.10",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^22.13.10",
+    "@types/pngjs": "^6.0.5",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
+    "jsqr": "^1.4.0",
     "pagefind": "^1.5.2",
+    "pngjs": "^7.0.0",
     "postcss": "^8.5.0",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.8.2"

@@ -63,6 +63,11 @@ sql/
 sql/*
 !sql/careers_jobs_and_applications.sql
 !sql/careers_legacy_jobs_cleanup.sql
+!sql/2026-09-07-reservation-refund-requests.sql
+!sql/2026-09-07-reservation-refund-abuse-controls.sql
+!tests/
+tests/*
+!tests/reservation-refunds.spec.ts
 
 # codesearch local semantic index
 .codesearch.db

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 const DEFAULT_INTERVAL_MS = 400;
-const DOT_SEQUENCE = [1, 2, 3, 0] as const;
+const DOT_SEQUENCE = [1, 2, 3] as const;
 
 export function getAnimatedEllipsis(nowMs: number, intervalMs = DEFAULT_INTERVAL_MS): string {
   const safeInterval = intervalMs > 0 ? intervalMs : DEFAULT_INTERVAL_MS;
@@ -25,7 +25,7 @@ export function useAnimatedEllipsis(active: boolean, intervalMs = DEFAULT_INTERV
   return active ? getAnimatedEllipsis(nowMs, intervalMs) : "";
 }
 
-/** Trailing animated dots (., .., ..., empty) — use in place of a final period. */
+/** Trailing animated dots (., .., ..., repeat) — use in place of a final period. */
 export function AnimatedEllipsis({
   active = true,
   intervalMs = DEFAULT_INTERVAL_MS,

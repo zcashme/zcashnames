@@ -1,4 +1,7 @@
 import "server-only";
+import { parseWaitlistReserveMemo } from "./reservation-memo";
+import { reservationMemoFailures } from "./reservation-refund-validation";
+export { parseWaitlistReserveMemo } from "./reservation-memo";
 
 import { db } from "@/lib/db";
 import {
@@ -42,12 +45,6 @@ type ReservedWaitlistEmailRow = {
   reservation_confirmed_email_sent_at: string | null;
 };
 
-type ParsedReserveMemo = {
-  name: string | null;
-  uuid: string | null;
-  uaddr: string | null;
-  fields: Record<string, string>;
-};
 
 function parseZecToZats(value: string): number | null {
   const trimmed = value.trim();
@@ -73,36 +70,6 @@ function coerceAmountZats(value: string | number | null | undefined): number | n
   return null;
 }
 
-function normalizeReserveMemoInput(fullMemo: string): string {
-  return fullMemo.startsWith("ZNS:RESERVE|")
-    ? fullMemo.slice("ZNS:RESERVE|".length)
-    : fullMemo;
-}
-
-export function parseWaitlistReserveMemo(fullMemo: string | null | undefined): ParsedReserveMemo | null {
-  const trimmed = fullMemo?.trim();
-  if (!trimmed) return null;
-
-  const normalized = normalizeReserveMemoInput(trimmed);
-  const fields: Record<string, string> = {};
-
-  for (const part of normalized.split("|")) {
-    const separatorIndex = part.indexOf("::");
-    if (separatorIndex <= 0) continue;
-
-    const key = part.slice(0, separatorIndex).trim();
-    const value = part.slice(separatorIndex + 2).trim();
-    if (!key || !value) continue;
-    fields[key.toLowerCase()] = value;
-  }
-
-  return {
-    name: fields["name"] ?? null,
-    uuid: fields["uuid"] ?? null,
-    uaddr: fields["uaddr"] ?? null,
-    fields,
-  };
-}
 
 /**
  * Incoming reserve payments detected by the viewer wallet.
@@ -208,6 +175,16 @@ export async function syncWaitlistReservationFieldsFromReserves(): Promise<{
   }
 
   const reserveRows = await fetchAllWaitlistReserveTransactions();
+  const candidateIds = [...new Set(reserveRows.flatMap(row => {
+    const parsed = parseWaitlistReserveMemo(row.memo);
+    return parsed?.uuid && parsed.name && !reservationMemoFailures(row.memo, parsed.name, parsed.uuid).length ? [parsed.uuid] : [];
+  }))];
+  const namesById = new Map<string, string>();
+  for (let offset = 0; offset < candidateIds.length; offset += 200) {
+    const { data, error } = await db.from("zn_waitlist").select("id, name").in("id", candidateIds.slice(offset, offset + 200));
+    if (error) throw new Error(error.message);
+    for (const candidate of data ?? []) if (candidate.name) namesById.set(candidate.id, candidate.name);
+  }
   const firstValidReservationByUuid = new Map<
     string,
     { createdAt: string; txid: string | null }
@@ -216,6 +193,8 @@ export async function syncWaitlistReservationFieldsFromReserves(): Promise<{
   for (const row of reserveRows) {
     const parsed = parseWaitlistReserveMemo(row.memo);
     if (!parsed?.uuid || !row.detected_at) continue;
+    const expectedName = namesById.get(parsed.uuid);
+    if (!expectedName || reservationMemoFailures(row.memo, expectedName, parsed.uuid).length) continue;
 
     const amountZats = coerceAmountZats(row.amount_zats);
     if (amountZats == null || amountZats < minimumZats) continue;
@@ -263,6 +242,10 @@ async function findQualifyingReserveForUuid(rowId: string): Promise<{
     throw new Error("WAITLIST_RESERVE_FEE_ZEC is missing or invalid.");
   }
 
+  const { data: waitlistRow, error: waitlistError } = await db.from("zn_waitlist").select("name").eq("id", rowId).maybeSingle();
+  if (waitlistError) throw new Error(waitlistError.message);
+  if (!waitlistRow?.name) return null;
+
   const paymentAddress = getWaitlistReservePaymentAddress()?.trim() || null;
   let query = db
     .from("zn_waitlist_reserves_transactions")
@@ -283,6 +266,7 @@ async function findQualifyingReserveForUuid(rowId: string): Promise<{
   for (const row of (data ?? []) as WaitlistReserveTransactionRow[]) {
     const parsed = parseWaitlistReserveMemo(row.memo);
     if (parsed?.uuid !== rowId || !row.detected_at) continue;
+    if (reservationMemoFailures(row.memo, waitlistRow.name, rowId).length) continue;
     const amountZats = coerceAmountZats(row.amount_zats);
     if (amountZats == null || amountZats < minimumZats) continue;
     return {

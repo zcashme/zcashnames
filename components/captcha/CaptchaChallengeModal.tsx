@@ -19,6 +19,8 @@ type CaptchaChallengeModalProps = {
   submitting?: boolean;
   onCancel: () => void;
   onConfirm: (solution: CaptchaSolution) => void | Promise<void>;
+  getChallenge?: () => Promise<{ image: string; token: string }>;
+  confirmDisabled?: boolean;
 };
 
 export default function CaptchaChallengeModal({
@@ -29,10 +31,16 @@ export default function CaptchaChallengeModal({
   submitting = false,
   onCancel,
   onConfirm,
+  getChallenge = getSvgCaptchaChallenge,
+  confirmDisabled = false,
 }: CaptchaChallengeModalProps) {
   const titleId = useId();
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef(onCancel);
+  const workingRef = useRef(false);
+  cancelRef.current = onCancel;
 
   const [challenge, setChallenge] = useState<{ image: string; token: string } | null>(null);
   const [answer, setAnswer] = useState("");
@@ -41,22 +49,23 @@ export default function CaptchaChallengeModal({
   const [confirming, setConfirming] = useState(false);
 
   const busy = loading || confirming || submitting;
-  const canConfirm = Boolean(challenge?.token) && answer.trim().length > 0 && !busy;
+  workingRef.current = confirming || submitting;
+  const canConfirm = Boolean(challenge?.token) && answer.trim().length > 0 && !busy && !confirmDisabled;
 
   const loadChallenge = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const next = await getSvgCaptchaChallenge();
+      const next = await getChallenge();
       setChallenge(next);
       setAnswer("");
-    } catch {
+    } catch (error) {
       setChallenge(null);
-      setError("Could not load the human check. Please try again.");
+      setError(error instanceof Error ? error.message : "Could not load the human check. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getChallenge]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -77,15 +86,25 @@ export default function CaptchaChallengeModal({
 
   useEffect(() => {
     if (!isOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !submitting && !confirming) {
+      if (event.key === "Escape" && !workingRef.current) {
         event.preventDefault();
-        onCancel();
+        event.stopPropagation();
+        cancelRef.current();
+      }
+      if (event.key === "Tab") {
+        const items = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled)') ?? []);
+        const first = items[0]; const last = items[items.length - 1];
+        if (!first) { event.preventDefault(); dialogRef.current?.focus(); return; }
+        const outside = !items.includes(document.activeElement as HTMLElement);
+        if (event.shiftKey && (document.activeElement === first || outside)) { event.preventDefault(); last.focus(); }
+        if (!event.shiftKey && (document.activeElement === last || outside)) { event.preventDefault(); first.focus(); }
       }
     }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, submitting, confirming, onCancel]);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => { document.removeEventListener("keydown", onKeyDown, true); previousFocus?.focus(); };
+  }, [isOpen]);
 
   async function handleConfirm() {
     if (!canConfirm || !challenge) return;
@@ -99,8 +118,8 @@ export default function CaptchaChallengeModal({
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Human check failed. Please try again.";
-      setError(message);
       await loadChallenge();
+      setError(message);
     } finally {
       setConfirming(false);
     }
@@ -117,6 +136,8 @@ export default function CaptchaChallengeModal({
       }}
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -233,12 +254,12 @@ export default function CaptchaChallengeModal({
             </p>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={onCancel}
               disabled={submitting || confirming}
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-border-muted bg-transparent px-5 py-2 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border-muted disabled:hover:text-fg-body"
+              className="inline-flex min-h-11 w-full min-w-0 items-center justify-center rounded-full border border-border-muted bg-transparent px-5 py-2 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border-muted disabled:hover:text-fg-body"
             >
               Cancel
             </button>
@@ -246,7 +267,7 @@ export default function CaptchaChallengeModal({
               type="button"
               onClick={() => void handleConfirm()}
               disabled={!canConfirm}
-              className="inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:brightness-100"
+              className="inline-flex min-h-11 w-full min-w-0 items-center justify-center rounded-full px-5 py-2 text-center text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:brightness-100"
               style={{
                 background: "var(--home-result-primary-bg)",
                 color: "var(--home-result-primary-fg)",

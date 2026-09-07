@@ -19,6 +19,7 @@ import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { QrBlock } from "@/components/ui/QrBlock";
 import NoirReservePaymentActions from "@/components/verify/NoirReservePaymentActions";
+import ReservationRefundModal from "@/components/verify/ReservationRefundModal";
 import HeroShareButton from "@/components/HeroShareButton";
 import VerifyAmbientHeroSection from "@/components/verify/VerifyAmbientHeroSection";
 import {
@@ -1970,8 +1971,10 @@ function ReservationMetaBox({
 
 function ExactAmountCallout({
   variant,
+  onForgot,
 }: {
   variant: "payment" | "sent";
+  onForgot?: () => void;
 }) {
   return (
     <div
@@ -1987,7 +1990,8 @@ function ExactAmountCallout({
         </p>
       ) : (
         <p className="text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>
-          Your reservation will appear after the transaction has been mined. Refresh status to check again.
+          Your reservation will appear when your payment and memo has been found.{" "}
+          <button type="button" onClick={onForgot} className="cursor-pointer font-semibold  text-[var(--color-accent-interactive)]">Forgot something?</button>
         </p>
       )}
     </div>
@@ -2661,7 +2665,7 @@ function WhatToDoSteps({
   minimumAmountZec: string;
 }) {
   const steps = [
-    `Send at least ${minimumAmountZec} ZEC. Don't change address or memo.`,
+    `Send at least ${minimumAmountZec} ZEC with the exact memo.`,
     "Tap I Sent It!",
     "We’ll email your access code before Early Access begins.",
   ];
@@ -3917,6 +3921,7 @@ function VerifyPaymentCard({
   const rebateEnabledRef = useRef(card.rebateEnabled);
   rebateEnabledRef.current = card.rebateEnabled;
   const [activeTab, setActiveTab] = useState<"payment" | "sent">("payment");
+  const [refundOpen, setRefundOpen] = useState(false);
   const baseAmountValue = roundPendingZecAmount(parseZecAmount(baseAmountZec));
   const [selectedAmount, setSelectedAmount] = useState(baseAmountValue);
   const [draftAmount, setDraftAmount] = useState(() => formatPendingZecAmount(baseAmountValue));
@@ -4383,7 +4388,7 @@ function VerifyPaymentCard({
                 style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}
               >
                 <PaymentTabButton
-                  label="Payment"
+                  label="Pay+Memo"
                   active={activeTab === "payment"}
                   onClick={() => setActiveTab("payment")}
                 />
@@ -4455,7 +4460,28 @@ function VerifyPaymentCard({
                       onReservationConfirmed={onReservationConfirmed}
                     />
                     <div className="mt-5">
-                      <ExactAmountCallout variant="sent" />
+                      <ExactAmountCallout variant="sent" onForgot={() => setRefundOpen(true)} />
+                      {refundOpen && <ReservationRefundModal
+                        token={verifyToken}
+                        rowId={card.id}
+                        name={card.name || "this name"}
+                        paymentAddress={paymentAddress}
+                        onClose={() => setRefundOpen(false)}
+                        onQualified={async () => {
+                          const response = await fetch("/api/waitlist/reservation-status", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ token: verifyToken, rowId: card.id }),
+                          });
+                          const payload = parseReservationStatusPayload(await response.text());
+                          if (!response.ok || !payload || !payload.ok) throw new Error("Payment checks passed, but status could not be refreshed. Please try again.");
+                          onStatusUpdate(card.id, payload.card);
+                          if (payload.card.reserved) {
+                            setRefundOpen(false);
+                            onReservationConfirmed(card);
+                          }
+                        }}
+                      />}
                     </div>
                   </div>
                 )}

@@ -6,6 +6,9 @@ export function rebateUnifiedAddressError(
 ): string | null {
   const trimmed = address.trim();
   if (!trimmed) return "Enter a shielded Unified Address.";
+  if (trimmed !== trimmed.toLowerCase() && trimmed !== trimmed.toUpperCase()) {
+    return "Enter a valid Unified Address without mixed letter case.";
+  }
 
   const result = validateAddress(trimmed);
   if (result.status !== "unified") {

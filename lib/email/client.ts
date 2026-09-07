@@ -23,6 +23,7 @@ export function getResend(): Resend {
 
 export async function sendEmail(
   params: Parameters<Resend["emails"]["send"]>[0],
+  options?: Parameters<Resend["emails"]["send"]>[1],
 ): Promise<Awaited<ReturnType<Resend["emails"]["send"]>>> {
   const resend = getResend();
   if (params.react) {
@@ -31,10 +32,10 @@ export async function sendEmail(
       throw new Error("Email HTML render produced an empty body.");
     }
     const { react: _react, ...rest } = params;
-    return resend.emails.send({ ...rest, html });
+    return resend.emails.send({ ...rest, html }, options);
   }
   if (!params.html && !params.text) {
     throw new Error("Email is missing html and text.");
   }
-  return resend.emails.send(params);
+  return resend.emails.send(params, options);
 }
