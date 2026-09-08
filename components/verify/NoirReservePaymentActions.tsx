@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import PayWithNoirButton from "@/components/verify/PayWithNoirButton";
+import PayWithNoirButton from "@/components/wallets/PayWithNoirButton";
 import RebateAvailableToggle from "@/components/verify/RebateAvailableToggle";
 import { detectNoirWallet } from "@/lib/wallets/noir";
 import { truncateUnifiedAddress } from "@/lib/waitlist/rebate-address";

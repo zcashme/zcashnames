@@ -250,6 +250,8 @@ export function QrBlock({
           </div>
         </div>
 
+        {belowQr}
+
         <button
           type="button"
           onClick={() => setShowHelp((v) => !v)}

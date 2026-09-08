@@ -68,6 +68,7 @@ sql/*
 !tests/
 tests/*
 !tests/reservation-refunds.spec.ts
+!tests/noir-wallet.spec.ts
 
 # codesearch local semantic index
 .codesearch.db

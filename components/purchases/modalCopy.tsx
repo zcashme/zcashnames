@@ -137,7 +137,7 @@ export function settlingStatusMessage(action: Action, settleState: ScanState): R
     case "in_mempool":
     case "confirming":
       return (
-        <SentenceLines>
+        <SentenceLines align="center">
           <span>Your {ACTION_NOUNS[action]} is being mined.</span>
           <span>Hang tight &mdash; this should only take a moment.</span>
         </SentenceLines>
@@ -235,7 +235,6 @@ export function modalDescription(
     if (state.settleState === "mined") return minedMessage("BUY", name, state.address);
     return <>The registry is waiting for your payment to the seller to confirm on-chain.</>;
   }
-  if (state.address && state.settleState === "mined") return minedMessage("BUY", name, state.address);
   if (action === "BUY") {
     return (
       <>

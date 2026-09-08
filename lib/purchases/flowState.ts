@@ -29,6 +29,7 @@ export type PurchaseFlowState = {
   otpError: string;
   otpLoading: boolean;
   otpSent: boolean;
+  otpNoirSentAt: number;
   otpAttempts: number;
   otpVerified: boolean;
   // scanning phase (watches memo'd tx on the mempool watcher)
@@ -65,6 +66,7 @@ export const PURCHASE_FLOW_INIT: PurchaseFlowState = {
   otpError: "",
   otpLoading: false,
   otpSent: false,
+  otpNoirSentAt: 0,
   otpAttempts: 0,
   otpVerified: false,
   scanState: "not_detected",
@@ -100,7 +102,16 @@ export const PHASE_OWNS: Record<Phase, ReadonlyArray<keyof PurchaseFlowState>> =
   input: [],
   // Back-nav past otp burns the session (memo/uri/sent/attempts) so the next
   // forward pass requests a fresh passcode.
-  otp: ["otpCode", "otpError", "otpMemo", "otpUri", "otpSent", "otpAttempts", "otpVerified"],
+  otp: [
+    "otpCode",
+    "otpError",
+    "otpMemo",
+    "otpUri",
+    "otpSent",
+    "otpNoirSentAt",
+    "otpAttempts",
+    "otpVerified",
+  ],
   confirm: ["uri", "memo", "paymentAddress", "amountZec"],
   scanning: ["scanState"],
   fund: [],

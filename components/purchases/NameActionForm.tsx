@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAppRouter } from "@/components/hooks/useAppRouter";
 import { usePurchaseFlow } from "@/components/hooks/usePurchaseFlow";
@@ -25,6 +25,9 @@ import {
   settlingStatusMessage,
 } from "@/components/purchases/modalCopy";
 import PasscodeBoxes from "@/components/purchases/PasscodeBoxes";
+import PayWithNoirButton from "@/components/wallets/PayWithNoirButton";
+import UseNoirAddressButton from "@/components/wallets/UseNoirAddressButton";
+import { useNoirOtpAutofill } from "@/components/wallets/useNoirOtpAutofill";
 
 const SITE_ORIGIN = "https://www.zcashnames.com";
 
@@ -295,6 +298,19 @@ export default function NameActionForm({
     handleVerifyOtp,
   } = flow;
 
+  const handleNoirOtpCode = useCallback(
+    (code: string) => {
+      set({ otpCode: code, otpError: "", otpVerified: false });
+    },
+    [set],
+  );
+  const noirOtpAutofillStatus = useNoirOtpAutofill({
+    active: phase === "otp" && s.otpSent && !s.otpVerified,
+    sentAt: s.otpNoirSentAt,
+    code: s.otpCode,
+    onCode: handleNoirOtpCode,
+  });
+
   const doneHref = returnHref ?? explorerNameHref(name, network);
   const isSuccess =
     (phase === "scanning" && s.scanState === "mined" && action !== "BUY") ||
@@ -383,7 +399,14 @@ export default function NameActionForm({
           return (
             <InlineStepButton
               label="I Sent It"
-              onClick={() => set({ otpSent: true, otpError: "", otpVerified: false })}
+              onClick={() =>
+                set({
+                  otpSent: true,
+                  otpNoirSentAt: 0,
+                  otpError: "",
+                  otpVerified: false,
+                })
+              }
             />
           );
         }
@@ -524,6 +547,13 @@ export default function NameActionForm({
                 style={buildFaqTextFieldStyle(!!s.inputError && active && needsAddress)}
                 autoComplete="off"
               />
+              {active ? (
+                <UseNoirAddressButton
+                  onAddress={(address) =>
+                    set({ addressInput: address, inputError: "" })
+                  }
+                />
+              ) : null}
               {active && isMatchedBuyer && (
                 <p className="mt-2 text-xs" style={{ color: "#22c55e" }}>
                   ✓ This address matches the locked purchase. Continue to send the seller payment.
@@ -585,6 +615,15 @@ export default function NameActionForm({
                 autoComplete="off"
                 spellCheck={false}
               />
+              {active ? (
+                <UseNoirAddressButton
+                  kind="transparent"
+                  network={network}
+                  onAddress={(address) =>
+                    set({ payTaddrInput: address, inputError: "" })
+                  }
+                />
+              ) : null}
             </div>
           )}
 
@@ -631,6 +670,24 @@ export default function NameActionForm({
                     amount={getNetworkConstants(network).OTP_AMOUNT}
                     memo={s.otpMemo}
                     size={180}
+                    belowQr={
+                      !s.otpSent ? (
+                        <PayWithNoirButton
+                          to={getNetworkConstants(network).OTP_SIGNIN_ADDR}
+                          amount={getNetworkConstants(network).OTP_AMOUNT}
+                          memo={s.otpMemo}
+                          onSent={(_txid, startedAt) =>
+                            set({
+                              otpSent: true,
+                              otpNoirSentAt: startedAt,
+                              otpCode: "",
+                              otpError: "",
+                              otpVerified: false,
+                            })
+                          }
+                        />
+                      ) : null
+                    }
                   />
                 </div>
               ) : null}
@@ -666,6 +723,26 @@ export default function NameActionForm({
                 }
                 onSubmit={() => void handleVerifyOtp()}
               />
+              {active && noirOtpAutofillStatus === "polling" ? (
+                <p className="text-center text-xs" style={{ color: "var(--fg-muted)" }}>
+                  Waiting for the passcode from Noir Wallet&hellip;
+                </p>
+              ) : null}
+              {active && noirOtpAutofillStatus === "found" ? (
+                <p className="text-center text-xs" style={{ color: "var(--color-accent-green)" }}>
+                  Passcode filled from Noir Wallet. Verify it to continue.
+                </p>
+              ) : null}
+              {active && noirOtpAutofillStatus === "timed_out" ? (
+                <p className="text-center text-xs" style={{ color: "var(--fg-muted)" }}>
+                  No passcode was detected automatically. Enter it manually.
+                </p>
+              ) : null}
+              {active && noirOtpAutofillStatus === "error" ? (
+                <p className="text-center text-xs" style={{ color: "var(--fg-muted)" }}>
+                  Noir Wallet history could not be read. Enter the passcode manually.
+                </p>
+              ) : null}
               {active && (s.otpError || s.otpAttempts > 0) ? (
                 <p className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1">
                   {s.otpError ? (
@@ -715,6 +792,15 @@ export default function NameActionForm({
                     amount={s.amountZec}
                     memo={s.memo}
                     size={200}
+                    belowQr={
+                      <PayWithNoirButton
+                        to={s.paymentAddress}
+                        amount={
+                          Number(s.amountZec) > 0 ? s.amountZec : "0.00000001"
+                        }
+                        memo={s.memo}
+                      />
+                    }
                   />
                 </div>
               </div>
@@ -739,23 +825,26 @@ export default function NameActionForm({
           </div>
         );
       }
+      const statusMessage = scanningStatusMessage(action, s.scanState);
       return (
         <div className="space-y-3">
           <PhaseLabel complete={complete}>Scanning</PhaseLabel>
           <p className="text-sm" style={{ color: "var(--fg-body)" }}>
             {modalDescription(action, "scanning", name, s)}
           </p>
-          <div
-            className="flex w-full flex-col items-center justify-center rounded-xl p-5 text-center"
-            style={{
-              background: "var(--color-raised)",
-              border: `1.5px solid ${s.scanState === "in_mempool" || s.scanState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
-            }}
-          >
-            <p className="w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
-              {scanningStatusMessage(action, s.scanState)}
-            </p>
-          </div>
+          {statusMessage ? (
+            <div
+              className="flex w-full flex-col items-center justify-center rounded-xl p-5 text-center"
+              style={{
+                background: "var(--color-raised)",
+                border: `1.5px solid ${s.scanState === "in_mempool" || s.scanState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
+              }}
+            >
+              <p className="w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
+                {statusMessage}
+              </p>
+            </div>
+          ) : null}
         </div>
       );
     }
@@ -794,6 +883,12 @@ export default function NameActionForm({
                 amount={String(listed.listingPrice.zec)}
                 memo=""
                 size={200}
+                belowQr={
+                  <PayWithNoirButton
+                    to={listed.payTaddr}
+                    amount={String(listed.listingPrice.zec)}
+                  />
+                }
               />
             </div>
           )}

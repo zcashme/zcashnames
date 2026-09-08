@@ -1,9 +1,18 @@
-const POSITIVE_ZEC = /^\d+(\.\d{1,8})?$/;
+const ZEC_AMOUNT = /^\d+(\.\d{1,8})?$/;
 const DETECT_TIMEOUT_MS = 3000;
 
 export type NoirPayment = {
   to: string;
   amount: string;
+  memo?: string;
+};
+
+export type NoirTransaction = {
+  txid: string;
+  type: string;
+  amount: string;
+  status: string;
+  timestamp: number;
   memo?: string;
 };
 
@@ -72,7 +81,7 @@ export async function payWithNoir(payment: NoirPayment): Promise<string> {
   const memo = payment.memo?.trim() || undefined;
 
   if (!to) throw new Error("Missing payment address.");
-  if (!POSITIVE_ZEC.test(amount) || Number(amount) <= 0) {
+  if (!ZEC_AMOUNT.test(amount) || Number(amount) <= 0) {
     throw new Error("Enter a valid ZEC amount.");
   }
 
@@ -85,12 +94,16 @@ export async function payWithNoir(payment: NoirPayment): Promise<string> {
     await wallet.zcash.connect();
   }
 
-  return wallet.zcash.sendTransaction({
+  const txid = await wallet.zcash.sendTransaction({
     to,
     amount,
     ...(memo ? { memo } : {}),
     fundingSource: "shielded",
   });
+  if (!/^(0x)?[0-9a-f]{64}$/i.test(txid.trim())) {
+    throw new Error("Noir Wallet did not confirm that the transaction was sent.");
+  }
+  return txid;
 }
 
 export async function getNoirShieldedAddress(): Promise<string> {
@@ -105,4 +118,29 @@ export async function getNoirShieldedAddress(): Promise<string> {
     throw new Error("Noir Wallet did not return a shielded address.");
   }
   return shielded;
+}
+
+export async function getNoirTransparentAddress(): Promise<string> {
+  const { getNoirWallet } = await loadSdk();
+  const wallet = getNoirWallet();
+  if (!wallet) throw new Error("Noir Wallet is not available.");
+
+  const existing = await wallet.zcash.getAccounts();
+  const connection = existing ?? (await wallet.zcash.connect());
+  const transparent = connection.transparent?.trim() || "";
+  if (!transparent) {
+    throw new Error("Noir Wallet did not return a transparent address.");
+  }
+  return transparent;
+}
+
+export async function getNoirTransactionHistory(): Promise<NoirTransaction[]> {
+  const { getNoirWallet } = await loadSdk();
+  const wallet = getNoirWallet();
+  if (!wallet) throw new Error("Noir Wallet is not available.");
+
+  const existing = await wallet.zcash.getAccounts();
+  if (!existing) throw new Error("Noir Wallet is not connected.");
+
+  return wallet.zcash.getTransactionHistory();
 }

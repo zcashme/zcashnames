@@ -84,7 +84,9 @@ export function usePurchaseFlow({
         return init;
       }
       return {
+        ...init,
         ...stored.state,
+        otpNoirSentAt: stored.state.otpNoirSentAt ?? 0,
         unlockLoading: false,
         otpLoading: false,
         otpVerified: false,
@@ -161,6 +163,7 @@ export function usePurchaseFlow({
       otpCode: "",
       otpError: "",
       otpSent: false,
+      otpNoirSentAt: 0,
       otpAttempts: 0,
       otpVerified: false,
     };
