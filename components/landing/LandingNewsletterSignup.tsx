@@ -136,7 +136,7 @@ export default function LandingNewsletterSignup({
       : buttonLabel;
 
   return (
-    <section id="newsletter" className="mx-auto w-full max-w-3xl px-4 pb-24 sm:px-6 sm:pb-28">
+    <section id="newsletter" className="mx-auto w-full max-w-3xl px-4 pb-7 sm:px-6 sm:pb-9">
       <CaptchaChallengeModal
         isOpen={captchaOpen}
         title="Confirm you're human"

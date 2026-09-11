@@ -172,9 +172,11 @@ function HeaderInfoModal({
 const WAITLIST_VIEW_FAQ_ITEMS = getFaqItemsForSurface("waitlist-view");
 
 function WaitlistFaq({
+  faqOpen,
   maskedViewKey,
   onOpenViewKey,
 }: {
+  faqOpen: boolean;
   maskedViewKey: string;
   onOpenViewKey: () => void;
 }) {
@@ -200,32 +202,33 @@ function WaitlistFaq({
   });
 
   return (
-    <section className="mx-auto mt-12 w-full max-w-3xl px-0 pb-4">
-      <div className="mb-8 flex items-center gap-4">
-        <h2 className="text-lg font-bold" style={{ color: "var(--fg-heading)" }}>
-          Frequently Asked Questions
-        </h2>
-        <div
-          className="h-px flex-1"
-          style={{ background: "color-mix(in srgb, var(--fg-heading) 18%, var(--faq-border))" }}
-        />
-      </div>
+    <section className="w-full max-w-full px-0">
+      <div
+        id="waitlist-view-faq-content"
+        className="grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out"
+        style={{
+          gridTemplateRows: faqOpen ? "1fr" : "0fr",
+          opacity: faqOpen ? 1 : 0,
+        }}
+      >
+        <div className="min-h-0 overflow-hidden pb-10 sm:pb-12">
+          <FaqAccordion
+            items={items}
+            openId={openId}
+            onToggle={(id) => setOpenId((current) => (current === id ? null : id))}
+            variant="separated"
+          />
 
-      <FaqAccordion
-        items={items}
-        openId={openId}
-        onToggle={(id) => setOpenId((current) => (current === id ? null : id))}
-        variant="card"
-      />
-
-      <div className="mt-4 flex justify-end">
-        <Link
-          href="/faq#waitlist-view"
-          className="text-sm font-semibold transition-colors hover:text-[var(--color-accent-interactive)]"
-          style={{ color: "var(--color-accent-interactive, var(--fg-heading))" }}
-        >
-          See all waitlist questions →
-        </Link>
+          <div className="mt-4 flex justify-end">
+            <Link
+              href="/faq#waitlist-view"
+              className="text-sm font-semibold transition-colors hover:text-[var(--color-accent-interactive)]"
+              style={{ color: "var(--color-accent-interactive, var(--fg-heading))" }}
+            >
+              See all waitlist questions →
+            </Link>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -589,6 +592,7 @@ export default function WaitlistViewClient({
   const [sortDirection, setSortDirection] = useState<WaitlistViewSortDirection>(initialSortDirection);
   const [page, setPage] = useState(initialPage);
   const [showViewKeyModal, setShowViewKeyModal] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(false);
   const [headerInfo, setHeaderInfo] = useState<{ title: string; body: string } | null>(null);
   const initialDataRef = useRef<PublicWaitlistViewData>({
     rows: initialRows,
@@ -1119,17 +1123,37 @@ export default function WaitlistViewClient({
             </div>
           </div>
 
-          {viewData.rows.length > 0 ? (
+          <div
+            className="grid grid-cols-1 items-center gap-3 border-t px-4 py-3 sm:grid-cols-[1fr_auto_1fr]"
+            style={{ borderColor: "var(--faq-border)" }}
+          >
+            <div className="hidden sm:block" aria-hidden="true" />
             <PaginationControls
               page={page}
               totalPages={totalPages}
               onPageChange={goToPage}
               disabled={isRefreshing}
-              style={{
-                borderTop: "1px solid var(--faq-border)",
-              }}
+              className="px-0 py-0"
             />
-          ) : null}
+            <div className="flex justify-center sm:justify-end">
+              <button
+                type="button"
+                className="landing-section-pill cursor-pointer gap-2 transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-105"
+                aria-expanded={faqOpen}
+                aria-controls="waitlist-view-faq-content"
+                onClick={() => setFaqOpen((open) => !open)}
+              >
+                <span>FAQ</span>
+                <span
+                  aria-hidden="true"
+                  className="inline-block text-sm leading-none transition-transform duration-200"
+                  style={{ transform: faqOpen ? "rotate(45deg)" : "rotate(0deg)" }}
+                >
+                  +
+                </span>
+              </button>
+            </div>
+          </div>
 
           <TableLoadingOverlay
             active={isRefreshing}
@@ -1140,6 +1164,7 @@ export default function WaitlistViewClient({
       </div>
 
       <WaitlistFaq
+        faqOpen={faqOpen}
         maskedViewKey={maskedQueueViewKey}
         onOpenViewKey={() => setShowViewKeyModal(true)}
       />

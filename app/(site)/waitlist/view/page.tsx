@@ -5,11 +5,11 @@ import WaitlistViewClient from "@/components/waitlist/WaitlistViewClient";
 import { getPublicWaitlistViewData } from "@/lib/waitlist/view";
 
 export const metadata: Metadata = {
-  title: "Waitlist View - Zcash Names",
+  title: "View Waitlist - Zcash Names",
   description: "Public waitlist view for verified Zcash Names queue positions.",
   alternates: { canonical: "https://www.zcashnames.com/waitlist/view" },
   openGraph: {
-    title: "Waitlist View | Zcash Names",
+    title: "View Waitlist | Zcash Names",
     description: "Public waitlist view for verified Zcash Names queue positions.",
     url: "https://www.zcashnames.com/waitlist/view",
     images: [
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Waitlist View | Zcash Names",
+    title: "View Waitlist | Zcash Names",
     description: "Public waitlist view for verified Zcash Names queue positions.",
     images: ["/og/waitlist-view.png"],
   },
@@ -48,7 +48,7 @@ export default async function WaitlistViewPage({ searchParams }: WaitlistViewPag
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl px-4 pb-10 pt-5 sm:pb-12 sm:pt-6">
-      <SiteRouteTitle title="Waitlist View" href="/waitlist/view" />
+      <SiteRouteTitle title="View Waitlist" href="/waitlist/view" />
 
       <WaitlistViewClient
         initialRows={data.rows}
@@ -78,7 +78,7 @@ export default async function WaitlistViewPage({ searchParams }: WaitlistViewPag
         }
       />
 
-      <section className="mx-auto mt-10 max-w-[920px] border-t pt-10 sm:mt-12 sm:pt-12" style={{ borderColor: "var(--faq-border)" }}>
+      <section className="mx-auto mt-6 max-w-[920px] sm:mt-8">
         <h2
           className="text-balance text-center text-[1.65rem] font-bold tracking-tight"
           style={{ color: "var(--hero-headline-primary, var(--fg-heading))" }}

@@ -35,6 +35,7 @@ type WaitlistViewDbRow = {
   name: string | null;
   created_at: string;
   email_verified: boolean | null;
+  zcasher_id: number | string | null;
   referral_code: string | null;
   human_referral_code: string | null;
   referred_by: string | null;
@@ -251,7 +252,7 @@ async function fetchAllWaitlistRows(): Promise<WaitlistViewDbRow[]> {
       await db
         .from("zn_waitlist")
         .select(
-          "id, name, created_at, email_verified, referral_code, human_referral_code, referred_by, name_reserved, name_reserved_at, name_reserved_txid, campaign_email_confirm_response",
+          "id, name, created_at, email_verified, zcasher_id, referral_code, human_referral_code, referred_by, name_reserved, name_reserved_at, name_reserved_txid, campaign_email_confirm_response",
         )
         .order("created_at", { ascending: true })
         .order("id", { ascending: true })
@@ -407,7 +408,10 @@ function buildSnapshotRows(args: {
   protectedNames: ProtectedNameRow[];
 }): PublicWaitlistViewSnapshotRow[] {
   const allRows = args.waitlistRows;
-  const verifiedRows = allRows.filter((row) => row.email_verified === true);
+  // Confirmed waitlist emails, or Zcash.me origin (zn_waitlist.zcasher_id).
+  const verifiedRows = allRows.filter(
+    (row) => row.email_verified === true || row.zcasher_id != null,
+  );
   const reservedVerifiedRows = verifiedRows.filter(
     (row) => row.name_reserved === true,
   );

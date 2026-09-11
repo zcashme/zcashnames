@@ -2,7 +2,7 @@
 
 import type { FaqItem } from "@/lib/faq";
 
-type FaqAccordionVariant = "plain" | "card";
+type FaqAccordionVariant = "plain" | "card" | "separated";
 
 export function FaqAccordion({
   items,
@@ -15,11 +15,11 @@ export function FaqAccordion({
   onToggle: (id: string) => void;
   variant?: FaqAccordionVariant;
 }) {
-  if (variant === "card") {
+  if (variant === "card" || variant === "separated") {
     return (
       <div
-        className="overflow-hidden rounded-xl"
-        style={{ border: "1px solid var(--faq-border)", backgroundColor: "transparent" }}
+        className={variant === "card" ? "overflow-hidden rounded-xl" : "overflow-hidden"}
+        style={variant === "card" ? { border: "1px solid var(--faq-border)", backgroundColor: "transparent" } : undefined}
       >
         {items.map((item, index) => {
           const isOpen = openId === item.id;
@@ -30,7 +30,7 @@ export function FaqAccordion({
               item={item}
               isOpen={isOpen}
               isLast={isLast}
-              variant="card"
+              variant={variant}
               onToggle={onToggle}
             />
           );
@@ -72,7 +72,7 @@ function FaqAccordionItem({
   onToggle: (id: string) => void;
 }) {
   const answerClassName =
-    variant === "card"
+    variant === "card" || variant === "separated"
       ? "px-6 pb-5 type-body [&_a]:underline [&_code]:rounded [&_code]:px-1 [&_li]:mt-1.5 [&_p+p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5"
       : "pb-5 type-body [&_a]:underline [&_code]:rounded [&_code]:px-1 [&_li]:mt-1.5 [&_p+p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5";
 
@@ -81,7 +81,7 @@ function FaqAccordionItem({
       id={item.id}
       className={variant === "plain" ? "scroll-mt-24 border-b border-border-muted" : "scroll-mt-24"}
       style={
-        variant === "card"
+        variant === "card" || variant === "separated"
           ? { borderBottom: isLast ? "none" : "1px solid var(--faq-border)" }
           : undefined
       }
@@ -92,7 +92,7 @@ function FaqAccordionItem({
         aria-expanded={isOpen}
         aria-controls={`${item.id}-answer`}
         className={
-          variant === "card"
+          variant === "card" || variant === "separated"
             ? "flex w-full cursor-pointer items-center justify-between px-6 py-5 text-left transition-colors duration-200"
             : "group flex w-full cursor-pointer items-center justify-between py-5 text-left"
         }
@@ -109,6 +109,8 @@ function FaqAccordionItem({
           className={
             variant === "card"
               ? "type-body pr-4"
+              : variant === "separated"
+                ? "type-body pr-4 text-[var(--fg-heading)]"
               : isOpen
                 ? "type-body pr-4 text-[var(--color-accent-interactive,var(--fg-heading))] transition-colors duration-[140ms] ease-out"
                 : "type-body pr-4 text-[var(--fg-heading)] transition-colors duration-[140ms] ease-out group-hover:text-[var(--color-accent-interactive,var(--fg-heading))]"
