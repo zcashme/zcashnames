@@ -631,7 +631,7 @@ export default function ReferralDashboardPage() {
           <div className="min-w-0 justify-self-end">
             <Link
               href={`/sharekit?ref=${encodeURIComponent(data.referralCode)}`}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-[var(--color-accent-interactive)] underline-offset-4 transition-colors hover:underline"
             >
               Share your reflink
               <ShareIcon className="h-4 w-4 shrink-0" />

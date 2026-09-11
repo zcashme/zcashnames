@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { usePathname } from "next/navigation";
 import { useAppRouter } from "@/components/hooks/useAppRouter";
 import { useTheme } from "next-themes";
+import CopyIconButton from "@/components/CopyIconButton";
 import HeroShareButton from "@/components/HeroShareButton";
 import ReferralCodeRecovery from "@/components/ReferralCodeRecovery";
 import { useCopy } from "@/components/hooks/useCopy";
@@ -239,7 +240,10 @@ export default function ShareKitClient({
                 </p>
               ) : null}
             </form>
-            <ReferralCodeRecovery variant="sharekit" controlsId="sharekit-forgot-code" />
+            <div className="mt-3 flex flex-col items-center gap-3">
+              <ReferralCodeRecovery variant="sharekit" controlsId="sharekit-forgot-code" className="text-center" />
+              {referralCode ? <LoadedReferralLink shareUrl={shareUrl} /> : null}
+            </div>
           </div>
         </div>
 
@@ -353,9 +357,9 @@ function DraftCard({
   const textareaClassName = monochrome
     ? "border-[rgba(155,188,15,0.42)] bg-transparent text-[var(--mono-3)] placeholder:text-[color:rgba(155,188,15,0.7)]"
     : "border-border-muted bg-transparent text-fg-body";
-  const actionButtonClassName = light
-    ? "cursor-pointer rounded-md border border-border-muted bg-transparent px-3 py-1.5 text-sm font-semibold text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
-    : "cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold text-fg-heading transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]";
+  const actionButtonClassName = `inline-flex items-center gap-2 cursor-pointer rounded-md border border-border-muted px-3 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)] ${
+    light ? "bg-transparent text-fg-body" : "text-fg-heading"
+  }`;
 
   return (
     <article className={`flex h-full flex-col overflow-hidden rounded-lg border ${cardClassName}`}>
@@ -373,7 +377,7 @@ function DraftCard({
           <button
             type="button"
             onClick={() => void copyState.copy(value)}
-            className={`inline-flex items-center gap-2 ${actionButtonClassName}`}
+            className={actionButtonClassName}
           >
             <ShareCopyIcon />
             {copyState.copied ? "Copied!" : "Copy"}
@@ -389,7 +393,8 @@ function DraftCard({
             showTriggerIcon={true}
             // Avoid ActionDropdown's default w-full root, which drops Share onto the next line.
             rootClassName="relative shrink-0"
-            buttonClassName={`inline-flex items-center gap-2 ${actionButtonClassName}`}
+            buttonClassName={actionButtonClassName}
+            portalMenu
           />
           {resetVisible && (
             <button
@@ -397,12 +402,40 @@ function DraftCard({
               onClick={onReset}
               className={actionButtonClassName}
             >
+              <ResetIcon />
               Reset
             </button>
           )}
         </div>
       </div>
     </article>
+  );
+}
+
+function LoadedReferralLink({ shareUrl }: { shareUrl: string }) {
+  const copyState = useCopy();
+
+  return (
+    <div className="flex w-full min-w-0 items-center justify-center gap-2">
+      <span className="min-w-0 break-all text-center font-mono text-sm text-fg-muted">
+        {shareUrl}
+      </span>
+      <CopyIconButton
+        copied={copyState.copied}
+        onClick={() => void copyState.copy(shareUrl)}
+        ariaLabel="Copy referral link"
+        title={copyState.copied ? "Copied!" : "Copy referral link"}
+      />
+    </div>
+  );
+}
+
+function ResetIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
   );
 }
 
