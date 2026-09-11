@@ -15,20 +15,35 @@ type PartnerReelItem = {
   id: string;
   displayName: string;
   iconSrc?: string;
+  lightIconSrc?: string;
   href?: string;
   kind?: "partner" | "cta";
 };
 
-type PartnerIconLayout = { scale: number; x?: number; y?: number };
+type PartnerIconLayout = {
+  scale: number;
+  x?: number;
+  y?: number;
+  containerClassName?: string;
+  imageClassName?: string;
+};
 
 const PARTNER_ICON_LAYOUT_BY_ID: Partial<Record<string, PartnerIconLayout>> = {
   edge: { scale: 0.70, y: 1 },
   cake: { scale: 0.98, x: 1, y: 1 },
-  unstoppable: { scale: 0.62 },
+  unstoppable: { scale: 0.68 },
   zipher: { scale: 1.25, y: -1 },
   zingo: { scale: 1.2, x: 2, y: 1 },
   noir: { scale: 1.2 },
   cipherscan: { scale: 0.65 },
+  cyze: { scale: 0.9 },
+  pgpz: {
+    scale: 0.95,
+    containerClassName: "flex h-16 w-28 items-center justify-center sm:h-20 sm:w-36",
+    imageClassName: "max-h-16 w-full object-contain sm:max-h-20",
+  },
+  "zec-os": { scale: 0.75 },
+  zucchini: { scale: 0.85 },
 };
 
 const EXTRA_PARTNERS: readonly PartnerReelItem[] = [
@@ -45,6 +60,25 @@ const EXTRA_PARTNERS: readonly PartnerReelItem[] = [
     href: "https://github.com/USCMig/Cyze",
   },
   {
+    id: "zucchini",
+    displayName: "Zucchini App",
+    iconSrc: "/icons/zucchini.png",
+    href: "https://zucchinifi.xyz/",
+  },
+  {
+    id: "pgpz",
+    displayName: "PGPZ",
+    iconSrc: "/icons/pgpz.png",
+    lightIconSrc: "/icons/pgpz-light.png",
+    href: "https://pgpz.org/",
+  },
+  {
+    id: "zec-os",
+    displayName: "zec-os",
+    iconSrc: "/icons/zec-os.svg",
+    href: "https://www.zec-os.com/",
+  },
+  {
     id: "developer-guide",
     displayName: "Developer Guide",
     href: "/docs/zns-developer-guide",
@@ -52,7 +86,7 @@ const EXTRA_PARTNERS: readonly PartnerReelItem[] = [
   },
 ];
 
-const PARTNER_ORDER = ["zingo", "cipherscan", "cyze", "unstoppable", "edge", "zipher", "noir", "cake", "developer-guide"] as const;
+const PARTNER_ORDER = ["zingo", "zucchini", "pgpz", "zec-os", "cipherscan", "cyze", "unstoppable", "edge", "zipher", "noir", "cake", "developer-guide"] as const;
 
 function isPartnerWithAppIcon(brand: WalletBrand): brand is WalletBrand & { appIcon: WalletBrandAppIcon } {
   return brand.partner && !!brand.appIcon;
@@ -131,16 +165,39 @@ function PartnerIcon({ item }: { item: PartnerReelItem }) {
 
   const content = (
     <>
-      <div className="flex h-16 w-16 items-center justify-center sm:h-20 sm:w-20">
-        <img
-          src={item.iconSrc ?? ""}
-          alt=""
-          aria-hidden="true"
-          className="h-16 w-16 object-contain sm:h-20 sm:w-20"
-          style={{ transform: iconTransform, transition: "transform 200ms ease-out" }}
-          loading="lazy"
-          decoding="async"
-        />
+      <div className={iconLayout.containerClassName ?? "flex h-16 w-16 items-center justify-center sm:h-20 sm:w-20"}>
+        {item.lightIconSrc ? (
+          <>
+            <img
+              src={item.iconSrc ?? ""}
+              alt=""
+              aria-hidden="true"
+              className={`${iconLayout.imageClassName ?? "h-16 w-16 object-contain sm:h-20 sm:w-20"} [[data-theme=light]_&]:hidden`}
+              style={{ transform: iconTransform, transition: "transform 200ms ease-out" }}
+              loading="lazy"
+              decoding="async"
+            />
+            <img
+              src={item.lightIconSrc}
+              alt=""
+              aria-hidden="true"
+              className={`hidden ${iconLayout.imageClassName ?? "h-16 w-16 object-contain sm:h-20 sm:w-20"} [[data-theme=light]_&]:block`}
+              style={{ transform: iconTransform, transition: "transform 200ms ease-out" }}
+              loading="lazy"
+              decoding="async"
+            />
+          </>
+        ) : (
+          <img
+            src={item.iconSrc ?? ""}
+            alt=""
+            aria-hidden="true"
+            className={iconLayout.imageClassName ?? "h-16 w-16 object-contain sm:h-20 sm:w-20"}
+            style={{ transform: iconTransform, transition: "transform 200ms ease-out" }}
+            loading="lazy"
+            decoding="async"
+          />
+        )}
       </div>
       <span
         className="text-xs font-semibold leading-tight transition-colors duration-200 sm:text-sm"
