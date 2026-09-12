@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useAppRouter } from "@/components/hooks/useAppRouter";
 import { useTheme } from "next-themes";
@@ -15,6 +15,11 @@ import type { ShareKitDraft, ShareKitSection } from "@/lib/sharekit";
 import { lookupShareKitReferral } from "./actions";
 
 const ACTION_INSET_PX = 4;
+const ACTION_GAP_PX = 6;
+const APPLY_BUTTON_INLINE_PADDING_PX = 32;
+const CLEAR_BUTTON_WIDTH_PX = 52;
+const INPUT_ACTION_BUFFER_PX = 16;
+const RESET_ACTION_WIDTH_PX = 92;
 
 function replaceYourLink(post: string, shareUrl: string): string {
   return post.replaceAll("[your link]", shareUrl);
@@ -107,7 +112,12 @@ export default function ShareKitClient({
     }
 
     setSubmitting(true);
+    const startedAt = Date.now();
     const result = await lookupShareKitReferral(nextCode);
+    const remainingMs = 320 - (Date.now() - startedAt);
+    if (remainingMs > 0) {
+      await new Promise((resolve) => window.setTimeout(resolve, remainingMs));
+    }
     setSubmitting(false);
 
     if (!result.ok) {
@@ -143,6 +153,16 @@ export default function ShareKitClient({
 
   const hasInput = input.trim().length > 0;
   const submitReady = hasInput && !submitting;
+  const {
+    buttonWidth: applyButtonWidth,
+    labelWidth: applyLabelWidth,
+    sizer: applyLabelSizer,
+  } = useApplyButtonMeasurements(submitting);
+  const inputActionPadding =
+    ACTION_INSET_PX +
+    applyButtonWidth +
+    INPUT_ACTION_BUFFER_PX +
+    (hasInput ? CLEAR_BUTTON_WIDTH_PX + ACTION_GAP_PX : 0);
 
   return (
     <>
@@ -193,9 +213,13 @@ export default function ShareKitClient({
                     setError("");
                   }}
                   placeholder="zcashnames.com/?ref=your-code"
-                  className={`w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 text-base text-fg-heading outline-none transition-colors placeholder:text-fg-muted ${
+                  className={`w-full min-w-0 rounded-2xl border border-border-muted py-3 pl-4 text-base text-fg-heading outline-none placeholder:text-fg-muted motion-reduce:!transition-none ${
                     resolvedTheme === "light" ? "bg-[var(--color-card)]" : "bg-[var(--input-fill)]"
-                  } ${hasInput ? "pr-[9.5rem]" : "pr-[5.5rem]"}`}
+                  }`}
+                  style={{
+                    paddingRight: `${inputActionPadding}px`,
+                    transition: "padding-right 300ms ease-out, color 300ms ease-out, background-color 300ms ease-out, border-color 300ms ease-out",
+                  }}
                 />
                 <span
                   className="absolute flex items-center gap-1.5"
@@ -203,6 +227,7 @@ export default function ShareKitClient({
                     top: ACTION_INSET_PX,
                     right: ACTION_INSET_PX,
                     bottom: ACTION_INSET_PX,
+                    gap: `${ACTION_GAP_PX}px`,
                   }}
                 >
                   {hasInput ? (
@@ -217,7 +242,7 @@ export default function ShareKitClient({
                   <button
                     type="submit"
                     disabled={!submitReady}
-                    className="inline-flex h-[calc(100%-2px)] shrink-0 items-center justify-center rounded-[13px] px-4 text-sm font-semibold leading-none transition"
+                    className="inline-flex h-[calc(100%-2px)] shrink-0 items-center justify-center overflow-hidden rounded-[13px] px-4 text-sm font-semibold leading-none motion-reduce:!transition-none"
                     style={{
                       background: submitReady
                         ? "var(--home-result-primary-bg)"
@@ -228,10 +253,21 @@ export default function ShareKitClient({
                       boxShadow: submitReady ? "var(--home-result-primary-shadow)" : "none",
                       cursor: submitting ? "progress" : submitReady ? "pointer" : "not-allowed",
                       opacity: submitting ? 0.7 : 1,
+                      width: `${applyButtonWidth}px`,
+                      transition: "width 300ms ease-out, background-color 300ms ease-out, color 300ms ease-out, box-shadow 300ms ease-out, opacity 300ms ease-out",
                     }}
                   >
-                    {submitting ? <AnimatedLoadingLabel label="Checking" active /> : "Apply"}
+                    <span
+                      className="inline-flex overflow-hidden whitespace-nowrap motion-reduce:!transition-none"
+                      style={{
+                        width: `${applyLabelWidth}px`,
+                        transition: "width 300ms ease-out",
+                      }}
+                    >
+                      {submitting ? <AnimatedLoadingLabel label="Checking" active /> : "Apply"}
+                    </span>
                   </button>
+                  {applyLabelSizer}
                 </span>
               </div>
               {error ? (
@@ -373,39 +409,42 @@ function DraftCard({
           onChange={(event) => onChange(event.target.value)}
           className={`min-h-[320px] w-full flex-1 resize-y rounded-lg border px-3 py-3 text-sm leading-6 outline-none transition-colors ${textareaClassName}`}
         />
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => void copyState.copy(value)}
-            className={actionButtonClassName}
-          >
-            <ShareCopyIcon />
-            {copyState.copied ? "Copied!" : "Copy"}
-          </button>
-          <ShareDropdown
-            label="Share"
-            message={value}
-            shareUrl={shareUrlFromPost(value)}
-            emailSubject="Zcash Names"
-            copyLabel="Copy Text"
-            systemShareLabel="Other"
-            menuAlign="left"
-            showTriggerIcon={true}
-            // Avoid ActionDropdown's default w-full root, which drops Share onto the next line.
-            rootClassName="relative shrink-0"
-            buttonClassName={actionButtonClassName}
-            portalMenu
-          />
-          {resetVisible && (
+        <div className="flex flex-wrap items-center justify-center">
+          <div className="flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => void copyState.copy(value)}
+              className={actionButtonClassName}
+            >
+              <ShareCopyIcon />
+              {copyState.copied ? "Copied!" : "Copy"}
+            </button>
+            <ShareDropdown
+              label="Share"
+              message={value}
+              shareUrl={shareUrlFromPost(value)}
+              emailSubject="Zcash Names"
+              copyLabel="Copy Text"
+              systemShareLabel="Other"
+              menuAlign="left"
+              showTriggerIcon={true}
+              // Avoid ActionDropdown's default w-full root, which drops Share onto the next line.
+              rootClassName="relative shrink-0"
+              buttonClassName={actionButtonClassName}
+              portalMenu
+            />
+          </div>
+          <CollapsibleAction open={resetVisible}>
             <button
               type="button"
               onClick={onReset}
-              className={actionButtonClassName}
+              tabIndex={resetVisible ? 0 : -1}
+              className={`${actionButtonClassName} whitespace-nowrap`}
             >
               <ResetIcon />
               Reset
             </button>
-          )}
+          </CollapsibleAction>
         </div>
       </div>
     </article>
@@ -427,6 +466,105 @@ function LoadedReferralLink({ shareUrl }: { shareUrl: string }) {
         title={copyState.copied ? "Copied!" : "Copy referral link"}
       />
     </div>
+  );
+}
+
+function useApplyButtonMeasurements(submitting: boolean): {
+  buttonWidth: number;
+  labelWidth: number;
+  sizer: ReactNode;
+} {
+  const applySizerRef = useRef<HTMLSpanElement>(null);
+  const checkingSizerRef = useRef<HTMLSpanElement>(null);
+  const [labelWidths, setLabelWidths] = useState({ apply: 38, checking: 86 });
+
+  useLayoutEffect(() => {
+    const applyWidth = applySizerRef.current?.getBoundingClientRect().width;
+    const checkingWidth = checkingSizerRef.current?.getBoundingClientRect().width;
+
+    if (!applyWidth || !checkingWidth) return;
+
+    setLabelWidths((current) => {
+      const next = {
+        apply: Math.ceil(applyWidth),
+        checking: Math.ceil(checkingWidth),
+      };
+
+      return current.apply === next.apply && current.checking === next.checking ? current : next;
+    });
+  }, []);
+
+  const labelWidth = submitting ? labelWidths.checking : labelWidths.apply;
+
+  return {
+    buttonWidth: labelWidth + APPLY_BUTTON_INLINE_PADDING_PX,
+    labelWidth,
+    sizer: (
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inline-flex whitespace-nowrap text-sm font-semibold leading-none opacity-0"
+        style={{ left: "-9999px", top: 0 }}
+      >
+        <span ref={applySizerRef}>Apply</span>
+        <span ref={checkingSizerRef} className="ml-4">
+          Checking...
+        </span>
+      </span>
+    ),
+  };
+}
+
+function CollapsibleAction({
+  open,
+  children,
+}: {
+  open: boolean;
+  children: ReactNode;
+}) {
+  const [width, setWidth] = useState(open ? RESET_ACTION_WIDTH_PX : 0);
+  const frameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (frameRef.current !== null) {
+      window.cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+
+    if (!open) {
+      setWidth(0);
+      return;
+    }
+
+    setWidth(0);
+    frameRef.current = window.requestAnimationFrame(() => {
+      frameRef.current = window.requestAnimationFrame(() => {
+        setWidth(RESET_ACTION_WIDTH_PX);
+        frameRef.current = null;
+      });
+    });
+
+    return () => {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+    };
+  }, [open]);
+
+  return (
+    <span
+      className="inline-flex min-w-0 overflow-hidden transition-[width,opacity,margin] duration-300 ease-out motion-reduce:transition-none"
+      style={{
+        width: `${width}px`,
+        opacity: open ? 1 : 0,
+        marginLeft: open ? "0.5rem" : "0rem",
+        pointerEvents: open ? "auto" : "none",
+        transition: "width 300ms ease-out, opacity 300ms ease-out, margin-left 300ms ease-out",
+      }}
+      aria-hidden={!open}
+    >
+      {children}
+    </span>
   );
 }
 
