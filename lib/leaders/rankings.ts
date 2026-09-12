@@ -1,4 +1,10 @@
 import type { WaitlistReferralRow } from "./referral-dashboard";
+import {
+  REFERRAL_REWARD_UNAVAILABLE_QUOTE,
+  fixedReferralRewardForDepth,
+  roundZecReward,
+  type ReferralRewardQuote,
+} from "./referral-rewards";
 
 export interface RankingEntry {
   referral_code: string;
@@ -31,6 +37,7 @@ function buildTopThreeEntries(
   counts: Record<string, number>,
   nameMap: Record<string, string>,
   preferredCodeMap: Record<string, string>,
+  rewardQuote: ReferralRewardQuote,
 ): [RankingEntry?, RankingEntry?, RankingEntry?] {
   const ranked = Object.entries(counts)
     .sort(([codeA, countA], [codeB, countB]) => {
@@ -43,7 +50,7 @@ function buildTopThreeEntries(
       canonical_referral_code: code,
       name: nameMap[code] || code,
       count,
-      payout: Math.round(count * 0.05 * 1000) / 1000,
+      payout: roundZecReward(count * fixedReferralRewardForDepth(1, rewardQuote)),
     }));
 
   return [ranked[0], ranked[1], ranked[2]];
@@ -99,6 +106,7 @@ function calculateGrowthPct(current: number, previous: number): number {
 
 export function buildDailyRankingsFromRows(
   rows: WaitlistReferralRow[],
+  rewardQuote: ReferralRewardQuote = REFERRAL_REWARD_UNAVAILABLE_QUOTE,
 ): DailyRow[] {
   if (rows.length === 0) return [];
 
@@ -128,7 +136,7 @@ export function buildDailyRankingsFromRows(
 
   return dates.map((date) => {
     const dailyCounts = dailyCountsByDate[date] || {};
-    const dailyTop = buildTopThreeEntries(dailyCounts, nameMap, preferredCodeMap);
+    const dailyTop = buildTopThreeEntries(dailyCounts, nameMap, preferredCodeMap, rewardQuote);
     const totalCount = Object.values(dailyCounts).reduce((sum, count) => sum + count, 0);
 
     for (const [code, count] of Object.entries(dailyCounts)) {
@@ -143,13 +151,14 @@ export function buildDailyRankingsFromRows(
       totalCount,
       totalGrowthPct,
       daily: dailyTop,
-      allTime: buildTopThreeEntries(cumulativeCounts, nameMap, preferredCodeMap),
+      allTime: buildTopThreeEntries(cumulativeCounts, nameMap, preferredCodeMap, rewardQuote),
     };
   });
 }
 
 export function buildWeeklyRankingsFromRows(
   rows: WaitlistReferralRow[],
+  rewardQuote: ReferralRewardQuote = REFERRAL_REWARD_UNAVAILABLE_QUOTE,
 ): WeeklyRow[] {
   if (rows.length === 0) return [];
 
@@ -181,7 +190,7 @@ export function buildWeeklyRankingsFromRows(
 
   return orderedWeeks.map(({ week, weekStart, weekEnd }) => {
     const weeklyCounts = weeklyCountsByRange[week] || {};
-    const weeklyTop = buildTopThreeEntries(weeklyCounts, nameMap, preferredCodeMap);
+    const weeklyTop = buildTopThreeEntries(weeklyCounts, nameMap, preferredCodeMap, rewardQuote);
     const totalCount = Object.values(weeklyCounts).reduce((sum, count) => sum + count, 0);
 
     for (const [code, count] of Object.entries(weeklyCounts)) {
@@ -198,7 +207,7 @@ export function buildWeeklyRankingsFromRows(
       totalCount,
       totalGrowthPct,
       weekly: weeklyTop,
-      allTime: buildTopThreeEntries(cumulativeCounts, nameMap, preferredCodeMap),
+      allTime: buildTopThreeEntries(cumulativeCounts, nameMap, preferredCodeMap, rewardQuote),
     };
   });
 }

@@ -2,6 +2,8 @@ import "server-only";
 
 import { db } from "@/lib/db";
 import { buildFixedDepthReferralSummaries } from "@/lib/leaders/referral-dashboard";
+import { getExchangeRate } from "@/lib/exchange-rate";
+import { buildReferralRewardQuote } from "@/lib/leaders/referral-rewards";
 import { fetchAllSupabaseRows } from "@/lib/supabase/fetch-all";
 import { assignWaitlistNameRanks, compareWaitlistNameRank } from "@/lib/waitlist/referral-spots";
 
@@ -435,10 +437,12 @@ export async function getWaitlistVerifyPotentialRewards(
           created_at: row.created_at ?? new Date(0).toISOString(),
           email_verified: row.email_verified === true,
           name_reserved: false,
+          name_reserved_at: null,
           cabal: false,
         };
       })
       .filter((row): row is NonNullable<typeof row> => Boolean(row)),
+    buildReferralRewardQuote(await getExchangeRate()),
   );
 
   for (const row of targetRows) {

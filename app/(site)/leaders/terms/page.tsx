@@ -58,7 +58,7 @@ const terms: Array<{ title: string; body: ReactNode }> = [
   },
   {
     title: "Reward Basis",
-    body: "During Early Access, direct referral rewards may earn up to 0.05 ZEC for each referred signup that completes a qualifying claim. Indirect referral rewards may apply when referred users invite others. The 0.05 ZEC value is based on the lowest name claim price at the time of purchase and may vary. Payouts are delivered to the referrer's Zcash Name after that name has been reserved.",
+    body: "During Early Access, direct referral rewards may earn up to $4 USD worth of ZEC for each referred signup that completes a qualifying claim. Indirect referral rewards may apply when referred users invite others. The Level I value is one fifth of the lowest pricing tier and is displayed as a current-rate ZEC estimate. Payouts are delivered to the referrer's Zcash Name after that name has been reserved.",
   },
   {
     title: "Early Access Order",

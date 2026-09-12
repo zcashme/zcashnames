@@ -35,8 +35,9 @@ import {
   calculateReferralProjection,
   DEFAULT_CONVERSION_BY_BUCKET,
   DEFAULT_PRICE_BY_BUCKET,
-  fixedRewardForDepth,
+  fixedRewardForDepthWithQuote,
   getNameLengthBucket,
+  priceByBucketFromRewardQuote,
   type ConversionByBucket,
   type NameLengthBucket,
   type PriceByBucket,
@@ -48,6 +49,7 @@ import { usePwaInstall } from "@/components/hooks/usePwaInstall";
 const DIRECT_CHART_COLOR = "var(--leaders-area-referred)";
 const INDIRECT_CHART_COLOR = "var(--leaders-area-non-referred)";
 const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
+const RESERVED_CHART_COLOR = "var(--color-accent-interactive)";
 type AxisSide = "left" | "right";
 
 interface EndpointGuideLine {
@@ -129,7 +131,7 @@ function AxisEndpointGuideLine({
   );
 }
 
-type ReferralChartSeriesKey = "rewards" | "direct" | "referrals";
+type ReferralChartSeriesKey = "rewards" | "direct" | "referrals" | "reserved";
 
 function ChartLegendItem({
   tag: Tag = "span",
@@ -178,9 +180,11 @@ interface ReferralChartPoint {
   date: string;
   direct: number;
   indirect: number;
+  reserved: number;
   rewards: number;
   directDelta?: number;
   indirectDelta?: number;
+  reservedDelta?: number;
   rewardsDelta?: number;
 }
 
@@ -261,7 +265,9 @@ export default function ReferralDashboardPage() {
   const [referralLevelFilter, setReferralLevelFilter] = useState<"all" | number>("all");
   const [visibleReferralRows, setVisibleReferralRows] = useState(10);
   const [activeMetricKey, setActiveMetricKey] = useState<"referrals" | "direct" | "payout" | null>(null);
+  const [referralsMetricFace, setReferralsMetricFace] = useState<"total" | "reserved">("total");
   const [directMetricFace, setDirectMetricFace] = useState<"direct" | "indirect">("direct");
+  const [rewardsMetricFace, setRewardsMetricFace] = useState<"zec" | "usd">("zec");
   const [chartRange, setChartRange] = useState<"7d" | "30d" | "allTime">("allTime");
   const [prices, setPrices] = useState<PriceByBucket>(DEFAULT_PRICE_BY_BUCKET);
   const [conversions, setConversions] = useState<ConversionByBucket>(DEFAULT_CONVERSION_BY_BUCKET);
@@ -275,7 +281,7 @@ export default function ReferralDashboardPage() {
   const [commissionPinEmail, setCommissionPinEmail] = useState("");
   const [commissionPinRecoveryOpen, setCommissionPinRecoveryOpen] = useState(false);
   const [modeSwitching, setModeSwitching] = useState(false);
-  const [copiedReferralLink, setCopiedReferralLink] = useState(false);
+  const [copiedReferralCode, setCopiedReferralCode] = useState<string | null>(null);
   const copiedResetTimeoutRef = useRef<number | null>(null);
   const installCardDismissTimeoutRef = useRef<number | null>(null);
   const [installCardClosing, setInstallCardClosing] = useState(false);
@@ -304,11 +310,18 @@ export default function ReferralDashboardPage() {
   const indirectReferrals = data
     ? Math.max(0, data.totalAttributedReferrals - data.directReferrals.length)
     : 0;
+  const reservedReferralCount = data
+    ? data.descendants.filter((entry) => entry.name_reserved).length
+    : 0;
 
   const projection = useMemo(() => {
     if (!data) return null;
     return calculateReferralProjection({ data, model, prices, conversions });
   }, [conversions, data, model, prices]);
+  const usdPerZec = data?.referralRewardQuote.usdPerZec ?? null;
+  const projectedRewardUsd =
+    projection && usdPerZec != null ? projection.projectedPayout * usdPerZec : null;
+  const rewardUsdRateLabel = usdPerZec == null ? null : `${formatUsd(usdPerZec)}/ZEC`;
 
   const referralChartSeries = useMemo(() => {
     if (!data) return [];
@@ -376,8 +389,15 @@ export default function ReferralDashboardPage() {
   }, [referralLevelFilter, visibleReferrals.length]);
 
   useEffect(() => {
+    setReferralsMetricFace("total");
     setDirectMetricFace("direct");
+    setRewardsMetricFace("zec");
   }, [referralCode]);
+
+  useEffect(() => {
+    if (!data) return;
+    setPrices(priceByBucketFromRewardQuote(data.referralRewardQuote));
+  }, [data?.canonicalReferralCode, data?.referralRewardQuote.usdPerZec]);
 
   useEffect(() => {
     setAccessGesture({ count: 0, lastAt: 0 });
@@ -541,19 +561,20 @@ export default function ReferralDashboardPage() {
   const projectedReferralPayout = (name: string, depth: number): number => {
     const bucket = getNameLengthBucket(name);
     const conversionRate = Math.max(0, conversions[bucket]) / 100;
-    if (model === "fixed") return fixedRewardForDepth(depth) * conversionRate;
+    if (!data) return 0;
+    if (model === "fixed") return fixedRewardForDepthWithQuote(depth, data.referralRewardQuote) * conversionRate;
     return prices[bucket] * conversionRate * (projection?.commissionRate ?? 0.15);
   };
 
   async function copyReferralLink(referralCodeToCopy: string) {
     try {
       await navigator.clipboard.writeText(`https://zcashnames.com/?ref=${referralCodeToCopy}`);
-      setCopiedReferralLink(true);
+      setCopiedReferralCode(referralCodeToCopy);
       if (copiedResetTimeoutRef.current !== null) {
         window.clearTimeout(copiedResetTimeoutRef.current);
       }
       copiedResetTimeoutRef.current = window.setTimeout(() => {
-        setCopiedReferralLink(false);
+        setCopiedReferralCode(null);
         copiedResetTimeoutRef.current = null;
       }, 2000);
     } catch {
@@ -561,7 +582,7 @@ export default function ReferralDashboardPage() {
         window.clearTimeout(copiedResetTimeoutRef.current);
         copiedResetTimeoutRef.current = null;
       }
-      setCopiedReferralLink(false);
+      setCopiedReferralCode(null);
     }
   }
 
@@ -692,25 +713,24 @@ export default function ReferralDashboardPage() {
                 />
               )}
             </h1>
-            <div className="mt-1 flex items-center gap-1.5">
-              <span className="font-mono text-sm text-fg-muted">{data.referralCode}</span>
-              <CopyIconButton
-                onClick={() => {
-                  void copyReferralLink(data.referralCode);
-                }}
-                ariaLabel="Copy referral link"
-                title={copiedReferralLink ? "Copied!" : "Copy referral link"}
-                copied={copiedReferralLink}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--fg-muted)",
-                  height: "0.875rem",
-                  width: "0.875rem",
-                  padding: 0,
-                  borderRadius: 0,
-                }}
+            <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <ReferralCodeCopyToken
+                code={data.referralCode}
+                copied={copiedReferralCode === data.referralCode}
+                label="display referral code"
+                onCopy={copyReferralLink}
               />
+              {data.canonicalReferralCode !== data.referralCode && (
+                <>
+                  <span className="text-sm text-fg-muted">,</span>
+                  <ReferralCodeCopyToken
+                    code={data.canonicalReferralCode}
+                    copied={copiedReferralCode === data.canonicalReferralCode}
+                    label="machine-readable referral code"
+                    onCopy={copyReferralLink}
+                  />
+                </>
+              )}
             </div>
           </div>
           <div className="text-right">
@@ -858,10 +878,23 @@ export default function ReferralDashboardPage() {
       <section className="mb-8">
         <div className="grid grid-cols-3 gap-3">
           <MetricCard
-            label="Referrals"
-            value={data.totalAttributedReferrals.toLocaleString()}
+            label={referralsMetricFace === "total" ? "Referrals" : "Reserved"}
+            value={
+              referralsMetricFace === "total"
+                ? data.totalAttributedReferrals.toLocaleString()
+                : reservedReferralCount.toLocaleString()
+            }
+            ariaLabel={`${referralsMetricFace === "total" ? "Referrals" : "Reserved referrals"} help`}
+            actionAriaLabel={
+              referralsMetricFace === "total" ? "Show reserved referrals" : "Show total referrals"
+            }
+            flipState={referralsMetricFace}
+            actionIcon={<MetricFlipIcon />}
             active={activeMetricKey === "referrals"}
             onClick={() => setActiveMetricKey((current) => (current === "referrals" ? null : "referrals"))}
+            onActionClick={() => {
+              setReferralsMetricFace((current) => (current === "total" ? "reserved" : "total"));
+            }}
           />
           <MetricCard
             label={directMetricFace === "direct" ? "Direct" : "Indirect"}
@@ -879,10 +912,23 @@ export default function ReferralDashboardPage() {
             }}
           />
           <MetricCard
-            label="Rewards"
-            value={projection ? <><ZecSymbol className="mr-0.5 inline-block" /> {formatZec(projection.projectedPayout)}</> : "-"}
+            label={rewardsMetricFace === "zec" ? "Rewards" : "Rewards"}
+            value={
+              rewardsMetricFace === "zec" ? (
+                projection ? <><ZecSymbol className="mr-0.5 inline-block" /> {formatZec(projection.projectedPayout)}</> : "-"
+              ) : (
+                projectedRewardUsd == null ? "-" : formatUsd(projectedRewardUsd)
+              )
+            }
+            ariaLabel={`${rewardsMetricFace === "zec" ? "Rewards" : "Reward USD value"} help`}
+            actionAriaLabel={rewardsMetricFace === "zec" ? "Show reward USD value" : "Show reward ZEC value"}
+            flipState={rewardsMetricFace}
+            actionIcon={<MetricFlipIcon />}
             active={activeMetricKey === "payout"}
             onClick={() => setActiveMetricKey((current) => (current === "payout" ? null : "payout"))}
+            onActionClick={() => {
+              setRewardsMetricFace((current) => (current === "zec" ? "usd" : "zec"));
+            }}
           />
         </div>
         <div
@@ -900,19 +946,27 @@ export default function ReferralDashboardPage() {
               color: "var(--market-stats-help-text)",
             }}
           >
-            {activeMetricKey === "referrals" && "All referrals connected to this code across every level."}
+            {activeMetricKey === "referrals" &&
+              (referralsMetricFace === "total"
+                ? "All referrals connected to this code across every level."
+                : "Referrals in this tree that have reserved their name or position.")}
             {activeMetricKey === "direct" &&
               (directMetricFace === "direct"
                 ? "Direct referrals signed up with this referral code."
                 : "Indirect referrals signed up through this code's referral tree.")}
-            {activeMetricKey === "payout" && (
-              <>
-                Projected rewards if all referrals purchase names during early access.{" "}
-                <Link href="/leaders/terms" className="underline underline-offset-2">
-                  See terms.
-                </Link>
-              </>
-            )}
+            {activeMetricKey === "payout" &&
+              (rewardsMetricFace === "zec" ? (
+                <>
+                  Projected rewards if all referrals purchase names during early access.{" "}
+                  <Link href="/leaders/terms" className="underline underline-offset-2">
+                    See terms.
+                  </Link>
+                </>
+              ) : rewardUsdRateLabel ? (
+                `Projected rewards converted at the current ${rewardUsdRateLabel} quote.`
+              ) : (
+                "The current USD quote is temporarily unavailable."
+              ))}
           </p>
         </div>
       </section>
@@ -1368,6 +1422,7 @@ function ReferralGrowthChart({
     rewards: true,
     direct: true,
     referrals: true,
+    reserved: true,
   });
   const chartGuidePoint =
     (activeChartPoint && data.some((point) => point.date === activeChartPoint.date) ? activeChartPoint : null) ??
@@ -1380,17 +1435,27 @@ function ReferralGrowthChart({
   const chartSummaryText = useMemo(() => {
     if (data.length === 0) return "No change yet";
 
-    const last = data[data.length - 1];
-    const totalReferrals = last.direct + last.indirect;
-    const delta =
+    const referralDelta =
       chartRange === "allTime"
-        ? totalReferrals
+        ? data[data.length - 1].direct + data[data.length - 1].indirect
         : data.reduce((sum, point) => sum + (point.directDelta ?? 0) + (point.indirectDelta ?? 0), 0);
+    const reservedDelta =
+      chartRange === "allTime"
+        ? data[data.length - 1].reserved
+        : data.reduce((sum, point) => sum + (point.reservedDelta ?? 0), 0);
     const rangeLabel =
       chartRange === "7d" ? "the last 7 days" : chartRange === "30d" ? "the last 30 days" : "all time";
+    const visibleParts = [
+      ...(visibleChartSeries.direct || visibleChartSeries.referrals
+        ? [`${referralDelta >= 0 ? "+" : ""}${referralDelta.toLocaleString()} referrals`]
+        : []),
+      ...(visibleChartSeries.reserved
+        ? [`${reservedDelta >= 0 ? "+" : ""}${reservedDelta.toLocaleString()} reserved`]
+        : []),
+    ];
 
-    return `${delta >= 0 ? "+" : ""}${delta.toLocaleString()} over ${rangeLabel}`;
-  }, [chartRange, data]);
+    return visibleParts.length > 0 ? `${visibleParts.join(", ")} over ${rangeLabel}` : `No visible count series over ${rangeLabel}`;
+  }, [chartRange, data, visibleChartSeries.direct, visibleChartSeries.referrals, visibleChartSeries.reserved]);
   const rewardsDomain = useMemo(
     () =>
       calculateNumericDomain(
@@ -1400,29 +1465,18 @@ function ReferralGrowthChart({
     [data, visibleChartSeries.rewards],
   );
   const referralsDomain = useMemo(() => {
+    const values: number[] = [];
+
     if (visibleChartSeries.direct && visibleChartSeries.referrals) {
-      return calculateStackedDomain(
-        data.map((point) => ({
-          base: point.direct,
-          total: point.direct + point.indirect,
-        })),
-        { integer: true },
-      );
+      values.push(...data.flatMap((point) => [point.direct, point.direct + point.indirect]));
+    } else {
+      if (visibleChartSeries.direct) values.push(...data.map((point) => point.direct));
+      if (visibleChartSeries.referrals) values.push(...data.map((point) => point.indirect));
     }
-    if (visibleChartSeries.direct) {
-      return calculateNumericDomain(
-        data.map((point) => point.direct),
-        { floorAtZero: true, integer: true },
-      );
-    }
-    if (visibleChartSeries.referrals) {
-      return calculateNumericDomain(
-        data.map((point) => point.indirect),
-        { floorAtZero: true, integer: true },
-      );
-    }
-    return calculateNumericDomain([], { integer: true });
-  }, [data, visibleChartSeries.direct, visibleChartSeries.referrals]);
+    if (visibleChartSeries.reserved) values.push(...data.map((point) => point.reserved));
+
+    return calculateNumericDomain(values, { floorAtZero: true, integer: true });
+  }, [data, visibleChartSeries.direct, visibleChartSeries.referrals, visibleChartSeries.reserved]);
 
   const toggleChartSeries = (key: ReferralChartSeriesKey) => {
     setVisibleChartSeries((current) => ({ ...current, [key]: !current[key] }));
@@ -1501,6 +1555,7 @@ function ReferralGrowthChart({
                 orientation="right"
                 tick={
                   visibleChartSeries.direct || visibleChartSeries.referrals
+                    || visibleChartSeries.reserved
                     ? { fill: "var(--fg-muted)", fontSize: 12 }
                     : false
                 }
@@ -1541,6 +1596,16 @@ function ReferralGrowthChart({
                 activeDot={{ r: 4, fill: REWARDS_CHART_COLOR }}
                 hide={!visibleChartSeries.rewards}
               />
+              <Line
+                yAxisId="referrals"
+                type="monotone"
+                dataKey="reserved"
+                stroke={RESERVED_CHART_COLOR}
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4, fill: RESERVED_CHART_COLOR }}
+                hide={!visibleChartSeries.reserved}
+              />
               <AxisEndpointGuideLines
                 point={chartGuidePoint}
                 lines={[
@@ -1552,6 +1617,9 @@ function ReferralGrowthChart({
                     : []),
                   ...(visibleChartSeries.direct
                     ? [{ yAxisId: "referrals", value: chartGuidePoint?.direct ?? 0, color: DIRECT_CHART_COLOR, side: "right" as const }]
+                    : []),
+                  ...(visibleChartSeries.reserved
+                    ? [{ yAxisId: "referrals", value: chartGuidePoint?.reserved ?? 0, color: RESERVED_CHART_COLOR, side: "right" as const }]
                     : []),
                 ]}
               />
@@ -1578,6 +1646,12 @@ function ReferralGrowthChart({
                 visible={visibleChartSeries.referrals}
                 onToggle={() => toggleChartSeries("referrals")}
               />
+              <ChartLegendItem
+                label="Reserved"
+                color={RESERVED_CHART_COLOR}
+                visible={visibleChartSeries.reserved}
+                onToggle={() => toggleChartSeries("reserved")}
+              />
             </div>
           </div>
         </>
@@ -1599,6 +1673,7 @@ function ReferralChartTooltip({
 
   const indirect = payload.find((p) => p.name === "indirect");
   const direct = payload.find((p) => p.name === "direct");
+  const reserved = payload.find((p) => p.name === "reserved");
   const rewards = payload.find((p) => p.name === "rewards");
   const point = payload[0]?.payload;
   const referrals = (direct?.value ?? 0) + (indirect?.value ?? 0);
@@ -1609,7 +1684,7 @@ function ReferralChartTooltip({
         : (point?.directDelta ?? 0) + (point?.indirectDelta ?? 0)
       : point?.indirectDelta
     : undefined;
-  if (!indirect && !direct && !rewards) return null;
+  if (!indirect && !direct && !reserved && !rewards) return null;
 
   return (
     <div
@@ -1637,6 +1712,15 @@ function ReferralChartTooltip({
             {direct.value}
           </span>
           {formatCountDelta(point?.directDelta)}
+        </p>
+      )}
+      {reserved && (
+        <p>
+          Reserved:{" "}
+          <span className="font-semibold" style={{ color: RESERVED_CHART_COLOR }}>
+            {reserved.value}
+          </span>
+          {formatCountDelta(point?.reservedDelta)}
         </p>
       )}
       {rewards && (
@@ -1755,9 +1839,20 @@ function RewardSchedule({
   prices: PriceByBucket;
   conversions: ConversionByBucket;
 }) {
-  const depthCountMap = new Map(data.depthCounts.map((row) => [row.depth, row.count]));
+  const [summaryMode, setSummaryMode] = useState<"referrals" | "reserved">("referrals");
+  const [commissionDetailsOpen, setCommissionDetailsOpen] = useState(false);
+  const summaryEntries = summaryMode === "reserved"
+    ? data.descendants.filter((entry) => entry.name_reserved)
+    : data.descendants;
+  const depthCountMap = new Map<number, number>();
+  for (const entry of summaryEntries) {
+    depthCountMap.set(entry.depth, (depthCountMap.get(entry.depth) ?? 0) + 1);
+  }
   const levels = Array.from({ length: Math.max(3, data.maxDepth) }, (_, index) => index + 1);
-  const recentCountsByDepth = buildRecentCountsByDepth(data.descendants);
+  const recentCountsByDepth = buildRecentCountsByDepth(
+    summaryEntries,
+    summaryMode === "reserved" ? "reserved" : "created",
+  );
   const commissionRows = [
     { min: 0, nextAt: 500, label: "0-500", value: "15% commission", rate: 0.15 },
     { min: 500, nextAt: 1500, label: "500-1,500", value: "18% commission", rate: 0.18 },
@@ -1772,39 +1867,71 @@ function RewardSchedule({
 
   return (
     <DashboardShell>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold text-fg-heading">Summary</h2>
-          <p className="mt-1 text-sm text-fg-muted">
-            {model === "fixed"
-              ? "Fixed rewards currently start at 0.05 ZEC for level I and halve each level."
-              : (
-                  <>
-                    You are earning {formatPercent(commissionRate)} commission on all referrals, both direct and indirect.{" "}
-                    {nextCommissionTier
-                      ? `Get ${referralsToNextTier.toLocaleString()} more ${pluralize(
-                          referralsToNextTier,
-                          "referral",
-                        )} to claim their name and earn ${formatPercent(nextCommissionTier.rate)}.`
-                      : "You are at the top commission tier."}
-                  </>
-                )}
-          </p>
-          {model === "commission" && (
-            <details className="mt-1 text-xs text-fg-muted">
-              <summary className="cursor-pointer font-medium text-fg-muted underline-offset-2 hover:underline">
-                Learn more
-              </summary>
-              <div className="mt-2 grid max-w-xs grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                <span className="text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Refs</span>
-                <span className="text-right text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Rate</span>
-                {commissionRows.map((row) => (
-                  <CommissionTierRow key={row.label} label={row.label} rate={row.rate} active={row.rate === commissionRate} />
-                ))}
-              </div>
-            </details>
-          )}
+          <div
+            className="relative grid shrink-0 grid-cols-2 items-center overflow-hidden rounded-full border p-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em]"
+            style={{
+              borderColor: "var(--leaders-card-border)",
+            }}
+          >
+            <span
+              className="absolute bottom-1 top-1 rounded-full transition-transform duration-300 ease-out"
+              style={{
+                left: "0.25rem",
+                width: "calc(50% - 0.25rem)",
+                background: "var(--leaders-rank-gold)",
+                transform: `translateX(${summaryMode === "reserved" ? 100 : 0}%)`,
+              }}
+              aria-hidden="true"
+            />
+            <LevelFilterButton active={summaryMode === "referrals"} onClick={() => setSummaryMode("referrals")}>
+              Referrals
+            </LevelFilterButton>
+            <LevelFilterButton active={summaryMode === "reserved"} onClick={() => setSummaryMode("reserved")}>
+              Reserved
+            </LevelFilterButton>
+          </div>
         </div>
+        <p className="mt-1 text-sm text-fg-muted">
+          {model === "fixed"
+            ? "Fixed rewards currently start at $4 USD worth of ZEC for level I and halve each level."
+            : (
+                <>
+                  You are earning {formatPercent(commissionRate)} commission on all referrals, both direct and indirect.{" "}
+                  {nextCommissionTier
+                    ? `Get ${referralsToNextTier.toLocaleString()} more ${pluralize(
+                        referralsToNextTier,
+                        "referral",
+                      )} to claim their name and earn ${formatPercent(nextCommissionTier.rate)}.`
+                    : "You are at the top commission tier."}{" "}
+                  <button
+                    type="button"
+                    aria-expanded={commissionDetailsOpen}
+                    onClick={() => setCommissionDetailsOpen((current) => !current)}
+                    className="cursor-pointer font-medium text-fg-muted underline-offset-2 transition-colors hover:text-[var(--color-accent-interactive)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)]"
+                  >
+                    Learn more
+                  </button>
+                </>
+          )}
+        </p>
+        {model === "commission" && (
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-out ${
+              commissionDetailsOpen ? "mt-2 max-h-48 translate-y-0 opacity-100" : "max-h-0 -translate-y-1 opacity-0"
+            }`}
+          >
+            <div className="grid max-w-xs grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+              <span className="text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Refs</span>
+              <span className="text-right text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">Rate</span>
+              {commissionRows.map((row) => (
+                <CommissionTierRow key={row.label} label={row.label} rate={row.rate} active={row.rate === commissionRate} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-5 max-w-full overflow-x-auto">
@@ -1825,8 +1952,13 @@ function RewardSchedule({
               recentCounts={recentCountsByDepth.get(level) ?? { day: 0, week: 0, month: 0 }}
               reward={
                 model === "fixed"
-                  ? fixedRewardForDepth(level) * (depthCountMap.get(level) ?? 0)
-                  : commissionRewardForDepth(level, data, prices, conversions, commissionRate)
+                  ? summaryEntries
+                      .filter((entry) => entry.depth === level)
+                      .reduce(
+                        (total, entry) => total + fixedRewardForDepthWithQuote(entry.depth, data.referralRewardQuote),
+                        0,
+                      )
+                  : commissionRewardForDepth(level, summaryEntries, prices, conversions, commissionRate)
               }
             />
           ))}
@@ -1864,12 +1996,12 @@ function ScheduleRow({
 
 function commissionRewardForDepth(
   level: number,
-  data: ReferralDashboardData,
+  entries: ReferralDashboardData["descendants"],
   prices: PriceByBucket,
   conversions: ConversionByBucket,
   commissionRate: number,
 ): number {
-  return data.descendants
+  return entries
     .filter((entry) => entry.depth === level)
     .reduce((total, entry) => {
       const bucket = getNameLengthBucket(entry.name);
@@ -1897,15 +2029,17 @@ function ScheduleMetric({
 
 function buildRecentCountsByDepth(
   descendants: ReferralDashboardData["descendants"],
+  mode: "created" | "reserved" = "created",
 ): Map<number, { day: number; week: number; month: number }> {
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   const counts = new Map<number, { day: number; week: number; month: number }>();
 
   for (const entry of descendants) {
-    const createdAt = new Date(entry.created_at).getTime();
-    if (!Number.isFinite(createdAt)) continue;
-    const age = now - createdAt;
+    const timestamp = mode === "reserved" ? entry.name_reserved_at : entry.created_at;
+    const time = new Date(timestamp ?? "").getTime();
+    if (!Number.isFinite(time)) continue;
+    const age = now - time;
     const row = counts.get(entry.depth) ?? { day: 0, week: 0, month: 0 };
     if (age >= 0 && age <= dayMs) row.day += 1;
     if (age >= 0 && age <= 7 * dayMs) row.week += 1;
@@ -1980,6 +2114,51 @@ function DashboardShell({ children }: { children: ReactNode }) {
   );
 }
 
+function ReferralCodeCopyToken({
+  code,
+  copied,
+  label,
+  onCopy,
+}: {
+  code: string;
+  copied: boolean;
+  label: string;
+  onCopy: (code: string) => void | Promise<void>;
+}) {
+  return (
+    <span className="group inline-flex min-w-0 items-center gap-1.5 rounded-sm text-fg-muted transition-colors hover:text-[var(--color-accent-interactive)] focus-within:text-[var(--color-accent-interactive)]">
+      <button
+        type="button"
+        onClick={() => {
+          void onCopy(code);
+        }}
+        className="min-w-0 cursor-pointer rounded-sm font-mono text-sm text-current transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)]"
+        aria-label={`Copy ${label} link`}
+        title={copied ? "Copied!" : `Copy ${label} link`}
+      >
+        {code}
+      </button>
+      <CopyIconButton
+        onClick={() => {
+          void onCopy(code);
+        }}
+        ariaLabel={`Copy ${label} link`}
+        title={copied ? "Copied!" : `Copy ${label} link`}
+        copied={copied}
+        style={{
+          background: "transparent",
+          border: "none",
+          color: "currentColor",
+          height: "0.875rem",
+          width: "0.875rem",
+          padding: 0,
+          borderRadius: 0,
+        }}
+      />
+    </span>
+  );
+}
+
 function MetricCard({
   label,
   value,
@@ -1997,10 +2176,12 @@ function MetricCard({
   actionIcon?: ReactNode;
   ariaLabel?: string;
   actionAriaLabel?: string;
-  flipState?: "direct" | "indirect";
+  flipState?: string | boolean;
   onClick?: () => void;
   onActionClick?: () => void;
 }) {
+  const flipped = flipState === true || flipState === "indirect" || flipState === "reserved" || flipState === "usd";
+
   return (
     <div
       className="group relative overflow-hidden rounded-2xl border text-center transition-colors [perspective:700px]"
@@ -2029,7 +2210,7 @@ function MetricCard({
       >
         <span
           className={`flex flex-col items-center gap-1 transition-transform duration-300 ease-out motion-reduce:transition-none ${
-            flipState === "indirect" ? "[transform:rotateY(360deg)]" : "[transform:rotateY(0deg)]"
+            flipped ? "[transform:rotateY(360deg)]" : "[transform:rotateY(0deg)]"
           }`}
         >
           <span className="tabular-nums text-[clamp(1.4rem,2.5vw,2rem)] font-semibold leading-none tracking-tight text-fg-heading">
@@ -2163,55 +2344,86 @@ function buildReferralChartSeries({
   conversions: ConversionByBucket;
   commissionRate: number;
 }): ReferralChartPoint[] {
-  const rows = [...data.descendants].sort((a, b) => {
-    const timeA = new Date(a.created_at).getTime();
-    const timeB = new Date(b.created_at).getTime();
-    if (timeA !== timeB) return timeA - timeB;
-    return a.referral_code.localeCompare(b.referral_code);
-  });
+  const signupsByDate = new Map<string, ReferralDashboardData["descendants"]>();
+  const reservationsByDate = new Map<string, ReferralDashboardData["descendants"]>();
+  const dates = new Set<string>();
+
+  for (const row of data.descendants) {
+    const signupDate = chartDateFromIso(row.created_at);
+    if (signupDate) {
+      dates.add(signupDate);
+      const signups = signupsByDate.get(signupDate) ?? [];
+      signups.push(row);
+      signupsByDate.set(signupDate, signups);
+    }
+
+    const reservedDate = row.name_reserved ? chartDateFromIso(row.name_reserved_at) : null;
+    if (reservedDate) {
+      dates.add(reservedDate);
+      const reservations = reservationsByDate.get(reservedDate) ?? [];
+      reservations.push(row);
+      reservationsByDate.set(reservedDate, reservations);
+    }
+  }
+
   const points: ReferralChartPoint[] = [];
   let direct = 0;
   let indirect = 0;
+  let reserved = 0;
   let rewards = 0;
-  let lastDate = "";
 
-  for (const row of rows) {
-    const date = row.created_at.slice(0, 10);
-    if (row.depth === 1) {
-      direct += 1;
-    } else {
-      indirect += 1;
+  for (const date of Array.from(dates).sort()) {
+    const signupRows = [...(signupsByDate.get(date) ?? [])].sort(compareReferralRowsByCreatedAt);
+    for (const row of signupRows) {
+      if (row.depth === 1) {
+        direct += 1;
+      } else {
+        indirect += 1;
+      }
+
+      const bucket = getNameLengthBucket(row.name);
+      const conversionRate = Math.max(0, conversions[bucket]) / 100;
+      rewards +=
+        model === "fixed"
+          ? fixedRewardForDepthWithQuote(row.depth, data.referralRewardQuote) * conversionRate
+          : prices[bucket] * conversionRate * commissionRate;
     }
 
-    const bucket = getNameLengthBucket(row.name);
-    const conversionRate = Math.max(0, conversions[bucket]) / 100;
-    rewards +=
-      model === "fixed"
-        ? fixedRewardForDepth(row.depth) * conversionRate
-        : prices[bucket] * conversionRate * commissionRate;
+    reserved += reservationsByDate.get(date)?.length ?? 0;
 
-    const point = {
+    points.push({
       date,
       direct,
       indirect,
+      reserved,
       rewards: roundZec(rewards),
-    };
-
-    if (date !== lastDate) {
-      points.push(point);
-      lastDate = date;
-    } else {
-      points[points.length - 1] = point;
-    }
+    });
   }
 
   for (let i = 1; i < points.length; i++) {
     points[i].directDelta = points[i].direct - points[i - 1].direct;
     points[i].indirectDelta = points[i].indirect - points[i - 1].indirect;
+    points[i].reservedDelta = points[i].reserved - points[i - 1].reserved;
     points[i].rewardsDelta = roundZec(points[i].rewards - points[i - 1].rewards);
   }
 
   return points;
+}
+
+function chartDateFromIso(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+}
+
+function compareReferralRowsByCreatedAt(
+  rowA: ReferralDashboardData["descendants"][number],
+  rowB: ReferralDashboardData["descendants"][number],
+): number {
+  const timeA = new Date(rowA.created_at).getTime();
+  const timeB = new Date(rowB.created_at).getTime();
+  if (timeA !== timeB) return timeA - timeB;
+  return rowA.referral_code.localeCompare(rowB.referral_code);
 }
 
 function formatCountDelta(value: number | undefined): ReactNode {
@@ -2253,6 +2465,16 @@ function formatZec(value: number): string {
   if (value >= 10) return value.toFixed(1);
   if (value >= 1) return value.toFixed(2);
   return value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function formatUsd(value: number): string {
+  if (!Number.isFinite(value)) return "$0.00";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 function formatPercent(value: number): string {

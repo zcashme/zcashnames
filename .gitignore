@@ -69,6 +69,8 @@ sql/*
 tests/*
 !tests/reservation-refunds.spec.ts
 !tests/noir-wallet.spec.ts
+!tests/referral-rewards.spec.ts
+!tests/protected-referral-human-codes.spec.ts
 
 # codesearch local semantic index
 .codesearch.db

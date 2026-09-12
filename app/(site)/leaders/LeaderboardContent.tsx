@@ -27,6 +27,7 @@ import CopyIconButton from "@/components/CopyIconButton";
 import { reservedReferralSpotPhrase } from "@/lib/waitlist/referral-spots";
 
 const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
+const RESERVED_CHART_COLOR = "var(--color-accent-interactive)";
 const PERIOD_COLUMN_STYLE = { width: "8.75rem", minWidth: "8.75rem" } as const;
 const PERIOD_HEADER_STYLE = {
   ...PERIOD_COLUMN_STYLE,
@@ -125,7 +126,7 @@ function AxisEndpointGuideLine({
   );
 }
 
-type LeadersChartSeriesKey = "rewards" | "waitlist" | "referred";
+type LeadersChartSeriesKey = "rewards" | "waitlist" | "referred" | "reserved";
 
 function ChartLegendItem({
   tag: Tag = "span",
@@ -316,11 +317,12 @@ function ChartTooltip({
 
   const total = payload.find((p) => p.name === "nonReferred");
   const referred = payload.find((p) => p.name === "referred");
+  const reserved = payload.find((p) => p.name === "reserved");
   const rewards = payload.find((p) => p.name === "rewardsPot");
   const totalVal = (total?.value ?? 0) + (referred?.value ?? 0);
   const point = payload[0]?.payload;
   const topReferrer = point?.topReferrer;
-  if (!total && !referred && !rewards) return null;
+  if (!total && !referred && !reserved && !rewards) return null;
 
   const formatDelta = (d: number | undefined) => {
     if (d === undefined) return null;
@@ -370,6 +372,15 @@ function ChartTooltip({
           {formatDelta(point?.referredDelta)}
         </p>
       )}
+      {reserved && (
+        <p>
+          Reserved:{" "}
+          <span className="font-semibold" style={{ color: RESERVED_CHART_COLOR }}>
+            {reserved.value}
+          </span>
+          {formatDelta(point?.reservedDelta)}
+        </p>
+      )}
       {rewards && (
         <p>
           Rewards:{" "}
@@ -400,33 +411,81 @@ function StatCard({
   label,
   value,
   active = false,
+  actionIcon,
+  ariaLabel,
+  actionAriaLabel,
+  flipState,
   onClick,
+  onActionClick,
 }: {
   label: string;
   value: ReactNode;
   active?: boolean;
+  actionIcon?: ReactNode;
+  ariaLabel?: string;
+  actionAriaLabel?: string;
+  flipState?: string | boolean;
   onClick?: () => void;
+  onActionClick?: () => void;
 }) {
+  const flipped = flipState === true || flipState === "reserved" || flipState === "usd";
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex cursor-pointer flex-col items-center gap-1 rounded-2xl border px-6 py-5 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)]"
+    <div
+      className="group relative overflow-hidden rounded-2xl border text-center transition-colors [perspective:700px]"
       style={{
         background: active ? "var(--market-stats-segment-active-bg)" : "var(--leaders-card-bg)",
         borderColor: "var(--leaders-card-border)",
       }}
     >
-      <div className="tabular-nums text-[clamp(1.4rem,2.5vw,2rem)] font-semibold leading-none tracking-tight text-fg-heading">
-        {value}
-      </div>
-      <div className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">{label}</div>
-    </button>
+      {actionIcon && (
+        <button
+          type="button"
+          aria-label={actionAriaLabel}
+          onClick={onActionClick}
+          className="zns-modal-close absolute right-2.5 top-2.5 z-10 cursor-pointer rounded-md p-1 opacity-70 transition-[color,opacity] duration-200 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)]"
+        >
+          {actionIcon}
+        </button>
+      )}
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        aria-pressed={active}
+        onClick={onClick}
+        className="flex h-full w-full cursor-pointer flex-col items-center gap-1 px-6 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--partner-card-border-hover)]"
+      >
+        <span
+          className={`flex flex-col items-center gap-1 transition-transform duration-300 ease-out motion-reduce:transition-none ${
+            flipped ? "[transform:rotateY(360deg)]" : "[transform:rotateY(0deg)]"
+          }`}
+        >
+          <span className="tabular-nums text-[clamp(1.4rem,2.5vw,2rem)] font-semibold leading-none tracking-tight text-fg-heading">
+            {value}
+          </span>
+          <span className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">{label}</span>
+        </span>
+      </button>
+    </div>
+  );
+}
+
+function MetricFlipIcon() {
+  return (
+    <span
+      className="block h-4 w-4 bg-current"
+      style={{
+        mask: "url('/icons/flip.svg') center / contain no-repeat",
+        WebkitMask: "url('/icons/flip.svg') center / contain no-repeat",
+      }}
+      aria-hidden="true"
+    />
   );
 }
 
 export default function LeaderboardContent({ data }: { data: LeadersData }) {
-  const { timeSeries, leaderboard, dailyRankings: dailyRows, weeklyRankings: weeklyRows, stats } = data;
+  const { timeSeries, leaderboard, dailyRankings: dailyRows, weeklyRankings: weeklyRows, stats, referralRewardQuote } = data;
+  const levelOneRewardZec = referralRewardQuote.levelOneRewardZec ?? 0;
 
   const [weeklyRankingsMode, setWeeklyRankingsMode] = useState<"weekly" | "allTime">("weekly");
   const [rankingsMode, setRankingsMode] = useState<"daily" | "allTime">("daily");
@@ -435,14 +494,21 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
   const [visibleWeeklyRows, setVisibleWeeklyRows] = useState(7);
   const [visibleDailyRows, setVisibleDailyRows] = useState(7);
   const [activeStatKey, setActiveStatKey] = useState<"waitlist" | "referred" | "rewards" | null>(null);
+  const [waitlistStatFace, setWaitlistStatFace] = useState<"waitlist" | "reserved">("waitlist");
+  const [referredStatFace, setReferredStatFace] = useState<"referred" | "reserved">("referred");
+  const [rewardsStatFace, setRewardsStatFace] = useState<"zec" | "usd">("zec");
   const [activeChartPoint, setActiveChartPoint] = useState<TimeSeriesPoint | null>(null);
   const [visibleChartSeries, setVisibleChartSeries] = useState<Record<LeadersChartSeriesKey, boolean>>({
     rewards: true,
     waitlist: true,
     referred: true,
+    reserved: true,
   });
   const [copiedReferralCode, setCopiedReferralCode] = useState<string | null>(null);
   const copiedResetTimeoutRef = useRef<number | null>(null);
+  const usdPerZec = referralRewardQuote.usdPerZec ?? null;
+  const rewardsPotUsd = usdPerZec == null ? null : stats.rewardsPot * usdPerZec;
+  const rewardUsdRateLabel = usdPerZec == null ? null : `${formatUsd(usdPerZec)}/ZEC`;
 
   const filteredWeeklyRows = useMemo(
     () => weeklyRows.filter((row) => row.weekStart >= "2026-03-30"),
@@ -489,14 +555,27 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
   const chartSummaryText = useMemo(() => {
     if (chartTimeSeries.length === 0) return "No change yet";
     const last = chartTimeSeries[chartTimeSeries.length - 1];
-    const delta =
+    const waitlistDelta =
       chartRange === "allTime"
         ? last.total
         : chartTimeSeries.reduce((sum, point) => sum + (point.totalDelta ?? 0), 0);
+    const reservedDelta =
+      chartRange === "allTime"
+        ? last.reserved
+        : chartTimeSeries.reduce((sum, point) => sum + (point.reservedDelta ?? 0), 0);
     const rangeLabel =
       chartRange === "7d" ? "the last 7 days" : chartRange === "30d" ? "the last 30 days" : "all time";
-    return `${delta >= 0 ? "+" : ""}${delta.toLocaleString()} over ${rangeLabel}`;
-  }, [chartRange, chartTimeSeries]);
+    const visibleParts = [
+      ...(visibleChartSeries.waitlist || visibleChartSeries.referred
+        ? [`${waitlistDelta >= 0 ? "+" : ""}${waitlistDelta.toLocaleString()} waitlist`]
+        : []),
+      ...(visibleChartSeries.reserved
+        ? [`${reservedDelta >= 0 ? "+" : ""}${reservedDelta.toLocaleString()} reserved`]
+        : []),
+    ];
+
+    return visibleParts.length > 0 ? `${visibleParts.join(", ")} over ${rangeLabel}` : `No visible count series over ${rangeLabel}`;
+  }, [chartRange, chartTimeSeries, visibleChartSeries.referred, visibleChartSeries.reserved, visibleChartSeries.waitlist]);
   const rewardsDomain = useMemo(
     () =>
       calculateNumericDomain(
@@ -506,29 +585,18 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
     [chartTimeSeries, visibleChartSeries.rewards],
   );
   const waitlistDomain = useMemo(() => {
+    const values: number[] = [];
+
     if (visibleChartSeries.referred && visibleChartSeries.waitlist) {
-      return calculateStackedDomain(
-        chartTimeSeries.map((point) => ({
-          base: point.referred,
-          total: point.referred + point.nonReferred,
-        })),
-        { integer: true },
-      );
+      values.push(...chartTimeSeries.flatMap((point) => [point.referred, point.referred + point.nonReferred]));
+    } else {
+      if (visibleChartSeries.referred) values.push(...chartTimeSeries.map((point) => point.referred));
+      if (visibleChartSeries.waitlist) values.push(...chartTimeSeries.map((point) => point.nonReferred));
     }
-    if (visibleChartSeries.referred) {
-      return calculateNumericDomain(
-        chartTimeSeries.map((point) => point.referred),
-        { floorAtZero: true, integer: true },
-      );
-    }
-    if (visibleChartSeries.waitlist) {
-      return calculateNumericDomain(
-        chartTimeSeries.map((point) => point.nonReferred),
-        { floorAtZero: true, integer: true },
-      );
-    }
-    return calculateNumericDomain([], { integer: true });
-  }, [chartTimeSeries, visibleChartSeries.referred, visibleChartSeries.waitlist]);
+    if (visibleChartSeries.reserved) values.push(...chartTimeSeries.map((point) => point.reserved));
+
+    return calculateNumericDomain(values, { floorAtZero: true, integer: true });
+  }, [chartTimeSeries, visibleChartSeries.referred, visibleChartSeries.reserved, visibleChartSeries.waitlist]);
 
   const toggleChartSeries = (key: LeadersChartSeriesKey) => {
     setVisibleChartSeries((current) => ({ ...current, [key]: !current[key] }));
@@ -741,7 +809,7 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
                 yAxisId="waitlist"
                 orientation="right"
                 tick={
-                  visibleChartSeries.waitlist || visibleChartSeries.referred
+                  visibleChartSeries.waitlist || visibleChartSeries.referred || visibleChartSeries.reserved
                     ? { fill: "var(--fg-muted)", fontSize: 12 }
                     : false
                 }
@@ -782,6 +850,16 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
                 activeDot={{ r: 4, fill: REWARDS_CHART_COLOR }}
                 hide={!visibleChartSeries.rewards}
               />
+              <Line
+                yAxisId="waitlist"
+                type="monotone"
+                dataKey="reserved"
+                stroke={RESERVED_CHART_COLOR}
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4, fill: RESERVED_CHART_COLOR }}
+                hide={!visibleChartSeries.reserved}
+              />
               <AxisEndpointGuideLines
                 point={chartGuidePoint}
                 lines={[
@@ -804,6 +882,16 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
                           yAxisId: "waitlist",
                           value: chartGuidePoint?.referred ?? 0,
                           color: "var(--leaders-area-referred)",
+                          side: "right" as const,
+                        },
+                      ]
+                    : []),
+                  ...(visibleChartSeries.reserved
+                    ? [
+                        {
+                          yAxisId: "waitlist",
+                          value: chartGuidePoint?.reserved ?? 0,
+                          color: RESERVED_CHART_COLOR,
                           side: "right" as const,
                         },
                       ]
@@ -833,6 +921,12 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
                 visible={visibleChartSeries.referred}
                 onToggle={() => toggleChartSeries("referred")}
               />
+              <ChartLegendItem
+                label="Reserved"
+                color={RESERVED_CHART_COLOR}
+                visible={visibleChartSeries.reserved}
+                onToggle={() => toggleChartSeries("reserved")}
+              />
             </div>
           </div>
           </>
@@ -842,26 +936,59 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
       <section className="mb-8">
         <div className="grid grid-cols-3 gap-3 sm:gap-4">
           <StatCard
-            label="Waitlist"
-            value={stats.waitlist.toLocaleString()}
+            label={waitlistStatFace === "waitlist" ? "Waitlist" : "Reserved"}
+            value={
+              waitlistStatFace === "waitlist"
+                ? stats.waitlist.toLocaleString()
+                : stats.reserved.toLocaleString()
+            }
+            ariaLabel={`${waitlistStatFace === "waitlist" ? "Waitlist" : "Reserved waitlist"} help`}
+            actionAriaLabel={waitlistStatFace === "waitlist" ? "Show reserved waitlist" : "Show total waitlist"}
+            flipState={waitlistStatFace}
+            actionIcon={<MetricFlipIcon />}
             active={activeStatKey === "waitlist"}
             onClick={() => setActiveStatKey((current) => (current === "waitlist" ? null : "waitlist"))}
+            onActionClick={() => {
+              setWaitlistStatFace((current) => (current === "waitlist" ? "reserved" : "waitlist"));
+            }}
           />
           <StatCard
-            label="Referred"
-            value={stats.referred.toLocaleString()}
+            label={referredStatFace === "referred" ? "Referred" : "Reserved"}
+            value={
+              referredStatFace === "referred"
+                ? stats.referred.toLocaleString()
+                : stats.reservedReferred.toLocaleString()
+            }
+            ariaLabel={`${referredStatFace === "referred" ? "Referred" : "Reserved referred"} help`}
+            actionAriaLabel={referredStatFace === "referred" ? "Show reserved referred" : "Show total referred"}
+            flipState={referredStatFace}
+            actionIcon={<MetricFlipIcon />}
             active={activeStatKey === "referred"}
             onClick={() => setActiveStatKey((current) => (current === "referred" ? null : "referred"))}
+            onActionClick={() => {
+              setReferredStatFace((current) => (current === "referred" ? "reserved" : "referred"));
+            }}
           />
           <StatCard
-            label="Rewards"
+            label={rewardsStatFace === "zec" ? "Rewards" : "USD Value"}
             value={
-              <>
-                <ZecSymbol className="mr-0.5 inline-block" /> {formatZec(stats.rewardsPot)}
-              </>
+              rewardsStatFace === "zec" ? (
+                <>
+                  <ZecSymbol className="mr-0.5 inline-block" /> {formatZec(stats.rewardsPot)}
+                </>
+              ) : (
+                rewardsPotUsd == null ? "-" : formatUsd(rewardsPotUsd)
+              )
             }
+            ariaLabel={`${rewardsStatFace === "zec" ? "Rewards" : "Reward USD value"} help`}
+            actionAriaLabel={rewardsStatFace === "zec" ? "Show reward USD value" : "Show reward ZEC value"}
+            flipState={rewardsStatFace}
+            actionIcon={<MetricFlipIcon />}
             active={activeStatKey === "rewards"}
             onClick={() => setActiveStatKey((current) => (current === "rewards" ? null : "rewards"))}
+            onActionClick={() => {
+              setRewardsStatFace((current) => (current === "zec" ? "usd" : "zec"));
+            }}
           />
         </div>
         <div
@@ -878,17 +1005,28 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
               color: "var(--market-stats-help-text)",
             }}
           >
-            {activeStatKey === "waitlist" && "Total number of people on the ZcashNames waitlist."}
-            {activeStatKey === "referred" && "Number of waitlist members who were referred by someone."}
-            {activeStatKey === "rewards" && (
-              <>
-                Total estimated rewards from all referrals.{" "}
-                <Link href="/leaders/terms" className="underline underline-offset-2">
-                  View terms
-                </Link>
-                .
-              </>
-            )}
+            {activeStatKey === "waitlist" &&
+              (waitlistStatFace === "waitlist"
+                ? "Total number of people on the ZcashNames waitlist."
+                : "Total number of waitlist members who have reserved their name or position.")}
+            {activeStatKey === "referred" &&
+              (referredStatFace === "referred"
+                ? "Number of waitlist members who were referred by someone."
+                : "Number of referred waitlist members who have reserved their name or position.")}
+            {activeStatKey === "rewards" &&
+              (rewardsStatFace === "zec" ? (
+                <>
+                  Total estimated rewards from all referrals.{" "}
+                  <Link href="/leaders/terms" className="underline underline-offset-2">
+                    View terms
+                  </Link>
+                  .
+                </>
+              ) : rewardUsdRateLabel ? (
+                `Total estimated rewards converted at the current ${rewardUsdRateLabel} quote.`
+              ) : (
+                "The current USD quote is temporarily unavailable."
+              ))}
           </p>
         </div>
       </section>
@@ -1020,13 +1158,13 @@ export default function LeaderboardContent({ data }: { data: LeadersData }) {
                     <td className="px-4 py-3 tabular-nums sm:px-6">
                       <div className="whitespace-nowrap text-fg-muted">{formatGrowthMetric(entry.recent, entry.recentGrowthPct)}</div>
                       <div className="mt-0.5 tabular-nums text-[0.8rem] text-fg-body">
-                        <ZecSymbol className="mr-0.5 inline-block" /> {formatPayout(entry.recent * 0.05)}
+                        <ZecSymbol className="mr-0.5 inline-block" /> {formatPayout(entry.recent * levelOneRewardZec)}
                       </div>
                     </td>
                     <td className="px-4 py-3 tabular-nums sm:px-6">
                       <div className="whitespace-nowrap text-fg-muted">{formatGrowthMetric(entry.weeklyRecent, entry.weeklyGrowthPct)}</div>
                       <div className="mt-0.5 tabular-nums text-[0.8rem] text-fg-body">
-                        <ZecSymbol className="mr-0.5 inline-block" /> {formatPayout(entry.weeklyRecent * 0.05)}
+                        <ZecSymbol className="mr-0.5 inline-block" /> {formatPayout(entry.weeklyRecent * levelOneRewardZec)}
                       </div>
                     </td>
                   </tr>
@@ -1396,10 +1534,10 @@ const HOW_IT_WORKS: { title: string; body: ReactNode }[] = [
     title: "Rewards",
     body: (
       <>
-        The 0.05 ZEC amount is an example based on the lowest name price (0.25 ZEC for 7+ characters).
-        You earn 20% of the lowest name price at the time of purchase for direct referrals. Since prices
-        can change, your reward may vary. You also earn from referrals of your referrals, with each level
-        earning half the previous one. Rewards are estimates until early access purchases are complete.{" "}
+        Level I referral rewards are based on $4 USD worth of ZEC, which is one fifth of the
+        current lowest pricing tier. You also earn from referrals of your referrals, with each
+        level earning half the previous one. Rewards are current-rate estimates until early
+        access purchases are complete.{" "}
         <Link href="/leaders/terms" className="underline underline-offset-2">
           View terms
         </Link>
@@ -1539,7 +1677,7 @@ function isNextWeek(previousWeekStart: string, nextWeekStart: string): boolean {
 }
 
 function formatPayout(value: number): string {
-  return Number.isInteger(value) ? `${value}` : value.toFixed(1);
+  return formatZec(value);
 }
 
 function formatZec(value: number): string {
@@ -1548,6 +1686,16 @@ function formatZec(value: number): string {
   if (value >= 10) return value.toFixed(1);
   if (value >= 1) return value.toFixed(2);
   return value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function formatUsd(value: number): string {
+  if (!Number.isFinite(value)) return "$0.00";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 function Skeleton({ w = "w-12" }: { w?: string }) {

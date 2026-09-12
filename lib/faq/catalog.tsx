@@ -219,8 +219,8 @@ export const FAQ_SECTIONS: FaqSection[] = [
             Sharing your referral link attributes people who join through it to you. Only referrals who
             also complete a reservation improve your adjusted line: {reservedReferralSpotPhrase("direct")}{" "}
             and {reservedReferralSpotPhrase("indirect")} move you up 1. Referral <em>rewards</em> are
-            separate — they pay when the referred person claims a name, up to 0.05 ZEC (1/5 of the
-            lowest claim price at purchase time). <FaqA href="/leaders/terms">View terms</FaqA>.
+            separate — they pay when the referred person claims a name, up to the current-rate ZEC
+            equivalent of $4 USD. <FaqA href="/leaders/terms">View terms</FaqA>.
           </>
         ),
       },
@@ -539,10 +539,10 @@ export const FAQ_SECTIONS: FaqSection[] = [
         question: "How much is the referral reward?",
         answer: (
           <>
-            During Early Access, direct referral rewards may earn up to 0.05 ZEC for each referred
-            signup that completes a qualifying claim. That 0.05 ZEC figure is 1/5 of the lowest name
-            claim price (0.25 ZEC for 7+ character names) and may vary with the claim price at
-            purchase time. Indirect rewards may apply when referred users invite others.
+            During Early Access, direct referral rewards may earn up to the current-rate ZEC
+            equivalent of $4 USD for each referred signup that completes a qualifying claim. That
+            Level I value is one fifth of the lowest pricing tier. Indirect rewards may apply when
+            referred users invite others.
           </>
         ),
       },

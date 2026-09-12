@@ -31,6 +31,13 @@ import { ensureHumanReferralCode, resolveReferralIdentity } from "@/lib/referral
 import { resolveSiteUrl } from "@/lib/site-url";
 import { getWaitlistVerifyNameStats } from "@/lib/campaigns/waitlist-verify";
 import { getProtectedFamilyVariants } from "@/lib/protected/referrals";
+import { getExchangeRate } from "@/lib/exchange-rate";
+import {
+  buildReferralRewardQuote,
+  fixedReferralRewardForDepth,
+  roundZecReward,
+  type ReferralRewardQuote,
+} from "@/lib/leaders/referral-rewards";
 
 export type { DailyRow, RankingEntry, WeeklyRow } from "@/lib/leaders/rankings";
 export type { ReferralDashboardData } from "@/lib/leaders/referral-dashboard";
@@ -40,10 +47,12 @@ export interface TimeSeriesPoint {
   total: number;
   referred: number;
   nonReferred: number;
+  reserved: number;
   rewardsPot: number;
   totalDelta?: number;
   referredDelta?: number;
   nonReferredDelta?: number;
+  reservedDelta?: number;
   rewardsDelta?: number;
   topReferrer?: { name: string; count: number; streak: boolean; code?: string };
 }
@@ -70,7 +79,8 @@ export interface LeadersData {
   leaderboard: LeaderboardEntry[];
   dailyRankings: DailyRow[];
   weeklyRankings: WeeklyRow[];
-  stats: { waitlist: number; referred: number; rewardsPot: number };
+  stats: { waitlist: number; referred: number; reserved: number; reservedReferred: number; rewardsPot: number };
+  referralRewardQuote: ReferralRewardQuote;
 }
 
 export interface WaitlistStatDeltaWindow {
@@ -140,13 +150,14 @@ function toWaitlistReferralRows(data: Record<string, unknown>[]): WaitlistReferr
       created_at: row.created_at as string,
       email_verified: Boolean(row.email_verified),
       name_reserved: Boolean(row.name_reserved),
+      name_reserved_at: (row.name_reserved_at as string | null) ?? null,
       cabal: Boolean(row.cabal),
     }))
     .filter((row) => Boolean(row.referral_code));
 }
 
 function roundZec(value: number): number {
-  return Math.round(value * 10000) / 10000;
+  return roundZecReward(value);
 }
 
 function formatUnknownError(error: unknown): string {
@@ -167,8 +178,8 @@ function wasCommissionPinSentToday(value: unknown): boolean {
   return Date.now() - sentAt < COMMISSION_PIN_RATE_LIMIT_MS;
 }
 
-function calculateRewardsPot(rows: WaitlistReferralRow[]): number {
-  const summaries = buildFixedDepthReferralSummaries(rows);
+function calculateRewardsPot(rows: WaitlistReferralRow[], rewardQuote: ReferralRewardQuote): number {
+  const summaries = buildFixedDepthReferralSummaries(rows, rewardQuote);
   const rewardsPot = Array.from(summaries.values()).reduce(
     (total, summary) => total + (summary.directReferrals > 0 ? summary.potentialRewards : 0),
     0,
@@ -215,7 +226,7 @@ async function fetchAllWaitlistRows(): Promise<Record<string, unknown>[] | null>
     while (true) {
       const { data, error } = await db
         .from("zn_waitlist")
-        .select("name, referral_code, human_referral_code, referred_by, created_at, email_verified, name_reserved, cabal")
+        .select("name, referral_code, human_referral_code, referred_by, created_at, email_verified, name_reserved, name_reserved_at, cabal")
         .order("created_at", { ascending: true })
         .range(offset, offset + WAITLIST_PAGE_SIZE - 1);
 
@@ -247,11 +258,14 @@ async function fetchAllWaitlistRows(): Promise<Record<string, unknown>[] | null>
 function buildWaitlistStatsFromData(
   data: Record<string, unknown>[],
   rows: WaitlistReferralRow[],
-): { waitlist: number; referred: number; rewardsPot: number } {
+  rewardQuote: ReferralRewardQuote,
+): { waitlist: number; referred: number; reserved: number; reservedReferred: number; rewardsPot: number } {
   return {
     waitlist: data.filter((r) => Boolean(r.email_verified)).length,
     referred: data.filter((r) => Boolean(r.referred_by) && Boolean(r.email_verified)).length,
-    rewardsPot: calculateRewardsPot(rows),
+    reserved: data.filter((r) => Boolean(r.name_reserved)).length,
+    reservedReferred: data.filter((r) => Boolean(r.referred_by) && Boolean(r.email_verified) && Boolean(r.name_reserved)).length,
+    rewardsPot: calculateRewardsPot(rows, rewardQuote),
   };
 }
 
@@ -267,6 +281,12 @@ function shiftUtcDate(date: string, days: number): string {
   const ts = new Date(`${date}T00:00:00.000Z`).getTime();
   if (!Number.isFinite(ts)) return date;
   return new Date(ts + days * DAY_MS).toISOString().slice(0, 10);
+}
+
+function chartDateFromIso(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
 }
 
 function computeWaitlistStatDeltas(points: TimeSeriesPoint[], current: {
@@ -314,8 +334,9 @@ export async function getWaitlistStats(): Promise<WaitlistStatsSnapshot> {
       };
     }
     const rows = toWaitlistReferralRows(data);
-    const current = buildWaitlistStatsFromData(data, rows);
-    const timeSeries = buildLeadersTimeSeriesFromData(data, rows);
+    const rewardQuote = buildReferralRewardQuote(await getExchangeRate());
+    const current = buildWaitlistStatsFromData(data, rows, rewardQuote);
+    const timeSeries = buildLeadersTimeSeriesFromData(data, rows, rewardQuote);
     return {
       ...current,
       deltas: computeWaitlistStatDeltas(timeSeries, current),
@@ -337,6 +358,7 @@ export async function getWaitlistStats(): Promise<WaitlistStatsSnapshot> {
 function buildLeadersTimeSeriesFromData(
   data: Record<string, unknown>[],
   rows: WaitlistReferralRow[],
+  rewardQuote: ReferralRewardQuote,
 ): TimeSeriesPoint[] {
   const nameMap: Record<string, string> = {};
   for (const row of rows) {
@@ -361,6 +383,7 @@ function buildLeadersTimeSeriesFromData(
       created_at: rawRow.created_at as string,
       email_verified: Boolean(rawRow.email_verified),
       name_reserved: Boolean(rawRow.name_reserved),
+      name_reserved_at: (rawRow.name_reserved_at as string | null) ?? null,
       cabal: Boolean(rawRow.cabal),
     };
     const date = row.created_at.slice(0, 10);
@@ -370,7 +393,7 @@ function buildLeadersTimeSeriesFromData(
     // cumulativeRows as it stands before pushing this row. This makes calculateRewardsPot
     // run once per date instead of once per row.
     if (isNewDate && points.length > 0) {
-      points[points.length - 1].rewardsPot = calculateRewardsPot(cumulativeRows);
+      points[points.length - 1].rewardsPot = calculateRewardsPot(cumulativeRows, rewardQuote);
       const top = resolveTopReferrer(dailyCounts, nameMap, previousTopCode);
       points[points.length - 1].topReferrer = top;
       previousTopCode = top?.code ?? null;
@@ -385,7 +408,7 @@ function buildLeadersTimeSeriesFromData(
     if (isCountedReferral) referred += 1;
 
     if (isNewDate) {
-      points.push({ date, total, referred, nonReferred: total - referred, rewardsPot: 0 });
+      points.push({ date, total, referred, nonReferred: total - referred, reserved: 0, rewardsPot: 0 });
       lastDate = date;
     } else {
       const point = points[points.length - 1];
@@ -402,15 +425,50 @@ function buildLeadersTimeSeriesFromData(
 
   // Final flush for the last date — rewardsPot was never set inside the loop.
   if (points.length > 0) {
-    points[points.length - 1].rewardsPot = calculateRewardsPot(cumulativeRows);
+    points[points.length - 1].rewardsPot = calculateRewardsPot(cumulativeRows, rewardQuote);
     const top = resolveTopReferrer(dailyCounts, nameMap, previousTopCode);
     points[points.length - 1].topReferrer = top;
   }
+
+  const reservedCountsByDate = new Map<string, number>();
+  for (const rawRow of data) {
+    if (!Boolean(rawRow.name_reserved)) continue;
+    const reservedDate = chartDateFromIso((rawRow.name_reserved_at as string | null) ?? null);
+    if (!reservedDate) continue;
+    reservedCountsByDate.set(reservedDate, (reservedCountsByDate.get(reservedDate) ?? 0) + 1);
+  }
+
+  let reserved = 0;
+  const pointByDate = new Map(points.map((point) => [point.date, point]));
+  const mergedDates = Array.from(new Set([...points.map((point) => point.date), ...reservedCountsByDate.keys()])).sort();
+  const mergedPoints: TimeSeriesPoint[] = [];
+  let lastPoint: TimeSeriesPoint | null = null;
+
+  for (const date of mergedDates) {
+    reserved += reservedCountsByDate.get(date) ?? 0;
+    const existingPoint = pointByDate.get(date);
+    const point: TimeSeriesPoint = existingPoint
+      ? { ...existingPoint, reserved }
+      : {
+          date,
+          total: lastPoint?.total ?? 0,
+          referred: lastPoint?.referred ?? 0,
+          nonReferred: lastPoint?.nonReferred ?? 0,
+          reserved,
+          rewardsPot: lastPoint?.rewardsPot ?? 0,
+        };
+
+    mergedPoints.push(point);
+    lastPoint = point;
+  }
+
+  points.splice(0, points.length, ...mergedPoints);
 
   for (let i = 1; i < points.length; i++) {
     points[i].totalDelta = points[i].total - points[i - 1].total;
     points[i].referredDelta = points[i].referred - points[i - 1].referred;
     points[i].nonReferredDelta = points[i].nonReferred - points[i - 1].nonReferred;
+    points[i].reservedDelta = points[i].reserved - points[i - 1].reserved;
     points[i].rewardsDelta = roundZec(points[i].rewardsPot - points[i - 1].rewardsPot);
   }
 
@@ -421,7 +479,8 @@ export async function getLeadersTimeSeries(): Promise<TimeSeriesPoint[]> {
   try {
     const data = await fetchAllWaitlistRows();
     if (!data) return [];
-    return buildLeadersTimeSeriesFromData(data, toWaitlistReferralRows(data));
+    const rewardQuote = buildReferralRewardQuote(await getExchangeRate());
+    return buildLeadersTimeSeriesFromData(data, toWaitlistReferralRows(data), rewardQuote);
   } catch {
     return [];
   }
@@ -432,7 +491,8 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
     const data = await fetchAllWaitlistRows();
     if (!data) return [];
 
-    return buildLeaderboardFromRows(toWaitlistReferralRows(data));
+    const rewardQuote = buildReferralRewardQuote(await getExchangeRate());
+    return buildLeaderboardFromRows(toWaitlistReferralRows(data), rewardQuote);
   } catch {
     return [];
   }
@@ -440,8 +500,9 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
 
 function buildLeaderboardFromRows(
   rows: WaitlistReferralRow[],
+  rewardQuote: ReferralRewardQuote,
 ): LeaderboardEntry[] {
-  const summaries = buildFixedDepthReferralSummaries(rows);
+  const summaries = buildFixedDepthReferralSummaries(rows, rewardQuote);
 
   const nameMap: Record<string, string> = {};
   const preferredCodeMap = buildPreferredCodeMap(rows);
@@ -523,7 +584,7 @@ function buildLeaderboardFromRows(
           weeklyCounts[referral_code] || 0,
           previousWeeklyCounts[referral_code] || 0,
         ),
-        potential_rewards: summary?.potentialRewards ?? roundZec(referrals * 0.05),
+        potential_rewards: summary?.potentialRewards ?? roundZec(referrals * fixedReferralRewardForDepth(1, rewardQuote)),
         streak: referral_code === streakCode,
         topRecent: referral_code === topRecentCode && referral_code !== streakCode,
       };
@@ -546,7 +607,8 @@ export async function getDailyRankings(): Promise<DailyRow[]> {
     const data = await fetchAllWaitlistRows();
     if (!data || data.length === 0) return [];
 
-    return buildDailyRankingsFromRows(toWaitlistReferralRows(data));
+    const rewardQuote = buildReferralRewardQuote(await getExchangeRate());
+    return buildDailyRankingsFromRows(toWaitlistReferralRows(data), rewardQuote);
   } catch {
     return [];
   }
@@ -557,7 +619,8 @@ export async function getWeeklyRankings(): Promise<WeeklyRow[]> {
     const data = await fetchAllWaitlistRows();
     if (!data || data.length === 0) return [];
 
-    return buildWeeklyRankingsFromRows(toWaitlistReferralRows(data));
+    const rewardQuote = buildReferralRewardQuote(await getExchangeRate());
+    return buildWeeklyRankingsFromRows(toWaitlistReferralRows(data), rewardQuote);
   } catch {
     return [];
   }
@@ -571,16 +634,18 @@ export async function getLeadersData(): Promise<LeadersData> {
       leaderboard: [],
       dailyRankings: [],
       weeklyRankings: [],
-      stats: { waitlist: 0, referred: 0, rewardsPot: 0 },
+      stats: { waitlist: 0, referred: 0, reserved: 0, reservedReferred: 0, rewardsPot: 0 },
+      referralRewardQuote: buildReferralRewardQuote(null),
     };
   }
   const rows = toWaitlistReferralRows(data);
+  const rewardQuote = buildReferralRewardQuote(await getExchangeRate());
 
-  const timeSeries = buildLeadersTimeSeriesFromData(data, rows);
-  const leaderboard = buildLeaderboardFromRows(rows);
-  const initialDailyRankings = buildDailyRankingsFromRows(rows);
-  const weeklyRankings = buildWeeklyRankingsFromRows(rows);
-  const stats = buildWaitlistStatsFromData(data, rows);
+  const timeSeries = buildLeadersTimeSeriesFromData(data, rows, rewardQuote);
+  const leaderboard = buildLeaderboardFromRows(rows, rewardQuote);
+  const initialDailyRankings = buildDailyRankingsFromRows(rows, rewardQuote);
+  const weeklyRankings = buildWeeklyRankingsFromRows(rows, rewardQuote);
+  const stats = buildWaitlistStatsFromData(data, rows, rewardQuote);
 
   const dailyRankings: DailyRow[] = initialDailyRankings.map((row) => ({ ...row, topBadge: null }));
 
@@ -610,7 +675,7 @@ export async function getLeadersData(): Promise<LeadersData> {
     previousTopCode = topEntry.canonical_referral_code ?? topEntry.referral_code;
   }
 
-  return { timeSeries, leaderboard, dailyRankings, weeklyRankings, stats };
+  return { timeSeries, leaderboard, dailyRankings, weeklyRankings, stats, referralRewardQuote: rewardQuote };
 }
 
 export async function getDailyNewNames(date: string): Promise<DailyNewNameEntry[]> {
@@ -676,7 +741,8 @@ export async function getReferralDashboard(
     }
 
     const rows = toWaitlistReferralRows(data);
-    const waitlistDashboard: ReferralDashboardBaseData = buildReferralDashboard(resolved.canonicalCode, rows);
+    const rewardQuote = buildReferralRewardQuote(await getExchangeRate());
+    const waitlistDashboard: ReferralDashboardBaseData = buildReferralDashboard(resolved.canonicalCode, rows, rewardQuote);
     const isProtectedFamily = resolved.row.owner_kind === "protected_family";
     const protectedFamilyVariants = isProtectedFamily && resolved.row.family_root_name
       ? await getProtectedFamilyVariants(resolved.row.family_root_name)
@@ -695,6 +761,7 @@ export async function getReferralDashboard(
             created_at: resolved.row.created_at ?? new Date(0).toISOString(),
             email_verified: true,
             name_reserved: false,
+            name_reserved_at: null,
             cabal: false,
           },
           referralCode: resolved.preferredCode,
@@ -704,7 +771,7 @@ export async function getReferralDashboard(
           rootBadge: null,
         }
       : waitlistDashboard;
-    const leaderboard = buildLeaderboardFromRows(rows);
+    const leaderboard = buildLeaderboardFromRows(rows, rewardQuote);
     const leaderboardRank =
       leaderboard.find((entry) => entry.canonical_referral_code === dashboard.canonicalReferralCode)?.rank ?? null;
     const [commissionUnlocked, referralsUnlocked, nameStatsById] = isProtectedFamily

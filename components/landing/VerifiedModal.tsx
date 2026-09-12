@@ -94,8 +94,8 @@ function ConfirmView({
       </p>
       <div className="w-full rounded-xl px-4 py-3 flex flex-col gap-3 text-left" style={{ border: "1px solid var(--border-muted)" }}>
         <p className="text-xs" style={{ color: "var(--fg-muted)", lineHeight: 1.6 }}>
-          Get up to <strong style={{ color: "var(--fg-body)" }}>0.05 ZEC</strong> per referral who signs up and buys a
-          name during early access, plus rewards from their referrals!
+          Get up to the current-rate ZEC equivalent of <strong style={{ color: "var(--fg-body)" }}>$4 USD</strong> per
+          referral who signs up and buys a name during early access, plus rewards from their referrals!
         </p>
         <div className="flex gap-2">
           <button

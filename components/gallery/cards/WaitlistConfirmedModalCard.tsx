@@ -85,8 +85,8 @@ function WaitlistConfirmedView() {
           }}
         >
           <p style={{ fontSize: "0.75rem", color: "var(--fg-muted)", lineHeight: 1.6, margin: 0 }}>
-            Get up to <strong style={{ color: "var(--fg-body)" }}>0.05 ZEC</strong> per referral who signs up and buys a
-            name during early access, plus rewards from their referrals!
+            Get up to the current-rate ZEC equivalent of <strong style={{ color: "var(--fg-body)" }}>$4 USD</strong> per
+            referral who signs up and buys a name during early access, plus rewards from their referrals!
           </p>
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             {[
@@ -352,7 +352,7 @@ function buildSnippet(t: ThemeName): string {
         <p class="lede">We'll reach out before we launch.</p>
 
         <div class="referral">
-          <p>Get up to <strong>0.05 ZEC</strong> per referral who signs up and buys a name during early access, plus rewards from their referrals!</p>
+          <p>Get up to the current-rate ZEC equivalent of <strong>$4 USD</strong> per referral who signs up and buys a name during early access, plus rewards from their referrals!</p>
           <div class="action-row">
             <button type="button" class="action">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

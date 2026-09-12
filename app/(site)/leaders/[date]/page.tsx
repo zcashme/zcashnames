@@ -108,7 +108,7 @@ export default function LeaderSnapshotPage() {
   const aggregate = {
     waitlist: selectedPoint?.total ?? 0,
     referred: selectedPoint?.referred ?? 0,
-    maxPay: roundZec((selectedPoint?.referred ?? 0) * 0.05),
+    maxPay: selectedPoint?.rewardsPot ?? 0,
   };
 
   const deltas = {
@@ -116,7 +116,7 @@ export default function LeaderSnapshotPage() {
     referred: selectedPoint && previousPoint ? selectedPoint.referred - previousPoint.referred : null,
     maxPay:
       selectedPoint && previousPoint
-        ? roundZec((selectedPoint.referred - previousPoint.referred) * 0.05)
+        ? roundZec(selectedPoint.rewardsPot - previousPoint.rewardsPot)
         : null,
   };
 

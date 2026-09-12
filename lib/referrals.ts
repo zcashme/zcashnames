@@ -50,6 +50,10 @@ function isCaseInsensitiveExactPattern(value: string): string {
   return value.replace(/[%_]/g, "");
 }
 
+function protectedFamilyKey(row: ReferralIdentityRow): string {
+  return (row.family_root_name ?? row.id).trim().toLowerCase();
+}
+
 function toWaitlistIdentity(row: Record<string, unknown> | null): ReferralIdentityRow | null {
   if (!row?.id || !row.referral_code) return null;
   return {
@@ -166,8 +170,7 @@ export async function ensureHumanReferralCode<Row extends ReferralIdentityRow = 
     throw new Error("Cannot ensure a human referral code without a canonical referral code.");
   }
 
-  // Protected-family profiles intentionally use their generated public code only.
-  if (row.owner_kind === "protected_family" || row.human_referral_code?.trim()) {
+  if (row.human_referral_code?.trim()) {
     return {
       canonicalCode: row.referral_code,
       preferredCode: existingPreferred,
@@ -179,10 +182,23 @@ export async function ensureHumanReferralCode<Row extends ReferralIdentityRow = 
     const candidate = buildHumanReferralCodeCandidate(row.name ?? row.referral_code, suffix);
     if (!candidate || await referralCodeExists(candidate)) continue;
 
-    const { data: updated, error } = await db
-      .from("zn_waitlist")
-      .update({ human_referral_code: candidate })
-      .eq("id", row.id)
+    const isProtectedFamily = row.owner_kind === "protected_family";
+    const protectedKey = isProtectedFamily ? protectedFamilyKey(row) : "";
+    if (isProtectedFamily && !protectedKey) {
+      throw new Error("Cannot ensure a human referral code without a protected family root name.");
+    }
+
+    const updateQuery = isProtectedFamily
+      ? db
+          .from("zn_protected_family_referrals")
+          .update({ human_referral_code: candidate })
+          .eq("family_root_name", protectedKey)
+      : db
+          .from("zn_waitlist")
+          .update({ human_referral_code: candidate })
+          .eq("id", row.id);
+
+    const { data: updated, error } = await updateQuery
       .is("human_referral_code", null)
       .select("human_referral_code")
       .maybeSingle();
@@ -199,12 +215,17 @@ export async function ensureHumanReferralCode<Row extends ReferralIdentityRow = 
       };
     }
 
-    const { data: refreshed, error: refreshError } = await db
-      .from("zn_waitlist")
-      .select("id, name, referral_code, human_referral_code")
-      .eq("id", row.id)
-      .limit(1)
-      .maybeSingle();
+    const refreshQuery = isProtectedFamily
+      ? db
+          .from("zn_protected_family_referrals")
+          .select(PROTECTED_FAMILY_REFERRAL_SELECT)
+          .eq("family_root_name", protectedKey)
+      : db
+          .from("zn_waitlist")
+          .select("id, name, referral_code, human_referral_code")
+          .eq("id", row.id);
+
+    const { data: refreshed, error: refreshError } = await refreshQuery.limit(1).maybeSingle();
     if (refreshError) throw refreshError;
 
     if (refreshed?.human_referral_code) {
@@ -217,7 +238,7 @@ export async function ensureHumanReferralCode<Row extends ReferralIdentityRow = 
     }
   }
 
-  throw new Error(`Could not assign a human referral code for waitlist row ${row.id}.`);
+  throw new Error(`Could not assign a human referral code for ${row.owner_kind === "protected_family" ? "protected family" : "waitlist row"} ${row.id}.`);
 }
 
 export async function resolveReferralIdentity<Row extends ReferralIdentityRow = ReferralIdentityRow>(

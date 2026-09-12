@@ -43,8 +43,8 @@ export default function WaitlistEmail({ name, referralUrl, referralCode, accessP
 
       <Section style={{ textAlign: "left" as const, padding: "16px 40px 0" }}>
         <Text style={paragraph}>
-          Earn up to <strong>0.05 ZEC</strong> for each signup that buys a name during early access. Earn from their
-          referrals too! You can view your referral activity and earnings{" "}
+          Earn up to the current-rate ZEC equivalent of <strong>$4 USD</strong> for each signup that buys a name during
+          early access. Earn from their referrals too! You can view your referral activity and earnings{" "}
           <Link href={dashboardUrl} style={{ color: "#f4b728", textDecoration: "underline" }}>
             here
           </Link>
