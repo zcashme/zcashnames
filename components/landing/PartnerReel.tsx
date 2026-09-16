@@ -60,6 +60,12 @@ const EXTRA_PARTNERS: readonly PartnerReelItem[] = [
     href: "https://github.com/USCMig/Cyze",
   },
   {
+    id: "nozy",
+    displayName: "Nozy",
+    iconSrc: "/icons/nozy.png",
+    href: "https://leonine-dao.github.io/Nozy-wallet/",
+  },
+  {
     id: "zucchini",
     displayName: "Zucchini App",
     iconSrc: "/icons/zucchini.png",
@@ -86,7 +92,11 @@ const EXTRA_PARTNERS: readonly PartnerReelItem[] = [
   },
 ];
 
-const PARTNER_ORDER = ["zingo", "zucchini", "pgpz", "zec-os", "cipherscan", "cyze", "unstoppable", "edge", "zipher", "noir", "cake", "developer-guide"] as const;
+function comparePartnerReelItems(a: PartnerReelItem, b: PartnerReelItem) {
+  if (a.kind === "cta" && b.kind !== "cta") return 1;
+  if (b.kind === "cta" && a.kind !== "cta") return -1;
+  return a.displayName.localeCompare(b.displayName, undefined, { sensitivity: "base" });
+}
 
 function isPartnerWithAppIcon(brand: WalletBrand): brand is WalletBrand & { appIcon: WalletBrandAppIcon } {
   return brand.partner && !!brand.appIcon;
@@ -423,9 +433,7 @@ export default function PartnerReel({ compactTopSpacing = false }: { compactTopS
   const partners = useMemo(
     () =>
       [...WALLET_BRANDS.filter(isPartnerWithAppIcon).map(toPartnerReelItem), ...EXTRA_PARTNERS].sort(
-        (a, b) =>
-          PARTNER_ORDER.indexOf(a.id as (typeof PARTNER_ORDER)[number]) -
-          PARTNER_ORDER.indexOf(b.id as (typeof PARTNER_ORDER)[number]),
+        comparePartnerReelItems,
       ),
     [],
   );
