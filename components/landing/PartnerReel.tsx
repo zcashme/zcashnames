@@ -66,12 +66,6 @@ const EXTRA_PARTNERS: readonly PartnerReelItem[] = [
     href: "https://leonine-dao.github.io/Nozy-wallet/",
   },
   {
-    id: "zucchini",
-    displayName: "Zucchini App",
-    iconSrc: "/icons/zucchini.png",
-    href: "https://zucchinifi.xyz/",
-  },
-  {
     id: "pgpz",
     displayName: "PGPZ",
     iconSrc: "/icons/pgpz.png",

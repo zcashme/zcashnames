@@ -21,6 +21,7 @@ export type WalletVariantId =
   | "desktop_mac_zingo"
   | "desktop_pc_zingo"
   | "browser_chrome_noir"
+  | "browser_chrome_zucchini"
   | "browser_chrome_brave";
 
 export type WalletId =
@@ -34,7 +35,8 @@ export type WalletId =
   | "mobile_cake"
   | "mobile_zipher"
   | "browser_brave"
-  | "browser_noir";
+  | "browser_noir"
+  | "browser_zucchini";
 
 export type WalletBrandSlug =
   | "edge"
@@ -46,6 +48,7 @@ export type WalletBrandSlug =
   | "zodl"
   | "vizor"
   | "noir"
+  | "zucchini"
   | "brave";
 
 export type WalletBrandLogoAssets = {
@@ -306,10 +309,14 @@ const zingoDesktopFeatures: WalletFeatures = {
   receiveUaddr: true,
 };
 
-const viewOnlyDesktopFeatures: WalletFeatures = {
+const noirLikeBrowserFeatures: WalletFeatures = {
   ...baseWalletFeatures,
-  viewProfile: true,
-  viewExplorer: true,
+  resolveName: true,
+  tapURI: true,
+  pasteURI: true,
+  uploadQR: true,
+  receiveTaddr: true,
+  receiveUaddr: true,
 };
 
 const browserResolverFeatures: WalletFeatures = {
@@ -530,6 +537,22 @@ export const WALLET_BRANDS: readonly WalletBrand[] = [
         device: "browser",
         subcategory: "chrome",
         href: "https://chromewebstore.google.com/detail/noir-wallet/mfoghjbpfanobmnoemoepenjjcmfpmdn",
+      },
+    ],
+  },
+  {
+    slug: "zucchini",
+    brandName: "Zucchini",
+    displayName: "Zucchini",
+    intro: "Test ZcashNames from a browser wallet context and compare extension-based resolution behavior.",
+    partner: true,
+    appIcon: { src: "/icons/zucchini.png", alt: "Zucchini app icon" },
+    websiteUrl: "https://zucchinifi.xyz/",
+    platformDownloads: [
+      {
+        device: "browser",
+        subcategory: "chrome",
+        href: "https://chromewebstore.google.com/detail/zucchini-wallet/khaifnjdhfaadfhgbilokobnaalmimad?hl=en",
       },
     ],
   },
@@ -757,7 +780,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "mac",
     recommended: false,
     sortOrder: 80,
-    features: viewOnlyDesktopFeatures,
+    features: baseWalletFeatures,
     warning: "Desktop wallet Vizor cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc).",
   },
   {
@@ -794,17 +817,19 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "chrome",
     recommended: true,
     sortOrder: 100,
-    features: {
-      ...baseWalletFeatures,
-      resolveName: true,
-      importContact: true,
-      exportContact: true,
-      tapURI: true,
-      pasteURI: true,
-      uploadQR: true,
-      receiveTaddr: true,
-      receiveUaddr: true,
-    },
+    features: noirLikeBrowserFeatures,
+  },
+  {
+    variantId: "browser_chrome_zucchini",
+    walletId: "browser_zucchini",
+    brandSlug: "zucchini",
+    brandName: "Zucchini",
+    displayName: "Zucchini",
+    device: "browser",
+    subcategory: "chrome",
+    recommended: true,
+    sortOrder: 105,
+    features: noirLikeBrowserFeatures,
   },
   {
     variantId: "browser_chrome_brave",
@@ -816,7 +841,7 @@ export const WALLET_VARIANTS: readonly WalletVariant[] = [
     subcategory: "chrome",
     recommended: false,
     sortOrder: 110,
-    features: viewOnlyDesktopFeatures,
+    features: baseWalletFeatures,
     warning: "Browser wallet Brave cannot send ZEC to names, only control names\n(claim, list for sale, buy, etc).",
   },
 ] as const;

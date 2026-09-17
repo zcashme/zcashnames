@@ -45,7 +45,7 @@ const linkStyle: React.CSSProperties = {
   textDecoration: "underline",
 };
 
-const SEND_TO_NAME_WALLET_SLUGS = new Set(["edge", "cake", "unstoppable", "zingo", "noir"]);
+const SEND_TO_NAME_WALLET_SLUGS = new Set(["edge", "cake", "unstoppable", "zingo", "noir", "zucchini"]);
 
 const summaryStyle: React.CSSProperties = {
   color: "var(--fg-heading)",
