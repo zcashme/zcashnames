@@ -110,7 +110,7 @@ from (
 
 ## Scenario 3b: Waitlist Verified Unreserved
 
-Requires `sql/2026-09-04-campaign-verified-unreserved-approved-access.sql` applied in Supabase.
+Requires `sql/2026-09-04-campaign-verified-unreserved-approved-access.sql` and `sql/2026-09-07-campaign-verified-unreserved-exclude-protected-names.sql` applied in Supabase.
 
 1. Set:
    - source kind: `zn_waitlist`
@@ -141,23 +141,73 @@ from (
 ) t;
 ```
 
-This count is an upper bound versus the campaign estimate: suppressions, waitlist unsubscribes, and protected-name families with a currently approved access request are excluded at estimate time.
+This count is an upper bound versus the campaign estimate: suppressions, waitlist unsubscribes, currently protected names, approved-access families, and priority-claim names are excluded at estimate time.
 
-Protected-name approved-access check:
+Protected-name exclusion check:
 
-1. Find or create a verified, unreserved waitlist row for a protected parent name or one of its variants.
-2. Approve an access request for either that parent or any variant in the same family.
-3. Refresh `verified_unreserved` recipients and record the reduced count.
-4. Refresh `verified_only` recipients and verify its count is unchanged.
-5. If the same inbox has another eligible unreserved name, use `one_per_email` and verify the inbox remains included with only the blocked family removed from `related_names`.
-6. Correct the access request to denied, refresh recipients, and verify the family is included again.
+1. Find or create a verified, unreserved waitlist row whose name matches a `zn_protected_names` row with `status = 'protected'`.
+2. Refresh `verified_unreserved` recipients and record the reduced count. That waitlist name must not appear.
+3. Refresh `verified_only` recipients and verify its count is unchanged.
+4. If the same inbox has another eligible unreserved name, use `one_per_email` and verify the inbox remains included with only the protected name removed from `related_names`.
+5. Approve an access request for a parent or any variant in a family, including names that are not `status = 'protected'`. Refresh `verified_unreserved` and verify the family is excluded.
+6. Correct the access request to denied, refresh recipients, and verify non-protected family names are included again while `status = 'protected'` names stay excluded.
+7. Mark a name with `ens_priority_claim` or `zm_priority_claim`, refresh recipients, and verify that name is excluded even without an access request and even if it is not `status = 'protected'`.
 
 Expected:
+- a waitlist name with `zn_protected_names.status = 'protected'` is excluded even with no access request
 - an approved request for a parent excludes that parent and all variants in its family
 - an approved request for a variant excludes that variant and its parent family
 - only `verified_unreserved` changes; `verified_only`, `verified_newsletter`, and `all_rows` do not
 - `one_per_row` removes only matching rows
 - `one_per_email` removes an inbox only when no eligible unreserved row remains
+- a protected name with either priority-claim flag is excluded without an approved access request
+
+## Scenario 3c: Waitlist Verified Reserved
+
+Requires `sql/2026-09-18-campaign-audience-verified-reserved.sql` applied in Supabase.
+
+1. Set:
+   - source kind: `zn_waitlist`
+   - audience scope: `verified_reserved`
+   - dedupe mode: `one_per_email`
+2. Click `Refresh recipients`
+3. Record count as `count_verified_reserved`
+4. Set audience scope to `verified_only`
+5. Click `Refresh recipients`
+6. Record count as `count_verified_only`
+
+Expected:
+- `count_verified_only >= count_verified_reserved`
+- both actions succeed
+- sample updates each time
+
+DB validation for `verified_reserved` with `one_per_email`:
+
+```sql
+select count(*) as verified_reserved_unique_emails
+from (
+  select lower(trim(email)) as normalized_email
+  from public.zn_waitlist
+  where coalesce(trim(email), '') <> ''
+    and email_verified is true
+    and name_reserved is true
+  group by lower(trim(email))
+) t;
+```
+
+This count is an upper bound versus the campaign estimate: suppressions and waitlist unsubscribes are excluded at estimate time. Protected names, approved-access families, and priority-claim names are not excluded from `verified_reserved`.
+
+Mixed-inbox check:
+
+1. Find or create a verified waitlist inbox with one reserved name and one unreserved name.
+2. Refresh `verified_reserved` with `one_per_email` and verify the inbox is included with only the reserved name in `related_names`.
+3. Refresh `verified_unreserved` with `one_per_email` and verify the same inbox is included with only the unreserved name in `related_names`, unless that unreserved name is excluded as protected, approved-access, or priority-claim.
+
+Expected:
+- `verified_reserved` includes only reserved rows
+- `verified_unreserved` protected-name exclusions do not change `verified_reserved`
+- `one_per_row` includes only matching reserved rows
+- `one_per_email` includes an inbox when at least one verified reserved row remains
 
 ## Scenario 4: Waitlist Selected Emails Happy Path
 

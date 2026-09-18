@@ -1,6 +1,7 @@
--- Exclude protected-name families with a currently approved access request from
--- the verified_unreserved campaign audience. This uses request.status because
--- decision corrections update the current request row.
+-- Exclude protected names from the verified_unreserved campaign audience:
+-- currently protected names, approved-access families, and priority-claim names.
+-- Approved-access matching uses request.status because decision corrections
+-- update the current request row.
 
 create or replace view public.approved_protected_name_access_family_members
 with (security_invoker = true) as
@@ -13,9 +14,13 @@ with approved_families as (
   from public.waitlist_protected_name_access_requests request
   join public.zn_protected_names protected_name
     on lower(trim(protected_name.name)) = lower(trim(request.requested_name))
+      or (
+        nullif(lower(trim(protected_name.normalized_name)), '') is not null
+        and protected_name.normalized_name = lower(trim(request.requested_name))
+      )
   where request.status = 'approved'
 ),
-family_members as (
+approved_access_family_members as (
   select distinct lower(trim(protected_name.name)) as normalized_name
   from public.zn_protected_names protected_name
   join approved_families family
@@ -23,13 +28,64 @@ family_members as (
       nullif(lower(trim(protected_name.parent_name)), ''),
       nullif(lower(trim(protected_name.name)), '')
     ) = family.family_key
+
+  union
+
+  select distinct lower(trim(protected_name.normalized_name)) as normalized_name
+  from public.zn_protected_names protected_name
+  join approved_families family
+    on coalesce(
+      nullif(lower(trim(protected_name.parent_name)), ''),
+      nullif(lower(trim(protected_name.name)), '')
+    ) = family.family_key
+  where nullif(lower(trim(protected_name.normalized_name)), '') is not null
+),
+protected_members as (
+  select distinct lower(trim(protected_name.name)) as normalized_name
+  from public.zn_protected_names protected_name
+  where protected_name.status = 'protected'
+
+  union
+
+  select distinct lower(trim(protected_name.normalized_name)) as normalized_name
+  from public.zn_protected_names protected_name
+  where protected_name.status = 'protected'
+    and nullif(lower(trim(protected_name.normalized_name)), '') is not null
+),
+priority_members as (
+  select distinct lower(trim(protected_name.name)) as normalized_name
+  from public.zn_protected_names protected_name
+  where protected_name.ens_priority_claim is true
+     or protected_name.zm_priority_claim is true
+
+  union
+
+  select distinct lower(trim(protected_name.normalized_name)) as normalized_name
+  from public.zn_protected_names protected_name
+  where (
+      protected_name.ens_priority_claim is true
+      or protected_name.zm_priority_claim is true
+    )
+    and nullif(lower(trim(protected_name.normalized_name)), '') is not null
 )
 select normalized_name
-from family_members
+from approved_access_family_members
+where normalized_name <> ''
+
+union
+
+select normalized_name
+from protected_members
+where normalized_name <> ''
+
+union
+
+select normalized_name
+from priority_members
 where normalized_name <> '';
 
 comment on view public.approved_protected_name_access_family_members is
-  'Normalized protected names in families with a currently approved access request.';
+  'Normalized names excluded from verified_unreserved campaigns: currently protected names, approved access-request families, and priority-claim names.';
 
 create or replace function public.campaign_contactable_waitlist_rows(
   p_series text default 'waitlist'
@@ -104,7 +160,7 @@ begin
     from public.campaign_contactable_waitlist_rows(p_series) z
     where (
       p_audience_scope = 'selected_emails'
-      and lower(z.email) in (select normalized_email from input_emails)
+      and lower(z.email) in (select input_email.normalized_email from input_emails input_email)
     )
     or p_audience_scope = 'all_rows'
     or (p_audience_scope = 'verified_only' and z.email_verified is true)
@@ -142,7 +198,7 @@ begin
     from public.campaign_contactable_waitlist_rows(p_series) z
     where (
       p_audience_scope = 'selected_emails'
-      and lower(z.email) in (select normalized_email from input_emails)
+      and lower(z.email) in (select input_email.normalized_email from input_emails input_email)
     )
     or p_audience_scope = 'all_rows'
     or (p_audience_scope = 'verified_only' and z.email_verified is true)
@@ -238,7 +294,7 @@ begin
     from public.campaign_contactable_waitlist_rows(p_series) z
     where (
       p_audience_scope = 'selected_emails'
-      and lower(z.email) in (select normalized_email from input_emails)
+      and lower(z.email) in (select input_email.normalized_email from input_emails input_email)
     )
     or p_audience_scope = 'all_rows'
     or (p_audience_scope = 'verified_only' and z.email_verified is true)

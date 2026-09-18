@@ -465,8 +465,10 @@ export default function CampaignEditor(props: CampaignEditorProps) {
       ? audienceScope === "selected_emails"
         ? "Send only to the entered waitlist emails. Waitlist personalization and tokens still apply. Updates unsubscribes are excluded."
         : audienceScope === "verified_unreserved"
-          ? "Send to verified waitlist rows that have not reserved a name. Mixed inboxes still receive mail for remaining unreserved names. Waitlist unsubscribes are excluded."
-          : "Start from waitlist rows. Audience and dedupe apply exactly as selected. Updates unsubscribes are excluded."
+          ? "Send to verified waitlist rows that have not reserved a name. Protected names, approved-access families, and priority-claim names are excluded. Mixed inboxes still receive mail for remaining unreserved names. Waitlist unsubscribes are excluded."
+          : audienceScope === "verified_reserved"
+            ? "Send to verified waitlist rows that have reserved a name. Mixed inboxes still receive mail for remaining reserved names. Waitlist unsubscribes are excluded."
+            : "Start from waitlist rows. Audience and dedupe apply exactly as selected. Updates unsubscribes are excluded."
       : sourceKind === "email_subscribers"
         ? "Send to all active subscribers in the selected series."
         : hasSeriesSelection
@@ -934,6 +936,7 @@ export default function CampaignEditor(props: CampaignEditorProps) {
                 >
                   <option value="verified_only">verified_only</option>
                   <option value="verified_unreserved">verified_unreserved</option>
+                  <option value="verified_reserved">verified_reserved</option>
                   <option value="all_rows">all_rows</option>
                   <option value="verified_newsletter">verified_newsletter</option>
                   <option value="selected_emails">selected_emails</option>

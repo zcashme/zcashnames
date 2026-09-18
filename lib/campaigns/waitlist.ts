@@ -141,6 +141,9 @@ function applyAudienceScope<T extends { eq: Function; not: Function }>(
   } else if (audienceScope === "verified_unreserved") {
     // Row-level: mixed inboxes stay eligible if any verified name is unreserved.
     scoped = scoped.eq("email_verified", true).eq("name_reserved", false);
+  } else if (audienceScope === "verified_reserved") {
+    // Row-level: mixed inboxes stay eligible if any verified name is reserved.
+    scoped = scoped.eq("email_verified", true).eq("name_reserved", true);
   } else if (audienceScope === "verified_newsletter") {
     scoped = scoped.eq("email_verified", true).eq("newsletter", true);
   }
