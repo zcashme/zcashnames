@@ -2,32 +2,8 @@ import type { Metadata } from "next";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import WaitlistEntryForm from "@/components/landing/WaitlistEntryForm";
 import WaitlistViewClient from "@/components/waitlist/WaitlistViewClient";
+import { buildWaitlistViewOgMetadata } from "@/lib/seo/table-og-pills";
 import { getPublicWaitlistViewData } from "@/lib/waitlist/view";
-
-export const metadata: Metadata = {
-  title: "View Waitlist - Zcash Names",
-  description: "Public waitlist view for verified Zcash Names queue positions.",
-  alternates: { canonical: "https://www.zcashnames.com/waitlist/view" },
-  openGraph: {
-    title: "View Waitlist | Zcash Names",
-    description: "Public waitlist view for verified Zcash Names queue positions.",
-    url: "https://www.zcashnames.com/waitlist/view",
-    images: [
-      {
-        url: "/og/waitlist-view.png",
-        width: 1200,
-        height: 630,
-        alt: "Zcash Names waitlist view preview",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "View Waitlist | Zcash Names",
-    description: "Public waitlist view for verified Zcash Names queue positions.",
-    images: ["/og/waitlist-view.png"],
-  },
-};
 
 export const dynamic = "force-dynamic";
 
@@ -36,14 +12,60 @@ type WaitlistViewPageProps = {
     search?: string;
     searchMode?: string;
     details?: string;
+    tab?: string;
   }>;
 };
 
+const WAITLIST_VIEW_DESCRIPTION =
+  "Public waitlist view for verified Zcash Names queue positions.";
+
+type WaitlistViewTab = "all" | "reserved" | "protected";
+
+function parseWaitlistViewTab(value: string | undefined): WaitlistViewTab {
+  if (value === "reserved" || value === "protected") return value;
+  return "all";
+}
+
+export async function generateMetadata({
+  searchParams,
+}: WaitlistViewPageProps): Promise<Metadata> {
+  const params = (await searchParams) ?? {};
+  const og = buildWaitlistViewOgMetadata(params);
+
+  return {
+    title: "View Waitlist - Zcash Names",
+    description: WAITLIST_VIEW_DESCRIPTION,
+    alternates: { canonical: "https://www.zcashnames.com/waitlist/view" },
+    openGraph: {
+      title: "View Waitlist | Zcash Names",
+      description: WAITLIST_VIEW_DESCRIPTION,
+      url: og.pageUrl,
+      images: [
+        {
+          url: og.imageUrl,
+          width: 1200,
+          height: 630,
+          alt: "Zcash Names waitlist view preview",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "View Waitlist | Zcash Names",
+      description: WAITLIST_VIEW_DESCRIPTION,
+      images: [og.imageUrl],
+    },
+  };
+}
+
 export default async function WaitlistViewPage({ searchParams }: WaitlistViewPageProps) {
   const params = (await searchParams) ?? {};
+  const initialTab = parseWaitlistViewTab(params.tab);
   const data = await getPublicWaitlistViewData({
     searchQuery: params.search ?? null,
     searchMode: params.searchMode ?? null,
+    reservedOnly: initialTab === "reserved",
+    protectedOnly: initialTab === "protected",
   });
 
   return (
@@ -66,6 +88,7 @@ export default async function WaitlistViewPage({ searchParams }: WaitlistViewPag
         initialSortDirection={data.sortDirection}
         initialSearchQuery={data.searchQuery}
         initialSearchMode={data.searchMode}
+        initialTab={initialTab}
         earlyAccessStartAt={data.earlyAccessStartAt}
         earlyAccessLabel={data.earlyAccessLabel}
         adminWalletUivk={data.adminWalletUivk}

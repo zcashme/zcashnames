@@ -24,14 +24,12 @@ export async function renderOgVariant(slug: string, request: Request) {
   if (!variant) notFound();
 
   const { searchParams } = new URL(request.url);
-  const dynamicPill =
-    slug === "home"
-      ? searchParams.get("inviter")?.trim() ?? searchParams.get("pill")?.trim()
-      : searchParams.get("pill")?.trim();
+  const dynamicPill = searchParams.get("pill")?.trim();
+  const inviter = slug === "home" ? searchParams.get("inviter")?.trim() : null;
   const pillText =
-    slug === "home" && dynamicPill
-      ? `You're invited by ${dynamicPill}`
-      : variant.pillText ?? dynamicPill ?? undefined;
+    slug === "home" && inviter
+      ? `You're invited by ${inviter}`
+      : dynamicPill || variant.pillText || undefined;
   const backgroundImage = await resolveOgBackgroundImage(variant.backgroundImage);
 
   return renderOgImage({ ...variant, backgroundImage, pillText });

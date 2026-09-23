@@ -131,7 +131,7 @@ function ZcashMePriorityNotice({ profileHref }: { profileHref: string }) {
       </p>
       <p>
         We plan to contact you before the priority access period, targeted for{" "}
-        <strong>October 1, 2026</strong>.
+        <strong>October 15, 2026</strong>.
       </p>
       <p>Thanks for your support.</p>
     </div>

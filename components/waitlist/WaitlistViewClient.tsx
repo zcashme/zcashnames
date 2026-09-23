@@ -43,6 +43,7 @@ type WaitlistViewClientProps = {
   initialSortDirection: WaitlistViewSortDirection;
   initialSearchQuery: string;
   initialSearchMode: WaitlistViewSearchMode;
+  initialTab?: WaitlistViewTab;
   earlyAccessStartAt: string;
   earlyAccessLabel: string;
   adminWalletUivk: string;
@@ -52,6 +53,7 @@ type WaitlistViewClientProps = {
 };
 
 const WAITLIST_VIEW_CACHE_LIMIT = 25;
+type WaitlistViewTab = "all" | "reserved" | "protected";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const SORT_OPTIONS: Array<{
@@ -570,6 +572,7 @@ export default function WaitlistViewClient({
   initialSortDirection,
   initialSearchQuery,
   initialSearchMode,
+  initialTab = "all",
   earlyAccessStartAt,
   earlyAccessLabel,
   adminWalletUivk,
@@ -585,8 +588,7 @@ export default function WaitlistViewClient({
   const [searchMode, setSearchMode] = useState<WaitlistViewSearchMode>(
     initialSearchQuery.trim() ? initialSearchMode : "contains",
   );
-  const [reservedOnly, setReservedOnly] = useState(false);
-  const [protectedOnly, setProtectedOnly] = useState(false);
+  const [activeTab, setActiveTab] = useState<WaitlistViewTab>(initialTab);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [sortKey, setSortKey] = useState<WaitlistViewSortKey>(initialSortKey);
   const [sortDirection, setSortDirection] = useState<WaitlistViewSortDirection>(initialSortDirection);
@@ -619,6 +621,8 @@ export default function WaitlistViewClient({
   const tableShellRef = useRef<HTMLDivElement | null>(null);
   const effectiveSearchMode: WaitlistViewSearchMode = appliedSearch.trim() ? searchMode : "contains";
   const initialData = initialDataRef.current;
+  const reservedOnly = activeTab === "reserved";
+  const protectedOnly = activeTab === "protected";
 
   const initialCacheKey = buildWaitlistViewCacheKey({
     page: initialPage,
@@ -627,8 +631,8 @@ export default function WaitlistViewClient({
     sortDirection: initialSortDirection,
     searchQuery: initialSearchQuery,
     searchMode: initialSearchQuery.trim() ? initialSearchMode : "contains",
-    reservedOnly: false,
-    protectedOnly: false,
+    reservedOnly: initialTab === "reserved",
+    protectedOnly: initialTab === "protected",
   });
   const queryKey = buildWaitlistViewCacheKey({
     page,
@@ -897,8 +901,7 @@ export default function WaitlistViewClient({
               active: allActive,
               onClick: () => {
                 setPage(1);
-                setReservedOnly(false);
-                setProtectedOnly(false);
+                setActiveTab("all");
               },
             },
             {
@@ -907,8 +910,7 @@ export default function WaitlistViewClient({
               active: reservedOnly,
               onClick: () => {
                 setPage(1);
-                setReservedOnly(true);
-                setProtectedOnly(false);
+                setActiveTab("reserved");
               },
             },
             {
@@ -917,8 +919,7 @@ export default function WaitlistViewClient({
               active: protectedOnly,
               onClick: () => {
                 setPage(1);
-                setProtectedOnly(true);
-                setReservedOnly(false);
+                setActiveTab("protected");
               },
             },
           ]}

@@ -1,34 +1,12 @@
 import type { Metadata } from "next";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 import ProtectedViewClient from "@/components/protected/ProtectedViewClient";
+import { buildProtectedViewOgMetadata } from "@/lib/seo/table-og-pills";
 import { getProtectedViewData } from "@/lib/protected/view";
 
-export const metadata: Metadata = {
-  title: "Protected Names - Zcash Names",
-  description: "Public protected names view for Zcash Names.",
-  alternates: { canonical: "https://www.zcashnames.com/protected" },
-  openGraph: {
-    title: "Protected Names | Zcash Names",
-    description: "Public protected names view for Zcash Names.",
-    url: "https://www.zcashnames.com/protected",
-    images: [
-      {
-        url: "/og/protected.png",
-        width: 1200,
-        height: 630,
-        alt: "Zcash Names protected names preview",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Protected Names | Zcash Names",
-    description: "Public protected names view for Zcash Names.",
-    images: ["/og/protected.png"],
-  },
-};
-
 export const dynamic = "force-dynamic";
+
+const PROTECTED_VIEW_DESCRIPTION = "Public protected names view for Zcash Names.";
 
 type ProtectedPageProps = {
   searchParams?: Promise<{
@@ -48,6 +26,38 @@ type ProtectedPageProps = {
     details?: string;
   }>;
 };
+
+export async function generateMetadata({
+  searchParams,
+}: ProtectedPageProps): Promise<Metadata> {
+  const params = (await searchParams) ?? {};
+  const og = buildProtectedViewOgMetadata(params);
+
+  return {
+    title: "Protected Names - Zcash Names",
+    description: PROTECTED_VIEW_DESCRIPTION,
+    alternates: { canonical: "https://www.zcashnames.com/protected" },
+    openGraph: {
+      title: "Protected Names | Zcash Names",
+      description: PROTECTED_VIEW_DESCRIPTION,
+      url: og.pageUrl,
+      images: [
+        {
+          url: og.imageUrl,
+          width: 1200,
+          height: 630,
+          alt: "Zcash Names protected names preview",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Protected Names | Zcash Names",
+      description: PROTECTED_VIEW_DESCRIPTION,
+      images: [og.imageUrl],
+    },
+  };
+}
 
 export default async function ProtectedPage({ searchParams }: ProtectedPageProps) {
   const params = (await searchParams) ?? {};
