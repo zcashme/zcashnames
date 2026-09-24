@@ -76,6 +76,7 @@ const nextConfig: NextConfig = {
       "https://vitals.vercel-insights.com",
       "https://light.zcash.me",
       "https://www.google.com/recaptcha/",
+      ...(supabaseAssetOrigin ? [supabaseAssetOrigin] : []),
       ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*", "ws://localhost:*"] : []),
     ].join(" ");
     const imgSrc = [

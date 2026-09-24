@@ -64,6 +64,16 @@ const sections = [
       },
     ],
   },
+  {
+    title: "Expenses",
+    links: [
+      {
+        href: "/admin/expenses",
+        label: "Inbox",
+        description: "Team expense reports and receipts from the shared submit link.",
+      },
+    ],
+  },
 ] as const;
 
 export default function AdminHomePage() {
@@ -74,8 +84,8 @@ export default function AdminHomePage() {
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-100">Admin Tools</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">
           Private operational views for beta invites, beta feedback reporting, campaigns,
-          and protected-name review. These routes are available on localhost and on deployed
-          hosts protected by shared admin credentials.
+          protected-name review, and expense reports. These routes are available on localhost
+          and on deployed hosts protected by shared admin credentials.
         </p>
       </header>
 

@@ -16,6 +16,7 @@ In practice, this repo should build and serve:
 
 - `/admin/**`
 - `/internal/**`
+- `/expenses`
 - `/og/**`
 - `/api/campaign-worker`
 
@@ -29,6 +30,7 @@ Primary route groups:
 - `app/admin/**`
 - `app/(site)/internal/**`
 - `app/(site)/internal/quotepost/**`
+- `app/expenses/**`
 - `app/og/**`
 
 Primary support code:
@@ -36,6 +38,7 @@ Primary support code:
 - `components/admin/**`
 - `components/emails/**`
 - `lib/admin/**`
+- `lib/expenses/**`
 - `lib/campaigns/**`
 - `lib/email/**`
 - `lib/email-preview/**`
@@ -52,6 +55,7 @@ Primary support code:
 - `/admin/beta-v2`
 - `/admin/campaigns`
 - `/admin/protected-names`
+- `/admin/expenses`
 
 These routes remain local-only and are the main reason this repo exists.
 
@@ -63,6 +67,13 @@ These routes remain local-only and are the main reason this repo exists.
 - SQL (apply in Supabase before mutations work):
   `sql/2026-08-06-protected-names-admin-ops.sql`
 - Public suggestion/dispute forms stay in `dotzcash_main`.
+
+#### Expenses
+
+- Team form: `/expenses` (shared link, receipts required)
+- Review inbox: `/admin/expenses`
+- SQL: `sql/2026-09-23-zn-expenses.sql`
+- Deployed submitters use `EXPENSE_FORM_SECRET` via `/expenses?access=...`. That secret must stay separate from admin basic auth.
 
 ### Internal
 
@@ -124,6 +135,13 @@ Admin routes are still guarded in `app/admin/layout.tsx` through
 
 `/internal` remains private by repo separation, not by the same localhost gate.
 That is acceptable because this worktree is not the public deployment target.
+Deployed hosts also use admin basic auth on `/internal` and `/admin`.
+
+### `/expenses`
+
+Team submitters use a dedicated shared link and `EXPENSE_FORM_SECRET`. That
+secret is independent of `ADMIN_USERNAME` / `ADMIN_PASSWORD`. Review stays on
+`/admin/expenses`.
 
 ## Local Workflow
 
@@ -137,6 +155,7 @@ Then open:
 ```text
 http://localhost:3000/admin
 http://localhost:3000/internal
+http://localhost:3000/expenses
 ```
 
 Useful direct routes:
@@ -176,6 +195,6 @@ pnpm build
 
 Expected end state:
 
-- this worktree builds with `/admin` and `/internal`
+- this worktree builds with `/admin`, `/internal`, and `/expenses`
 - public-site route trees are absent
 - `dotzcash_main` remains the public-site owner

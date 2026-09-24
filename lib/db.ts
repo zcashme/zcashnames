@@ -19,6 +19,7 @@ import { createClient } from "@supabase/supabase-js";
 //   beta_checklist_progress — per-tester checklist ticks
 //   cabal_invites         — cabal/influencer deck access codes
 //   indexer_launch_alert_signups — indexer launch notification signups
+//   zn_expenses          — internal team expense reports (private receipts bucket)
 //
 export const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

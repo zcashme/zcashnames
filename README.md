@@ -6,6 +6,7 @@ Its purpose is narrow:
 
 - `/admin/**`
 - `/internal/**`
+- `/expenses` (shared-link team expense form)
 - shared support code those routes need
 - local OG preview rendering under `/og/**`
 
@@ -19,6 +20,7 @@ Expected local routes:
 
 - `http://localhost:3000/admin`
 - `http://localhost:3000/internal`
+- `http://localhost:3000/expenses`
 
 Supporting local routes intentionally still exist:
 
@@ -35,6 +37,7 @@ Supporting local routes intentionally still exist:
 - internal quotepost and text-splitter tools
 - internal blockinfo-post tooling
 - email rendering, personalization, and campaign support code
+- shared-link expense submissions and admin inbox
 
 ## What Does Not Belong Here
 
@@ -57,6 +60,7 @@ Then open:
 
 - `http://localhost:3000/admin`
 - `http://localhost:3000/internal`
+- `http://localhost:3000/expenses`
 
 ## Notes
 

@@ -5,6 +5,15 @@ import {
   isAuthorizedInternalBasicAuthHeader,
   shouldBypassInternalBasicAuth,
 } from "@/lib/admin/basic-auth";
+import {
+  canBypassExpenseAccess,
+  constantTimeEqual,
+  expenseAccessCookieOptions,
+  getExpenseFormSecret,
+  hashExpenseAccessCookie,
+  isExpensePath,
+} from "@/lib/expenses/access";
+import { EXPENSE_ACCESS_QUERY_PARAM } from "@/lib/expenses/config";
 
 function unauthorizedResponse() {
   return new NextResponse("Authentication required.", {
@@ -21,7 +30,44 @@ function unconfiguredResponse() {
   });
 }
 
-export function middleware(request: NextRequest) {
+async function handleExpenseAccess(request: NextRequest) {
+  const host =
+    request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  if (canBypassExpenseAccess(host)) {
+    return NextResponse.next();
+  }
+
+  const secret = getExpenseFormSecret();
+  if (!secret) {
+    return NextResponse.next();
+  }
+
+  const provided = request.nextUrl.searchParams.get(EXPENSE_ACCESS_QUERY_PARAM)?.trim() ?? "";
+  if (provided && constantTimeEqual(provided, secret)) {
+    const url = request.nextUrl.clone();
+    url.searchParams.delete(EXPENSE_ACCESS_QUERY_PARAM);
+    const response = NextResponse.redirect(url);
+    const cookie = expenseAccessCookieOptions();
+    response.cookies.set({
+      name: cookie.name,
+      value: await hashExpenseAccessCookie(secret),
+      httpOnly: cookie.httpOnly,
+      sameSite: cookie.sameSite,
+      secure: cookie.secure,
+      path: cookie.path,
+      maxAge: cookie.maxAge,
+    });
+    return response;
+  }
+
+  return NextResponse.next();
+}
+
+export async function middleware(request: NextRequest) {
+  if (isExpensePath(request.nextUrl.pathname)) {
+    return handleExpenseAccess(request);
+  }
+
   const host =
     request.headers.get("x-forwarded-host") ?? request.headers.get("host");
 
@@ -45,5 +91,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/internal/:path*", "/admin/:path*"],
+  matcher: ["/internal/:path*", "/admin/:path*", "/expenses", "/expenses/:path*"],
 };
