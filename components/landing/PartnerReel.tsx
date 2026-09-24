@@ -42,6 +42,11 @@ const PARTNER_ICON_LAYOUT_BY_ID: Partial<Record<string, PartnerIconLayout>> = {
     containerClassName: "flex h-16 w-28 items-center justify-center sm:h-20 sm:w-36",
     imageClassName: "max-h-16 w-full object-contain sm:max-h-20",
   },
+  zdex: {
+    scale: 0.80,
+    containerClassName: "flex h-16 w-36 items-center justify-center sm:h-20 sm:w-44",
+    imageClassName: "max-h-14 w-full object-contain sm:max-h-16",
+  },
   "zec-os": { scale: 0.75 },
   zucchini: { scale: 0.85 },
 };
@@ -71,6 +76,13 @@ const EXTRA_PARTNERS: readonly PartnerReelItem[] = [
     iconSrc: "/icons/pgpz.png",
     lightIconSrc: "/icons/pgpz-light.png",
     href: "https://pgpz.org/",
+  },
+  {
+    id: "zdex",
+    displayName: "ZDEX",
+    iconSrc: "/icons/zdex.png",
+    lightIconSrc: "/icons/zdex-light.png",
+    href: "https://zdex.finance",
   },
   {
     id: "zec-os",
