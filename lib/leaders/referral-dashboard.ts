@@ -1,14 +1,24 @@
+import {
+  REFERRAL_REWARD_UNAVAILABLE_QUOTE,
+  buildReferralNamePriceByBucket,
+  fixedReferralRewardForDepth,
+  roundZecReward,
+  type ReferralNameLengthBucket,
+  type ReferralNamePriceByBucket,
+  type ReferralRewardQuote,
+} from "@/lib/leaders/referral-rewards";
+
 // Referral tree algorithms for the retained referral dashboard support code.
 //
 // Core operations:
 //   buildFixedDepthReferralSummaries  — BFS over referral graph with cycle detection,
-//                                       decay rewards (0.05 / 2^(depth-1)), per-code summaries
+//                                       USD-derived halving rewards, per-code summaries
 //   buildReferralDashboard            — single-code depth tree for the referral detail view
 //   calculateReferralProjection       — revenue/payout projections by name-length bucket
 //
 // Both tree traversals guard against cycles via visited + path sets.
 // Consumed by admin/email personalization helpers that still expose referral stats.
-export type NameLengthBucket = "1" | "2" | "3" | "4" | "5" | "6" | "7+";
+export type NameLengthBucket = ReferralNameLengthBucket;
 
 export type ProjectionModel = "fixed" | "commission";
 
@@ -44,6 +54,7 @@ export interface ReferralDashboardBaseData {
   depthCounts: Array<{ depth: number; count: number }>;
   totalAttributedReferrals: number;
   maxDepth: number;
+  referralRewardQuote: ReferralRewardQuote;
 }
 
 export interface ReferralDashboardData extends ReferralDashboardBaseData {
@@ -52,7 +63,7 @@ export interface ReferralDashboardData extends ReferralDashboardBaseData {
   referralsUnlocked: boolean;
 }
 
-export type PriceByBucket = Record<NameLengthBucket, number>;
+export type PriceByBucket = ReferralNamePriceByBucket;
 export type ConversionByBucket = Record<NameLengthBucket, number>;
 
 export interface ReferralProjection {
@@ -82,15 +93,7 @@ export interface FixedDepthReferralSummary {
 
 export const NAME_LENGTH_BUCKETS: NameLengthBucket[] = ["1", "2", "3", "4", "5", "6", "7+"];
 
-export const DEFAULT_PRICE_BY_BUCKET: PriceByBucket = {
-  "1": 6,
-  "2": 4.25,
-  "3": 3,
-  "4": 1.5,
-  "5": 0.75,
-  "6": 0.5,
-  "7+": 0.25,
-};
+export const DEFAULT_PRICE_BY_BUCKET: PriceByBucket = buildReferralNamePriceByBucket(REFERRAL_REWARD_UNAVAILABLE_QUOTE);
 
 export const DEFAULT_CONVERSION_BY_BUCKET: ConversionByBucket = {
   "1": 100,
@@ -101,10 +104,6 @@ export const DEFAULT_CONVERSION_BY_BUCKET: ConversionByBucket = {
   "6": 100,
   "7+": 100,
 };
-
-function roundZec(value: number): number {
-  return Math.round(value * 10000) / 10000;
-}
 
 export function getNameLengthBucket(name: string): NameLengthBucket {
   const length = name.trim().replace(/\.(zcash|zec)$/i, "").length;
@@ -118,12 +117,20 @@ export function getNameLengthBucket(name: string): NameLengthBucket {
 }
 
 export function fixedRewardForDepth(depth: number): number {
-  if (depth <= 0) return 0;
-  return 0.05 / 2 ** (depth - 1);
+  return fixedReferralRewardForDepth(depth, REFERRAL_REWARD_UNAVAILABLE_QUOTE);
+}
+
+export function fixedRewardForDepthWithQuote(depth: number, quote: ReferralRewardQuote): number {
+  return fixedReferralRewardForDepth(depth, quote);
+}
+
+export function priceByBucketFromRewardQuote(quote: ReferralRewardQuote): PriceByBucket {
+  return buildReferralNamePriceByBucket(quote);
 }
 
 export function buildFixedDepthReferralSummaries(
   rows: WaitlistReferralRow[],
+  rewardQuote: ReferralRewardQuote = REFERRAL_REWARD_UNAVAILABLE_QUOTE,
 ): Map<string, FixedDepthReferralSummary> {
   const eligibleRows = rows.filter((row) => row.email_verified);
   const childrenByParent = new Map<string, WaitlistReferralRow[]>();
@@ -163,7 +170,7 @@ export function buildFixedDepthReferralSummaries(
       visited.add(rowCode);
 
       attributedReferrals += 1;
-      potentialRewards += fixedRewardForDepth(next.depth);
+      potentialRewards += fixedRewardForDepthWithQuote(next.depth, rewardQuote);
 
       const childPath = new Set(next.path);
       childPath.add(rowCode);
@@ -178,7 +185,7 @@ export function buildFixedDepthReferralSummaries(
       directReferrals,
       indirectReferrals: Math.max(0, attributedReferrals - directReferrals),
       attributedReferrals,
-      potentialRewards: roundZec(potentialRewards),
+      potentialRewards: roundZecReward(potentialRewards),
     });
   }
 
@@ -196,6 +203,7 @@ export function commissionRateForAttributedReferrals(totalAttributedReferrals: n
 export function buildReferralDashboard(
   referralCode: string,
   rows: WaitlistReferralRow[],
+  rewardQuote: ReferralRewardQuote = REFERRAL_REWARD_UNAVAILABLE_QUOTE,
 ): ReferralDashboardBaseData {
   const normalizedCode = referralCode.trim();
   const eligibleRows = rows.filter((row) => row.email_verified);
@@ -269,6 +277,7 @@ export function buildReferralDashboard(
     depthCounts,
     totalAttributedReferrals: descendants.length,
     maxDepth: depthCounts.at(-1)?.depth ?? 0,
+    referralRewardQuote: rewardQuote,
   };
 }
 
@@ -329,7 +338,7 @@ export function calculateReferralProjection({
     const projectedConversions = count * conversionRate;
     const projectedRevenue = projectedConversions * price;
     const projectedFixedPayout = bucketEntries.reduce(
-      (total, entry) => total + conversionRate * fixedRewardForDepth(entry.depth),
+      (total, entry) => total + conversionRate * fixedRewardForDepthWithQuote(entry.depth, data.referralRewardQuote),
       0,
     );
 

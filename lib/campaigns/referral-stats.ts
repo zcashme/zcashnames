@@ -1,10 +1,13 @@
 import "server-only";
 
-import { db } from "@/lib/db";
+import { convertSqlPotentialRewardsToQuote } from "@/lib/campaigns/referral-reward-convert";
 import type {
   CampaignRecipientPersonalization,
   CampaignReferralStats,
 } from "@/lib/campaigns/types";
+import { db } from "@/lib/db";
+import { getExchangeRate } from "@/lib/exchange-rate";
+import { buildReferralRewardQuote, type ReferralRewardQuote } from "@/lib/leaders/referral-rewards";
 
 const REFERRAL_STATS_CACHE_TTL_MS = 60 * 1000;
 const REFERRAL_STATS_PAGE_SIZE = 1000;
@@ -42,14 +45,16 @@ let referralStatsCache:
     }
   | null = null;
 
-function mapRowToCampaignReferralStats(row: CampaignReferralStatsRow): CampaignReferralStats {
+function parseSqlPotentialRewards(value: CampaignReferralStatsRow["potential_rewards"]): number | null {
   const potentialRewards =
-    typeof row.potential_rewards === "number"
-      ? row.potential_rewards
-      : typeof row.potential_rewards === "string"
-        ? Number(row.potential_rewards)
-        : null;
+    typeof value === "number" ? value : typeof value === "string" ? Number(value) : null;
+  return Number.isFinite(potentialRewards) ? potentialRewards : null;
+}
 
+function mapRowToCampaignReferralStats(
+  row: CampaignReferralStatsRow,
+  rewardQuote: ReferralRewardQuote,
+): CampaignReferralStats {
   return {
     directReferrals: row.direct_referrals,
     indirectReferrals: row.indirect_referrals,
@@ -67,7 +72,10 @@ function mapRowToCampaignReferralStats(row: CampaignReferralStatsRow): CampaignR
     waitlistPosition: row.waitlist_position,
     waitlistTotal: row.waitlist_total,
     maxReferralDepth: row.max_referral_depth,
-    potentialRewards: Number.isFinite(potentialRewards) ? potentialRewards : null,
+    potentialRewards: convertSqlPotentialRewardsToQuote(
+      parseSqlPotentialRewards(row.potential_rewards),
+      rewardQuote.levelOneRewardZec,
+    ),
     rootBadge: row.root_badge === "red" || row.root_badge === "blue" ? row.root_badge : null,
     commissionUnlocked: row.commission_unlocked,
     referralsUnlocked: row.referrals_unlocked,
@@ -165,12 +173,20 @@ async function getReferralStatsIndex(): Promise<{
     };
   }
 
+  const rewardQuote = buildReferralRewardQuote(await getExchangeRate());
+  if (rewardQuote.levelOneRewardZec == null) {
+    throw buildReferralStatsFailure({
+      reason: "ZEC/USD exchange rate is unavailable",
+      hint: "Campaign {{potential_rewards}} uses the live $4 Level I quote. Retry when Coinbase, CoinGecko, or Kraken responds.",
+    });
+  }
+
   const rows = await fetchReferralStatsRows();
   const index = new Map<string, CampaignReferralStats>();
   let refreshedAt: string | null = null;
 
   for (const row of rows) {
-    index.set(row.referral_code, mapRowToCampaignReferralStats(row));
+    index.set(row.referral_code, mapRowToCampaignReferralStats(row, rewardQuote));
     if (!refreshedAt && row.refreshed_at) refreshedAt = row.refreshed_at;
   }
 

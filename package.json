@@ -8,6 +8,7 @@
     "build": "next build && pagefind --site .next/server/app --output-path public/_pagefind",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "test:referral-rewards": "node --experimental-strip-types --test scripts/referral-rewards.test.mjs",
     "test:blockinfo-caption-policy": "node --experimental-strip-types --test scripts/blockinfo-caption-policy.test.mjs",
     "test:reserveinfo-post-x-delivery": "node --experimental-strip-types --test scripts/reserveinfo-post-x-delivery.test.mjs",
     "test:reserveinfo-post": "node --experimental-strip-types --test scripts/reserveinfo-post.test.mjs",

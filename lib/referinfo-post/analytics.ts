@@ -1,6 +1,13 @@
 import "server-only";
 
 import { db } from "@/lib/db";
+import { getExchangeRate } from "@/lib/exchange-rate";
+import {
+  buildReferralRewardQuote,
+  fixedReferralRewardForDepth,
+  roundZecReward,
+  type ReferralRewardQuote,
+} from "@/lib/leaders/referral-rewards";
 import type {
   ReferinfoCaptionPolicy,
   ReferinfoPostKind,
@@ -87,13 +94,12 @@ function fail(message: string): never {
   throw new Error(message);
 }
 
-function roundZec(value: number): number {
-  return Math.round(value * 10000) / 10000;
-}
-
-function fixedRewardForDepth(depth: number): number {
-  if (depth <= 0) return 0;
-  return 0.05 / 2 ** (depth - 1);
+function requireReferralRewardQuote(usdPerZec: number | null): ReferralRewardQuote {
+  const quote = buildReferralRewardQuote(usdPerZec);
+  if (quote.levelOneRewardZec == null) {
+    fail("ZEC/USD exchange rate is unavailable. Referral rewards cannot be projected until a live rate is fetched.");
+  }
+  return quote;
 }
 
 function formatShortDate(date: Date): string {
@@ -369,7 +375,7 @@ function buildIdentityMaps(rows: WaitlistRow[]) {
   return { nameMap, displayCodeMap };
 }
 
-function buildReferralSummaries(rows: WaitlistRow[]): Map<string, ReferralSummary> {
+function buildReferralSummaries(rows: WaitlistRow[], rewardQuote: ReferralRewardQuote): Map<string, ReferralSummary> {
   const childrenByParent = new Map<string, WaitlistRow[]>();
   const candidateCodes = new Set<string>();
 
@@ -405,7 +411,7 @@ function buildReferralSummaries(rows: WaitlistRow[]): Map<string, ReferralSummar
       if (visited.has(next.row.referralCode) || next.path.has(next.row.referralCode)) continue;
       visited.add(next.row.referralCode);
       attributedReferrals += 1;
-      potentialRewards += fixedRewardForDepth(next.depth);
+      potentialRewards += fixedReferralRewardForDepth(next.depth, rewardQuote);
 
       const childPath = new Set(next.path);
       childPath.add(next.row.referralCode);
@@ -419,7 +425,7 @@ function buildReferralSummaries(rows: WaitlistRow[]): Map<string, ReferralSummar
       directReferrals: directChildren.length,
       indirectReferrals: Math.max(0, attributedReferrals - directChildren.length),
       attributedReferrals,
-      potentialRewards: roundZec(potentialRewards),
+      potentialRewards: roundZecReward(potentialRewards),
       firstDirectReferralAtMs: directChildren[0]?.createdAtMs ?? null,
     });
   }
@@ -427,9 +433,9 @@ function buildReferralSummaries(rows: WaitlistRow[]): Map<string, ReferralSummar
   return summaries;
 }
 
-function buildRewardRanking(rows: WaitlistRow[]): RewardRankEntry[] {
+function buildRewardRanking(rows: WaitlistRow[], rewardQuote: ReferralRewardQuote): RewardRankEntry[] {
   const { nameMap, displayCodeMap } = buildIdentityMaps(rows);
-  const summaries = buildReferralSummaries(rows);
+  const summaries = buildReferralSummaries(rows, rewardQuote);
 
   return Array.from(summaries.values())
     .filter((summary) => summary.directReferrals > 0)
@@ -452,7 +458,12 @@ function buildRewardRanking(rows: WaitlistRow[]): RewardRankEntry[] {
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 }
 
-function buildWindowMetrics(snapshotRows: WaitlistRow[], windowStartMs: number, windowEndMs: number): Map<string, WindowMetrics> {
+function buildWindowMetrics(
+  snapshotRows: WaitlistRow[],
+  windowStartMs: number,
+  windowEndMs: number,
+  rewardQuote: ReferralRewardQuote,
+): Map<string, WindowMetrics> {
   const childrenByParent = new Map<string, WaitlistRow[]>();
   const candidateCodes = new Set<string>();
 
@@ -494,7 +505,7 @@ function buildWindowMetrics(snapshotRows: WaitlistRow[], windowStartMs: number, 
       visited.add(next.row.referralCode);
 
       if (next.row.createdAtMs >= windowStartMs && next.row.createdAtMs < windowEndMs) {
-        const reward = fixedRewardForDepth(next.depth);
+        const reward = fixedReferralRewardForDepth(next.depth, rewardQuote);
         attributedWeekly += 1;
         if (next.depth === 1) {
           directWeekly += 1;
@@ -522,8 +533,8 @@ function buildWindowMetrics(snapshotRows: WaitlistRow[], windowStartMs: number, 
       depth2Weekly,
       depth3Weekly,
       depth4PlusWeekly,
-      directRewardWeekly: roundZec(directRewardWeekly),
-      indirectRewardWeekly: roundZec(indirectRewardWeekly),
+      directRewardWeekly: roundZecReward(directRewardWeekly),
+      indirectRewardWeekly: roundZecReward(indirectRewardWeekly),
     });
   }
 
@@ -745,21 +756,22 @@ export async function buildReferinfoDraftBundle(args: {
   const monthWindowStartMs = weekEndMs - 30 * DAY_MS;
   const prevMonthWindowStartMs = monthWindowStartMs - 30 * DAY_MS;
 
+  const rewardQuote = requireReferralRewardQuote(await getExchangeRate());
   const rows = await fetchVerifiedWaitlistRows();
   const { nameMap, displayCodeMap } = buildIdentityMaps(rows);
   const rowsAtWeekEnd = rows.filter((row) => row.createdAtMs < weekEndMs);
   const rowsAtPrevWeekEnd = rows.filter((row) => row.createdAtMs < prevWeekEndMs);
-  const rankingCurrent = buildRewardRanking(rowsAtWeekEnd);
-  const rankingPrevious = buildRewardRanking(rowsAtPrevWeekEnd);
-  const currentSummaryMap = buildReferralSummaries(rowsAtWeekEnd);
-  const targetWeekMetrics = buildWindowMetrics(rowsAtWeekEnd, weekStartMs, weekEndMs);
-  const previousWeekMetrics = buildWindowMetrics(rowsAtPrevWeekEnd, prevWeekStartMs, prevWeekEndMs);
-  const currentMonthMetrics = buildWindowMetrics(rowsAtWeekEnd, monthWindowStartMs, weekEndMs);
-  const previousMonthMetrics = buildWindowMetrics(rowsAtWeekEnd, prevMonthWindowStartMs, monthWindowStartMs);
+  const rankingCurrent = buildRewardRanking(rowsAtWeekEnd, rewardQuote);
+  const rankingPrevious = buildRewardRanking(rowsAtPrevWeekEnd, rewardQuote);
+  const currentSummaryMap = buildReferralSummaries(rowsAtWeekEnd, rewardQuote);
+  const targetWeekMetrics = buildWindowMetrics(rowsAtWeekEnd, weekStartMs, weekEndMs, rewardQuote);
+  const previousWeekMetrics = buildWindowMetrics(rowsAtPrevWeekEnd, prevWeekStartMs, prevWeekEndMs, rewardQuote);
+  const currentMonthMetrics = buildWindowMetrics(rowsAtWeekEnd, monthWindowStartMs, weekEndMs, rewardQuote);
+  const previousMonthMetrics = buildWindowMetrics(rowsAtWeekEnd, prevMonthWindowStartMs, monthWindowStartMs, rewardQuote);
   const rewardDeltaMap = new Map<string, number>();
   for (const current of rankingCurrent) {
     const previous = rankingPrevious.find((entry) => entry.referralCode === current.referralCode);
-    rewardDeltaMap.set(current.referralCode, roundZec(current.potentialRewards - (previous?.potentialRewards ?? 0)));
+    rewardDeltaMap.set(current.referralCode, roundZecReward(current.potentialRewards - (previous?.potentialRewards ?? 0)));
   }
 
   const leaderChanges = buildLeaderChanges({
