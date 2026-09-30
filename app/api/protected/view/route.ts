@@ -18,6 +18,7 @@ export async function GET(request: Request) {
       underReviewOnly: url.searchParams.get("underReviewOnly"),
       rejectedOnly: url.searchParams.get("rejectedOnly"),
       pendingOnly: url.searchParams.get("pendingOnly"),
+      protectedOnly: url.searchParams.get("protectedOnly"),
       disputedOnly: url.searchParams.get("disputedOnly"),
       categoryOnly: url.searchParams.get("categoryOnly"),
       ensOnly: url.searchParams.get("ensOnly"),

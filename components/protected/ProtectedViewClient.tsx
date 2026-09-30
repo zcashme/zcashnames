@@ -74,6 +74,7 @@ function buildProtectedViewCacheKey(args: {
   underReviewOnly: boolean;
   rejectedOnly: boolean;
   pendingOnly: boolean;
+  protectedOnly: boolean;
   disputedOnly: boolean;
   categoryOnly: string | null;
   ensOnly: boolean;
@@ -90,6 +91,7 @@ function buildProtectedViewCacheKey(args: {
     underReviewOnly: args.underReviewOnly,
     rejectedOnly: args.rejectedOnly,
     pendingOnly: args.pendingOnly,
+    protectedOnly: args.protectedOnly,
     disputedOnly: args.disputedOnly,
     categoryOnly: args.categoryOnly,
     ensOnly: args.ensOnly,
@@ -108,6 +110,7 @@ function buildProtectedViewUrl(args: {
   underReviewOnly: boolean;
   rejectedOnly: boolean;
   pendingOnly: boolean;
+  protectedOnly: boolean;
   disputedOnly: boolean;
   categoryOnly: string | null;
   ensOnly: boolean;
@@ -123,6 +126,7 @@ function buildProtectedViewUrl(args: {
     underReviewOnly: String(args.underReviewOnly),
     rejectedOnly: String(args.rejectedOnly),
     pendingOnly: String(args.pendingOnly),
+    protectedOnly: String(args.protectedOnly),
     disputedOnly: String(args.disputedOnly),
     ensOnly: String(args.ensOnly),
     zmOnly: String(args.zmOnly),
@@ -337,6 +341,7 @@ export default function ProtectedViewClient({
   const [underReviewOnly, setUnderReviewOnly] = useState(initialData.underReviewOnly);
   const [rejectedOnly, setRejectedOnly] = useState(initialData.rejectedOnly);
   const [pendingOnly, setPendingOnly] = useState(initialData.pendingOnly);
+  const [protectedOnly, setProtectedOnly] = useState(initialData.protectedOnly);
   const [disputedOnly, setDisputedOnly] = useState(initialData.disputedOnly);
   const [categoryOnly, setCategoryOnly] = useState<string | null>(
     initialData.categoryOnly ?? null,
@@ -374,6 +379,7 @@ export default function ProtectedViewClient({
     underReviewOnly: stableInitialData.underReviewOnly,
     rejectedOnly: stableInitialData.rejectedOnly,
     pendingOnly: stableInitialData.pendingOnly,
+    protectedOnly: stableInitialData.protectedOnly,
     disputedOnly: stableInitialData.disputedOnly,
     categoryOnly: stableInitialData.categoryOnly ?? null,
     ensOnly: stableInitialData.ensOnly,
@@ -390,6 +396,7 @@ export default function ProtectedViewClient({
     underReviewOnly,
     rejectedOnly,
     pendingOnly,
+    protectedOnly,
     disputedOnly,
     categoryOnly,
     ensOnly,
@@ -413,6 +420,7 @@ export default function ProtectedViewClient({
           underReviewOnly,
           rejectedOnly,
           pendingOnly,
+          protectedOnly,
           disputedOnly,
           categoryOnly,
           ensOnly,
@@ -454,6 +462,7 @@ export default function ProtectedViewClient({
     !underReviewOnly &&
     !rejectedOnly &&
     !pendingOnly &&
+    !protectedOnly &&
     !disputedOnly &&
     !categoryOnly &&
     !ensOnly &&
@@ -466,6 +475,8 @@ export default function ProtectedViewClient({
         ? "Status=Rejected"
         : pendingOnly
           ? "Status=Pending"
+          : protectedOnly
+            ? "Status=Protected"
         : disputedOnly
           ? "Status=Disputed"
           : categoryOnly
@@ -477,6 +488,7 @@ export default function ProtectedViewClient({
     setUnderReviewOnly(false);
     setRejectedOnly(false);
     setPendingOnly(false);
+    setProtectedOnly(false);
     setDisputedOnly(false);
     setCategoryOnly(null);
     setEnsOnly(false);
@@ -656,7 +668,7 @@ export default function ProtectedViewClient({
           {
             key: "status",
             label: "Status",
-            active: redeemedOnly || underReviewOnly || rejectedOnly || pendingOnly || disputedOnly,
+            active: redeemedOnly || underReviewOnly || rejectedOnly || pendingOnly || protectedOnly || disputedOnly,
             children: [
               {
                 key: "redeemed",
@@ -696,6 +708,16 @@ export default function ProtectedViewClient({
                   setPage(1);
                   clearTabFilters();
                   setPendingOnly(true);
+                },
+              },
+              {
+                key: "protected",
+                label: `Protected (${data.protectedCount})`,
+                active: protectedOnly,
+                onClick: () => {
+                  setPage(1);
+                  clearTabFilters();
+                  setProtectedOnly(true);
                 },
               },
               {

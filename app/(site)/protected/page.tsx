@@ -20,6 +20,7 @@ type ProtectedPageProps = {
     underReviewOnly?: string;
     rejectedOnly?: string;
     pendingOnly?: string;
+    protectedOnly?: string;
     disputedOnly?: string;
     categoryOnly?: string;
     ensOnly?: string;
@@ -75,6 +76,7 @@ export default async function ProtectedPage({ searchParams }: ProtectedPageProps
     underReviewOnly: params.underReviewOnly ?? null,
     rejectedOnly: params.rejectedOnly ?? null,
     pendingOnly: params.pendingOnly ?? null,
+    protectedOnly: params.protectedOnly ?? null,
     disputedOnly: params.disputedOnly ?? null,
     categoryOnly: params.categoryOnly ?? null,
     ensOnly: params.ensOnly ?? null,
