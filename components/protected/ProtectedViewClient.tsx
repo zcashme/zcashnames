@@ -144,13 +144,16 @@ function buildProtectedViewUrl(args: {
  * - ≥ 1 day and < 7d:   "DDd HHh"   (e.g. 3d 5h)
  * - ≥ 1 hour and < 1d:  "HHh MMm"   (e.g. 8h 42m)
  * - < 1 hour:           "MMm SSs"   (e.g. 15m 3s)
+ * - pending, no clock:  "N/A"
  * - no date:            "Never"
  * - past:               "Expired"
  */
 function formatExpiresRemaining(
   expiresAt: string | null | undefined,
   nowMs: number,
+  status?: string | null,
 ): string {
+  if (status?.toLowerCase() === "pending") return "N/A";
   if (!expiresAt) return "Never";
   const targetMs = new Date(expiresAt).getTime();
   if (!Number.isFinite(targetMs)) return "—";
@@ -845,7 +848,7 @@ export default function ProtectedViewClient({
                   </tr>
                 ) : (
                   data.rows.map((row: ProtectedViewRow) => {
-                    const expiresLabel = formatExpiresRemaining(row.expires_at, nowMs);
+                    const expiresLabel = formatExpiresRemaining(row.expires_at, nowMs, row.status);
                     return (
                     <tr
                       key={row.name}
@@ -938,9 +941,11 @@ export default function ProtectedViewClient({
                               : "var(--fg-body)",
                         }}
                         title={
-                          row.expires_at
-                            ? new Date(row.expires_at).toLocaleString()
-                            : "Never expires"
+                          row.status.toLowerCase() === "pending"
+                            ? "N/A"
+                            : row.expires_at
+                              ? new Date(row.expires_at).toLocaleString()
+                              : "Never expires"
                         }
                       >
                         {expiresLabel}

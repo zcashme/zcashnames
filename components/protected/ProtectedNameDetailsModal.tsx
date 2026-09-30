@@ -518,9 +518,15 @@ export default function ProtectedNameDetailsModal({
                   <UrlList urls={row.evidence ?? []} />
                 </FieldBlock>
               </div>
-              <FieldBlock label="Protected">{formatTimestamp(row.protected_at)}</FieldBlock>
+              <FieldBlock label="Protected">
+                {status === "pending" ? "N/A" : formatTimestamp(row.protected_at)}
+              </FieldBlock>
               <FieldBlock label="Expires">
-                {row.expires_at ? formatTimestamp(row.expires_at) : "Never"}
+                {status === "pending"
+                  ? "N/A"
+                  : row.expires_at
+                    ? formatTimestamp(row.expires_at)
+                    : "Never"}
               </FieldBlock>
               <FieldBlock label="Redeemed">
                 {row.redeemed ? (
