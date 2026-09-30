@@ -25,6 +25,7 @@ export default function QueueFilters({
           </option>
           <option value="under_review">under_review only</option>
           <option value="protected">protected</option>
+          <option value="pending">pending</option>
           <option value="rejected">rejected</option>
           <option value="all">all</option>
         </select>

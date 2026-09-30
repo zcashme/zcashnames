@@ -10,11 +10,13 @@ export function StatusBadge({
         ? "bg-red-500/15 text-red-300 border-red-800/60"
         : status === "under_review"
           ? "bg-amber-500/15 text-amber-300 border-amber-800/60"
-          : status === "accepted"
+          : status === "pending"
             ? "bg-sky-500/15 text-sky-300 border-sky-800/60"
-            : status === "dismissed"
-              ? "bg-zinc-700/40 text-zinc-300 border-zinc-700"
-              : "bg-zinc-800 text-zinc-300 border-zinc-700";
+            : status === "accepted"
+              ? "bg-sky-500/15 text-sky-300 border-sky-800/60"
+              : status === "dismissed"
+                ? "bg-zinc-700/40 text-zinc-300 border-zinc-700"
+                : "bg-zinc-800 text-zinc-300 border-zinc-700";
 
   return (
     <span

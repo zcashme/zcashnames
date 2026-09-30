@@ -14,6 +14,7 @@ export const PROTECTED_NAME_STATUSES = [
   "under_review",
   "protected",
   "rejected",
+  "pending",
 ] as const;
 
 export type ProtectedNameStatus = (typeof PROTECTED_NAME_STATUSES)[number];

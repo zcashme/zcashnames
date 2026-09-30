@@ -4,7 +4,7 @@ Operational review UI for protected-name suggestions, disputes, and access reque
 
 ## Setup
 
-1. Apply `sql/2026-08-06-protected-names-admin-ops.sql`, `sql/2026-08-25-protected-name-decision-dashboard.sql`, `sql/2026-08-28-approved-protected-name-access-requests-view.sql`, `sql/2026-09-03-protected-name-decision-email-history.sql`, and `sql/2026-09-04-protected-name-access-decision-corrections.sql` in the Supabase SQL editor, in that order.
+1. Apply `sql/2026-08-06-protected-names-admin-ops.sql`, `sql/2026-08-25-protected-name-decision-dashboard.sql`, `sql/2026-08-28-approved-protected-name-access-requests-view.sql`, `sql/2026-09-03-protected-name-decision-email-history.sql`, `sql/2026-09-04-protected-name-access-decision-corrections.sql`, `sql/2026-10-01-ens-pending-status.sql`, and `sql/2026-10-01-ens-pending-early-access-reject.sql` in the Supabase SQL editor, in that order.
 2. Ensure `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured.
 3. Open `/admin/protected-names` (localhost bypasses basic auth; deployed hosts need `ADMIN_USERNAME` / `ADMIN_PASSWORD`).
 
@@ -49,6 +49,11 @@ The view uses the immutable decision log as its source of truth and includes the
 - `protected` ↔ `rejected` (rejecting protected requires `redeemed = false`)
 - Return to `under_review` allowed from rejected, or from protected only when not redeemed
 - Redeemed names must stay `protected`
+- `pending` is the ENS holding state: listed, requestable, claim gate off, `expires_at` null
+- Pending ENS names with no `submitted` or `approved` access request auto-reject at Early Access (`2026-10-15T16:00:00.000Z`) with reason `ENS priority access was not requested before Early Access`
+- A live `submitted` request keeps the name pending until you decide
+- Approving an ENS access request sets `protected` and `expires_at = 2026-11-01T16:00:00.000Z`
+- Denying (or correcting away from approved) with no other approved request returns the ENS row to `pending`
 - Dispute accept: filed against `protected` aims for `rejected`; filed against `rejected` aims for `protected`
 - Corroborating accepts (name already at target status) append reason only
 - Variant propagation is optional on real transitions for parent names; redeemed descendants are skipped

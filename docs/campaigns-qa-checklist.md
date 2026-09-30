@@ -151,10 +151,11 @@ Protected-name exclusion check:
 4. If the same inbox has another eligible unreserved name, use `one_per_email` and verify the inbox remains included with only the protected name removed from `related_names`.
 5. Approve an access request for a parent or any variant in a family, including names that are not `status = 'protected'`. Refresh `verified_unreserved` and verify the family is excluded.
 6. Correct the access request to denied, refresh recipients, and verify non-protected family names are included again while `status = 'protected'` names stay excluded.
-7. Mark a name with `ens_priority_claim` or `zm_priority_claim`, refresh recipients, and verify that name is excluded even without an access request and even if it is not `status = 'protected'`.
+7. Mark a name with `ens_priority_claim` or `zm_priority_claim` and `status = 'protected'`, refresh recipients, and verify that name is excluded even without an access request. A `pending` ENS row is included in `verified_unreserved`.
 
 Expected:
 - a waitlist name with `zn_protected_names.status = 'protected'` is excluded even with no access request
+- a `pending` ENS name is not excluded by the priority-claim rule; `status = 'protected'` ENS/ZM names still are
 - an approved request for a parent excludes that parent and all variants in its family
 - an approved request for a variant excludes that variant and its parent family
 - only `verified_unreserved` changes; `verified_only`, `verified_newsletter`, and `all_rows` do not
