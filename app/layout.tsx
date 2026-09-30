@@ -1,9 +1,10 @@
 import { Manrope, Dancing_Script, Inter } from "next/font/google";
 import "./globals.css";
 
+// Discrete Manrope weights make Google Fonts return /l/font?kit= URLs with no
+// file extension; next/font 15.5 then crashes while parsing the extension.
 const uiSans = Manrope({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   variable: "--font-ui",
   display: "swap",
 });
