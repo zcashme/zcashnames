@@ -16,6 +16,7 @@ type ProtectedViewOgParams = {
   redeemedOnly?: SearchParamValue;
   underReviewOnly?: SearchParamValue;
   rejectedOnly?: SearchParamValue;
+  pendingOnly?: SearchParamValue;
   disputedOnly?: SearchParamValue;
   categoryOnly?: SearchParamValue;
   ensOnly?: SearchParamValue;
@@ -114,6 +115,7 @@ function protectedContextLabel(params: ProtectedViewOgParams): string | null {
   if (isTruthyParam(params.redeemedOnly)) return "Redeemed";
   if (isTruthyParam(params.underReviewOnly)) return "Under review";
   if (isTruthyParam(params.rejectedOnly)) return "Rejected";
+  if (isTruthyParam(params.pendingOnly)) return "Pending";
   if (isTruthyParam(params.disputedOnly)) return "Disputed";
   if (
     params.categoryOnly
@@ -137,6 +139,10 @@ function appendProtectedFilterParams(urlParams: URLSearchParams, params: Protect
   }
   if (isTruthyParam(params.rejectedOnly)) {
     urlParams.set("rejectedOnly", "true");
+    return;
+  }
+  if (isTruthyParam(params.pendingOnly)) {
+    urlParams.set("pendingOnly", "true");
     return;
   }
   if (isTruthyParam(params.disputedOnly)) {

@@ -73,6 +73,7 @@ function buildProtectedViewCacheKey(args: {
   redeemedOnly: boolean;
   underReviewOnly: boolean;
   rejectedOnly: boolean;
+  pendingOnly: boolean;
   disputedOnly: boolean;
   categoryOnly: string | null;
   ensOnly: boolean;
@@ -88,6 +89,7 @@ function buildProtectedViewCacheKey(args: {
     redeemedOnly: args.redeemedOnly,
     underReviewOnly: args.underReviewOnly,
     rejectedOnly: args.rejectedOnly,
+    pendingOnly: args.pendingOnly,
     disputedOnly: args.disputedOnly,
     categoryOnly: args.categoryOnly,
     ensOnly: args.ensOnly,
@@ -105,6 +107,7 @@ function buildProtectedViewUrl(args: {
   redeemedOnly: boolean;
   underReviewOnly: boolean;
   rejectedOnly: boolean;
+  pendingOnly: boolean;
   disputedOnly: boolean;
   categoryOnly: string | null;
   ensOnly: boolean;
@@ -119,6 +122,7 @@ function buildProtectedViewUrl(args: {
     redeemedOnly: String(args.redeemedOnly),
     underReviewOnly: String(args.underReviewOnly),
     rejectedOnly: String(args.rejectedOnly),
+    pendingOnly: String(args.pendingOnly),
     disputedOnly: String(args.disputedOnly),
     ensOnly: String(args.ensOnly),
     zmOnly: String(args.zmOnly),
@@ -329,6 +333,7 @@ export default function ProtectedViewClient({
   const [redeemedOnly, setRedeemedOnly] = useState(initialData.redeemedOnly);
   const [underReviewOnly, setUnderReviewOnly] = useState(initialData.underReviewOnly);
   const [rejectedOnly, setRejectedOnly] = useState(initialData.rejectedOnly);
+  const [pendingOnly, setPendingOnly] = useState(initialData.pendingOnly);
   const [disputedOnly, setDisputedOnly] = useState(initialData.disputedOnly);
   const [categoryOnly, setCategoryOnly] = useState<string | null>(
     initialData.categoryOnly ?? null,
@@ -365,6 +370,7 @@ export default function ProtectedViewClient({
     redeemedOnly: stableInitialData.redeemedOnly,
     underReviewOnly: stableInitialData.underReviewOnly,
     rejectedOnly: stableInitialData.rejectedOnly,
+    pendingOnly: stableInitialData.pendingOnly,
     disputedOnly: stableInitialData.disputedOnly,
     categoryOnly: stableInitialData.categoryOnly ?? null,
     ensOnly: stableInitialData.ensOnly,
@@ -380,6 +386,7 @@ export default function ProtectedViewClient({
     redeemedOnly,
     underReviewOnly,
     rejectedOnly,
+    pendingOnly,
     disputedOnly,
     categoryOnly,
     ensOnly,
@@ -402,6 +409,7 @@ export default function ProtectedViewClient({
           redeemedOnly,
           underReviewOnly,
           rejectedOnly,
+          pendingOnly,
           disputedOnly,
           categoryOnly,
           ensOnly,
@@ -442,6 +450,7 @@ export default function ProtectedViewClient({
     !redeemedOnly &&
     !underReviewOnly &&
     !rejectedOnly &&
+    !pendingOnly &&
     !disputedOnly &&
     !categoryOnly &&
     !ensOnly &&
@@ -452,6 +461,8 @@ export default function ProtectedViewClient({
       ? "Status=Under Review"
       : rejectedOnly
         ? "Status=Rejected"
+        : pendingOnly
+          ? "Status=Pending"
         : disputedOnly
           ? "Status=Disputed"
           : categoryOnly
@@ -462,6 +473,7 @@ export default function ProtectedViewClient({
     setRedeemedOnly(false);
     setUnderReviewOnly(false);
     setRejectedOnly(false);
+    setPendingOnly(false);
     setDisputedOnly(false);
     setCategoryOnly(null);
     setEnsOnly(false);
@@ -641,7 +653,7 @@ export default function ProtectedViewClient({
           {
             key: "status",
             label: "Status",
-            active: redeemedOnly || underReviewOnly || rejectedOnly || disputedOnly,
+            active: redeemedOnly || underReviewOnly || rejectedOnly || pendingOnly || disputedOnly,
             children: [
               {
                 key: "redeemed",
@@ -671,6 +683,16 @@ export default function ProtectedViewClient({
                   setPage(1);
                   clearTabFilters();
                   setRejectedOnly(true);
+                },
+              },
+              {
+                key: "pending",
+                label: `Pending (${data.pendingCount})`,
+                active: pendingOnly,
+                onClick: () => {
+                  setPage(1);
+                  clearTabFilters();
+                  setPendingOnly(true);
                 },
               },
               {

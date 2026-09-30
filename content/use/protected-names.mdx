@@ -25,11 +25,12 @@ If operators set an `expires_at` on a protected row, protection ends after that 
 | Status | Meaning |
 |--------|---------|
 | **Under review** | Suggested or submitted; not yet approved for protection |
+| **Pending** | ENS priority row waiting on an approved access request; listed and requestable, no unlock code |
 | **Protected** | Actively held; unlock code required to claim (if not redeemed and not expired) |
 | **Rejected** | Not protected for claim (includes expired unclaimed protection) |
 | **Redeemed** | Claimed on-chain; shown with a checkmark on the list, no unlock gate |
 
-Some rows are also flagged as **ENS** or **Zcash.me** priority claims. Those flags are informational for operators and filters on `/protected`; they do not replace the unlock-code gate.
+Some rows are also flagged as **ENS** or **Zcash.me** priority claims. Those flags are informational for operators and filters on `/protected`; they do not replace the unlock-code gate. An unapproved ENS row stays **pending** until an access request is approved, which sets protection through 1 November 2026, 12:00 PM Eastern. File that request before Early Access (15 October 2026, 12:00 PM Eastern). After that time, pending ENS names with no submitted or approved request are rejected. Waitlist join and reservation for that name keep working while it is pending.
 
 ## Parents and variants
 
@@ -85,7 +86,7 @@ If you represent the person, organization, or identity associated with a protect
 3. Choose your relationship to the name. A supporting link and extra context are optional.
 4. Submit for manual review.
 
-You can also request access from a protected-name card on [Reserve](/reserve) if that name is on your waitlist. Filing a request does not by itself unlock the claim gate.
+You can also request access from a protected-name card on [Reserve](/reserve) if that name is on your waitlist. Filing a request does not by itself unlock the claim gate. Pending ENS names are requestable the same way; approval is what turns the unlock gate on.
 
 ## Disputing a name
 

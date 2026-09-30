@@ -104,7 +104,7 @@ export type ProtectedRequestNameOption = {
   normalizedName: string;
   parentName: string | null;
   category: ProtectedNameCategory;
-  status: "protected";
+  status: "protected" | "pending";
   reason: string;
   protectedAt: string | null;
   redeemed: boolean;
@@ -114,6 +114,16 @@ export type ProtectedRequestNameOption = {
   createdAt: string;
   updatedAt: string | null;
 };
+
+export function isRequestableProtectedName(args: {
+  status: string;
+  redeemed?: boolean | null;
+  ensPriorityClaim?: boolean | null;
+}): boolean {
+  if (args.redeemed === true) return false;
+  if (args.status === "protected") return true;
+  return args.status === "pending" && args.ensPriorityClaim === true;
+}
 
 export const PROTECTED_REQUEST_CONTACT_KINDS = [
   "email",

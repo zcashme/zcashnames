@@ -111,6 +111,7 @@ type ProtectedViewFilterFlags = {
   redeemedOnly: boolean;
   underReviewOnly: boolean;
   rejectedOnly: boolean;
+  pendingOnly: boolean;
   disputedOnly: boolean;
   /** When set, filter to this protected-name category. */
   categoryOnly: string | null;
@@ -144,6 +145,7 @@ export type ProtectedViewData = {
   redeemedCount: number;
   underReviewCount: number;
   rejectedCount: number;
+  pendingCount: number;
   disputedCount: number;
   /** Counts keyed by protected-name category (all known categories present). */
   categoryCounts: Record<ProtectedNameCategory, number>;
@@ -163,6 +165,7 @@ export type ProtectedViewData = {
   redeemedOnly: boolean;
   underReviewOnly: boolean;
   rejectedOnly: boolean;
+  pendingOnly: boolean;
   disputedOnly: boolean;
   categoryOnly: string | null;
   ensOnly: boolean;
@@ -434,6 +437,10 @@ function applyViewFilters(
     return query.eq("status", "rejected");
   }
 
+  if (args.pendingOnly) {
+    return query.eq("status", "pending");
+  }
+
   if (args.disputedOnly) {
     if (disputedNames.length === 0) {
       return query.eq("name", "");
@@ -460,6 +467,7 @@ const EMPTY_TAB_FILTERS: ProtectedViewFilterFlags = {
   redeemedOnly: false,
   underReviewOnly: false,
   rejectedOnly: false,
+  pendingOnly: false,
   disputedOnly: false,
   categoryOnly: null,
   ensOnly: false,
@@ -516,6 +524,7 @@ export async function getProtectedViewData(args?: {
   redeemedOnly?: boolean | string | null;
   underReviewOnly?: boolean | string | null;
   rejectedOnly?: boolean | string | null;
+  pendingOnly?: boolean | string | null;
   disputedOnly?: boolean | string | null;
   categoryOnly?: string | null;
   ensOnly?: boolean | string | null;
@@ -539,22 +548,27 @@ export async function getProtectedViewData(args?: {
   const underReviewOnly = redeemedOnly ? false : sanitizeBooleanFlag(args?.underReviewOnly);
   const rejectedOnly =
     redeemedOnly || underReviewOnly ? false : sanitizeBooleanFlag(args?.rejectedOnly);
-  const disputedOnly =
+  const pendingOnly =
     redeemedOnly || underReviewOnly || rejectedOnly
+      ? false
+      : sanitizeBooleanFlag(args?.pendingOnly);
+  const disputedOnly =
+    redeemedOnly || underReviewOnly || rejectedOnly || pendingOnly
       ? false
       : sanitizeBooleanFlag(args?.disputedOnly);
   const categoryOnly =
-    redeemedOnly || underReviewOnly || rejectedOnly || disputedOnly
+    redeemedOnly || underReviewOnly || rejectedOnly || pendingOnly || disputedOnly
       ? null
       : sanitizeCategoryOnly(args?.categoryOnly);
   const ensOnly =
-    redeemedOnly || underReviewOnly || rejectedOnly || disputedOnly || !!categoryOnly
+    redeemedOnly || underReviewOnly || rejectedOnly || pendingOnly || disputedOnly || !!categoryOnly
       ? false
       : sanitizeBooleanFlag(args?.ensOnly);
   const zmOnly =
     redeemedOnly
     || underReviewOnly
     || rejectedOnly
+    || pendingOnly
     || disputedOnly
     || !!categoryOnly
     || ensOnly
@@ -564,6 +578,7 @@ export async function getProtectedViewData(args?: {
     redeemedOnly,
     underReviewOnly,
     rejectedOnly,
+    pendingOnly,
     disputedOnly,
     categoryOnly,
     ensOnly,
@@ -609,6 +624,14 @@ export async function getProtectedViewData(args?: {
       familyRoots,
     ),
     { ...EMPTY_TAB_FILTERS, rejectedOnly: true },
+    disputedNames,
+  );
+  const pendingCountQuery = applyViewFilters(
+    applyFamilyFilter(
+      db.from("zn_protected_names").select("name", { count: "exact", head: true }),
+      familyRoots,
+    ),
+    { ...EMPTY_TAB_FILTERS, pendingOnly: true },
     disputedNames,
   );
   const disputedCountQuery = applyViewFilters(
@@ -659,6 +682,7 @@ export async function getProtectedViewData(args?: {
     { count: redeemedCount, error: redeemedCountError },
     { count: underReviewCount, error: underReviewCountError },
     { count: rejectedCount, error: rejectedCountError },
+    { count: pendingCount, error: pendingCountError },
     { count: disputedCount, error: disputedCountError },
     ensCountResult,
     zmCountResult,
@@ -671,6 +695,7 @@ export async function getProtectedViewData(args?: {
     redeemedCountQuery,
     underReviewCountQuery,
     rejectedCountQuery,
+    pendingCountQuery,
     disputedCountQuery,
     ensCountQuery,
     zmCountQuery,
@@ -746,6 +771,7 @@ export async function getProtectedViewData(args?: {
   if (redeemedCountError) throw new Error(redeemedCountError.message);
   if (underReviewCountError) throw new Error(underReviewCountError.message);
   if (rejectedCountError) throw new Error(rejectedCountError.message);
+  if (pendingCountError) throw new Error(pendingCountError.message);
   if (disputedCountError) throw new Error(disputedCountError.message);
   if (heroAllCountError) throw new Error(heroAllCountError.message);
   if (heroUnderReviewCountError) throw new Error(heroUnderReviewCountError.message);
@@ -812,6 +838,7 @@ export async function getProtectedViewData(args?: {
     redeemedCount: redeemedCount ?? 0,
     underReviewCount: underReviewCount ?? 0,
     rejectedCount: rejectedCount ?? 0,
+    pendingCount: pendingCount ?? 0,
     disputedCount: disputedCount ?? 0,
     categoryCounts,
     ensCount,
@@ -831,6 +858,7 @@ export async function getProtectedViewData(args?: {
     redeemedOnly,
     underReviewOnly,
     rejectedOnly,
+    pendingOnly,
     disputedOnly,
     categoryOnly,
     ensOnly: priorityColumnsAvailable ? ensOnly : false,

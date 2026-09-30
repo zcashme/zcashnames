@@ -113,6 +113,7 @@ function formatTimestamp(value: string | null | undefined) {
 function getNameStatusLabel(status: string) {
   const normalized = status.toLowerCase();
   if (normalized === "under_review") return "Under Review";
+  if (normalized === "pending") return "Pending";
   if (normalized === "protected") return "Protected";
   if (normalized === "rejected") return "Rejected";
   return status.replaceAll("_", " ");
@@ -132,6 +133,13 @@ function getNameStatusStyle(status: string) {
     return {
       color: "var(--accent-yellow, #d6a852)",
       background: "color-mix(in srgb, var(--accent-yellow, #d6a852) 12%, transparent)",
+    };
+  }
+
+  if (normalized === "pending") {
+    return {
+      color: "var(--color-brand-blue, #3b82f6)",
+      background: "color-mix(in srgb, var(--color-brand-blue, #3b82f6) 12%, transparent)",
     };
   }
 
@@ -372,7 +380,9 @@ export default function ProtectedNameDetailsModal({
   if (!isOpen || !row || typeof document === "undefined") return null;
 
   const status = row.status.toLowerCase();
-  const canRequest = !row.redeemed && status === "protected";
+  const canRequest =
+    !row.redeemed
+    && (status === "protected" || (status === "pending" && row.ens_priority_claim));
   const canDispute = !row.redeemed && (status === "protected" || status === "rejected");
   const referralCode = row.referral_code
     ? getPreferredReferralCode({

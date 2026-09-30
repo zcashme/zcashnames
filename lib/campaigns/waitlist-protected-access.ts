@@ -1,7 +1,10 @@
 import "server-only";
 
 import { db } from "@/lib/db";
-import type { ProtectedAccessRelationship } from "@/lib/protected/shared";
+import {
+  isRequestableProtectedName,
+  type ProtectedAccessRelationship,
+} from "@/lib/protected/shared";
 import type { ContactKind } from "@/lib/types";
 
 export type WaitlistProtectedAccessStatus = "submitted" | "approved" | "denied";
@@ -17,7 +20,9 @@ type ProtectedNameLookupRow = {
   name: string;
   normalized_name: string;
   category: string | null;
+  status?: string | null;
   redeemed: boolean | null;
+  ens_priority_claim?: boolean | null;
   zm_priority_claim?: boolean | null;
   expires_at?: string | null;
 };
@@ -44,8 +49,11 @@ type WaitlistProtectedAccessRequestRow = {
 export type ProtectedNameInfo = {
   name: string;
   category: string | null;
+  status: string;
   redeemed: boolean;
   isProtected: boolean;
+  isRequestable: boolean;
+  ensPriorityClaim: boolean;
   zmPriorityClaim: boolean;
   expiresAt: string | null;
 };
@@ -137,24 +145,29 @@ export async function getProtectedNameInfoByName(
     return protectedByName;
   }
 
-  const selectWithPriority = "name, normalized_name, category, redeemed, zm_priority_claim, expires_at";
-  const selectBasic = "name, normalized_name, category, redeemed";
+  const selectWithPriority =
+    "name, normalized_name, category, status, redeemed, ens_priority_claim, zm_priority_claim, expires_at";
+  const selectBasic = "name, normalized_name, category, status, redeemed";
 
   let { data, error } = await db
     .from("zn_protected_names")
     .select(selectWithPriority)
     .in("normalized_name", normalizedNames)
-    .eq("status", "protected");
+    .in("status", ["protected", "pending"]);
 
   if (
     error
-    && (error.message.includes("zm_priority_claim") || error.message.includes("expires_at"))
+    && (
+      error.message.includes("zm_priority_claim")
+      || error.message.includes("ens_priority_claim")
+      || error.message.includes("expires_at")
+    )
   ) {
     const fallback = await db
       .from("zn_protected_names")
       .select(selectBasic)
       .in("normalized_name", normalizedNames)
-      .eq("status", "protected");
+      .in("status", ["protected", "pending"]);
     data = (fallback.data ?? null) as typeof data;
     error = fallback.error;
   }
@@ -170,15 +183,25 @@ export async function getProtectedNameInfoByName(
     // Prefer keeping an unredeemed row if multiple match the same name.
     const existing = protectedByName.get(normalizedName);
     const redeemed = row.redeemed === true;
-    if (existing && existing.isProtected && redeemed) {
+    const status = typeof row.status === "string" && row.status.trim() ? row.status : "protected";
+    const ensPriorityClaim = row.ens_priority_claim === true;
+    const isProtected = status === "protected" && !redeemed;
+    if (existing && existing.isProtected && !isProtected) {
       continue;
     }
 
     protectedByName.set(normalizedName, {
       name: row.name,
       category: row.category,
+      status,
       redeemed,
-      isProtected: !redeemed,
+      isProtected,
+      isRequestable: isRequestableProtectedName({
+        status,
+        redeemed,
+        ensPriorityClaim,
+      }),
+      ensPriorityClaim,
       zmPriorityClaim: row.zm_priority_claim === true,
       expiresAt: row.expires_at ?? null,
     });

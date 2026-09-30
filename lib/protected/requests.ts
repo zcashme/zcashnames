@@ -17,6 +17,7 @@ import {
   PROTECTED_NAME_CATEGORIES,
   PROTECTED_REQUEST_CONTACT_KINDS,
   PROTECTED_REQUEST_OPTION_LIMIT,
+  isRequestableProtectedName,
   normalizeEvidenceUrls,
   type ProtectedAccessRelationship,
   type ProtectedNameCategory,
@@ -119,7 +120,13 @@ function getRequestMatchScore(query: string, candidate: string): number {
 }
 
 function mapRequestNameRow(row: ProtectedRequestNameRow): ProtectedRequestNameOption | null {
-  if (row.status !== "protected" || row.redeemed) {
+  if (
+    !isRequestableProtectedName({
+      status: row.status,
+      redeemed: row.redeemed,
+      ensPriorityClaim: row.ens_priority_claim === true,
+    })
+  ) {
     return null;
   }
 
@@ -133,7 +140,7 @@ function mapRequestNameRow(row: ProtectedRequestNameRow): ProtectedRequestNameOp
     normalizedName: row.normalized_name,
     parentName: row.parent_name,
     category: row.category,
-    status: "protected",
+    status: row.status === "pending" ? "pending" : "protected",
     reason: row.reason,
     protectedAt: row.protected_at,
     redeemed: false,
@@ -391,7 +398,7 @@ export async function getProtectedRequestOptions(args: {
   let request = db
     .from("zn_protected_names")
     .select(REQUEST_NAME_SELECT)
-    .eq("status", "protected")
+    .in("status", ["protected", "pending"])
     .eq("redeemed", false);
 
   if (!query) {
@@ -436,7 +443,7 @@ export async function getRequestableProtectedNameByName(
     .from("zn_protected_names")
     .select(REQUEST_NAME_SELECT)
     .eq("name", trimmedName)
-    .eq("status", "protected")
+    .in("status", ["protected", "pending"])
     .eq("redeemed", false)
     .limit(1)
     .maybeSingle();
@@ -453,7 +460,7 @@ export async function getRequestableProtectedNameByName(
     .from("zn_protected_names")
     .select(REQUEST_NAME_SELECT)
     .eq("normalized_name", trimmedName.toLowerCase())
-    .eq("status", "protected")
+    .in("status", ["protected", "pending"])
     .eq("redeemed", false)
     .limit(1)
     .maybeSingle();
@@ -477,7 +484,7 @@ export async function submitPublicProtectedAccessRequest(
 ): Promise<WaitlistProtectedAccessRequest> {
   const requestableName = await getRequestableProtectedNameByName(payload.name);
   if (!requestableName) {
-    throw new Error("Only non-redeemed protected names can be requested.");
+    throw new Error("Only non-redeemed protected or pending ENS names can be requested.");
   }
 
   if (requestableName.zmPriorityClaim) {
@@ -486,8 +493,8 @@ export async function submitPublicProtectedAccessRequest(
 
   const protectedNames = await getProtectedNameInfoByName([requestableName.normalizedName]);
   const protectedName = protectedNames.get(requestableName.normalizedName);
-  if (!protectedName?.isProtected) {
-    throw new Error("This name is not currently protected.");
+  if (!protectedName?.isRequestable) {
+    throw new Error("This name is not currently requestable.");
   }
 
   const waitlistRows = await findWaitlistRowsByNormalizedEmail(payload.submittedByEmail);

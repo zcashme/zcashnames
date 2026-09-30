@@ -229,9 +229,9 @@ export async function POST(request: Request) {
 
     const protectedNames = await getProtectedNameInfoByName([normalizedName]);
     const protectedName = protectedNames.get(normalizedName);
-    if (!protectedName?.isProtected) {
+    if (!protectedName?.isRequestable) {
       return NextResponse.json(
-        { ok: false, error: "This name is not currently protected.", requestId },
+        { ok: false, error: "This name is not currently requestable.", requestId },
         { status: 400 },
       );
     }

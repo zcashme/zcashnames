@@ -682,7 +682,7 @@ export const FAQ_SECTIONS: FaqSection[] = [
         id: "protected-flags",
         question: "What do the ENS and Zcash.me flags mean?",
         answer:
-          "They mark priority-claim context for operators and filters. They do not replace the unlock-code gate. Gating only cares about protected + unredeemed + not past expiry.",
+          "They mark priority-claim context for operators and filters. They do not replace the unlock-code gate. Unapproved ENS rows stay pending (requestable, no unlock code) until an access request is approved. File the request before Early Access (October 15, 2026, 12:00 PM Eastern); after that, pending ENS names with no submitted or approved request are rejected. Gating only cares about protected + unredeemed + not past expiry.",
       },
       {
         id: "protected-unlock-codes",

@@ -16,11 +16,14 @@
  *     the gate for that name.
  *  4. Expiry — past expires_at, unclaimed protection is treated as not gated
  *     and expire_protected_names() (SQL/cron) flips status to rejected.
+ *     Pending ENS names with no submitted or approved access request are
+ *     rejected at Early Access (2026-10-15T16:00:00.000Z).
  */
 import "server-only";
 
 import crypto from "node:crypto";
 import { db } from "@/lib/db";
+import { WAITLIST_VIEW_EARLY_ACCESS_START_AT } from "@/lib/waitlist/early-access";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -41,6 +44,9 @@ type ProtectedNameLookupRow = {
 };
 
 const EXPIRED_PROTECTION_REASON = "Protection period expired";
+const ENS_PENDING_EXPIRED_REASON =
+  "ENS priority access was not requested before Early Access";
+const ENS_PENDING_REQUEST_DEADLINE_MS = Date.parse(WAITLIST_VIEW_EARLY_ACCESS_START_AT);
 
 /* ── Expiry helpers ────────────────────────────────────────────────── */
 
@@ -83,44 +89,31 @@ async function markProtectedNameExpiredByName(name: string): Promise<void> {
     .eq("redeemed", false);
 }
 
-/**
- * Batch-expire all unclaimed protected names past expires_at.
- * Prefers the SQL RPC expire_protected_names(); falls back to a direct update.
- */
-export async function expireProtectedNames(): Promise<number> {
-  const { data, error } = await db.rpc("expire_protected_names");
-
-  if (!error) {
-    const count = typeof data === "number" ? data : Number(data);
-    return Number.isFinite(count) ? count : 0;
-  }
-
-  // RPC missing or not deployed yet — direct update fallback.
+function isMissingRpcError(error: { message?: string; code?: string }, fnName: string): boolean {
   const message = error.message ?? "";
-  const rpcMissing =
-    message.includes("expire_protected_names")
+  return (
+    message.includes(fnName)
     || message.includes("Could not find the function")
     || message.includes("does not exist")
     || error.code === "PGRST202"
-    || error.code === "42883";
+    || error.code === "42883"
+  );
+}
 
-  if (!rpcMissing) {
-    throw new Error(error.message);
-  }
+async function expirePendingEnsNamesFallback(): Promise<number> {
+  if (Date.now() < ENS_PENDING_REQUEST_DEADLINE_MS) return 0;
 
   const nowIso = new Date().toISOString();
   const { data: rows, error: selectError } = await db
     .from("zn_protected_names")
-    .select("name, rejected_reason")
-    .eq("status", "protected")
-    .eq("redeemed", false)
-    .not("expires_at", "is", null)
-    .lte("expires_at", nowIso);
+    .select("name, normalized_name, rejected_reason")
+    .eq("ens_priority_claim", true)
+    .eq("status", "pending")
+    .eq("redeemed", false);
 
   if (selectError) {
-    // Column not migrated yet.
     if (
-      selectError.message.includes("expires_at")
+      selectError.message.includes("ens_priority_claim")
       || selectError.message.includes("does not exist")
     ) {
       return 0;
@@ -131,8 +124,84 @@ export async function expireProtectedNames(): Promise<number> {
   const targets = rows ?? [];
   if (targets.length === 0) return 0;
 
+  const openRequestNames = new Set<string>();
+  const { data: requests, error: requestError } = await db
+    .from("waitlist_protected_name_access_requests")
+    .select("requested_name")
+    .in("status", ["submitted", "approved"]);
+
+  if (requestError) {
+    if (
+      !(
+        requestError.message.includes("waitlist_protected_name_access_requests")
+        || requestError.message.includes("does not exist")
+      )
+    ) {
+      throw new Error(requestError.message);
+    }
+  } else {
+    for (const request of requests ?? []) {
+      if (typeof request.requested_name === "string" && request.requested_name.trim()) {
+        openRequestNames.add(request.requested_name.trim().toLowerCase());
+      }
+    }
+  }
+
   let expiredCount = 0;
   for (const row of targets) {
+    const nameKey = typeof row.name === "string" ? row.name.trim().toLowerCase() : "";
+    const normalizedKey =
+      typeof row.normalized_name === "string" ? row.normalized_name.trim().toLowerCase() : "";
+    if (
+      (nameKey && openRequestNames.has(nameKey))
+      || (normalizedKey && openRequestNames.has(normalizedKey))
+    ) {
+      continue;
+    }
+
+    const existingReason =
+      typeof row.rejected_reason === "string" ? row.rejected_reason.trim() : "";
+    const { error: updateError } = await db
+      .from("zn_protected_names")
+      .update({
+        status: "rejected",
+        rejected_at: nowIso,
+        rejected_reason: existingReason || ENS_PENDING_EXPIRED_REASON,
+        updated_at: nowIso,
+      })
+      .eq("name", row.name)
+      .eq("status", "pending")
+      .eq("redeemed", false);
+
+    if (updateError) throw new Error(updateError.message);
+    expiredCount += 1;
+  }
+
+  return expiredCount;
+}
+
+async function expireProtectedNamesFallback(): Promise<number> {
+  const nowIso = new Date().toISOString();
+  const { data: rows, error: selectError } = await db
+    .from("zn_protected_names")
+    .select("name, rejected_reason")
+    .eq("status", "protected")
+    .eq("redeemed", false)
+    .not("expires_at", "is", null)
+    .lte("expires_at", nowIso);
+
+  if (selectError) {
+    if (
+      selectError.message.includes("expires_at")
+      || selectError.message.includes("does not exist")
+    ) {
+      return 0;
+    }
+    throw new Error(selectError.message);
+  }
+
+  let expiredCount = 0;
+  for (const row of rows ?? []) {
     const existingReason =
       typeof row.rejected_reason === "string" ? row.rejected_reason.trim() : "";
     const { error: updateError } = await db
@@ -149,6 +218,36 @@ export async function expireProtectedNames(): Promise<number> {
 
     if (updateError) throw new Error(updateError.message);
     expiredCount += 1;
+  }
+
+  return expiredCount;
+}
+
+/**
+ * Batch-expire unclaimed protected names past expires_at, plus pending ENS
+ * names with no submitted or approved access request after Early Access.
+ */
+export async function expireProtectedNames(): Promise<number> {
+  let expiredCount = 0;
+
+  const protectedRpc = await db.rpc("expire_protected_names");
+  if (!protectedRpc.error) {
+    const count = typeof protectedRpc.data === "number" ? protectedRpc.data : Number(protectedRpc.data);
+    expiredCount += Number.isFinite(count) ? count : 0;
+  } else if (!isMissingRpcError(protectedRpc.error, "expire_protected_names")) {
+    throw new Error(protectedRpc.error.message);
+  } else {
+    expiredCount += await expireProtectedNamesFallback();
+  }
+
+  const pendingRpc = await db.rpc("expire_pending_ens_names");
+  if (!pendingRpc.error) {
+    const count = typeof pendingRpc.data === "number" ? pendingRpc.data : Number(pendingRpc.data);
+    expiredCount += Number.isFinite(count) ? count : 0;
+  } else if (!isMissingRpcError(pendingRpc.error, "expire_pending_ens_names")) {
+    throw new Error(pendingRpc.error.message);
+  } else {
+    expiredCount += await expirePendingEnsNamesFallback();
   }
 
   return expiredCount;

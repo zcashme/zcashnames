@@ -41,6 +41,7 @@ Protected names live in a Supabase table (`zn_protected_names`) queried by the w
 | Status | Role |
 |--------|------|
 | `under_review` | Suggested or pending operator decision; **does not** gate claims |
+| `pending` | ENS priority holding state before an approved access request; **does not** gate claims; `expires_at` is null. After Early Access (`2026-10-15T16:00:00.000Z`), pending ENS rows with no submitted or approved request auto-reject |
 | `protected` | Actively held; **can** gate claims when unredeemed and not past `expires_at` |
 | `rejected` | Not held for claim; includes expired unclaimed protection |
 
