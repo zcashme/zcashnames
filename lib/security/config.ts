@@ -1,12 +1,11 @@
 import "server-only";
 
+import { db } from "@/lib/db";
 import { validateAddress } from "@/lib/zns/address-validation";
 import {
   competitionPhase,
   formatCompetitionInstant,
-  parseCommit,
   parseFeeZec,
-  parseGithubSlug,
   parseInstant,
   parseTxTable,
   zecToZats,
@@ -20,25 +19,12 @@ export type SecurityConfig = {
   start: Date | null;
   end: Date | null;
   phase: CompetitionPhase;
-  pinnedCommit: string | null;
   feeAddress: string | null;
   feeZec: string | null;
   feeZats: number | null;
   txTable: string | null;
-  owner: string | null;
-  repo: string | null;
-  appId: string | null;
-  installationId: string | null;
-  privateKey: string | null;
   submissionsOpen: boolean;
 };
-
-function readPrivateKey(): string | null {
-  const raw = process.env.SECURITY_COMP_GITHUB_PRIVATE_KEY?.trim() ?? "";
-  if (!raw) return null;
-  const unquoted = raw.startsWith("\"") && raw.endsWith("\"") ? raw.slice(1, -1) : raw;
-  return unquoted.replace(/\\n/g, "\n");
-}
 
 function payableAddress(raw: string | undefined): string | null {
   const value = raw?.trim() ?? "";
@@ -49,32 +35,49 @@ function payableAddress(raw: string | undefined): string | null {
 }
 
 export function getSecurityConfig(now = new Date()): SecurityConfig {
-  const start = parseInstant(process.env.SECURITY_COMP_START);
-  const end = parseInstant(process.env.SECURITY_COMP_END);
+  const start = parseInstant(process.env.SECURITY_COMP_START || "2026-10-03T20:00:00Z");
+  const end = parseInstant(process.env.SECURITY_COMP_END || "2026-10-13T20:00:00Z");
   const phase = competitionPhase(start, end, now);
   const feeRaw = process.env.SECURITY_COMP_FEE_ZEC;
   const feeZec = parseFeeZec(feeRaw === undefined || feeRaw.trim() === "" ? "0.01" : feeRaw);
   const feeZats = feeZec ? zecToZats(feeZec) : null;
-  const pinnedCommit = parseCommit(process.env.SECURITY_COMP_PINNED_COMMIT);
   const feeAddress = payableAddress(process.env.SECURITY_COMP_FEE_ADDRESS);
   const txTable = parseTxTable(process.env.SECURITY_COMP_TX_TABLE);
-  const appId = process.env.SECURITY_COMP_GITHUB_APP_ID?.trim() || null;
-  const installationId = process.env.SECURITY_COMP_GITHUB_INSTALLATION_ID?.trim() || null;
   return {
     start,
     end,
     phase,
-    pinnedCommit,
     feeAddress,
     feeZec,
     feeZats,
     txTable,
-    owner: parseGithubSlug(process.env.SECURITY_COMP_GITHUB_OWNER, "znsme"),
-    repo: parseGithubSlug(process.env.SECURITY_COMP_GITHUB_REPO, "zns-mint"),
-    appId,
-    installationId,
-    privateKey: readPrivateKey(),
-    submissionsOpen: phase === "open" && Boolean(pinnedCommit && feeAddress && feeZec && feeZats && txTable),
+    submissionsOpen: phase === "open" && Boolean(feeAddress && feeZec && feeZats && txTable),
+  };
+}
+
+/** Use the active scanner registry row as the payment recipient. Never select its view_key. */
+export async function getActiveSecurityConfig(now = new Date()): Promise<SecurityConfig> {
+  const config = getSecurityConfig(now);
+  let feeAddress: string | null = null;
+  if (config.txTable) {
+    const { data, error } = await db
+      .from("zn_view_keys")
+      .select("recipient_address")
+      .eq("reserve_table_name", config.txTable)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (error) {
+      console.error("[security] fee recipient lookup", { code: error.code });
+    } else {
+      feeAddress = payableAddress(typeof data?.recipient_address === "string" ? data.recipient_address : undefined);
+    }
+  }
+  return {
+    ...config,
+    feeAddress,
+    submissionsOpen: config.phase === "open" && Boolean(
+      feeAddress && config.feeZec && config.feeZats && config.txTable,
+    ),
   };
 }
 
@@ -90,9 +93,10 @@ export function securityPageModel(config: SecurityConfig): SecurityPageModel {
           : "Submissions are not open yet.";
   return {
     phase: config.phase,
+    startAt: config.start?.getTime() ?? null,
+    endAt: config.end?.getTime() ?? null,
     startLabel: config.start ? formatCompetitionInstant(config.start) : null,
     endLabel: config.end ? formatCompetitionInstant(config.end) : null,
-    pinnedCommit: config.pinnedCommit,
     feeZec: config.feeZec ?? "0.01",
     submissionsOpen: config.submissionsOpen,
     closedMessage,

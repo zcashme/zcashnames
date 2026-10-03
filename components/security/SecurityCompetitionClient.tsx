@@ -9,49 +9,29 @@ import { buildFaqTextFieldStyle } from "@/components/ui/formFieldStyles";
 import { QrBlock } from "@/components/ui/QrBlock";
 import { validateAddress } from "@/lib/zns/address-validation";
 import { SECURITY_MESSAGES } from "@/lib/security/errors";
-import { validateSecurityReport } from "@/lib/security/report";
 import type { SecurityPageModel } from "@/lib/security/window";
 
 const STORAGE_KEY = "zns.securityTicket";
 const STATUS_POLL_INTERVAL_MS = 10_000;
 const STATUS_POLL_WINDOW_MS = 120_000;
 
-const MODULES = [
-  "src/boot.rs",
-  "src/capsule.rs",
-  "src/tee.rs",
-  "src/key.rs",
-  "src/mint/*",
-  "src/wallet/*",
-  "src/zcash.rs",
-  "zcashme/orchard",
-  "zcashme/zns-zcash_primitives",
-  "regtest / fake-tee",
-];
-
 type View = "loading" | "start" | "payment" | "report" | "success" | "unavailable";
 
 type Session = {
   ticketId: string;
-  resumeToken: string;
+  accessToken: string;
   feeZec: string;
   address: string;
   memo: string;
-  pinnedCommit: string | null;
   status: string;
-  hasStoredReport: boolean;
+  paymentTxid?: string;
+  ghsaUrl?: string;
+  devTest?: boolean;
 };
 
 type Draft = {
-  title: string;
-  affectedModule: string;
-  severity: string;
-  cwe: string;
-  description: string;
-  impact: string;
-  proofOfConcept: string;
-  suggestedFix: string;
-  researcherHandle: string;
+  ghsaUrl: string;
+  claimedSeverity: string;
   githubUsername: string;
   payoutAddress: string;
 };
@@ -60,28 +40,22 @@ type ApiBody = {
   ok?: boolean;
   error?: string;
   code?: string;
-  retryAfter?: number;
   ticketId?: string;
-  resumeToken?: string;
+  accessToken?: string;
   feeZec?: string;
   address?: string;
   memo?: string;
-  pinnedCommit?: string | null;
   status?: string;
-  hasStoredReport?: boolean;
+  paymentTxid?: string;
+  ghsaUrl?: string;
+  claimedSeverity?: string;
+  finalSeverity?: string | null;
   payment?: { address?: string; memo?: string; amountZec?: string } | null;
 };
 
 const EMPTY_DRAFT: Draft = {
-  title: "",
-  affectedModule: "",
-  severity: "",
-  cwe: "",
-  description: "",
-  impact: "",
-  proofOfConcept: "",
-  suggestedFix: "",
-  researcherHandle: "",
+  ghsaUrl: "",
+  claimedSeverity: "",
   githubUsername: "",
   payoutAddress: "",
 };
@@ -104,16 +78,18 @@ const primaryButtonStyle = {
 function statusLabel(status: string): string {
   if (status === "awaiting_payment") return "Awaiting payment";
   if (status === "payment_verified") return "Payment verified";
-  if (status === "submitting") return "Submitting";
-  if (status === "github_failed") return "Saved, not filed";
   if (status === "submitted") return "Submitted";
+  if (status === "accepted") return "Accepted";
+  if (status === "duplicate") return "Duplicate";
+  if (status === "invalid") return "Invalid";
+  if (status === "paid") return "Paid";
   return "In progress";
 }
 
 function viewFor(status: string): View {
-  if (status === "submitted") return "success";
+  if (["submitted", "accepted", "duplicate", "invalid", "paid"].includes(status)) return "success";
   if (status === "awaiting_payment") return "payment";
-  if (status === "payment_verified" || status === "github_failed" || status === "submitting") return "report";
+  if (status === "payment_verified") return "report";
   return "unavailable";
 }
 
@@ -215,7 +191,7 @@ function PaymentCard({
   onVerified,
 }: {
   session: Session;
-  onVerified: (status: string) => void;
+  onVerified: (status: string, paymentTxid?: string) => void;
 }) {
   const [tab, setTab] = useState<"payment" | "sent">("payment");
   const [opened, setOpened] = useState(false);
@@ -265,12 +241,12 @@ function PaymentCard({
     try {
       const { status, payload } = await postJson("/api/security/tickets/verify", {
         ticketId: session.ticketId,
-        resumeToken: session.resumeToken,
+        accessToken: session.accessToken,
         ...(hint ? { hintTxid: hint } : {}),
       });
       if (payload?.ok && payload.status && payload.status !== "awaiting_payment") {
         stop = true;
-        onVerified(payload.status);
+        onVerified(payload.status, payload.paymentTxid);
         return;
       }
       const code = payload?.code ?? "";
@@ -342,6 +318,23 @@ function PaymentCard({
       beginAutoWindow(Date.now());
       void runRef.current("manual");
     }
+  }
+
+  if (session.devTest) {
+    return (
+      <Panel>
+        <div className="grid gap-4">
+          <p className="text-xs font-bold uppercase tracking-[0.16em]" style={{ color: "var(--accent-red, #e05252)" }}>Local development simulation</p>
+          <TicketLine ticketId={session.ticketId} />
+          <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>
+            No ZEC is sent and no Supabase ticket is created. Use this gate to walk through the submission form.
+          </p>
+          <button type="button" onClick={() => onVerified("payment_verified", "d".repeat(64))} className={primaryButtonClass} style={primaryButtonStyle}>
+            Simulate fee payment
+          </button>
+        </div>
+      </Panel>
+    );
   }
 
   const sentCopy = checking
@@ -430,17 +423,15 @@ function ReportForm({
   onSubmitted,
 }: {
   session: Session;
-  onSubmitted: () => void;
+  onSubmitted: (ghsaUrl: string) => void;
 }) {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const commit = session.pinnedCommit;
   const payout = validateAddress(draft.payoutAddress.trim());
-  const payoutWarning = draft.payoutAddress.trim() && (payout.status === "sapling" || payout.status === "transparent")
-    ? payout.warning
+  const payoutWarning = draft.payoutAddress.trim() && payout.status !== "unified"
+    ? payout.warning || "Enter a valid Unified Zcash address."
     : "";
-  const proofRequired = draft.severity === "critical" || draft.severity === "high";
 
   function set<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -451,13 +442,34 @@ function ReportForm({
     setBusy(true);
     setError("");
     try {
+      if (session.devTest) {
+        if (!/^https:\/\/github\.com\/.+\/security\/advisories\/GHSA-[A-Za-z0-9-]+\/?$/.test(draft.ghsaUrl.trim())) {
+          setError("Enter a GitHub Security Advisory URL.");
+          return;
+        }
+        if (!draft.claimedSeverity) {
+          setError("Choose a claimed severity.");
+          return;
+        }
+        if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(draft.githubUsername.trim().replace(/^@/, ""))) {
+          setError("Enter a valid GitHub username.");
+          return;
+        }
+        if (payout.status !== "unified") {
+          setError("Enter a valid Zcash Unified address for bounty payment.");
+          return;
+        }
+        onSubmitted(draft.ghsaUrl.trim());
+        return;
+      }
       const { payload } = await postJson("/api/security/report", {
         ticketId: session.ticketId,
-        resumeToken: session.resumeToken,
+        accessToken: session.accessToken,
+        paymentTxid: session.paymentTxid,
         ...body,
       });
       if (payload?.ok && payload.status === "submitted") {
-        onSubmitted();
+        onSubmitted(draft.ghsaUrl.trim());
         return;
       }
       setError(messageFrom(payload));
@@ -466,14 +478,7 @@ function ReportForm({
     }
   }
 
-  function submitDraft() {
-    const validated = validateSecurityReport(draft);
-    if (!validated.ok) {
-      setError(validated.error);
-      return;
-    }
-    void send(draft);
-  }
+  function submitDraft() { void send(draft); }
 
   const fieldClass = "w-full min-w-0 rounded-xl px-4 py-3 text-sm outline-none";
 
@@ -482,38 +487,16 @@ function ReportForm({
       <div className="grid gap-5">
         <TicketLine ticketId={session.ticketId} />
         <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-          {statusLabel(session.status)}. Payment is saved. File the private report here.
+          Payment verified. Create the private GitHub Security Advisory, then submit its link here. The ticket is recorded after submission.
         </p>
-        {session.status === "submitting" ? (
-          <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>{SECURITY_MESSAGES.inProgress}</p>
-        ) : null}
-        {session.hasStoredReport ? (
-          <button
-            type="button"
-            onClick={() => void send({ retryStored: true })}
-            disabled={busy}
-            className={primaryButtonClass}
-            style={primaryButtonStyle}
-          >
-            {busy ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit saved report"}
-          </button>
-        ) : null}
-        <Field label="Title">
-          <input className={fieldClass} style={buildFaqTextFieldStyle(false)} value={draft.title} maxLength={200} onChange={(event) => set("title", event.target.value)} />
+        <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>
+          <a href="https://github.com/zcashme/zns-mint/security/advisories/new" target="_blank" rel="noreferrer" className="underline underline-offset-4" style={{ color: "var(--color-accent-interactive)" }}>Create a GitHub Security Advisory ↗</a>
+        </p>
+        <Field label="GitHub Security Advisory URL">
+          <input className={`${fieldClass} break-all font-mono`} style={buildFaqTextFieldStyle(false)} value={draft.ghsaUrl} maxLength={300} onChange={(event) => set("ghsaUrl", event.target.value)} autoComplete="url" spellCheck={false} />
         </Field>
-        <Field label="Affected module / file" hint="Choose a path or type one.">
-          <input className={fieldClass} style={buildFaqTextFieldStyle(false)} list="security-modules" value={draft.affectedModule} maxLength={200} onChange={(event) => set("affectedModule", event.target.value)} />
-          <datalist id="security-modules">
-            {MODULES.map((entry) => <option key={entry} value={entry} />)}
-          </datalist>
-        </Field>
-        <Field label="Affected commit">
-          <p className="break-all font-mono text-sm" style={{ color: "var(--fg-body)" }}>
-            {commit || "The pinned commit is not configured."}
-          </p>
-        </Field>
-        <Field label="Severity claim">
-          <select className={fieldClass} style={buildFaqTextFieldStyle(false)} value={draft.severity} onChange={(event) => set("severity", event.target.value)}>
+        <Field label="Claimed severity">
+          <select className={fieldClass} style={buildFaqTextFieldStyle(false)} value={draft.claimedSeverity} onChange={(event) => set("claimedSeverity", event.target.value)}>
             <option value="">Choose severity</option>
             <option value="critical">Critical</option>
             <option value="high">High</option>
@@ -521,53 +504,35 @@ function ReportForm({
             <option value="low">Low</option>
           </select>
         </Field>
-        <Field label="Weakness class / CWE" hint="Example: CWE-287">
-          <input className={fieldClass} style={buildFaqTextFieldStyle(false)} value={draft.cwe} onChange={(event) => set("cwe", event.target.value)} autoComplete="off" />
+        <Field label="GitHub username">
+          <input className={fieldClass} style={buildFaqTextFieldStyle(false)} value={draft.githubUsername} maxLength={40} onChange={(event) => set("githubUsername", event.target.value)} autoComplete="username" />
         </Field>
-        <Field label="Description">
-          <textarea className={`${fieldClass} min-h-32`} style={buildFaqTextFieldStyle(false)} value={draft.description} onChange={(event) => set("description", event.target.value)} />
-        </Field>
-        <Field label="Impact">
-          <textarea className={`${fieldClass} min-h-32`} style={buildFaqTextFieldStyle(false)} value={draft.impact} onChange={(event) => set("impact", event.target.value)} />
-        </Field>
-        <Field label="Proof of concept" hint={proofRequired ? "Required for critical and high findings." : "Optional for medium and low findings."}>
-          <textarea className={`${fieldClass} min-h-32 font-mono`} style={buildFaqTextFieldStyle(false)} value={draft.proofOfConcept} onChange={(event) => set("proofOfConcept", event.target.value)} />
-        </Field>
-        <Field label="Suggested fix" hint="Optional.">
-          <textarea className={`${fieldClass} min-h-24 font-mono`} style={buildFaqTextFieldStyle(false)} value={draft.suggestedFix} onChange={(event) => set("suggestedFix", event.target.value)} />
-        </Field>
-        <Field label="Researcher handle">
-          <input className={fieldClass} style={buildFaqTextFieldStyle(false)} value={draft.researcherHandle} maxLength={64} onChange={(event) => set("researcherHandle", event.target.value)} autoComplete="off" />
-        </Field>
-        <Field label="GitHub username" hint="Optional. The private report is filed by Zcash Names.">
-          <input className={fieldClass} style={buildFaqTextFieldStyle(false)} value={draft.githubUsername} maxLength={40} onChange={(event) => set("githubUsername", event.target.value)} autoComplete="off" />
-        </Field>
-        <Field label="ZEC payout address" hint={payoutWarning || "Unified, Sapling, or transparent."}>
+        <Field label="Unified address for bounty payment" hint={payoutWarning || "Enter a Unified Zcash address where bounty rewards can be paid."}>
           <input className={`${fieldClass} break-all font-mono`} style={buildFaqTextFieldStyle(false)} value={draft.payoutAddress} onChange={(event) => set("payoutAddress", event.target.value)} autoComplete="off" spellCheck={false} />
         </Field>
         <ErrorText>{error}</ErrorText>
-        <button type="button" onClick={submitDraft} disabled={busy || !commit} className={primaryButtonClass} style={primaryButtonStyle}>
-          {busy ? <AnimatedLoadingLabel label="Submitting" active /> : "Submit report"}
+        <button type="button" onClick={submitDraft} disabled={busy || payout.status !== "unified" || !session.paymentTxid} className={primaryButtonClass} style={primaryButtonStyle}>
+          {busy ? <AnimatedLoadingLabel label="Saving ticket" active /> : "Submit GHSA link"}
         </button>
       </div>
     </Panel>
   );
 }
 
-export default function SecurityCompetitionClient({ model }: { model: SecurityPageModel }) {
+export default function SecurityCompetitionClient({ model, devTestEnabled = false }: { model: SecurityPageModel; devTestEnabled?: boolean }) {
   const [view, setView] = useState<View>("loading");
   const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   function remember(next: Session) {
-    writeLocalStorage(STORAGE_KEY, { ticketId: next.ticketId, resumeToken: next.resumeToken });
+    if (!next.devTest) writeLocalStorage(STORAGE_KEY, { ticketId: next.ticketId, accessToken: next.accessToken });
     setSession(next);
     setView(viewFor(next.status));
   }
 
   async function loadStored(
-    stored: { ticketId: string; resumeToken: string },
+    stored: { ticketId: string; accessToken: string },
     cancelled: () => boolean = () => false,
   ) {
     const { status, payload } = await postJson("/api/security/tickets/status", stored);
@@ -579,16 +544,7 @@ export default function SecurityCompetitionClient({ model }: { model: SecurityPa
       return;
     }
     if (!payload?.ok || !payload.status) {
-      setSession({
-        ticketId: stored.ticketId,
-        resumeToken: stored.resumeToken,
-        feeZec: model.feeZec,
-        address: "",
-        memo: "",
-        pinnedCommit: model.pinnedCommit,
-        status: "",
-        hasStoredReport: false,
-      });
+      setSession({ ticketId: stored.ticketId, accessToken: stored.accessToken, feeZec: model.feeZec, address: "", memo: "", status: "" });
       setError(messageFrom(payload));
       setView("unavailable");
       return;
@@ -596,25 +552,25 @@ export default function SecurityCompetitionClient({ model }: { model: SecurityPa
     const payment = payload.payment;
     remember({
       ticketId: payload.ticketId || stored.ticketId,
-      resumeToken: stored.resumeToken,
+      accessToken: stored.accessToken,
       feeZec: payload.feeZec || model.feeZec,
       address: payment?.address || "",
       memo: payment?.memo || "",
-      pinnedCommit: payload.pinnedCommit ?? model.pinnedCommit,
       status: payload.status,
-      hasStoredReport: payload.hasStoredReport === true,
+      paymentTxid: payload.paymentTxid,
+      ghsaUrl: payload.ghsaUrl,
     });
   }
 
   useEffect(() => {
     let cancelled = false;
-    const stored = readLocalStorage<{ ticketId?: string; resumeToken?: string } | null>(STORAGE_KEY, null);
-    if (!stored?.ticketId || !stored.resumeToken) {
+    const stored = readLocalStorage<{ ticketId?: string; accessToken?: string } | null>(STORAGE_KEY, null);
+    if (!stored?.ticketId || !stored.accessToken) {
       setView("start");
       return;
     }
     void loadStored(
-      { ticketId: stored.ticketId, resumeToken: stored.resumeToken },
+      { ticketId: stored.ticketId, accessToken: stored.accessToken },
       () => cancelled,
     );
     return () => {
@@ -630,19 +586,17 @@ export default function SecurityCompetitionClient({ model }: { model: SecurityPa
     setError("");
     try {
       const { payload } = await postJson("/api/security/tickets", {});
-      if (!payload?.ok || !payload.ticketId || !payload.resumeToken || !payload.address || !payload.memo) {
+      if (!payload?.ok || !payload.ticketId || !payload.accessToken || !payload.address || !payload.memo) {
         setError(messageFrom(payload));
         return;
       }
       remember({
         ticketId: payload.ticketId,
-        resumeToken: payload.resumeToken,
+        accessToken: payload.accessToken,
         feeZec: payload.feeZec || model.feeZec,
         address: payload.address,
         memo: payload.memo,
-        pinnedCommit: payload.pinnedCommit ?? model.pinnedCommit,
         status: "awaiting_payment",
-        hasStoredReport: false,
       });
     } finally {
       setBusy(false);
@@ -654,6 +608,19 @@ export default function SecurityCompetitionClient({ model }: { model: SecurityPa
     setSession(null);
     setError("");
     setView("start");
+  }
+
+  function startDevTest() {
+    removeLocalStorage(STORAGE_KEY);
+    remember({
+      ticketId: "ZNS-DEV-001",
+      accessToken: "local-development-only",
+      feeZec: model.feeZec,
+      address: "local-simulation",
+      memo: "local-simulation",
+      status: "awaiting_payment",
+      devTest: true,
+    });
   }
 
   if (view === "loading") {
@@ -692,7 +659,7 @@ export default function SecurityCompetitionClient({ model }: { model: SecurityPa
     return (
       <PaymentCard
         session={session}
-        onVerified={(status) => remember({ ...session, status, hasStoredReport: false })}
+        onVerified={(status, paymentTxid) => remember({ ...session, status, paymentTxid })}
       />
     );
   }
@@ -708,7 +675,7 @@ export default function SecurityCompetitionClient({ model }: { model: SecurityPa
     return (
       <ReportForm
         session={session}
-        onSubmitted={() => remember({ ...session, status: "submitted", hasStoredReport: false })}
+        onSubmitted={(ghsaUrl) => remember({ ...session, status: "submitted", ghsaUrl })}
       />
     );
   }
@@ -717,12 +684,13 @@ export default function SecurityCompetitionClient({ model }: { model: SecurityPa
     return (
       <Panel>
         <div className="grid gap-4 text-left">
-          <h2 className="text-2xl font-black tracking-[-0.04em]" style={{ color: "var(--fg-heading)" }}>Report submitted</h2>
+          <h2 className="text-2xl font-black tracking-[-0.04em]" style={{ color: "var(--fg-heading)" }}>Ticket status</h2>
           <TicketLine ticketId={session.ticketId} />
           <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-            Status: {statusLabel(session.status)}. Keep this ticket ID. The report will now be triaged.
+            Status: {statusLabel(session.status)}. Keep this ticket ID for your records.
           </p>
-          {model.submissionsOpen ? (
+          {session.ghsaUrl ? <a href={session.ghsaUrl} target="_blank" rel="noreferrer" className="break-all text-sm underline underline-offset-4" style={{ color: "var(--color-accent-interactive)" }}>Open your GHSA ↗</a> : null}
+          {model.submissionsOpen || session.devTest ? (
             <button type="button" onClick={reset} className={primaryButtonClass} style={primaryButtonStyle}>
               Submit another finding
             </button>
@@ -737,10 +705,17 @@ export default function SecurityCompetitionClient({ model }: { model: SecurityPa
       <div className="grid gap-4">
         <h2 className="text-2xl font-black tracking-[-0.04em]" style={{ color: "var(--fg-heading)" }}>Submit finding</h2>
         <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-          Start a ticket, pay the {model.feeZec} ZEC fee, then file the report on this page.
+          Pay the {model.feeZec} ZEC fee, create a private GitHub Security Advisory, then submit its link with your severity and payout details.
         </p>
         {model.closedMessage ? (
           <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>{model.closedMessage}</p>
+        ) : null}
+        {devTestEnabled ? (
+          <div className="rounded-xl border border-dashed px-4 py-4" style={{ borderColor: "var(--faq-border)" }}>
+            <p className="text-xs font-bold uppercase tracking-[0.16em]" style={{ color: "var(--fg-muted)" }}>Developer-only test gate</p>
+            <p className="mt-2 text-sm leading-6" style={{ color: "var(--fg-body)" }}>Simulates fee verification and form submission locally. It does not call the ticket APIs or write to Supabase.</p>
+            <button type="button" onClick={startDevTest} className={`${primaryButtonClass} mt-3`} style={primaryButtonStyle}>Start simulated submission</button>
+          </div>
         ) : null}
         <ErrorText>{error}</ErrorText>
         <button type="button" onClick={() => void start()} disabled={busy || !model.submissionsOpen} className={primaryButtonClass} style={primaryButtonStyle}>

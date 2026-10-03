@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    return securityJson(await createSecurityTicket(request));
+    return securityJson(await createSecurityTicket());
   } catch (error) {
     return securityErrorResponse(error);
   }

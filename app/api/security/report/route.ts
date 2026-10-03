@@ -9,12 +9,12 @@ export async function POST(request: Request) {
   const body = await readJson(request);
   const record = asRecord(body);
   const ticketId = stringField(record, "ticketId");
-  const resumeToken = stringField(record, "resumeToken");
-  if (!ticketId || !resumeToken) {
+  const accessToken = stringField(record, "accessToken");
+  if (!ticketId || !accessToken) {
     return securityJson({ ok: false, error: SECURITY_MESSAGES.missingTicket, code: "missing_ticket" }, 400);
   }
   try {
-    return securityJson(await submitSecurityReport(request, ticketId, resumeToken, body));
+    return securityJson(await submitSecurityReport(ticketId, accessToken, body));
   } catch (error) {
     return securityErrorResponse(error);
   }

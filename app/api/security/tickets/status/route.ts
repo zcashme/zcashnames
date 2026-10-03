@@ -8,12 +8,12 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const record = asRecord(await readJson(request));
   const ticketId = stringField(record, "ticketId");
-  const resumeToken = stringField(record, "resumeToken");
-  if (!ticketId || !resumeToken) {
+  const accessToken = stringField(record, "accessToken");
+  if (!ticketId || !accessToken) {
     return securityJson({ ok: false, error: SECURITY_MESSAGES.missingTicket, code: "missing_ticket" }, 400);
   }
   try {
-    return securityJson(await securityTicketStatus(ticketId, resumeToken));
+    return securityJson(await securityTicketStatus(ticketId, accessToken));
   } catch (error) {
     return securityErrorResponse(error);
   }

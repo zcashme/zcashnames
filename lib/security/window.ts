@@ -3,9 +3,10 @@ export type CompetitionPhase = "before" | "open" | "after" | "unconfigured";
 /** Public competition facts. This object must not carry the fee address or GitHub secrets. */
 export type SecurityPageModel = {
   phase: CompetitionPhase;
+  startAt: number | null;
+  endAt: number | null;
   startLabel: string | null;
   endLabel: string | null;
-  pinnedCommit: string | null;
   feeZec: string;
   submissionsOpen: boolean;
   closedMessage: string | null;
@@ -60,20 +61,8 @@ export function zecToZats(value: string): number | null {
   return Number(wholePart) * 100_000_000 + Number(`${fractionPart}00000000`.slice(0, 8));
 }
 
-export function parseCommit(raw: string | undefined): string | null {
-  const value = raw?.trim().toLowerCase() ?? "";
-  if (!/^[0-9a-f]{7,64}$/.test(value)) return null;
-  return value;
-}
-
 export function parseTxTable(raw: string | undefined): string | null {
   const value = (raw?.trim() || "zn_security_comp").toLowerCase();
   if (!/^[a-z][a-z0-9_]{0,62}$/.test(value)) return null;
-  return value;
-}
-
-export function parseGithubSlug(raw: string | undefined, fallback: string): string | null {
-  const value = raw?.trim() || fallback;
-  if (!/^[A-Za-z0-9_.-]{1,100}$/.test(value)) return null;
   return value;
 }

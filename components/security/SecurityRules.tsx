@@ -1,25 +1,18 @@
 import type { ReactNode } from "react";
+import CompetitionCountdown from "@/components/security/CompetitionCountdown";
+import RegistryPublicDetails from "@/components/security/RegistryPublicDetails";
 import type { SecurityPageModel } from "@/lib/security/window";
 
-const SCOPE: Array<[string, string]> = [
-  ["Boot / liveness / checkpointing", "src/boot.rs"],
-  ["Seed capsule + sealing", "src/capsule.rs"],
-  ["TEE seam", "src/tee.rs"],
-  ["Key derivation", "src/key.rs"],
-  ["Mint protocol", "src/mint/* (registry, otp, treasury, pricing, presale, note, mtp)"],
-  ["Wallet", "src/wallet/*"],
-  ["Chain client", "src/zcash.rs"],
-  ["Patched forks — ZNS-specific code only", "zcashme/orchard, zcashme/zns-zcash_primitives"],
-  ["Dev-gate escapes", "regtest / fake-tee features reaching a release build"],
+const REPOSITORIES = [
+  { label: "zcashme/zns-mint", href: "https://github.com/zcashme/zns-mint", detail: "ZNS mint, wallet, and chain integration" },
 ];
 
 const OUT_OF_SCOPE = [
+  "All ZNS repositories other than zcashme/zns-mint, including zns-resolver, zns-orchard, zns-zcash_primitives, and every other zns-* repository",
   "zcashnames.com website, frontend, DNS, hosting",
   "Zebra, the Zcash protocol itself, unpatched upstream crates",
-  "Infrastructure: AWS, GitHub, CI, operator machines, hypervisor/host attacks, SEV-SNP hardware attacks under the documented V1 trust model",
-  "Anything outside the pinned commit",
-  "Bugs already reported in a GitHub issue, security advisory, or other sponsor-tracked report before competition open",
-  "Bugs already addressed by an open or merged pull request before competition open, even if the fix is not included in the pinned commit",
+  "Cloud, hosting, CI, operator machines, and host or hypervisor attacks",
+  "Unmodified upstream dependencies and protocol-level issues",
   "Denial-of-service against live infrastructure. All testing must run locally against the regtest harness.",
 ];
 
@@ -103,20 +96,13 @@ export default function SecurityRules({
           ZNS Mint Bug Bounty Competition
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-lg leading-8" style={{ color: "var(--fg-body)" }}>
-          The ZNS mint runs a SEV-SNP attested enclave that holds the Registry seed, scans the chain, and registers names as shielded Orchard Name Notes. Find the bugs before mainnet does.
+          Help protect the ZNS mint before mainnet launch. Find and privately report vulnerabilities in the competition repositories.
         </p>
         <dl className="mx-auto mt-6 max-w-xl space-y-3 text-left text-sm leading-6">
           <div>
             <dt className="font-semibold" style={{ color: "var(--fg-heading)" }}>Competition window</dt>
             <dd className="break-words" style={{ color: "var(--fg-body)" }}>{windowLabel}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold" style={{ color: "var(--fg-heading)" }}>Code snapshot</dt>
-            <dd className="break-all font-mono" style={{ color: "var(--fg-body)" }}>
-              {model.pinnedCommit
-                ? `${model.pinnedCommit} (frozen 24 h before start)`
-                : "The pinned commit is published at competition open."}
-            </dd>
+            <CompetitionCountdown startAt={model.startAt} endAt={model.endAt} />
           </div>
           <div>
             <dt className="font-semibold" style={{ color: "var(--fg-heading)" }}>Submission fee</dt>
@@ -126,20 +112,45 @@ export default function SecurityRules({
       </section>
 
       <div className="mt-4">{children}</div>
+      <RegistryPublicDetails />
 
       <section className="mt-4 rounded-2xl border px-5 py-6 sm:px-6 sm:py-8" style={cardStyle}>
         <SectionTitle>Scope</SectionTitle>
         <Body>
-          All review is against a single frozen commit of znsme/zns-mint, published at competition open. The snapshot is taken from main 24 hours before start. Anything pushed after the pinned hash is out of scope.
+          The only in-scope repository is zcashme/zns-mint. Reports must show a security impact to people using or relying on the ZNS mint.
         </Body>
-        <h3 className="mt-6 text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>In scope — code only</h3>
-        <RulesTable headers={["Module", "Path"]} rows={SCOPE} />
+        <Body>
+          A finding is eligible only if it affects <code>master</code> as it existed 24 hours before your report is submitted. Maintainer issues and pull requests that already cover the finding before submission make it ineligible.
+        </Body>
+        <h3 className="mt-6 text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>Competition repositories</h3>
+        <ul className="mt-3 space-y-3 text-sm leading-6">
+          {REPOSITORIES.map((repository) => (
+            <li key={repository.href} className="rounded-xl border px-4 py-3" style={{ borderColor: "var(--faq-border)" }}>
+              <a href={repository.href} target="_blank" rel="noreferrer" className="font-semibold underline decoration-dotted underline-offset-4" style={{ color: "var(--color-accent-interactive)" }}>
+                {repository.label} ↗
+              </a>
+              <span className="ml-2" style={{ color: "var(--fg-body)" }}>{repository.detail}</span>
+            </li>
+          ))}
+        </ul>
         <h3 className="mt-6 text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>Out of scope</h3>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
           {OUT_OF_SCOPE.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
+
+        <div className="mt-8">
+          <SectionTitle>Rules</SectionTitle>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
+            <li>Local testing only using the regtest harness.</li>
+            <li>Never touch live infrastructure or other users.</li>
+            <li>No public disclosure before the program&apos;s publication date.</li>
+            <li>No phishing, social engineering, or physical attacks.</li>
+            <li>Sponsor employees and their households are ineligible.</li>
+            <li>Automated submission of unverified scanner output is spam and earns nothing.</li>
+          </ul>
+        </div>
 
         <div className="mt-8">
           <SectionTitle>Rewards</SectionTitle>
@@ -158,23 +169,23 @@ export default function SecurityRules({
         </div>
 
         <div className="mt-8">
-          <h3 className="text-lg font-black tracking-[-0.03em]" style={{ color: "var(--fg-heading)" }}>Severity definitions</h3>
+          <h3 className="text-lg font-black tracking-[-0.03em]" style={{ color: "var(--fg-heading)" }}>Severity by impact on users</h3>
           <dl className="mt-3 space-y-3 text-sm leading-6">
             <div>
               <dt className="font-semibold" style={{ color: "var(--fg-heading)" }}>Critical</dt>
-              <dd style={{ color: "var(--fg-body)" }}>Treasury theft or drain; Registry seed or key-material exposure via a code path; claiming names without valid payment; permanent registry corruption; authorization bypass on update/release.</dd>
+              <dd style={{ color: "var(--fg-body)" }}>A reproducible attack can directly steal or drain funds, give an attacker control of another person&apos;s registered name, expose key material that enables those attacks, or permanently corrupt the registry. Examples include unauthorized claims, updates, or releases; treasury theft; and irreversible registry damage.</dd>
             </div>
             <div>
               <dt className="font-semibold" style={{ color: "var(--fg-heading)" }}>High</dt>
-              <dd style={{ color: "var(--fg-body)" }}>Mint liveness break that halts claims/updates/releases; name theft or hijack via protocol flaw; OTP/liveness-challenge bypass; oracle manipulation causing mispricing beyond design bounds; name ↔ address linkage beyond intended design.</dd>
+              <dd style={{ color: "var(--fg-body)" }}>A serious, demonstrated impact occurs without direct theft or unauthorized control of a name. Examples include a recoverable halt to claims, updates, or releases; bypassing an OTP or liveness challenge without taking over a name; mispricing beyond intended bounds; or linking a name to an address beyond the design.</dd>
             </div>
             <div>
               <dt className="font-semibold" style={{ color: "var(--fg-heading)" }}>Medium</dt>
-              <dd style={{ color: "var(--fg-body)" }}>Recoverable DoS of a mint flow; griefing with attacker cost; fee/value leakage.</dd>
+              <dd style={{ color: "var(--fg-body)" }}>A user flow is temporarily disrupted but recovers; an attacker can cause costly griefing; or users lose a limited amount of fees or value.</dd>
             </div>
             <div>
               <dt className="font-semibold" style={{ color: "var(--fg-heading)" }}>Low</dt>
-              <dd style={{ color: "var(--fg-body)" }}>Correctness or spec mismatch with no direct fund impact.</dd>
+              <dd style={{ color: "var(--fg-body)" }}>A minor behavior or specification mismatch with no direct impact on user funds, name ownership, privacy, or access to the mint.</dd>
             </div>
           </dl>
         </div>
@@ -187,38 +198,23 @@ export default function SecurityRules({
         </div>
 
         <div className="mt-8">
-          <SectionTitle>Judging and appeals</SectionTitle>
+          <SectionTitle>Judging and payouts</SectionTitle>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
             <li>Sponsor triage sets final severity and duplicate groupings.</li>
-            <li>Preliminary results are published at competition close.</li>
-            <li>There is a 72-hour appeal window after preliminary results.</li>
-            <li>Judges&apos; decisions are final once the appeal window closes.</li>
-            <li>Payment is made in ZEC to the address on the report within 7 days of final results.</li>
+            <li>Accepted rewards are paid in ZEC to the Unified address on the ticket.</li>
+            <li>Payouts are sent within 7 days after final results.</li>
           </ul>
         </div>
 
         <div className="mt-8">
-          <SectionTitle>Rules of engagement</SectionTitle>
-          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-            <li>Local testing only using the regtest harness.</li>
-            <li>Never touch live infrastructure or other users.</li>
-            <li>No public disclosure before the program&apos;s publication date.</li>
-            <li>No phishing, social engineering, or physical attacks.</li>
-            <li>Sponsor employees and their households are ineligible.</li>
-            <li>Automated submission of unverified scanner output is spam and earns nothing.</li>
-          </ul>
+          <SectionTitle>Submitting a finding</SectionTitle>
+          <Body>Pay the submission fee, create a private GitHub Security Advisory for the finding, attach a valid, reproducible proof of concept to the GHSA, then submit its link here with your claimed severity, GitHub username, and Unified payout address. The ticket page stores the link and tracking details; it does not file the advisory for you.</Body>
+          <Body><a href="https://github.com/zcashme/zns-mint/security/advisories/new" target="_blank" rel="noreferrer" className="underline underline-offset-4" style={{ color: "var(--color-accent-interactive)" }}>Create a GitHub Security Advisory ↗</a></Body>
         </div>
+      </section>
 
-        <div className="mt-8">
-          <SectionTitle>Disclosure</SectionTitle>
-          <Body>
-            After fixes merge, every accepted report is published as a GitHub Security Advisory on the zns-mint repository, with a CVE ID requested through GitHub and the finder credited by handle.
-          </Body>
-          <Body>The finder owns the credit line.</Body>
-        </div>
-
-        <div className="mt-8">
-          <SectionTitle>FAQ</SectionTitle>
+      <section className="mt-4 rounded-2xl border px-5 py-6 sm:px-6 sm:py-8" style={cardStyle}>
+          <SectionTitle>Frequently asked questions</SectionTitle>
           <div className="mt-2">
             <details className="border-b border-border-muted py-4">
               <summary className="cursor-pointer text-base font-semibold" style={{ color: "var(--fg-heading)" }}>
@@ -230,30 +226,29 @@ export default function SecurityRules({
             </details>
             <details className="border-b border-border-muted py-4">
               <summary className="cursor-pointer text-base font-semibold" style={{ color: "var(--fg-heading)" }}>
-                Can I submit code fixes?
+                Which repository is in scope?
               </summary>
               <p className="mt-3 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-                Suggested fixes are welcome as a report field but are not paid. Rewards are for findings.
+                Only <a href="https://github.com/zcashme/zns-mint" target="_blank" rel="noreferrer" className="underline underline-offset-4" style={{ color: "var(--color-accent-interactive)" }}>zcashme/zns-mint</a> is in scope. Findings in zns-resolver, zns-orchard, zns-zcash_primitives, or other repositories are out of scope.
               </p>
             </details>
             <details className="border-b border-border-muted py-4">
               <summary className="cursor-pointer text-base font-semibold" style={{ color: "var(--fg-heading)" }}>
-                Do team submissions split points?
+                Which version of the code is eligible?
               </summary>
               <p className="mt-3 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-                Teams earn points as one identity. The side-pool tier and payout go to the single registered payout address.
+                The finding must affect <code>master</code> as it existed 24 hours before you submit. If a maintainer issue or pull request already covers it before submission, it is ineligible.
               </p>
             </details>
             <details className="border-b border-border-muted py-4">
               <summary className="cursor-pointer text-base font-semibold" style={{ color: "var(--fg-heading)" }}>
-                What if the top finding is High? Is the full Critical-gated pool paid?
+                How do I submit a finding?
               </summary>
               <p className="mt-3 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-                No. The unlock follows the highest severity found. High unlocks 5 ZEC, not 8 ZEC.
+                Pay the submission fee, create a private GitHub Security Advisory, and attach a valid, reproducible proof of concept to it. Then submit the GHSA link, your GitHub username, claimed severity, and Unified payout address here. The finding details and proof of concept belong in the GHSA.
               </p>
             </details>
           </div>
-        </div>
       </section>
     </>
   );

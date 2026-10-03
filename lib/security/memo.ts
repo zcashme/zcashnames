@@ -1,6 +1,6 @@
 export const SECURITY_MEMO_PREFIX = "ZNS:SECURITY|";
 
-const TICKET_ID = /^ZNS-\d{2}-\d{3,}$/;
+const TICKET_ID = /^ZNS-BB-\d{3,}$/;
 
 export function isSecurityTicketId(value: string): boolean {
   return TICKET_ID.test(value);
@@ -10,7 +10,7 @@ export function securityPaymentMemo(ticketId: string): string {
   return `${SECURITY_MEMO_PREFIX}ticket::${ticketId}`;
 }
 
-/** Exact `ticket::ZNS-YY-NNN` field. A longer id does not match a shorter one. */
+/** Exact `ticket::ZNS-YY-ID` field. */
 export function memoTicketId(memo: string | null | undefined): string | null {
   const body = memo?.replace(/\0/g, "").trim() ?? "";
   if (!body) return null;
