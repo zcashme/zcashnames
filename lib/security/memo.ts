@@ -1,27 +1,30 @@
-export const SECURITY_MEMO_PREFIX = "ZNS:SECURITY|";
+export const SECURITY_MEMO_PREFIX = "ZNS:SECURITY:";
 
 const TICKET_ID = /^ZNS-BB-\d{3,}$/;
+const MEMO_FIELDS = /^ZNS:SECURITY:(\d{3,}):(.+)$/;
 
 export function isSecurityTicketId(value: string): boolean {
   return TICKET_ID.test(value);
 }
 
-export function securityPaymentMemo(ticketId: string): string {
-  return `${SECURITY_MEMO_PREFIX}ticket::${ticketId}`;
+/** `ZNS:SECURITY:<ticket number>:<payout address>` */
+export function securityPaymentMemo(ticketId: string, payoutAddress: string): string {
+  return `${SECURITY_MEMO_PREFIX}${ticketId.slice("ZNS-BB-".length)}:${payoutAddress}`;
 }
 
-/** Exact `ticket::ZNS-YY-ID` field. */
-export function memoTicketId(memo: string | null | undefined): string | null {
+/** Postgres LIKE pattern matching ledger memos for one ticket number. */
+export function securityMemoPattern(ticketId: string): string {
+  return `${SECURITY_MEMO_PREFIX}${ticketId.slice("ZNS-BB-".length)}:%`;
+}
+
+export type MemoFields = { ticketId: string; payoutAddress: string };
+
+/** Ticket number and payout address from a `ZNS:SECURITY:<number>:<address>` memo, or null. */
+export function memoFields(memo: string | null | undefined): MemoFields | null {
   const body = memo?.replace(/\0/g, "").trim() ?? "";
-  if (!body) return null;
-  const fields = body.startsWith(SECURITY_MEMO_PREFIX) ? body.slice(SECURITY_MEMO_PREFIX.length) : body;
-  for (const field of fields.split("|")) {
-    const trimmed = field.trim();
-    const separator = trimmed.indexOf("::");
-    if (separator <= 0) continue;
-    const key = trimmed.slice(0, separator).toLowerCase();
-    const value = trimmed.slice(separator + 2);
-    if (key === "ticket" && TICKET_ID.test(value)) return value;
-  }
-  return null;
+  const match = MEMO_FIELDS.exec(body);
+  if (!match) return null;
+  const ticketId = `ZNS-BB-${match[1]}`;
+  const payoutAddress = match[2];
+  return TICKET_ID.test(ticketId) && payoutAddress ? { ticketId, payoutAddress } : null;
 }

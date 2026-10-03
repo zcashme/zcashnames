@@ -208,7 +208,8 @@ export default function SecurityRules({
 
         <div className="mt-8">
           <SectionTitle>Submitting a finding</SectionTitle>
-          <Body>Pay the submission fee, create a private GitHub Security Advisory for the finding, attach a valid, reproducible proof of concept to the GHSA, then submit its link here with your claimed severity, GitHub username, and Unified payout address. The ticket page stores the link and tracking details; it does not file the advisory for you.</Body>
+          <Body>First, create a private GitHub Security Advisory for the finding and attach a valid, reproducible proof of concept to it. The finding details belong in the GHSA.</Body>
+          <Body>Then pay the submission fee here and submit the GHSA link right after paying, with your claimed severity, GitHub username, and Unified payout address. The ticket page stores the link and tracking details; it does not file the advisory for you.</Body>
           <Body><a href="https://github.com/zcashme/zns-mint/security/advisories/new" target="_blank" rel="noreferrer" className="underline underline-offset-4" style={{ color: "var(--color-accent-interactive)" }}>Create a GitHub Security Advisory ↗</a></Body>
         </div>
       </section>
@@ -245,7 +246,7 @@ export default function SecurityRules({
                 How do I submit a finding?
               </summary>
               <p className="mt-3 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-                Pay the submission fee, create a private GitHub Security Advisory, and attach a valid, reproducible proof of concept to it. Then submit the GHSA link, your GitHub username, claimed severity, and Unified payout address here. The finding details and proof of concept belong in the GHSA.
+                Create a private GitHub Security Advisory first and attach a valid, reproducible proof of concept — take your time, nothing is paid yet. Then pay the submission fee and, right after paying, submit the GHSA link with your claimed severity, GitHub username, and Unified payout address. The finding details and proof of concept belong in the GHSA.
               </p>
             </details>
           </div>

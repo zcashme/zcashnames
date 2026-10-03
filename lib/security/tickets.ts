@@ -1,38 +1,27 @@
 import "server-only";
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { randomInt } from "node:crypto";
 import { db } from "@/lib/db";
 import { validateAddress } from "@/lib/zns/address-validation";
 import { getActiveSecurityConfig } from "./config";
 import { SECURITY_MESSAGES, SecurityError, wrongAmountMessage } from "./errors";
-import { isSecurityTicketId, securityPaymentMemo } from "./memo";
+import { isSecurityTicketId, securityMemoPattern, securityPaymentMemo } from "./memo";
 import { selectQualifyingPayment, type SecurityLedgerRow } from "./payment";
 
-type TicketRow = {
-  ticket_id: string;
-  status: string;
-  ghsa_url: string;
-  claimed_severity: string;
-  final_severity: string | null;
-};
-
-function rpcText(data: unknown): string {
-  return typeof data === "string" ? data : "";
+/** Four random digits per ticket: no sequence, no counter, no burned numbers. */
+function newTicketId(): string {
+  return `ZNS-BB-${String(randomInt(0, 10_000)).padStart(4, "0")}`;
 }
 
-function ticketAccessToken(ticketId: string): string {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!secret) throw new SecurityError("not_configured", 503, SECURITY_MESSAGES.unavailable);
-  return createHmac("sha256", secret).update(`zns-security-ticket:${ticketId}`).digest("hex");
+function validatedPayoutAddress(raw: unknown): string {
+  const payoutAddress = typeof raw === "string" ? raw.trim() : "";
+  if (validateAddress(payoutAddress).status !== "unified") {
+    throw new SecurityError("invalid_report", 400, "Enter a valid Zcash Unified address for bounty payment.");
+  }
+  return payoutAddress;
 }
 
-function authorizeTicket(ticketId: string, token: string) {
-  const expected = Buffer.from(ticketAccessToken(ticketId), "hex");
-  const supplied = /^[a-f0-9]{64}$/.test(token) ? Buffer.from(token, "hex") : Buffer.alloc(32);
-  if (!timingSafeEqual(expected, supplied)) throw new SecurityError("not_found", 404, SECURITY_MESSAGES.notFound);
-}
-
-async function qualifyingPayment(ticketId: string, hintTxid?: string | null) {
+async function qualifyingPayment(ticketId: string, payoutAddress: string, hintTxid?: string | null) {
   const config = await getActiveSecurityConfig();
   if (!config.submissionsOpen || !config.feeAddress || !config.feeZec || !config.feeZats || !config.txTable) {
     throw new SecurityError("not_configured", 503, SECURITY_MESSAGES.unavailable);
@@ -40,9 +29,9 @@ async function qualifyingPayment(ticketId: string, hintTxid?: string | null) {
   const ledger = await db.from(config.txTable)
     .select("amount_zats, detected_at, memo, txid, is_outgoing, status, recipient_address")
     .eq("is_outgoing", false)
-    .in("status", ["mempool", "confirmed"])
+    .eq("status", "confirmed")
     .eq("recipient_address", config.feeAddress)
-    .ilike("memo", `%ticket::${ticketId}%`)
+    .ilike("memo", securityMemoPattern(ticketId))
     .order("detected_at", { ascending: true })
     .limit(50);
   if (ledger.error) {
@@ -60,7 +49,7 @@ async function qualifyingPayment(ticketId: string, hintTxid?: string | null) {
     }
     for (const item of bound.data ?? []) if (typeof item.payment_txid === "string") used.add(item.payment_txid);
   }
-  const match = selectQualifyingPayment({ rows, ticketId, feeAddress: config.feeAddress, minimumZats: config.feeZats, usedTxids: used, hintTxid });
+  const match = selectQualifyingPayment({ rows, ticketId, feeAddress: config.feeAddress, payoutAddress, minimumZats: config.feeZats, usedTxids: used, hintTxid });
   if (!match.ok) {
     if (match.code === "invalid_txid") throw new SecurityError(match.code, 400, SECURITY_MESSAGES.invalidTxid);
     if (match.code === "wrong_amount") throw new SecurityError(match.code, 409, wrongAmountMessage(config.feeZec));
@@ -70,53 +59,39 @@ async function qualifyingPayment(ticketId: string, hintTxid?: string | null) {
   return { match, config };
 }
 
-export async function createSecurityTicket() {
+export async function createSecurityTicket(rawPayoutAddress: unknown) {
+  const payoutAddress = validatedPayoutAddress(rawPayoutAddress);
   const config = await getActiveSecurityConfig();
   if (config.phase === "before") throw new SecurityError("window_closed", 403, SECURITY_MESSAGES.windowBefore);
   if (config.phase === "after") throw new SecurityError("window_closed", 403, SECURITY_MESSAGES.windowAfter);
   if (!config.submissionsOpen || !config.feeAddress || !config.feeZec) {
     throw new SecurityError("not_configured", 503, SECURITY_MESSAGES.unavailable);
   }
-  const created = await db.rpc("next_zn_security_comp_ticket_id");
-  const ticketId = rpcText(created.data);
-  if (created.error || !isSecurityTicketId(ticketId)) {
-    console.error("[security] ticket id", { code: created.error?.code ?? "invalid_id" });
-    throw new SecurityError("persistence", 503, SECURITY_MESSAGES.persistence);
-  }
-  return { ok: true as const, ticketId, accessToken: ticketAccessToken(ticketId), feeZec: config.feeZec, address: config.feeAddress, memo: securityPaymentMemo(ticketId) };
+  const ticketId = await freshTicketId();
+  return { ok: true as const, ticketId, feeZec: config.feeZec, address: config.feeAddress, memo: securityPaymentMemo(ticketId, payoutAddress), payoutAddress };
 }
 
-export async function securityTicketStatus(ticketId: string, accessToken: string) {
-  if (!isSecurityTicketId(ticketId)) throw new SecurityError("not_found", 404, SECURITY_MESSAGES.notFound);
-  authorizeTicket(ticketId, accessToken);
-  const { data, error } = await db.from("zn_security_comp_tickets")
-    .select("ticket_id, status, ghsa_url, claimed_severity, final_severity")
-    .eq("ticket_id", ticketId).maybeSingle();
-  if (error) throw new SecurityError("persistence", 503, SECURITY_MESSAGES.persistence);
-  if (data) {
-    const row = data as TicketRow;
-    return { ok: true as const, ticketId, status: row.status, ghsaUrl: row.ghsa_url, claimedSeverity: row.claimed_severity, finalSeverity: row.final_severity, payment: null };
-  }
-  const config = await getActiveSecurityConfig();
-  if (!config.feeAddress) throw new SecurityError("not_configured", 503, SECURITY_MESSAGES.unavailable);
-  try {
-    const { match } = await qualifyingPayment(ticketId);
-    return { ok: true as const, ticketId, status: "payment_verified", paymentTxid: match.txid, payment: null };
-  } catch (error) {
-    if (error instanceof SecurityError && error.code === "payment_not_found") {
-      return { ok: true as const, ticketId, status: "awaiting_payment", payment: config.feeZec ? { address: config.feeAddress, memo: securityPaymentMemo(ticketId), amountZec: config.feeZec } : null };
+/** Draw an unused ticket id. Dedupes against submitted tickets; in-flight collisions are vanishingly rare. */
+async function freshTicketId(): Promise<string> {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const ticketId = newTicketId();
+    const { data, error } = await db.from("zn_security_comp_tickets").select("ticket_id").eq("ticket_id", ticketId).maybeSingle();
+    if (error) {
+      console.error("[security] ticket id lookup", { code: error.code });
+      throw new SecurityError("persistence", 503, SECURITY_MESSAGES.persistence);
     }
-    throw error;
+    if (!data) return ticketId;
   }
+  throw new SecurityError("persistence", 503, SECURITY_MESSAGES.persistence);
 }
 
-export async function verifySecurityPayment(ticketId: string, accessToken: string, hintTxid?: string | null) {
+export async function verifySecurityPayment(ticketId: string, payoutAddress: string, hintTxid?: string | null) {
   if (!isSecurityTicketId(ticketId)) throw new SecurityError("not_found", 404, SECURITY_MESSAGES.notFound);
-  authorizeTicket(ticketId, accessToken);
+  if (validateAddress(payoutAddress).status !== "unified") throw new SecurityError("not_found", 404, SECURITY_MESSAGES.notFound);
   const existing = await db.from("zn_security_comp_tickets").select("status").eq("ticket_id", ticketId).maybeSingle();
   if (existing.error) throw new SecurityError("persistence", 503, SECURITY_MESSAGES.persistence);
   if (existing.data) return { ok: true as const, ticketId, status: existing.data.status };
-  const { match } = await qualifyingPayment(ticketId, hintTxid);
+  const { match } = await qualifyingPayment(ticketId, payoutAddress, hintTxid);
   return { ok: true as const, ticketId, status: "payment_verified" as const, paymentTxid: match.txid };
 }
 
@@ -131,10 +106,7 @@ function validateSubmission(input: unknown) {
   if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(githubUsername)) {
     throw new SecurityError("invalid_report", 400, "Enter a valid GitHub username.");
   }
-  const payoutAddress = typeof body.payoutAddress === "string" ? body.payoutAddress.trim() : "";
-  if (validateAddress(payoutAddress).status !== "unified") {
-    throw new SecurityError("invalid_report", 400, "Enter a valid Zcash Unified address for bounty payment.");
-  }
+  const payoutAddress = validatedPayoutAddress(body.payoutAddress);
   const claimedSeverity = typeof body.claimedSeverity === "string" ? body.claimedSeverity.toLowerCase() : "";
   if (!["critical", "high", "medium", "low"].includes(claimedSeverity)) {
     throw new SecurityError("invalid_report", 400, "Choose a claimed severity.");
@@ -142,13 +114,12 @@ function validateSubmission(input: unknown) {
   return { ghsaUrl, githubUsername, payoutAddress, claimedSeverity };
 }
 
-export async function submitSecurityReport(ticketId: string, accessToken: string, input: unknown) {
+export async function submitSecurityReport(ticketId: string, input: unknown) {
   if (!isSecurityTicketId(ticketId)) throw new SecurityError("not_found", 404, SECURITY_MESSAGES.notFound);
-  authorizeTicket(ticketId, accessToken);
   const submission = validateSubmission(input);
   const body = input as Record<string, unknown>;
   const paymentTxid = typeof body.paymentTxid === "string" ? body.paymentTxid.trim().toLowerCase() : "";
-  const { match } = await qualifyingPayment(ticketId, paymentTxid);
+  const { match } = await qualifyingPayment(ticketId, submission.payoutAddress, paymentTxid);
   const { data, error } = await db.from("zn_security_comp_tickets").insert({
     ticket_id: ticketId,
     status: "submitted",

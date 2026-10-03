@@ -32,7 +32,7 @@ export default async function SecurityPage() {
       <SiteRouteTitle title="Security Competition" href="/security" />
       <div className="name-action-column mx-auto w-full min-w-0 max-w-2xl">
         <SecurityRules model={model}>
-          <SecurityCompetitionClient model={model} devTestEnabled={process.env.NODE_ENV === "development"} />
+          <SecurityCompetitionClient model={model} />
         </SecurityRules>
       </div>
     </div>

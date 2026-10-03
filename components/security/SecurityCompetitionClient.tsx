@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import PayWithNoirButton from "@/components/wallets/PayWithNoirButton";
-import { readLocalStorage, removeLocalStorage, writeLocalStorage } from "@/components/hooks/useLocalStorage";
 import { useCopy } from "@/components/hooks/useCopy";
 import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
 import { buildFaqTextFieldStyle } from "@/components/ui/formFieldStyles";
@@ -11,29 +10,29 @@ import { validateAddress } from "@/lib/zns/address-validation";
 import { SECURITY_MESSAGES } from "@/lib/security/errors";
 import type { SecurityPageModel } from "@/lib/security/window";
 
-const STORAGE_KEY = "zns.securityTicket";
 const STATUS_POLL_INTERVAL_MS = 10_000;
 const STATUS_POLL_WINDOW_MS = 120_000;
 
-type View = "loading" | "start" | "payment" | "report" | "success" | "unavailable";
+type View = "start" | "address" | "payment" | "report" | "success";
 
 type Session = {
   ticketId: string;
-  accessToken: string;
   feeZec: string;
   address: string;
   memo: string;
   status: string;
   paymentTxid?: string;
   ghsaUrl?: string;
-  devTest?: boolean;
+  claimedSeverity?: string;
+  finalSeverity?: string | null;
+  githubUsername?: string;
+  payoutAddress: string;
 };
 
 type Draft = {
   ghsaUrl: string;
   claimedSeverity: string;
   githubUsername: string;
-  payoutAddress: string;
 };
 
 type ApiBody = {
@@ -41,15 +40,16 @@ type ApiBody = {
   error?: string;
   code?: string;
   ticketId?: string;
-  accessToken?: string;
   feeZec?: string;
   address?: string;
   memo?: string;
+  payoutAddress?: string;
   status?: string;
   paymentTxid?: string;
   ghsaUrl?: string;
   claimedSeverity?: string;
   finalSeverity?: string | null;
+  githubUsername?: string;
   payment?: { address?: string; memo?: string; amountZec?: string } | null;
 };
 
@@ -57,7 +57,6 @@ const EMPTY_DRAFT: Draft = {
   ghsaUrl: "",
   claimedSeverity: "",
   githubUsername: "",
-  payoutAddress: "",
 };
 
 const cardStyle = {
@@ -90,7 +89,7 @@ function viewFor(status: string): View {
   if (["submitted", "accepted", "duplicate", "invalid", "paid"].includes(status)) return "success";
   if (status === "awaiting_payment") return "payment";
   if (status === "payment_verified") return "report";
-  return "unavailable";
+  return "start";
 }
 
 async function postJson(url: string, body: unknown): Promise<{ status: number; payload: ApiBody | null }> {
@@ -170,22 +169,6 @@ function TicketLine({ ticketId }: { ticketId: string }) {
   );
 }
 
-function PaymentTabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`relative -mb-px bg-transparent px-3 py-2.5 text-sm font-semibold transition-colors duration-200 ${
-        active
-          ? "border-b-4 border-[var(--color-accent-interactive)] text-[var(--color-accent-interactive)]"
-          : "border-b-2 border-transparent text-fg-body hover:text-[var(--color-accent-interactive)]"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
 function PaymentCard({
   session,
   onVerified,
@@ -193,8 +176,7 @@ function PaymentCard({
   session: Session;
   onVerified: (status: string, paymentTxid?: string) => void;
 }) {
-  const [tab, setTab] = useState<"payment" | "sent">("payment");
-  const [opened, setOpened] = useState(false);
+  const [sent, setSent] = useState(false);
   const [checking, setChecking] = useState(false);
   const [quiet, setQuiet] = useState("");
   const [error, setError] = useState("");
@@ -239,9 +221,10 @@ function PaymentCard({
     pendingHintRef.current = "";
     let stop = false;
     try {
-      const { status, payload } = await postJson("/api/security/tickets/verify", {
+      const { status, payload } = await postJson("/api/security", {
+        action: "verify",
         ticketId: session.ticketId,
-        accessToken: session.accessToken,
+        payoutAddress: session.payoutAddress,
         ...(hint ? { hintTxid: hint } : {}),
       });
       if (payload?.ok && payload.status && payload.status !== "awaiting_payment") {
@@ -290,51 +273,26 @@ function PaymentCard({
   runRef.current = run;
 
   useEffect(() => {
-    if (tab !== "sent" || opened) return;
-    setOpened(true);
-    beginAutoWindow(Date.now());
-    void runRef.current("auto");
-  }, [tab, opened]);
-
-  useEffect(() => {
     if (nextCheckAt <= Date.now()) return;
     const interval = window.setInterval(() => setNowMs(Date.now()), 250);
     return () => window.clearInterval(interval);
   }, [nextCheckAt]);
 
   useEffect(() => {
-    if (tab !== "sent" || nextCheckAt <= 0 || stopRef.current) return;
+    if (!sent || nextCheckAt <= 0 || stopRef.current) return;
     const delay = Math.max(0, nextCheckAt - Date.now());
     const timeout = window.setTimeout(() => {
       void runRef.current("auto");
     }, delay);
     return () => window.clearTimeout(timeout);
-  }, [tab, nextCheckAt]);
+  }, [sent, nextCheckAt]);
 
-  function handleSent(txid: string) {
+  function confirmSent(txid?: string) {
     if (txid) pendingHintRef.current = txid;
-    setTab("sent");
-    if (opened) {
-      beginAutoWindow(Date.now());
-      void runRef.current("manual");
-    }
-  }
-
-  if (session.devTest) {
-    return (
-      <Panel>
-        <div className="grid gap-4">
-          <p className="text-xs font-bold uppercase tracking-[0.16em]" style={{ color: "var(--accent-red, #e05252)" }}>Local development simulation</p>
-          <TicketLine ticketId={session.ticketId} />
-          <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-            No ZEC is sent and no Supabase ticket is created. Use this gate to walk through the submission form.
-          </p>
-          <button type="button" onClick={() => onVerified("payment_verified", "d".repeat(64))} className={primaryButtonClass} style={primaryButtonStyle}>
-            Simulate fee payment
-          </button>
-        </div>
-      </Panel>
-    );
+    setError("");
+    setSent(true);
+    beginAutoWindow(Date.now());
+    void runRef.current(txid ? "manual" : "auto");
   }
 
   const sentCopy = checking
@@ -350,41 +308,15 @@ function PaymentCard({
       <div className="grid gap-4">
         <TicketLine ticketId={session.ticketId} />
         <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-          Send {session.feeZec} ZEC with the memo below. The fee is non-refundable.
+          Send {session.feeZec} ZEC with the memo below. The fee is non-refundable — have your GHSA link ready and submit it right after this step.
         </p>
       </div>
       <div
-        className="mt-6 flex h-full flex-col rounded-2xl border px-4 py-4 sm:px-5"
+        className="mt-6 rounded-2xl border px-4 py-4 sm:px-5"
         style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}
       >
-        <div
-          className="flex items-end justify-center gap-6 border-b"
-          style={{ borderColor: "color-mix(in srgb, var(--faq-border) 84%, transparent)" }}
-        >
-          <PaymentTabButton label="Pay+Memo" active={tab === "payment"} onClick={() => setTab("payment")} />
-          <PaymentTabButton label="I Sent It!" active={tab === "sent"} onClick={() => setTab("sent")} />
-        </div>
-        {tab === "payment" ? (
-          <div className="mt-6 text-center">
-            <QrBlock
-              address={session.address}
-              amount={session.feeZec}
-              memo={session.memo}
-              layout="verify"
-              size={184}
-              downloadFilename={`zns-security-${session.ticketId}.png`}
-              belowQr={
-                <PayWithNoirButton
-                  to={session.address}
-                  amount={session.feeZec}
-                  memo={session.memo}
-                  onSent={(txid) => handleSent(txid)}
-                />
-              }
-            />
-          </div>
-        ) : (
-          <div className="mt-6 space-y-4">
+        {sent ? (
+          <div className="space-y-4">
             <div
               className="rounded-2xl border px-4 py-4 text-left sm:px-5"
               style={{
@@ -406,11 +338,43 @@ function PaymentCard({
                 {checking
                   ? <AnimatedLoadingLabel label="Checking" active />
                   : waitingForNextCheck
-                    ? `Refresh Status (${Math.ceil(remainingMs / 1000)}s)`
-                    : "Refresh Status"}
+                    ? `Check again (${Math.ceil(remainingMs / 1000)}s)`
+                    : "Check again"}
               </button>
             </div>
             <ErrorText>{error}</ErrorText>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div className="text-center">
+              <QrBlock
+                address={session.address}
+                amount={session.feeZec}
+                memo={session.memo}
+                layout="verify"
+                size={184}
+                downloadFilename={`zns-security-${session.ticketId}.png`}
+                belowQr={
+                  <PayWithNoirButton
+                    to={session.address}
+                    amount={session.feeZec}
+                    memo={session.memo}
+                    onSent={(txid) => confirmSent(txid)}
+                  />
+                }
+              />
+            </div>
+            <p className="text-center text-sm leading-6" style={{ color: "var(--fg-body)" }}>
+              Paying with a different wallet? Send exactly {session.feeZec} ZEC with the exact memo, then confirm below.
+            </p>
+            <button
+              type="button"
+              onClick={() => confirmSent()}
+              className={primaryButtonClass}
+              style={primaryButtonStyle}
+            >
+              I&apos;ve sent it — check for my payment
+            </button>
           </div>
         )}
       </div>
@@ -423,16 +387,11 @@ function ReportForm({
   onSubmitted,
 }: {
   session: Session;
-  onSubmitted: (ghsaUrl: string) => void;
+  onSubmitted: (draft: Draft) => void;
 }) {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const payout = validateAddress(draft.payoutAddress.trim());
-  const payoutWarning = draft.payoutAddress.trim() && payout.status !== "unified"
-    ? payout.warning || "Enter a valid Unified Zcash address."
-    : "";
-
   function set<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
   }
@@ -442,34 +401,15 @@ function ReportForm({
     setBusy(true);
     setError("");
     try {
-      if (session.devTest) {
-        if (!/^https:\/\/github\.com\/.+\/security\/advisories\/GHSA-[A-Za-z0-9-]+\/?$/.test(draft.ghsaUrl.trim())) {
-          setError("Enter a GitHub Security Advisory URL.");
-          return;
-        }
-        if (!draft.claimedSeverity) {
-          setError("Choose a claimed severity.");
-          return;
-        }
-        if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(draft.githubUsername.trim().replace(/^@/, ""))) {
-          setError("Enter a valid GitHub username.");
-          return;
-        }
-        if (payout.status !== "unified") {
-          setError("Enter a valid Zcash Unified address for bounty payment.");
-          return;
-        }
-        onSubmitted(draft.ghsaUrl.trim());
-        return;
-      }
-      const { payload } = await postJson("/api/security/report", {
+      const { payload } = await postJson("/api/security", {
+        action: "submit",
         ticketId: session.ticketId,
-        accessToken: session.accessToken,
         paymentTxid: session.paymentTxid,
+        payoutAddress: session.payoutAddress,
         ...body,
       });
       if (payload?.ok && payload.status === "submitted") {
-        onSubmitted(draft.ghsaUrl.trim());
+        onSubmitted(draft);
         return;
       }
       setError(messageFrom(payload));
@@ -487,7 +427,7 @@ function ReportForm({
       <div className="grid gap-5">
         <TicketLine ticketId={session.ticketId} />
         <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-          Payment verified. Create the private GitHub Security Advisory, then submit its link here. The ticket is recorded after submission.
+          Payment verified. Paste the link to the private GitHub Security Advisory you created earlier — the ticket is recorded once you submit.
         </p>
         <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>
           <a href="https://github.com/zcashme/zns-mint/security/advisories/new" target="_blank" rel="noreferrer" className="underline underline-offset-4" style={{ color: "var(--color-accent-interactive)" }}>Create a GitHub Security Advisory ↗</a>
@@ -507,11 +447,12 @@ function ReportForm({
         <Field label="GitHub username">
           <input className={fieldClass} style={buildFaqTextFieldStyle(false)} value={draft.githubUsername} maxLength={40} onChange={(event) => set("githubUsername", event.target.value)} autoComplete="username" />
         </Field>
-        <Field label="Unified address for bounty payment" hint={payoutWarning || "Enter a Unified Zcash address where bounty rewards can be paid."}>
-          <input className={`${fieldClass} break-all font-mono`} style={buildFaqTextFieldStyle(false)} value={draft.payoutAddress} onChange={(event) => set("payoutAddress", event.target.value)} autoComplete="off" spellCheck={false} />
-        </Field>
+        <div className="min-w-0 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
+          <p className="font-semibold" style={{ color: "var(--fg-heading)" }}>Unified address for bounty payment</p>
+          <p className="mt-1 break-all font-mono text-xs">{session.payoutAddress}</p>
+        </div>
         <ErrorText>{error}</ErrorText>
-        <button type="button" onClick={submitDraft} disabled={busy || payout.status !== "unified" || !session.paymentTxid} className={primaryButtonClass} style={primaryButtonStyle}>
+        <button type="button" onClick={submitDraft} disabled={busy || !session.paymentTxid} className={primaryButtonClass} style={primaryButtonStyle}>
           {busy ? <AnimatedLoadingLabel label="Saving ticket" active /> : "Submit GHSA link"}
         </button>
       </div>
@@ -519,83 +460,39 @@ function ReportForm({
   );
 }
 
-export default function SecurityCompetitionClient({ model, devTestEnabled = false }: { model: SecurityPageModel; devTestEnabled?: boolean }) {
-  const [view, setView] = useState<View>("loading");
+export default function SecurityCompetitionClient({ model }: { model: SecurityPageModel }) {
+  const [view, setView] = useState<View>("start");
   const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [payoutAddress, setPayoutAddress] = useState("");
+  const payout = validateAddress(payoutAddress.trim());
 
   function remember(next: Session) {
-    if (!next.devTest) writeLocalStorage(STORAGE_KEY, { ticketId: next.ticketId, accessToken: next.accessToken });
     setSession(next);
     setView(viewFor(next.status));
   }
 
-  async function loadStored(
-    stored: { ticketId: string; accessToken: string },
-    cancelled: () => boolean = () => false,
-  ) {
-    const { status, payload } = await postJson("/api/security/tickets/status", stored);
-    if (cancelled()) return;
-    if (payload?.code === "not_found" || status === 404) {
-      removeLocalStorage(STORAGE_KEY);
-      setSession(null);
-      setView("start");
-      return;
-    }
-    if (!payload?.ok || !payload.status) {
-      setSession({ ticketId: stored.ticketId, accessToken: stored.accessToken, feeZec: model.feeZec, address: "", memo: "", status: "" });
-      setError(messageFrom(payload));
-      setView("unavailable");
-      return;
-    }
-    const payment = payload.payment;
-    remember({
-      ticketId: payload.ticketId || stored.ticketId,
-      accessToken: stored.accessToken,
-      feeZec: payload.feeZec || model.feeZec,
-      address: payment?.address || "",
-      memo: payment?.memo || "",
-      status: payload.status,
-      paymentTxid: payload.paymentTxid,
-      ghsaUrl: payload.ghsaUrl,
-    });
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-    const stored = readLocalStorage<{ ticketId?: string; accessToken?: string } | null>(STORAGE_KEY, null);
-    if (!stored?.ticketId || !stored.accessToken) {
-      setView("start");
-      return;
-    }
-    void loadStored(
-      { ticketId: stored.ticketId, accessToken: stored.accessToken },
-      () => cancelled,
-    );
-    return () => {
-      cancelled = true;
-    };
-    // Load the saved ticket once, after hydration.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   async function start() {
     if (busy || !model.submissionsOpen) return;
+    if (payout.status !== "unified") {
+      setError(payout.warning || "Enter a valid Unified Zcash address.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
-      const { payload } = await postJson("/api/security/tickets", {});
-      if (!payload?.ok || !payload.ticketId || !payload.accessToken || !payload.address || !payload.memo) {
+      const { payload } = await postJson("/api/security", { action: "start", payoutAddress: payoutAddress.trim() });
+      if (!payload?.ok || !payload.ticketId || !payload.address || !payload.memo) {
         setError(messageFrom(payload));
         return;
       }
       remember({
         ticketId: payload.ticketId,
-        accessToken: payload.accessToken,
         feeZec: payload.feeZec || model.feeZec,
         address: payload.address,
         memo: payload.memo,
+        payoutAddress: payload.payoutAddress || payoutAddress.trim(),
         status: "awaiting_payment",
       });
     } finally {
@@ -604,52 +501,35 @@ export default function SecurityCompetitionClient({ model, devTestEnabled = fals
   }
 
   function reset() {
-    removeLocalStorage(STORAGE_KEY);
     setSession(null);
     setError("");
+    setPayoutAddress("");
     setView("start");
   }
 
-  function startDevTest() {
-    removeLocalStorage(STORAGE_KEY);
-    remember({
-      ticketId: "ZNS-DEV-001",
-      accessToken: "local-development-only",
-      feeZec: model.feeZec,
-      address: "local-simulation",
-      memo: "local-simulation",
-      status: "awaiting_payment",
-      devTest: true,
-    });
-  }
-
-  if (view === "loading") {
+  if (view === "address") {
     return (
       <Panel>
-        <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-          <AnimatedLoadingLabel label="Loading" active />
-        </p>
-      </Panel>
-    );
-  }
-
-  if (view === "unavailable") {
-    return (
-      <Panel>
-        <div className="grid gap-4">
+        <div className="grid gap-5">
+          <h2 className="text-2xl font-black tracking-[-0.04em]" style={{ color: "var(--fg-heading)" }}>Start submission</h2>
+          <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>
+            Enter the Unified address where any bounty reward should be paid. It will also appear in your payment memo.
+          </p>
+          <Field label="Unified address for bounty payment" hint={payoutAddress.trim() && payout.status !== "unified" ? payout.warning : undefined}>
+            <input
+              className="w-full min-w-0 rounded-xl px-4 py-3 font-mono text-sm outline-none"
+              style={buildFaqTextFieldStyle(false)}
+              value={payoutAddress}
+              onChange={(event) => { setPayoutAddress(event.target.value); setError(""); }}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </Field>
           <ErrorText>{error}</ErrorText>
-          <button
-            type="button"
-            className={primaryButtonClass}
-            style={primaryButtonStyle}
-            onClick={() => {
-              if (!session) return;
-              setView("loading");
-              void loadStored(session);
-            }}
-          >
-            Try again
+          <button type="button" onClick={() => void start()} disabled={busy || payout.status !== "unified" || !model.submissionsOpen} className={primaryButtonClass} style={primaryButtonStyle}>
+            {busy ? <AnimatedLoadingLabel label="Creating ticket" active /> : "Start submission"}
           </button>
+          <button type="button" onClick={() => setView("start")} disabled={busy} className="text-sm underline underline-offset-4" style={{ color: "var(--fg-body)" }}>Back</button>
         </div>
       </Panel>
     );
@@ -675,7 +555,14 @@ export default function SecurityCompetitionClient({ model, devTestEnabled = fals
     return (
       <ReportForm
         session={session}
-        onSubmitted={(ghsaUrl) => remember({ ...session, status: "submitted", ghsaUrl })}
+        onSubmitted={(draft) => remember({
+          ...session,
+          status: "submitted",
+          ghsaUrl: draft.ghsaUrl.trim(),
+          claimedSeverity: draft.claimedSeverity,
+          githubUsername: draft.githubUsername.trim().replace(/^@/, ""),
+          payoutAddress: session.payoutAddress,
+        })}
       />
     );
   }
@@ -690,7 +577,12 @@ export default function SecurityCompetitionClient({ model, devTestEnabled = fals
             Status: {statusLabel(session.status)}. Keep this ticket ID for your records.
           </p>
           {session.ghsaUrl ? <a href={session.ghsaUrl} target="_blank" rel="noreferrer" className="break-all text-sm underline underline-offset-4" style={{ color: "var(--color-accent-interactive)" }}>Open your GHSA ↗</a> : null}
-          {model.submissionsOpen || session.devTest ? (
+          {session.claimedSeverity ? <p className="text-sm" style={{ color: "var(--fg-body)" }}>Claimed severity: {session.claimedSeverity}</p> : null}
+          {session.finalSeverity ? <p className="text-sm" style={{ color: "var(--fg-body)" }}>Final severity: {session.finalSeverity}</p> : null}
+          {session.githubUsername ? <p className="text-sm" style={{ color: "var(--fg-body)" }}>GitHub username: @{session.githubUsername}</p> : null}
+          {session.payoutAddress ? <p className="break-all font-mono text-xs" style={{ color: "var(--fg-body)" }}>Payout address: {session.payoutAddress}</p> : null}
+          {session.paymentTxid ? <p className="break-all font-mono text-xs" style={{ color: "var(--fg-muted)" }}>Fee payment: {session.paymentTxid}</p> : null}
+          {model.submissionsOpen ? (
             <button type="button" onClick={reset} className={primaryButtonClass} style={primaryButtonStyle}>
               Submit another finding
             </button>
@@ -704,22 +596,20 @@ export default function SecurityCompetitionClient({ model, devTestEnabled = fals
     <Panel>
       <div className="grid gap-4">
         <h2 className="text-2xl font-black tracking-[-0.04em]" style={{ color: "var(--fg-heading)" }}>Submit finding</h2>
-        <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-          Pay the {model.feeZec} ZEC fee, create a private GitHub Security Advisory, then submit its link with your severity and payout details.
-        </p>
+        <ol className="space-y-3 text-sm leading-6" style={{ color: "var(--fg-body)" }}>
+          <li>
+            <span className="font-semibold" style={{ color: "var(--fg-heading)" }}>First, write your private GitHub Security Advisory</span> with the finding and a reproducible proof of concept.{' '}
+            <a href="https://github.com/zcashme/zns-mint/security/advisories/new" target="_blank" rel="noreferrer" className="underline underline-offset-4" style={{ color: "var(--color-accent-interactive)" }}>Create a GitHub Security Advisory ↗</a>
+          </li>
+          <li><span className="font-semibold" style={{ color: "var(--fg-heading)" }}>Then start here</span> and pay the {model.feeZec} ZEC fee to get your ticket and payment memo.</li>
+          <li><span className="font-semibold" style={{ color: "var(--fg-heading)" }}>Right after paying</span>, submit the GHSA link with your severity and GitHub username. Keep this tab open until submitted — the fee is non-refundable.</li>
+        </ol>
         {model.closedMessage ? (
           <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>{model.closedMessage}</p>
         ) : null}
-        {devTestEnabled ? (
-          <div className="rounded-xl border border-dashed px-4 py-4" style={{ borderColor: "var(--faq-border)" }}>
-            <p className="text-xs font-bold uppercase tracking-[0.16em]" style={{ color: "var(--fg-muted)" }}>Developer-only test gate</p>
-            <p className="mt-2 text-sm leading-6" style={{ color: "var(--fg-body)" }}>Simulates fee verification and form submission locally. It does not call the ticket APIs or write to Supabase.</p>
-            <button type="button" onClick={startDevTest} className={`${primaryButtonClass} mt-3`} style={primaryButtonStyle}>Start simulated submission</button>
-          </div>
-        ) : null}
         <ErrorText>{error}</ErrorText>
-        <button type="button" onClick={() => void start()} disabled={busy || !model.submissionsOpen} className={primaryButtonClass} style={primaryButtonStyle}>
-          {busy ? <AnimatedLoadingLabel label="Starting" active /> : "Submit finding"}
+        <button type="button" onClick={() => setView("address")} disabled={!model.submissionsOpen} className={primaryButtonClass} style={primaryButtonStyle}>
+          Start submission
         </button>
       </div>
     </Panel>

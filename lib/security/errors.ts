@@ -18,7 +18,7 @@ export const SECURITY_MESSAGES = {
   windowAfter: "The competition is closed.",
   unavailable: "Submissions are not available right now.",
   invalidTxid: "That transaction id is not valid.",
-  paymentNotFound: "No matching payment has been detected yet.",
+  paymentNotFound: "No confirmed payment with this ticket memo has reached the competition ledger yet.",
   alreadyUsed: "That payment was already used for another ticket.",
   paymentUnavailable: "Payment verification is temporarily unavailable. Try again.",
   persistence: "We could not save this step. Your payment is kept. Try again.",

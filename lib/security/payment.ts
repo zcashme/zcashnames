@@ -1,4 +1,4 @@
-import { memoTicketId } from "./memo";
+import { memoFields } from "./memo";
 
 export type SecurityLedgerRow = {
   amount_zats: string | number | null;
@@ -35,11 +35,14 @@ function amountZats(value: string | number | null | undefined): number | null {
   return null;
 }
 
-function rowQualifies(row: SecurityLedgerRow, ticketId: string, feeAddress: string): boolean {
+function rowQualifies(row: SecurityLedgerRow, ticketId: string, feeAddress: string, payoutAddress: string): boolean {
+  const fields = memoFields(row.memo);
   return row.is_outgoing === false
-    && (row.status === "mempool" || row.status === "confirmed")
+    && row.status === "confirmed"
     && row.recipient_address === feeAddress
-    && memoTicketId(row.memo) === ticketId
+    && fields !== null
+    && fields.ticketId === ticketId
+    && fields.payoutAddress === payoutAddress
     && isSecurityTxid(normalizeTxid(row.txid));
 }
 
@@ -51,6 +54,7 @@ export function selectQualifyingPayment(args: {
   rows: SecurityLedgerRow[];
   ticketId: string;
   feeAddress: string;
+  payoutAddress: string;
   minimumZats: number;
   usedTxids: ReadonlySet<string>;
   hintTxid?: string | null;
@@ -69,7 +73,7 @@ export function selectQualifyingPayment(args: {
   let sawShortfall = false;
   let sawUsed = false;
   for (const row of considered) {
-    if (!rowQualifies(row, args.ticketId, args.feeAddress)) continue;
+    if (!rowQualifies(row, args.ticketId, args.feeAddress, args.payoutAddress)) continue;
     const paid = amountZats(row.amount_zats);
     if (paid == null || paid < args.minimumZats) {
       sawShortfall = true;

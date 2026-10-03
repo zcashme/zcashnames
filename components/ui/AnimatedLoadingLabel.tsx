@@ -12,7 +12,8 @@ export function getAnimatedEllipsis(nowMs: number, intervalMs = DEFAULT_INTERVAL
 }
 
 export function useAnimatedEllipsis(active: boolean, intervalMs = DEFAULT_INTERVAL_MS): string {
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  // Keep the server and first client render identical; the effect starts animation after hydration.
+  const [nowMs, setNowMs] = useState(0);
 
   useEffect(() => {
     if (!active) return;

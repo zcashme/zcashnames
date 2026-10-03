@@ -1,30 +1,11 @@
 -- Security competition ticket table only.
 -- The scanner-managed public.zn_security_comp payment ledger is unchanged.
+-- Ticket ids are random 4-digit numbers drawn in the app; there is no sequence and no id generator in the database.
 
 begin;
 
-create sequence if not exists public.zn_security_comp_ticket_seq;
-
-create or replace function public.next_zn_security_comp_ticket_id()
-returns text
-language plpgsql
-volatile
-set search_path = public, pg_temp
-as $$
-declare
-  n bigint;
-begin
-  n := nextval('public.zn_security_comp_ticket_seq');
-  return 'ZNS-BB-' || case
-    when n < 1000 then lpad(n::text, 3, '0')
-    else n::text
-  end;
-end;
-$$;
-
 create table if not exists public.zn_security_comp_tickets (
-  ticket_id text primary key
-    default public.next_zn_security_comp_ticket_id(),
+  ticket_id text primary key,
 
   status text not null default 'submitted'
     check (status in ('submitted', 'accepted', 'duplicate', 'invalid', 'paid')),
@@ -64,13 +45,5 @@ alter table public.zn_security_comp_tickets enable row level security;
 
 revoke all on public.zn_security_comp_tickets from anon, authenticated;
 grant all on public.zn_security_comp_tickets to service_role;
-
-revoke all on sequence public.zn_security_comp_ticket_seq from public, anon, authenticated;
-grant usage, select on sequence public.zn_security_comp_ticket_seq to service_role;
-
-revoke all on function public.next_zn_security_comp_ticket_id()
-  from public, anon, authenticated;
-grant execute on function public.next_zn_security_comp_ticket_id()
-  to service_role;
 
 commit;
