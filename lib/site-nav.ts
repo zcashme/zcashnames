@@ -111,6 +111,7 @@ export const SITEMAP_SECTIONS: SiteNavLink[] = [
     children: [
       { label: "Blogs", href: "/blogs" },
       { label: "Careers", href: "/careers" },
+      { label: "Security competition", href: "/security" },
       { label: "Brand Kit", href: "/brandkit" },
       { label: "Roadmap", href: "/roadmap" },
     ],

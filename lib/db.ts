@@ -19,6 +19,7 @@ import { createClient } from "@supabase/supabase-js";
 //   cabal_invites         â€” cabal/influencer deck access codes
 //   indexer_launch_alert_signups â€” indexer launch notification signups
 //   email_subscribers    â€” confirmed blog-series subscribers
+//   zn_security_comp_tickets — mint bug bounty tickets (report bodies live on GitHub)
 //
 export const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

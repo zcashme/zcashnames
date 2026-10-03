@@ -65,12 +65,15 @@ sql/*
 !sql/careers_legacy_jobs_cleanup.sql
 !sql/2026-09-07-reservation-refund-requests.sql
 !sql/2026-09-07-reservation-refund-abuse-controls.sql
+!sql/2026-10-02-security-competition.sql
+docs/security-competition.md
 !tests/
 tests/*
 !tests/reservation-refunds.spec.ts
 !tests/noir-wallet.spec.ts
 !tests/referral-rewards.spec.ts
 !tests/protected-referral-human-codes.spec.ts
+!tests/security-competition.spec.ts
 
 # codesearch local semantic index
 .codesearch.db
