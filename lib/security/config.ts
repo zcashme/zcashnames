@@ -35,7 +35,7 @@ function payableAddress(raw: string | undefined): string | null {
 }
 
 export function getSecurityConfig(now = new Date()): SecurityConfig {
-  const start = parseInstant(process.env.SECURITY_COMP_START || "2026-10-03T20:00:00Z");
+  const start = parseInstant(process.env.SECURITY_COMP_START || "2026-10-03T19:00:00Z");
   const end = parseInstant(process.env.SECURITY_COMP_END || "2026-10-13T20:00:00Z");
   const phase = competitionPhase(start, end, now);
   const feeRaw = process.env.SECURITY_COMP_FEE_ZEC;
