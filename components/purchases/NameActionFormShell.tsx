@@ -53,7 +53,6 @@ export default function NameActionFormShell({
           name={name}
           network={network}
           availability={availability}
-          hideShare={formSuccess}
         />
       </div>
 
@@ -72,8 +71,7 @@ export default function NameActionFormShell({
             name={name}
             network={network}
             availability={availability}
-            hideShare={formSuccess}
-          />
+            />
           {heroBody}
         </div>
       </section>

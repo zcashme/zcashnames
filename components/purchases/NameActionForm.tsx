@@ -1,265 +1,68 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { useAppRouter } from "@/components/hooks/useAppRouter";
 import { usePurchaseFlow } from "@/components/hooks/usePurchaseFlow";
-import ShareDropdown from "@/components/ShareDropdown";
-import { buildFaqTextFieldStyle } from "@/components/ui/formFieldStyles";
-import { ACTION_LABELS, getNetworkConstants } from "@/lib/types";
-import type { Action, Network, Phase, ResolveName } from "@/lib/types";
-import { validateAddress } from "@/lib/zns/utils";
 import { clearResume } from "@/lib/purchases/resume";
-import { explorerNameHref } from "@/lib/purchases/nameActionHref";
-import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
-import { QrBlock } from "@/components/ui/QrBlock";
-import ZcashNamesLogoMark from "@/components/ZcashNamesLogoMark";
-import {
-  AddressBadge,
-  minedMessage,
-  modalDescription,
-  NameBadge,
-  phaseHeader,
-  scanningStatusMessage,
-  settlingStatusMessage,
-} from "@/components/purchases/modalCopy";
 import PasscodeBoxes from "@/components/purchases/PasscodeBoxes";
-import PayWithNoirButton from "@/components/wallets/PayWithNoirButton";
-import UseNoirAddressButton from "@/components/wallets/UseNoirAddressButton";
-import { useNoirOtpAutofill } from "@/components/wallets/useNoirOtpAutofill";
+import { QrBlock } from "@/components/ui/QrBlock";
+import AnimatedLoadingLabel from "@/components/ui/AnimatedLoadingLabel";
+import { ACTION_LABELS } from "@/lib/types";
+import type { Action, Network, ResolveName } from "@/lib/types";
+import { explorerNameHref, actionToSlug } from "@/lib/purchases/nameActionHref";
 
-const SITE_ORIGIN = "https://www.zcashnames.com";
+// Term choices per action, in display order. Labels double as memo terms —
+// claim terms are "forever" or "<N>y"; update terms add "none" (carry the
+// current expiration forward).
+const CLAIM_TERMS = ["1y", "2y", "5y", "10y", "forever"] as const;
+const UPDATE_TERMS = ["none", "1y", "2y", "5y", "forever"] as const;
 
-function successShareCopy(action: Action, name: string): {
-  message: string;
-  xMessage: string;
-  emailSubject: string;
-} {
+function termChoices(action: Action): ReadonlyArray<string> {
+  return action === "CLAIM" ? CLAIM_TERMS : UPDATE_TERMS;
+}
+
+function termLabel(term: string): string {
+  if (term === "forever") return "Forever";
+  if (term === "none") return "No change";
+  return term.replace("y", " yr");
+}
+
+function termDescription(action: Action, term: string): string {
+  if (term === "forever") return "Registration without fixed expiration (3× annual price).";
+  if (term === "none") return "Keep the current expiration; confirms liveness.";
+  const years = Number(term.slice(0, -1));
+  return `Extend expiration by ${years} year${years === 1 ? "" : "s"}.`;
+}
+
+function successShareCopy(action: Action, name: string): { title: string; text: string } {
   switch (action) {
     case "CLAIM":
       return {
-        message: `I just claimed ${name} on Zcash Names.`,
-        xMessage: `I just claimed ${name} on @ZcashNames.`,
-        emailSubject: `I claimed ${name} on Zcash Names`,
-      };
-    case "BUY":
-      return {
-        message: `I just bought ${name} on Zcash Names.`,
-        xMessage: `I just bought ${name} on @ZcashNames.`,
-        emailSubject: `I bought ${name} on Zcash Names`,
+        title: `${name} is yours`,
+        text: `I just claimed "${name}" on Zcash Names.`,
       };
     case "UPDATE":
       return {
-        message: `I just updated ${name} on Zcash Names.`,
-        xMessage: `I just updated ${name} on @ZcashNames.`,
-        emailSubject: `I updated ${name} on Zcash Names`,
-      };
-    case "LIST":
-      return {
-        message: `I just listed ${name} for sale on Zcash Names.`,
-        xMessage: `I just listed ${name} for sale on @ZcashNames.`,
-        emailSubject: `${name} is listed for sale on Zcash Names`,
-      };
-    case "DELIST":
-      return {
-        message: `I just delisted ${name} on Zcash Names.`,
-        xMessage: `I just delisted ${name} on @ZcashNames.`,
-        emailSubject: `${name} was delisted on Zcash Names`,
+        title: `${name} updated`,
+        text: `"${name}" now points at a fresh Zcash address.`,
       };
     case "RELEASE":
       return {
-        message: `I just released ${name} on Zcash Names - it is available to claim.`,
-        xMessage: `I just released ${name} on @ZcashNames - it is available to claim.`,
-        emailSubject: `${name} was released on Zcash Names`,
+        title: `${name} released`,
+        text: `"${name}" has been released back to the namespace.`,
       };
   }
 }
 
-type NameActionFormProps = {
+// ---- Component -------------------------------------------------------------
+
+export interface NameActionFormProps {
   action: Action;
   name: string;
   network: Network;
   resolveResult: ResolveName;
   returnHref?: string;
-  /** Fired when the form enters/leaves the success confirmation state. */
   onSuccessChange?: (success: boolean) => void;
-};
-
-function InlineStepButton({
-  onClick,
-  disabled = false,
-  label = "Next",
-  loading = false,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  label?: string;
-  loading?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled || loading}
-      className="inline-flex h-9 items-center justify-center rounded-[13px] px-4 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:brightness-100"
-      style={{
-        background:
-          disabled || loading
-            ? "color-mix(in srgb, var(--leaders-card-border) 22%, transparent)"
-            : "var(--home-result-primary-bg)",
-        color: disabled || loading ? "var(--fg-muted)" : "var(--home-result-primary-fg)",
-        boxShadow: disabled || loading ? "none" : "var(--home-result-primary-shadow)",
-      }}
-    >
-      {loading ? <AnimatedLoadingLabel label={label} active /> : label}
-    </button>
-  );
-}
-
-const footerSecondaryButtonClassName =
-  "inline-flex h-9 items-center justify-center rounded-[13px] border-[1.5px] border-border-muted bg-transparent px-4 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]";
-
-function RequiredAsterisk() {
-  return (
-    <span aria-hidden="true" className="ml-1" style={{ color: "var(--accent-red, #e05252)" }}>
-      *
-    </span>
-  );
-}
-
-function PhaseLabel({
-  children,
-  complete = false,
-}: {
-  children: ReactNode;
-  complete?: boolean;
-}) {
-  return (
-    <div className="mb-2 flex items-center gap-1.5">
-      <label
-        className="block text-[0.72rem] font-semibold uppercase tracking-[0.18em]"
-        style={{ color: "var(--fg-muted)" }}
-      >
-        {children}
-      </label>
-      {complete ? (
-        <span
-          className="inline-flex shrink-0 items-center justify-center"
-          style={{ color: "var(--color-accent-green)" }}
-          aria-label="Complete"
-          title="Complete"
-        >
-          <svg
-            viewBox="0 0 16 16"
-            className="h-3.5 w-3.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M3.2 8.2 6.4 11.2 12.8 4.5" />
-          </svg>
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-function OtpBackWarningModal({
-  open,
-  onCancel,
-  onConfirm,
-}: {
-  open: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  if (!open || typeof document === "undefined") return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
-      onClick={onCancel}
-    >
-      <div
-        className="relative isolate w-full max-w-md overflow-visible rounded-2xl"
-        style={{
-          background: "var(--feature-card-bg)",
-          border: "1px solid var(--faq-border)",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.45)",
-          maxHeight: "calc(100vh - 2rem)",
-        }}
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="otp-back-warning-title"
-      >
-        <span
-          className="absolute left-1/2 top-0 z-10 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border"
-          style={{
-            background: "color-mix(in srgb, var(--color-brand-orange, #f59e0b) 18%, var(--feature-card-bg))",
-            borderColor: "var(--faq-border)",
-            color: "var(--color-brand-orange, #f59e0b)",
-            boxShadow: "0 18px 42px rgba(0,0,0,0.28)",
-          }}
-          aria-hidden="true"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-7 w-7"
-          >
-            <path d="M12 9v4" />
-            <path d="M12 17h.01" />
-            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-          </svg>
-        </span>
-        <div className="flex flex-col items-center gap-4 px-8 pb-8 pt-12 text-center">
-          <h2
-            id="otp-back-warning-title"
-            className="text-xl font-bold"
-            style={{ color: "var(--fg-heading)" }}
-          >
-            New passcode required
-          </h2>
-          <p className="text-sm leading-relaxed" style={{ color: "var(--fg-body)" }}>
-            Going back lets you change the price and payout address, but you will need a new
-            ownership passcode. Your current verification session will be discarded.
-          </p>
-          <div className="flex w-full flex-wrap items-center justify-center gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="inline-flex min-h-11 items-center justify-center rounded-full border-[1.5px] border-border-muted bg-transparent px-5 py-2 text-sm font-semibold text-fg-body transition-colors duration-200 hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
-            >
-              Stay here
-            </button>
-            <button
-              type="button"
-              onClick={onConfirm}
-              className="inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition-[filter,transform] duration-200 hover:-translate-y-0.5 hover:brightness-110"
-              style={{
-                background: "var(--home-result-primary-bg)",
-                color: "var(--home-result-primary-fg)",
-                boxShadow: "var(--home-result-primary-shadow)",
-              }}
-            >
-              Go back
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>,
-    document.body,
-  );
 }
 
 export default function NameActionForm({
@@ -271,7 +74,6 @@ export default function NameActionForm({
   onSuccessChange,
 }: NameActionFormProps) {
   const router = useAppRouter();
-  const [otpBackOpen, setOtpBackOpen] = useState(false);
   const flow = usePurchaseFlow({
     action,
     name,
@@ -290,49 +92,24 @@ export default function NameActionForm({
     advance,
     goto,
     needsAddress,
-    needsPrice,
-    needsPayTaddr,
-    isOwnerAction,
-    handleUnlock,
     handleInputContinue,
+    handleConfirmSent,
+    handleOtpBack,
     handleVerifyOtp,
+    handleRespondSent,
   } = flow;
 
-  const handleNoirOtpCode = useCallback(
-    (code: string) => {
-      set({ otpCode: code, otpError: "", otpVerified: false });
-    },
-    [set],
-  );
-  const noirOtpAutofillStatus = useNoirOtpAutofill({
-    active: phase === "otp" && s.otpSent && !s.otpVerified,
-    sentAt: s.otpNoirSentAt,
-    code: s.otpCode,
-    onCode: handleNoirOtpCode,
-  });
-
   const doneHref = returnHref ?? explorerNameHref(name, network);
-  const isSuccess =
-    (phase === "scanning" && s.scanState === "mined" && action !== "BUY") ||
-    (phase === "settling" && s.settleState === "mined");
+  const isSuccess = phase === "scanning" && s.scanState === "mined";
 
   useEffect(() => {
     onSuccessChange?.(isSuccess);
   }, [isSuccess, onSuccessChange]);
 
-  const pendingBuy =
-    action === "BUY" && resolveResult.status === "listed"
-      ? resolveResult.pendingBuy
-      : undefined;
-  const isResume = !!pendingBuy && phase === "input";
-
   const successShare = useMemo(() => {
-    const path = explorerNameHref(name, network);
     const copy = successShareCopy(action, name);
-    return {
-      ...copy,
-      shareUrl: `${SITE_ORIGIN}${path}`,
-    };
+    const path = explorerNameHref(name, network);
+    return { ...copy, shareUrl: path };
   }, [action, name, network]);
 
   function handleDone() {
@@ -340,659 +117,286 @@ export default function NameActionForm({
     router.push(doneHref);
   }
 
-  function successShareButton() {
-    return (
-      <ShareDropdown
-        label="Share"
-        message={successShare.message}
-        xMessage={successShare.xMessage}
-        shareUrl={successShare.shareUrl}
-        emailSubject={successShare.emailSubject}
-        menuAlign="left"
-        menuDirection="up"
-        rootClassName="relative inline-flex w-fit flex-col items-start"
-        buttonClassName="box-border inline-flex h-9 min-h-9 items-center justify-center gap-2 rounded-[13px] border border-border-muted bg-transparent px-4 text-sm font-semibold leading-none text-fg-body transition-colors hover:border-[var(--color-accent-interactive)] hover:text-[var(--color-accent-interactive)]"
-      />
-    );
-  }
-
-  function confirmOtpBack() {
-    setOtpBackOpen(false);
-    // Skip the native confirm; modal is the warning.
-    goto(s.step - 1);
-  }
-
-  // Progressive reveal: show all phases up to and including current step.
-  const visiblePhases = phases.slice(0, s.step + 1);
-
-  const showOtpBack = phase === "otp" && s.step > 0 && !isSuccess;
-  const showGenericBack =
-    s.step > 0 &&
-    phase !== "otp" &&
-    !isSuccess &&
-    phase !== "scanning" &&
-    phase !== "settling";
-
-  function footerPrimary() {
-    if (isSuccess) {
-      return <InlineStepButton label="View on Explorer" onClick={handleDone} />;
+  async function handleShare() {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: successShare.title,
+          text: successShare.text,
+          url: successShare.shareUrl,
+        });
+        return;
+      } catch {
+        // user cancelled — fall through to clipboard
+      }
     }
+    try {
+      await navigator.clipboard.writeText(`${successShare.text} ${successShare.shareUrl}`);
+    } catch {
+      // clipboard unavailable — ignore
+    }
+  }
 
-    switch (phase) {
-      case "unlock":
-        return (
-          <InlineStepButton
-            label="Unlock"
-            loading={s.unlockLoading}
-            onClick={() => void handleUnlock()}
-          />
-        );
-      case "input":
-        return (
-          <InlineStepButton
-            label={isResume ? "Continue to payment" : "Continue"}
-            onClick={() => void handleInputContinue()}
-          />
-        );
-      case "otp":
-        if (!s.otpSent) {
+  const stepIndex = phases.indexOf(phase);
+
+  return (
+    <div className="w-full rounded-b-2xl border border-t-0 px-6 py-8 sm:px-8 sm:py-9" style={{ borderColor: "var(--faq-border)" }}>
+      {/* Progress rail */}
+      <div className="mb-7 flex items-center justify-center gap-1.5" aria-hidden="true">
+        {phases.map((step, i) => {
+          const fill = i < stepIndex || isSuccess ? 1 : i === stepIndex ? 0.5 : 0;
           return (
-            <InlineStepButton
-              label="I Sent It"
-              onClick={() =>
-                set({
-                  otpSent: true,
-                  otpNoirSentAt: 0,
-                  otpError: "",
-                  otpVerified: false,
-                })
-              }
-            />
+            <button
+              key={step}
+              type="button"
+              aria-label={i < stepIndex ? `Back to ${step}` : step}
+              disabled={i >= stepIndex}
+              onClick={() => goto(i)}
+              className="relative h-2 w-10 overflow-hidden rounded-full border p-0"
+              style={{
+                borderColor: fill > 0 ? "var(--fg-heading)" : "var(--border-muted)",
+                cursor: i < stepIndex ? "pointer" : "default",
+              }}
+            >
+              <span
+                className="absolute inset-y-0 left-0 block"
+                style={{ width: `${fill * 100}%`, background: "var(--fg-heading)" }}
+              />
+            </button>
           );
-        }
-        return (
-          <InlineStepButton
-            label={s.otpVerified ? "Verified" : "Verify code"}
-            loading={s.otpLoading}
-            disabled={
-              s.otpCode.trim().length !== 6 ||
-              s.otpVerified ||
-              s.otpAttempts >= getNetworkConstants(network).OTP_MAX_ATTEMPTS
-            }
-            onClick={() => void handleVerifyOtp()}
-          />
-        );
-      case "confirm":
-        return <InlineStepButton label="I Sent It" onClick={() => advance()} />;
-      case "fund":
-        if (resolveResult.status !== "listed") {
-          return <InlineStepButton label="Close" onClick={handleDone} />;
-        }
-        return <InlineStepButton label="I Sent It" onClick={() => advance()} />;
-      case "scanning":
-      case "settling":
-        return (
-          <button
-            type="button"
-            onClick={handleDone}
-            className={footerSecondaryButtonClassName}
-          >
-            Close
-          </button>
-        );
-      default:
-        return null;
-    }
-  }
+        })}
+      </div>
 
-  function footerBack() {
-    if (showOtpBack) {
-      return (
-        <button
-          type="button"
-          onClick={() => setOtpBackOpen(true)}
-          className={footerSecondaryButtonClassName}
-        >
-          Previous
-        </button>
-      );
-    }
-    if (showGenericBack) {
-      return (
-        <button
-          type="button"
-          onClick={() => goto(s.step - 1)}
-          className={footerSecondaryButtonClassName}
-        >
-          Previous
-        </button>
-      );
-    }
-    return <span />;
-  }
-
-  function renderPhaseBody(p: Phase, active: boolean, complete: boolean) {
-    const muted = !active;
-
-    if (p === "unlock") {
-      return (
-        <div className={muted ? "opacity-70" : undefined}>
-          <PhaseLabel complete={complete}>
-            Unlock code
-            {!complete && <RequiredAsterisk />}
-          </PhaseLabel>
-          <p className="mb-2 text-sm" style={{ color: "var(--fg-body)" }}>
-            {modalDescription(action, "unlock", name, s)}
-          </p>
-          <input
-            type="text"
-            value={s.unlockCode}
-            disabled={muted}
-            onChange={(e) => {
-              const raw = e.target.value
-                .replace(/[^A-Za-z0-9]/g, "")
-                .toUpperCase()
-                .slice(0, 12);
-              const formatted = [raw.slice(0, 4), raw.slice(4, 8), raw.slice(8, 12)]
-                .filter(Boolean)
-                .join("-");
-              set({ unlockCode: formatted, unlockError: "" });
-              if (muted) goto(phases.indexOf("unlock"));
-            }}
-            placeholder="XXXX-XXXX-XXXX"
-            className="w-full rounded-2xl px-4 py-2.5 text-center font-mono text-sm tracking-[0.15em] outline-none disabled:opacity-70"
-            style={buildFaqTextFieldStyle(!!s.unlockError && active)}
-            autoComplete="off"
-          />
-          {active && s.unlockError ? (
-            <p className="mt-2 text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
-              {s.unlockError}
-            </p>
-          ) : null}
-        </div>
-      );
-    }
-
-    if (p === "input") {
-      const trimmed = s.addressInput.trim();
-      const v = trimmed ? validateAddress(trimmed) : { status: "invalid" as const, warning: "" };
-      const isMatchedBuyer = !!pendingBuy && trimmed === pendingBuy.buyer;
-      const isMismatchedBuyer =
-        !!pendingBuy && !!trimmed && trimmed !== pendingBuy.buyer && v.status === "unified";
-
-      return (
-        <div className={`space-y-4 ${muted ? "opacity-70" : ""}`}>
-          {isResume && active ? (
-            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              {modalDescription(action, "input", name, s, { isResume: true })}
-            </p>
-          ) : null}
-
-          {needsAddress && (
-            <div>
-              <PhaseLabel complete={complete}>
-                {action === "UPDATE" ? "New Zcash address" : "Your Zcash address"}
-                {!complete && <RequiredAsterisk />}
-              </PhaseLabel>
+      {/* ── INPUT ── */}
+      {phase === "input" ? (
+        <div className="grid gap-5">
+          {needsAddress ? (
+            <label className="grid gap-2">
+              <span className="text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>
+                {action === "CLAIM" ? "Your unified address" : "New unified address"}
+              </span>
               <input
                 type="text"
                 value={s.addressInput}
-                disabled={muted}
-                onChange={(e) => {
-                  set({ addressInput: e.target.value, inputError: "" });
-                  if (muted) goto(phases.indexOf("input"));
-                }}
-                placeholder="u1…"
-                className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none disabled:opacity-70"
-                style={buildFaqTextFieldStyle(!!s.inputError && active && needsAddress)}
-                autoComplete="off"
-              />
-              {active ? (
-                <UseNoirAddressButton
-                  onAddress={(address) =>
-                    set({ addressInput: address, inputError: "" })
-                  }
-                />
-              ) : null}
-              {active && isMatchedBuyer && (
-                <p className="mt-2 text-xs" style={{ color: "#22c55e" }}>
-                  ✓ This address matches the locked purchase. Continue to send the seller payment.
-                </p>
-              )}
-              {active && isMismatchedBuyer && (
-                <p className="mt-2 text-xs" style={{ color: "var(--accent-red, #e05252)" }}>
-                  This name is locked to a different buyer&rsquo;s address.
-                </p>
-              )}
-            </div>
-          )}
-
-          {needsPrice && (
-            <div>
-              <PhaseLabel complete={complete}>
-                Price (ZEC)
-                {!complete && <RequiredAsterisk />}
-              </PhaseLabel>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={s.priceInput}
-                disabled={muted}
-                onChange={(e) => {
-                  set({ priceInput: e.target.value, inputError: "" });
-                  if (muted) goto(phases.indexOf("input"));
-                }}
-                placeholder="0.00"
-                className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none disabled:opacity-70"
-                style={buildFaqTextFieldStyle(false)}
-                autoComplete="off"
-              />
-            </div>
-          )}
-
-          {needsPayTaddr && (
-            <div>
-              <PhaseLabel complete={complete}>
-                Payout address (t-address)
-                {!complete && <RequiredAsterisk />}
-              </PhaseLabel>
-              <input
-                type="text"
-                value={s.payTaddrInput}
-                disabled={muted}
-                onChange={(e) => {
-                  set({ payTaddrInput: e.target.value, inputError: "" });
-                  if (muted) goto(phases.indexOf("input"));
-                }}
-                placeholder={network === "testnet" ? "tm…" : "t1…"}
-                className="w-full rounded-2xl px-4 py-2.5 text-sm outline-none disabled:opacity-70"
-                style={buildFaqTextFieldStyle(
-                  !!s.inputError &&
-                    active &&
-                    needsPayTaddr &&
-                    /payout|transparent|checksum|t-address|tm or tn|t1 or t3/i.test(s.inputError),
-                )}
+                onChange={(e) => set({ addressInput: e.target.value })}
+                placeholder={network === "testnet" ? "utest1…" : "u1…"}
                 autoComplete="off"
                 spellCheck={false}
+                className="h-11 w-full rounded-xl border px-4 text-sm"
+                style={{ borderColor: "var(--faq-border)", background: "var(--color-raised)" }}
               />
-              {active ? (
-                <UseNoirAddressButton
-                  kind="transparent"
-                  network={network}
-                  onAddress={(address) =>
-                    set({ payTaddrInput: address, inputError: "" })
-                  }
-                />
-              ) : null}
-            </div>
-          )}
-
-          {isOwnerAction && (
-            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              Changes to this name are authorized by{" "}
-              <strong style={{ color: "var(--fg-heading)" }}>sending the owner passcodes</strong>.
-            </p>
-          )}
-
-          {active && s.inputError ? (
-            <p className="text-sm font-semibold" style={{ color: "var(--accent-red, #e05252)" }}>
-              {s.inputError}
-            </p>
+            </label>
           ) : null}
-        </div>
-      );
-    }
 
-    if (p === "otp") {
-      return (
-        <div
-          className={`transition-opacity duration-300 ease-out ${muted ? "opacity-70" : "opacity-100"}`}
-        >
-          <PhaseLabel complete={complete}>Verify ownership</PhaseLabel>
+          <div className="grid gap-2">
+            <span className="text-sm font-semibold" style={{ color: "var(--fg-heading)" }}>
+              {action === "CLAIM" ? "Registration term" : action === "UPDATE" ? "Term" : "Term"}
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {termChoices(action).map((term) => (
+                <button
+                  key={term}
+                  type="button"
+                  onClick={() => set({ termInput: term })}
+                  aria-pressed={s.termInput === term}
+                  className="h-9 rounded-full border px-4 text-sm font-semibold transition-colors"
+                  style={{
+                    borderColor:
+                      s.termInput === term ? "var(--fg-heading)" : "var(--border-muted)",
+                    background: s.termInput === term ? "var(--fg-heading)" : "transparent",
+                    color: s.termInput === term ? "var(--color-bg, #fff)" : "var(--fg-heading)",
+                  }}
+                >
+                  {termLabel(term)}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs" style={{ color: "var(--fg-body)" }}>
+              {termDescription(action, s.termInput || (action === "CLAIM" ? "1y" : "none"))}
+            </span>
+          </div>
 
-          {/* Payment QR + send instructions collapse when leaving this step (like Send Payment). */}
-          <div
-            className="grid transition-[grid-template-rows,opacity] duration-500 ease-in-out"
+          {s.inputError ? (
+            <p className="text-sm font-medium" style={{ color: "#ef4444" }}>{s.inputError}</p>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => void handleInputContinue()}
+            className="mt-1 inline-flex h-12 items-center justify-center rounded-full px-6 text-sm font-bold"
             style={{
-              gridTemplateRows: active ? "1fr" : "0fr",
-              opacity: active ? 1 : 0,
+              background: "var(--home-result-primary-bg)",
+              color: "var(--home-result-primary-fg)",
+              boxShadow: "var(--home-result-primary-shadow)",
             }}
-            aria-hidden={!active}
           >
-            <div className="min-h-0 overflow-hidden">
+            Continue
+          </button>
+        </div>
+      ) : null}
+
+      {/* ── CONFIRM (Request payment) ── */}
+      {phase === "confirm" ? (
+        <div className="grid gap-5">
+          <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
+            {action === "CLAIM"
+              ? `Send the name price to the mint treasury with your claim request. Final price is set by the mint.`
+              : `Send the $1 request fee to the mint treasury with your ${ACTION_LABELS[action].toLowerCase()} request.`}
+          </p>
+          {s.uri ? (
+            <QrBlock
+              address={s.paymentAddress}
+              amount={s.amountZec}
+              memo={s.memo}
+              downloadFilename={`zns-${actionToSlug(action)}-request.png`}
+            />
+          ) : (
+            <AnimatedLoadingLabel label="Building request" active />
+          )}
+          {s.inputError ? (
+            <p className="text-sm font-medium" style={{ color: "#ef4444" }}>{s.inputError}</p>
+          ) : null}
+          <button
+            type="button"
+            disabled={!s.uri}
+            onClick={handleConfirmSent}
+            className="inline-flex h-12 items-center justify-center rounded-full px-6 text-sm font-bold disabled:opacity-50"
+            style={{
+              background: "var(--home-result-primary-bg)",
+              color: "var(--home-result-primary-fg)",
+              boxShadow: "var(--home-result-primary-shadow)",
+            }}
+          >
+            {action === "CLAIM" ? "I've sent the payment" : "I've sent the request fee"}
+          </button>
+        </div>
+      ) : null}
+
+      {/* ── OTP ── */}
+      {phase === "otp" ? (
+        <div className="grid gap-5">
+          <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
+            The mint sent a 6-digit passcode to the address currently bound to{" "}
+            <strong style={{ color: "var(--fg-heading)" }}>{name}</strong>. Find it in your
+            wallet&apos;s memo, then enter it below.
+          </p>
+          <div className="flex justify-center">
+            <PasscodeBoxes
+              value={s.otpCode}
+              onChange={(digits) => set({ otpCode: digits, otpError: "" })}
+              onSubmit={() => void handleVerifyOtp()}
+              error={!!s.otpError}
+              success={s.otpVerified}
+              autoFocus
+            />
+          </div>
+          {s.otpError ? (
+            <p className="text-center text-sm font-medium" style={{ color: "#ef4444" }}>{s.otpError}</p>
+          ) : null}
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={handleOtpBack}
+              className="inline-flex h-11 items-center justify-center rounded-full border px-5 text-sm font-semibold"
+              style={{ borderColor: "var(--border-muted)", color: "var(--fg-heading)" }}
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              disabled={s.otpLoading || s.otpCode.length !== 6}
+              onClick={() => void handleVerifyOtp()}
+              className="inline-flex h-11 items-center justify-center rounded-full px-6 text-sm font-bold disabled:opacity-50"
+              style={{
+                background: "var(--home-result-primary-bg)",
+                color: "var(--home-result-primary-fg)",
+                boxShadow: "var(--home-result-primary-shadow)",
+              }}
+            >
+              {s.otpLoading ? <AnimatedLoadingLabel label="Preparing" active /> : "Continue"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── RESPOND (OTP + name payment) ── */}
+      {phase === "respond" ? (
+        <div className="grid gap-5">
+          <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
+            {action === "UPDATE"
+              ? "Send the update payment with your passcode memo to execute the update."
+              : "Send the release memo to execute the release. No name payment is due."}
+          </p>
+          <QrBlock
+            address={s.paymentAddress}
+            amount={s.respondAmountZec}
+            memo={s.respondMemo}
+            downloadFilename={`zns-${actionToSlug(action)}-respond.png`}
+          />
+          <button
+            type="button"
+            onClick={handleRespondSent}
+            className="inline-flex h-12 items-center justify-center rounded-full px-6 text-sm font-bold"
+            style={{
+              background: "var(--home-result-primary-bg)",
+              color: "var(--home-result-primary-fg)",
+              boxShadow: "var(--home-result-primary-shadow)",
+            }}
+          >
+            I've sent it
+          </button>
+        </div>
+      ) : null}
+
+      {/* ── SCANNING ── */}
+      {phase === "scanning" ? (
+        <div className="grid gap-5">
+          {s.scanState === "mined" ? (
+            <div className="grid gap-4 text-center">
+              <h2 className="text-2xl font-black tracking-tight" style={{ color: "var(--fg-heading)" }}>
+                {successShare.title}
+              </h2>
               <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-                Send exact memo and minimum amount to the address below to receive a passcode.
+                {action === "CLAIM"
+                  ? `${name} is registered on-chain. View it any time on the explorer.`
+                  : action === "UPDATE"
+                    ? `${name} now points at its new address.`
+                    : `${name} has been released.`}
               </p>
-              {s.otpMemo ? (
-                <div className="flex justify-center pt-4">
-                  <QrBlock
-                    address={getNetworkConstants(network).OTP_SIGNIN_ADDR}
-                    amount={getNetworkConstants(network).OTP_AMOUNT}
-                    memo={s.otpMemo}
-                    size={180}
-                    belowQr={
-                      !s.otpSent ? (
-                        <PayWithNoirButton
-                          to={getNetworkConstants(network).OTP_SIGNIN_ADDR}
-                          amount={getNetworkConstants(network).OTP_AMOUNT}
-                          memo={s.otpMemo}
-                          onSent={(_txid, startedAt) =>
-                            set({
-                              otpSent: true,
-                              otpNoirSentAt: startedAt,
-                              otpCode: "",
-                              otpError: "",
-                              otpVerified: false,
-                            })
-                          }
-                        />
-                      ) : null
-                    }
-                  />
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          {/* Persist after passcode is requested: summary + boxes (green after verify). */}
-          {s.otpSent ? (
-            <div
-              className={`flex w-full flex-col items-center gap-3 ${active ? "mt-6" : "mt-2"}`}
-            >
-              <p className="text-center text-sm" style={{ color: "var(--fg-body)" }}>
-                The owner of <NameBadge name={name} /> will receive a passcode in their wallet.
-              </p>
-              <PasscodeBoxes
-                id="name-action-passcode"
-                value={s.otpCode}
-                disabled={muted || s.otpVerified}
-                error={active && !!s.otpError}
-                success={
-                  s.otpCode.length === 6 &&
-                  !s.otpError &&
-                  (s.otpVerified || complete)
-                }
-                autoFocus={active && !s.otpVerified}
-                className="w-full"
-                onChange={(digits) =>
-                  set({
-                    otpCode: digits,
-                    otpError: "",
-                    otpVerified: false,
-                  })
-                }
-                onSubmit={() => void handleVerifyOtp()}
-              />
-              {active && noirOtpAutofillStatus === "polling" ? (
-                <p className="text-center text-xs" style={{ color: "var(--fg-muted)" }}>
-                  Waiting for the passcode from Noir Wallet&hellip;
-                </p>
-              ) : null}
-              {active && noirOtpAutofillStatus === "found" ? (
-                <p className="text-center text-xs" style={{ color: "var(--color-accent-green)" }}>
-                  Passcode filled from Noir Wallet. Verify it to continue.
-                </p>
-              ) : null}
-              {active && noirOtpAutofillStatus === "timed_out" ? (
-                <p className="text-center text-xs" style={{ color: "var(--fg-muted)" }}>
-                  No passcode was detected automatically. Enter it manually.
-                </p>
-              ) : null}
-              {active && noirOtpAutofillStatus === "error" ? (
-                <p className="text-center text-xs" style={{ color: "var(--fg-muted)" }}>
-                  Noir Wallet history could not be read. Enter the passcode manually.
-                </p>
-              ) : null}
-              {active && (s.otpError || s.otpAttempts > 0) ? (
-                <p className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1">
-                  {s.otpError ? (
-                    <span
-                      className="text-sm font-semibold"
-                      style={{ color: "var(--accent-red, #e05252)" }}
-                    >
-                      {s.otpError}
-                    </span>
-                  ) : null}
-                  {s.otpAttempts > 0 ? (
-                    <span className="text-xs" style={{ color: "var(--fg-muted)" }}>
-                      Attempt {s.otpAttempts} of {getNetworkConstants(network).OTP_MAX_ATTEMPTS}
-                    </span>
-                  ) : null}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      );
-    }
-
-    if (p === "confirm") {
-      return (
-        <div
-          className={`transition-opacity duration-300 ease-out ${muted ? "opacity-70" : "opacity-100"}`}
-        >
-          <PhaseLabel complete={complete}>{phaseHeader(action, "confirm")}</PhaseLabel>
-          <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-            {modalDescription(action, "confirm", name, s)}
-          </p>
-          {s.uri && s.paymentAddress ? (
-            <div
-              className="grid transition-[grid-template-rows,opacity] duration-500 ease-in-out"
-              style={{
-                gridTemplateRows: active ? "1fr" : "0fr",
-                opacity: active ? 1 : 0,
-              }}
-              aria-hidden={!active}
-            >
-              {/* Nested under copy so collapsed height leaves no leftover space-y gap. */}
-              <div className="min-h-0 overflow-hidden">
-                <div className="flex justify-center pt-4">
-                  <QrBlock
-                    address={s.paymentAddress}
-                    amount={s.amountZec}
-                    memo={s.memo}
-                    size={200}
-                    belowQr={
-                      <PayWithNoirButton
-                        to={s.paymentAddress}
-                        amount={
-                          Number(s.amountZec) > 0 ? s.amountZec : "0.00000001"
-                        }
-                        memo={s.memo}
-                      />
-                    }
-                  />
-                </div>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleShare()}
+                  className="inline-flex h-11 items-center justify-center rounded-full border px-5 text-sm font-semibold"
+                  style={{ borderColor: "var(--border-muted)", color: "var(--fg-heading)" }}
+                >
+                  Share
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDone}
+                  className="inline-flex h-11 items-center justify-center rounded-full px-6 text-sm font-bold"
+                  style={{
+                    background: "var(--home-result-primary-bg)",
+                    color: "var(--home-result-primary-fg)",
+                    boxShadow: "var(--home-result-primary-shadow)",
+                  }}
+                >
+                  Done
+                </button>
               </div>
             </div>
-          ) : null}
-        </div>
-      );
-    }
-
-    if (p === "scanning") {
-      if (s.scanState === "mined" && action !== "BUY") {
-        return (
-          <div className="w-full space-y-4">
-            {/* Label stays left; success body is centered. */}
-            <PhaseLabel complete>Scanning</PhaseLabel>
-            <div className="flex w-full flex-col items-center gap-4 text-center">
-              <ZcashNamesLogoMark size={56} />
-              <div className="flex w-full flex-col items-center text-center text-sm" style={{ color: "var(--fg-body)" }}>
-                {minedMessage(action, name, s.address)}
-              </div>
-            </div>
-          </div>
-        );
-      }
-      const statusMessage = scanningStatusMessage(action, s.scanState);
-      return (
-        <div className="space-y-3">
-          <PhaseLabel complete={complete}>Scanning</PhaseLabel>
-          <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-            {modalDescription(action, "scanning", name, s)}
-          </p>
-          {statusMessage ? (
-            <div
-              className="flex w-full flex-col items-center justify-center rounded-xl p-5 text-center"
-              style={{
-                background: "var(--color-raised)",
-                border: `1.5px solid ${s.scanState === "in_mempool" || s.scanState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
-              }}
-            >
-              <p className="w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
-                {statusMessage}
+          ) : (
+            <div className="grid justify-items-center gap-3 py-4">
+              <AnimatedLoadingLabel label="Scanning the chain" active />
+              <p className="max-w-md text-center text-sm" style={{ color: "var(--fg-body)" }}>
+                Waiting for your {ACTION_LABELS[action].toLowerCase()} to be recorded on Zcash.
+                This usually takes a few minutes.
               </p>
-            </div>
-          ) : null}
-        </div>
-      );
-    }
-
-    if (p === "fund") {
-      const listed = resolveResult.status === "listed" ? resolveResult : null;
-      if (!listed) {
-        return (
-          <div className="space-y-2">
-            <PhaseLabel complete={complete}>Listing withdrawn</PhaseLabel>
-            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              This name is no longer for sale. Don&rsquo;t send the seller payment.
-            </p>
-          </div>
-        );
-      }
-      return (
-        <div className={`space-y-4 ${muted ? "opacity-70" : ""}`}>
-          <div>
-            <PhaseLabel complete={complete}>Pay the seller</PhaseLabel>
-            <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-              {modalDescription(action, "fund", name, s, {
-                listingPriceZec: listed.listingPrice.zec,
-              })}
-            </p>
-          </div>
-          {listed.pendingBuy && (
-            <p className="text-xs break-all" style={{ color: "#22c55e" }}>
-              Locked to <AddressBadge address={listed.pendingBuy.buyer} />
-            </p>
-          )}
-          {active && (
-            <div className="flex justify-center">
-              <QrBlock
-                address={listed.payTaddr}
-                amount={String(listed.listingPrice.zec)}
-                memo=""
-                size={200}
-                belowQr={
-                  <PayWithNoirButton
-                    to={listed.payTaddr}
-                    amount={String(listed.listingPrice.zec)}
-                  />
-                }
-              />
             </div>
           )}
         </div>
-      );
-    }
-
-    if (p === "settling") {
-      if (s.settleState === "mined") {
-        return (
-          <div className="w-full space-y-4">
-            {/* Label stays left; success body is centered. */}
-            <PhaseLabel complete>Finalising purchase</PhaseLabel>
-            <div className="flex w-full flex-col items-center gap-4 text-center">
-              <ZcashNamesLogoMark size={56} />
-              <div className="flex w-full flex-col items-center text-center text-sm" style={{ color: "var(--fg-body)" }}>
-                {minedMessage("BUY", name, s.address)}
-              </div>
-            </div>
-          </div>
-        );
-      }
-      return (
-        <div className="space-y-3">
-          <PhaseLabel complete={complete}>Finalising your purchase</PhaseLabel>
-          <p className="text-sm" style={{ color: "var(--fg-body)" }}>
-            {modalDescription(action, "settling", name, s)}
-          </p>
-          <div
-            className="flex w-full flex-col items-center justify-center rounded-xl p-5 text-center"
-            style={{
-              background: "var(--color-raised)",
-              border: `1.5px solid ${s.settleState === "confirming" ? "#ca8a04" : "var(--faq-border)"}`,
-            }}
-          >
-            <p className="w-full text-center text-sm" style={{ color: "var(--fg-body)" }}>
-              {settlingStatusMessage(action, s.settleState)}
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    return null;
-  }
-
-  return (
-    <>
-      <OtpBackWarningModal
-        open={otpBackOpen}
-        onCancel={() => setOtpBackOpen(false)}
-        onConfirm={confirmOtpBack}
-      />
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-        }}
-        aria-label={`${ACTION_LABELS[action]} ${name}`}
-        className="w-full rounded-2xl border px-5 py-5 sm:px-6 sm:py-6"
-        style={{
-          borderColor: "var(--faq-border)",
-          background:
-            "linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated, transparent) 76%, transparent), color-mix(in srgb, var(--faq-border) 10%, transparent))",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
-        }}
-      >
-        <div className="space-y-6">
-          {visiblePhases.map((p, index) => {
-            const active = index === s.step;
-            const complete = index < s.step || (active && isSuccess);
-            return (
-              <div
-                key={`${p}-${index}`}
-                className={index < s.step ? "border-b pb-5" : undefined}
-                style={
-                  index < s.step
-                    ? {
-                        borderColor: "color-mix(in srgb, var(--faq-border) 72%, transparent)",
-                      }
-                    : undefined
-                }
-              >
-                {renderPhaseBody(p, active, complete)}
-              </div>
-            );
-          })}
-        </div>
-
-        <div
-          className="mt-6 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-t pt-4 text-sm"
-          style={{
-            borderColor: "color-mix(in srgb, var(--faq-border) 72%, transparent)",
-            color: "var(--fg-muted)",
-          }}
-        >
-          <div className="flex min-w-0 justify-start">
-            {isSuccess ? successShareButton() : footerBack()}
-          </div>
-          <div className="justify-self-center whitespace-nowrap text-center">
-            Step {Math.min(s.step + 1, phases.length)} of {phases.length}
-          </div>
-          <div className="flex min-w-0 justify-end">{footerPrimary()}</div>
-        </div>
-      </form>
-    </>
+      ) : null}
+    </div>
   );
 }

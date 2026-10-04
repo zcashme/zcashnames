@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useAnimatedEllipsis } from "@/components/ui/AnimatedLoadingLabel";
-import type { Phase, ScanState } from "@/lib/types";
+import type { Phase } from "@/lib/types";
 import type { ResumeSnapshot } from "@/lib/purchases/resume";
 import {
   NameBadge,
@@ -11,30 +11,21 @@ import {
   phaseHeader,
   progressFillForPhase,
   scanningStatusMessage,
-  settlingStatusMessage,
 } from "@/components/purchases/modalCopy";
 
 type BannerState = {
   step?: number;
   address?: string;
-  price?: string;
-  priceInput?: string;
-  settleState?: ScanState;
 };
 
-const FALLBACK_PHASES: Phase[] = ["input", "confirm", "scanning", "fund", "settling"];
+const FALLBACK_PHASES: Phase[] = ["input", "confirm", "otp", "respond", "scanning"];
 
 function stateOf(snap: ResumeSnapshot): BannerState {
   return (snap.state ?? {}) as BannerState;
 }
 
-function settleStateOf(snap: ResumeSnapshot): ScanState {
-  return stateOf(snap).settleState ?? "not_detected";
-}
-
 function isCompleteSnapshot(snap: ResumeSnapshot): boolean {
-  if (snap.phase === "settling") return settleStateOf(snap) === "mined";
-  return snap.phase === "scanning" && snap.action !== "BUY" && snap.scanState === "mined";
+  return snap.phase === "scanning" && snap.scanState === "mined";
 }
 
 function explorerHref(snap: ResumeSnapshot): string {
@@ -111,12 +102,12 @@ function LoadingEllipsis({ active }: { active: boolean }) {
 
 interface ResumeBannerProps {
   snapshot: ResumeSnapshot;
-  hiddenByFullModal?: boolean;
+  hiddenByMinimized?: boolean;
   onResume: () => void;
   onDismiss: () => void;
 }
 
-export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onResume, onDismiss }: ResumeBannerProps) {
+export default function ResumeBanner({ snapshot, hiddenByMinimized = false, onResume, onDismiss }: ResumeBannerProps) {
   const [confirmingClear, setConfirmingClear] = useState(false);
   const snapshotState = stateOf(snapshot);
   const header =
@@ -126,21 +117,17 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
   const isComplete = isCompleteSnapshot(snapshot);
   const isConfirm = snapshot.phase === "confirm";
   const description = isComplete
-    ? minedMessage(snapshot.action === "BUY" ? "BUY" : snapshot.action, snapshot.name, snapshotState.address)
+    ? minedMessage(snapshot.action, snapshot.name, snapshotState.address)
     : modalDescription(snapshot.action, snapshot.phase, snapshot.name, snapshotState);
   const copyIncludesName =
     isComplete ||
-    snapshot.phase === "unlock" ||
     snapshot.phase === "input" ||
-    snapshot.phase === "fund" ||
     snapshot.phase === "scanning";
   const showStandaloneName = !copyIncludesName;
   const statusDetail =
     snapshot.phase === "scanning" && !isComplete
       ? scanningStatusMessage(snapshot.action, snapshot.scanState)
-      : snapshot.phase === "settling" && !isComplete
-        ? settlingStatusMessage(snapshot.action, settleStateOf(snapshot))
-        : null;
+      : null;
   const clearWarning = isConfirm
     ? "Removes this prepared request. Sent payments cannot be undone."
     : "Payment processing, if any, cannot be cancelled. Ignore?";
@@ -158,12 +145,12 @@ export default function ResumeBanner({ snapshot, hiddenByFullModal = false, onRe
         background: "var(--leaders-card-bg-solid, var(--leaders-card-bg, var(--feature-card-bg)))",
         borderColor: "var(--leaders-card-border, var(--faq-border))",
         boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
-        opacity: hiddenByFullModal ? 0 : 1,
-        pointerEvents: hiddenByFullModal ? "none" : "auto",
-        transform: hiddenByFullModal ? "translateY(1rem)" : "translateY(0)",
+        opacity: hiddenByMinimized ? 0 : 1,
+        pointerEvents: hiddenByMinimized ? "none" : "auto",
+        transform: hiddenByMinimized ? "translateY(1rem)" : "translateY(0)",
         transition: "opacity 320ms ease, transform 320ms ease",
       }}
-      aria-hidden={hiddenByFullModal ? "true" : undefined}
+      aria-hidden={hiddenByMinimized ? "true" : undefined}
     >
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-2">

@@ -38,7 +38,7 @@ interface UseSearchStateReturn {
 
 export function useSearchState(): UseSearchStateReturn {
   const { zns } = useZns();
-  const network = zns.mode === "waitlist" ? "testnet" : zns.mode;
+  const network = zns.mode;
   const [input, setInputState] = useState("");
   const [results, setResults] = useState<ResolveName[]>([]);
   const [searching, setSearching] = useState(false);

@@ -1,45 +1,41 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { writeLocalStorage } from "@/components/hooks/useLocalStorage";
 import {
-  watchScanning, deriveScanState, type Expected,
+  watchScanning, deriveScanState,
 } from "@/lib/purchases/scanningWatcher";
 import {
   RESUME_EVENT, RESUME_KEY, clearResume, readResume, notifyResumeChanged,
   type ResumeSnapshot,
 } from "@/lib/purchases/resume";
 
-// All phases get a resume banner — closing the modal anywhere should behave
-// like "minimize", not "abandon". The banner restores the modal at the same
+// All phases get a resume banner — closing the form anywhere should behave
+// like "minimize", not "abandon". The banner restores the form at the same
 // step; only the explicit "Done" / "Abandon" controls clear the snapshot.
 const BANNER_PHASES = new Set([
-  "unlock", "input", "otp",
-  "confirm", "fund", "scanning", "settling",
+  "input", "confirm", "otp", "respond", "scanning",
 ]);
 
-// Pull the `expected` post-action shape out of the modal's saved reducer
-// state. The shape mirrors what Zip321Modal builds at scanning-phase entry.
-function expectedFromSnapshot(snap: ResumeSnapshot): Expected | null {
-  const state = snap.state as { address?: string; priceInput?: string } | null;
+// Pull the scan expectation out of the saved flow state. Mirrors what
+// usePurchaseFlow captures when entering the scanning phase.
+function expectedFromSnapshot(snap: ResumeSnapshot) {
+  const state = snap.state as {
+    address?: string;
+    baselineTxid?: string;
+  } | null;
   if (!state) return null;
-  const address = state.address?.trim() || undefined;
-  let priceZats: number | undefined;
-  if (state.priceInput) {
-    const num = Number(state.priceInput.replace(/,/g, "").trim());
-    if (Number.isFinite(num) && num >= 0) priceZats = Math.round(num * 1e8);
-  }
-  return { action: snap.action, address, priceZats };
+  return {
+    action: snap.action,
+    address: state.address?.trim() || undefined,
+    baselineTxid: state.baselineTxid ?? "",
+  };
 }
 
 // Read + watch the resume snapshot. Subscribes to the shared scanning watcher
 // while in scanning phase so the snapshot's scanState stays current — this
-// lets the banner reflect mined/in_mempool/etc even when the modal is closed,
-// and lets a reopened modal rehydrate to the latest known state.
-//
-// The modal subscribes to the same watcher independently, so closing the
-// modal cleanly hands off polling responsibility to this hook (and vice
-// versa) via subscriber reference counting.
+// lets the banner reflect mined even when the form is closed, and lets a
+// reopened form rehydrate to the latest known state.
 export function usePurchaseResume() {
   const [snapshot, setSnapshot] = useState<ResumeSnapshot | null>(null);
 
@@ -58,8 +54,7 @@ export function usePurchaseResume() {
 
   // Subscribe to the scanning watcher while in scanning phase. Writes the
   // derived scanState back into the snapshot (top-level + state mirror) so
-  // the banner reflects it and a reopened modal rehydrates correctly.
-  const sawMempoolRef = useRef(false);
+  // the banner reflects it and a reopened form rehydrates correctly.
   useEffect(() => {
     if (!snapshot) return;
     if (snapshot.phase !== "scanning") return;
@@ -67,14 +62,10 @@ export function usePurchaseResume() {
     const expected = expectedFromSnapshot(snapshot);
     if (!expected) return;
     const { name, network } = snapshot;
-    sawMempoolRef.current = snapshot.scanState !== "not_detected";
     return watchScanning(name, network, (tick) => {
       const cur = readResume();
       if (!cur || cur.name !== name || cur.network !== network) return;
-      const { scanState: next, sawMempool } = deriveScanState(
-        tick, expected, { sawMempool: sawMempoolRef.current },
-      );
-      sawMempoolRef.current = sawMempool;
+      const next = deriveScanState(tick, expected);
       if (next === cur.scanState) return;
       const updated: ResumeSnapshot = {
         ...cur,
