@@ -2,6 +2,8 @@
 
 import { NETWORKS } from "zcashname-sdk";
 import { getZns } from "@/lib/zns/utils";
+import { noteStatus } from "@/lib/zns/note-reader";
+import { getMintConfig } from "@/lib/mint/config";
 import { getWaitlistStats } from "@/lib/leaders/leaders";
 
 export type WaitlistStats = {
@@ -28,6 +30,24 @@ export type ChainStats = {
 export type NetworkStats = WaitlistStats | ChainStats;
 
 export async function getChainStats(mode: "mainnet" | "testnet"): Promise<ChainStats> {
+  // Testnet reads the Name Note resolver; its registry UFVK is verified
+  // against the value baked into mint-config.
+  if (mode === "testnet") {
+    const mint = getMintConfig("testnet");
+    const note = await noteStatus();
+    if (!note) {
+      return { mode, claimed: 0, forSale: 0, syncedHeight: 0, uivk: "", uivkVerified: false };
+    }
+    return {
+      mode,
+      claimed: note.registered,
+      forSale: 0, // the Name Note protocol has no marketplace
+      syncedHeight: note.syncedHeight,
+      uivk: note.viewingKey,
+      uivkVerified: !!mint.registryUfvk && note.viewingKey === mint.registryUfvk,
+    };
+  }
+
   try {
     const s = await getZns(mode).status();
     return {

@@ -12,7 +12,7 @@ import {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const network = parseExplorerNetwork(searchParams.get("env"));
-  const tab = parseExplorerTab(searchParams.get("tab") ?? undefined);
+  const tab = parseExplorerTab(searchParams.get("tab") ?? undefined, network);
   const page = parseExplorerPage(searchParams.get("page"));
   const pageSize = parseExplorerPageSize(searchParams.get("pageSize"));
   const searchMode = parseExplorerSearchMode(searchParams.get("searchMode"));

@@ -10,7 +10,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import type { ResolveName, ZnsEvent, NameAvailabilityState } from "@/lib/types";
+import type { Network, ResolveName, ZnsEvent, NameAvailabilityState } from "@/lib/types";
 import type { Action } from "@/lib/types";
 import { formatUsdEquivalent, zatsToZec } from "@/lib/zns/utils";
 import ActionBadge from "@/components/ActionBadge";
@@ -31,6 +31,13 @@ function toAvailabilityState(result: ResolveName): NameAvailabilityState {
   return "blocked";
 }
 
+function expiryLabel(expiresAt: string): string {
+  if (expiresAt === "none") return "Never (no fixed expiration)";
+  const ms = Number(expiresAt) * 1000;
+  if (!Number.isFinite(ms)) return expiresAt;
+  return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
 export default function ExplorerNameDetail({
   query,
   result,
@@ -38,6 +45,7 @@ export default function ExplorerNameDetail({
   isPending,
   usdPerZec,
   onAction,
+  network = "mainnet",
 }: {
   query: string;
   result: ResolveName | null;
@@ -45,6 +53,7 @@ export default function ExplorerNameDetail({
   isPending: boolean;
   usdPerZec: number | null;
   onAction: (action: Action) => void;
+  network?: Network;
 }) {
   const [copiedValue, setCopiedValue] = useState<string | null>(null);
   // Match NameStatusButtons proximity hover (scale + shadow) on identity links.
@@ -138,7 +147,7 @@ export default function ExplorerNameDetail({
 
           {showCenteredActionLayout && (
             <div className="flex flex-col gap-4">
-              {availabilityState && (
+              {availabilityState && network === "mainnet" && (
                 <NameStatusButtons
                   status={availabilityState}
                   onAction={onAction}
@@ -175,6 +184,14 @@ export default function ExplorerNameDetail({
                 </span>
                 <span className="text-fg-muted">{result.registration.height.toLocaleString()}</span>
               </div>
+              {result.registration.expiresAt && (
+                <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
+                  <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                    Expires
+                  </span>
+                  <span className="text-fg-muted">{expiryLabel(result.registration.expiresAt)}</span>
+                </div>
+              )}
               <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
                 <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
                   Txid

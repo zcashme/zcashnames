@@ -10,6 +10,8 @@ import {
 import type { Network, Action, ResolveName, Registration } from "@/lib/types";
 import { getProtectedClaimGate } from "@/lib/zns/protected-claim";
 import { getNamePricing } from "@/lib/network-stats";
+import { noteEvents, noteRegistrations, noteResolve } from "@/lib/zns/note-reader";
+import { quoteClaimZats } from "@/lib/mint/pricing";
 
 //
 // Server-side name resolution. These functions are the read path for the
@@ -30,6 +32,26 @@ export async function getCurrentRegistrations(
   limit?: number,
   offset?: number,
 ) {
+  // Testnet reads the Name Note resolver and maps records into the
+  // legacy view model (uppercase verbs, optional expiresAt) so the
+  // explorer tables render unchanged.
+  if (network === "testnet") {
+    const notes = await noteRegistrations(limit, offset);
+    return notes
+      .map((n) => ({
+        name: n.name,
+        address: n.address,
+        txid: n.txid,
+        height: n.height,
+        nonce: 0,
+        signature: null,
+        lastAction: n.lastAction.toUpperCase(),
+        pubkey: null,
+        listing: null,
+        expiresAt: n.expiresAt,
+      }))
+      .sort((a, b) => b.height - a.height || a.name.localeCompare(b.name));
+  }
   try {
     const registrations = await getZns(network).listAllRegistrations(limit, offset);
     return [...registrations].sort((a, b) => b.height - a.height || a.name.localeCompare(b.name));
@@ -46,6 +68,34 @@ export async function resolveName(
 
   if (!isValidUsername(normalized)) {
     throw new Error("Use 1-62 characters: lowercase letters and numbers only.");
+  }
+
+  // Testnet: resolve against the Name Note resolver, price via the Mint
+  // schedule mirror (the resolver exposes no pricing).
+  if (network === "testnet") {
+    const note = await noteResolve(normalized);
+    if (!note) {
+      const zats = await quoteClaimZats(normalized, "1y");
+      return {
+        status: "available",
+        query: normalized,
+        claimCost: { zats, zec: zatsToZec(zats) },
+      };
+    }
+    return {
+      status: "registered",
+      query: normalized,
+      registration: {
+        name: note.name,
+        address: note.address,
+        txid: note.txid,
+        height: note.height,
+        nonce: 0,
+        pubkey: null,
+        lastAction: note.lastAction.toUpperCase(),
+        expiresAt: note.expiresAt,
+      },
+    };
   }
 
   const zns = getZns(network);

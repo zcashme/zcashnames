@@ -14,6 +14,7 @@ import { zatsToZec } from "@/lib/zns/utils";
 import type { Listing, Network, Registration, ZnsEvent } from "@/lib/types";
 import {
   buildExplorerListCacheKey,
+  NOTE_ACTIONS,
   EXPLORER_CACHE_LIMIT,
   getExplorerSortOptions,
   normalizeExplorerSort,
@@ -30,11 +31,19 @@ import {
 } from "./listConfig";
 import type { ExplorerListData } from "./listData";
 
-const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "registered", label: "Registered" },
-  { key: "forsale", label: "For Sale" },
-];
+function primaryTabsFor(network: Network): { key: ExplorerTab; label: string }[] {
+  if (network === "testnet") {
+    return [
+      { key: "all" as const, label: "All" },
+      { key: "registered" as const, label: "Registered" },
+    ];
+  }
+  return [
+    { key: "all" as const, label: "All" },
+    { key: "registered" as const, label: "Registered" },
+    { key: "forsale" as const, label: "For Sale" },
+  ];
+}
 
 type ExplorerListPaneProps = {
   initialData: ExplorerListData;
@@ -55,8 +64,8 @@ export default function ExplorerListPane({
 
   const selectedName = searchParams.get("name");
   const showNameDetail = !!selectedName;
-  const tab = parseExplorerTab(searchParams.get("tab") ?? undefined);
   const network = parseExplorerNetwork(searchParams.get("env"));
+  const tab = parseExplorerTab(searchParams.get("tab") ?? undefined, network);
   const page = parseExplorerPage(searchParams.get("page"));
   const pageSize = parseExplorerPageSize(searchParams.get("pageSize"));
   const searchMode = parseExplorerSearchMode(searchParams.get("searchMode"));
@@ -181,9 +190,10 @@ export default function ExplorerListPane({
     },
   });
 
+  const tabs = primaryTabsFor(network);
   const totalPages = Math.max(1, Math.ceil(data.totalCount / pageSize));
   const activeEventsTotal = data.totalCount;
-  const activeMoreLabel = PRIMARY_TABS.some((entry) => entry.key === tab)
+  const activeMoreLabel = tabs.some((entry) => entry.key === tab)
     ? null
     : ACTION_LABELS[tab as (typeof ACTIONS)[number]];
 
@@ -321,6 +331,13 @@ export default function ExplorerListPane({
     );
   }
 
+  function expiryLabel(expiresAt: string | undefined): string {
+    if (!expiresAt || expiresAt === "none") return "Never";
+    const ms = Number(expiresAt) * 1000;
+    if (!Number.isFinite(ms)) return expiresAt;
+    return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
   function renderRegistrationsTable(rows: Registration[]) {
     return (
       <table className="w-full text-left text-sm">
@@ -405,12 +422,16 @@ export default function ExplorerListPane({
                   className="px-4 py-3 sm:px-6"
                   style={{ borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)" }}
                 >
-                  <span
-                    className="rounded px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
-                    style={getRegistrationStatusBadgeStyle(!!row.listing)}
-                  >
-                    {row.listing ? "Listed" : "Registered"}
-                  </span>
+                  {network === "testnet" ? (
+                    expiryLabel(row.expiresAt)
+                  ) : (
+                    <span
+                      className="rounded px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
+                      style={getRegistrationStatusBadgeStyle(!!row.listing)}
+                    >
+                      {row.listing ? "Listed" : "Registered"}
+                    </span>
+                  )}
                 </td>
                 <td
                   className="hidden sm:table-cell px-4 py-3 sm:px-6"
@@ -536,7 +557,7 @@ export default function ExplorerListPane({
       <div className={showNameDetail ? "hidden space-y-4" : "space-y-4"}>
         <DataViewTabs
           borderColor="var(--leaders-card-border)"
-          tabs={PRIMARY_TABS.map((entry) => {
+          tabs={tabs.map((entry) => {
             const count = getTabCount(entry.key);
             return {
               key: entry.key,
@@ -551,7 +572,7 @@ export default function ExplorerListPane({
             label: "More",
             activeLabel: activeMoreLabel,
             menuBackground: "var(--leaders-card-bg-solid, var(--leaders-card-bg))",
-            items: ACTIONS.map((actionKey) => ({
+            items: (network === "testnet" ? NOTE_ACTIONS : ACTIONS).map((actionKey) => ({
               key: actionKey,
               label: ACTION_LABELS[actionKey],
               active: tab === actionKey,

@@ -1,6 +1,7 @@
 import { getChainStats } from "@/lib/network-stats";
-import type { Listing, Network, Registration, ZnsEvent } from "@/lib/types";
+import type { EventAction, Listing, Network, Registration, ZnsEvent } from "@/lib/types";
 import { getCurrentRegistrations, getEvents, getListings } from "@/lib/zns/resolve";
+import { noteEvents, noteRegistrations } from "@/lib/zns/note-reader";
 import { ACTIONS } from "@/lib/types";
 import { filterEvents, filterListings, filterRegistrations } from "@/lib/zns/utils";
 import type {
@@ -192,12 +193,60 @@ export async function getExplorerListData(args: {
   } = args;
   const statsPromise = getChainStats(network);
   const activeSearchQuery = searchMode === "contains" ? normalizeSearchQuery(searchQuery) : "";
-  const [stats, allRegistrations, allListingsResult, allEventsResult] = await Promise.all([
-    statsPromise,
-    getCurrentRegistrations(network),
-    getListings(network),
-    getAllEvents(network),
-  ]);
+
+  // Testnet: read the Name Note resolver and map records into the legacy
+  // view models (uppercase verbs, ua field, listing: null) so the shared
+  // explorer tables, filters, and search render unchanged. The protocol
+  // has no marketplace, so listings are always empty.
+  let allRegistrations: Registration[];
+  let allEventsResult: { events: ZnsEvent[]; total: number };
+  let allListingsResult: { listings: Listing[]; total: number } = { listings: [], total: 0 };
+  let stats: Awaited<ReturnType<typeof getChainStats>>;
+  if (network === "testnet") {
+    const [notes, noteEventsResult, testnetStats] = await Promise.all([
+      noteRegistrations(),
+      noteEvents({ limit: EVENTS_BATCH_SIZE, offset: 0 }),
+      statsPromise,
+    ]);
+    stats = testnetStats;
+    allRegistrations = notes
+      .map((n) => ({
+        name: n.name,
+        address: n.address,
+        txid: n.txid,
+        height: n.height,
+        nonce: 0,
+        signature: null,
+        lastAction: n.lastAction.toUpperCase(),
+        pubkey: null,
+        listing: null,
+        expiresAt: n.expiresAt,
+      }))
+      .sort((a, b) => b.height - a.height || a.name.localeCompare(b.name));
+    allEventsResult = {
+      events: noteEventsResult.events.map((ev) => ({
+        id: ev.id,
+        name: ev.name,
+        action: ev.action.toUpperCase() as EventAction,
+        txid: ev.txid,
+        height: ev.height,
+        ua: ev.address,
+        price: null,
+        nonce: null,
+        signature: null,
+        pubkey: null,
+      })),
+      total: noteEventsResult.total,
+    };
+  } else {
+    [stats, allRegistrations, allListingsResult, allEventsResult] = await Promise.all([
+      statsPromise,
+      getCurrentRegistrations(network),
+      getListings(network),
+      getAllEvents(network),
+    ]);
+  }
+
   const filteredRegistrations = filterRegistrations(allRegistrations, activeSearchQuery);
   const filteredListings = filterListings(allListingsResult.listings, activeSearchQuery);
   const filteredEvents = filterEvents(allEventsResult.events, activeSearchQuery);

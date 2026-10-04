@@ -124,7 +124,7 @@ export default function ExplorerView({
 
   const selectedName = searchParams.get("name");
   const currentNetwork = parseExplorerNetwork(searchParams.get("env"));
-  const currentTab = parseExplorerTab(searchParams.get("tab") ?? undefined);
+  const currentTab = parseExplorerTab(searchParams.get("tab") ?? undefined, currentNetwork);
   const currentPage = parseExplorerPage(searchParams.get("page"));
   const currentPageSize = parseExplorerPageSize(searchParams.get("pageSize"));
   const currentContainsSearch = searchParams.get("search") ?? "";
@@ -457,6 +457,7 @@ export default function ExplorerView({
           isPending={isPending && !nameDataReady}
           usdPerZec={usdPerZec}
           onAction={handleDetailAction}
+          network={currentNetwork}
         />
       ) : null}
 
