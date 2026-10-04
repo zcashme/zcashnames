@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512" role="img" aria-label="shieldedscan">
+<rect x="1" y="1" width="22" height="22" rx="3"
+         fill="#050805" stroke="#2bff64" stroke-width="2"/><text x="3.1" y="11.27" font-family="'JetBrains Mono', JBM, ui-monospace, monospace" font-size="2.97" font-weight="700" fill="#2bff64" text-anchor="start">./shielded</text><text x="3.1" y="14.89" font-family="'JetBrains Mono', JBM, ui-monospace, monospace" font-size="2.97" font-weight="700" fill="#2bff64" text-anchor="start">scan</text><rect x="10.40" y="12.76" width="1.53" height="2.31" fill="#2bff64"/>
+</svg>

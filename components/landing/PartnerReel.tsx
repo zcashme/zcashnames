@@ -37,6 +37,7 @@ const PARTNER_ICON_LAYOUT_BY_ID: Partial<Record<string, PartnerIconLayout>> = {
   noir: { scale: 1.2 },
   cipherscan: { scale: 0.65 },
   cyze: { scale: 0.9 },
+  shieldedscan: { scale: 0.9 },
   pgpz: {
     scale: 0.95,
     containerClassName: "flex h-16 w-28 items-center justify-center sm:h-20 sm:w-36",
@@ -76,6 +77,12 @@ const EXTRA_PARTNERS: readonly PartnerReelItem[] = [
     iconSrc: "/icons/pgpz.png",
     lightIconSrc: "/icons/pgpz-light.png",
     href: "https://pgpz.org/",
+  },
+  {
+    id: "shieldedscan",
+    displayName: "Shieldedscan",
+    iconSrc: "/icons/shieldedscan.svg",
+    href: "https://shieldedscan.xyz",
   },
   {
     id: "zdex",
