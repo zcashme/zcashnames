@@ -1,10 +1,9 @@
 /**
  * ExplorerNameDetail — the name resolution panel that appears when a user
  * searches for a specific name in the explorer. Displays the resolved status
- * (available / registered / listed / protected), ownership details (address,
- * block, txid), a link to ZcashMe, listing info (payout, pending buyer), and
- * an event history table. Accepts an onAction callback that navigates to the
- * name-action form page (or opens Zip321Modal on legacy modal paths).
+ * (available / registered), ownership details (address, block, txid,
+ * expires_at), a link to ZcashMe, and an event history table. Accepts an
+ * onAction callback that navigates to the name-action form page.
  */
 "use client";
 
@@ -21,14 +20,23 @@ import {
   NameStatusButtons,
   statusSupportsPrice,
 } from "@/components/NameStatus";
-import NameForSaleShareButton from "@/components/purchases/NameForSaleShareButton";
 
 function toAvailabilityState(result: ResolveName): NameAvailabilityState {
   if (result.status === "available") return "available";
-  if (result.status === "listed") return "forsale";
-  if (result.status === "registered") return "unavailable";
-  if (result.status === "protected") return "protected";
+  if (result.status === "registered") return "registered";
   return "blocked";
+}
+
+/** Human label for a committed expiry value. */
+function expiryLabel(expiresAt: string): string {
+  if (expiresAt === "none") return "Never (no fixed expiration)";
+  const ms = Number(expiresAt) * 1000;
+  if (!Number.isFinite(ms)) return expiresAt;
+  return new Date(ms).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export default function ExplorerNameDetail({
@@ -70,13 +78,12 @@ export default function ExplorerNameDetail({
 
   if (!query) return null;
 
-  const listed = result?.status === "listed" ? result : null;
   const available = result?.status === "available" ? result : null;
+  const registered = result?.status === "registered" ? result : null;
   const availabilityState = result ? toAvailabilityState(result) : null;
   const encodedName = encodeURIComponent(result?.query ?? query);
   const zcashMeUrl = `https://zcash.me/${encodedName}`;
-  const protectedName = result?.status === "protected" ? result : null;
-  const priceZec = listed?.listingPrice.zec ?? available?.claimCost.zec ?? protectedName?.claimCost.zec;
+  const priceZec = available?.claimCost.zec;
   const usdLabel = priceZec != null ? formatUsdEquivalent(priceZec, usdPerZec) : "";
   const showCenteredActionLayout = !!availabilityState;
 
@@ -100,7 +107,7 @@ export default function ExplorerNameDetail({
                   {availabilityState && <NameStatusBadge status={availabilityState} />}
                   {availabilityState && statusSupportsPrice(availabilityState) && priceZec != null && (
                     <p className="m-0 text-[var(--home-result-price-color)] text-[clamp(1.02rem,1.85vw,1.3rem)] font-extrabold tracking-[-0.012em]">
-                      {priceZec} ZEC
+                      ~{priceZec} ZEC
                     </p>
                   )}
                   {availabilityState && statusSupportsPrice(availabilityState) && usdLabel && (
@@ -110,17 +117,9 @@ export default function ExplorerNameDetail({
                   )}
                 </div>
                 <div className="home-result-trust-pills justify-end">
-                  {availabilityState === "forsale" ? (
-                    <NameForSaleShareButton
-                      name={result.query}
-                      variant="feature-chip"
-                      menuAlign="right"
-                    />
-                  ) : (
-                    <span className="home-result-feature-chip">
-                      {result.query.length} characters
-                    </span>
-                  )}
+                  <span className="home-result-feature-chip">
+                    {result.query.length} characters
+                  </span>
                 </div>
               </div>
               <div
@@ -143,7 +142,6 @@ export default function ExplorerNameDetail({
                   status={availabilityState}
                   onAction={onAction}
                   align="center"
-                  hasPendingBuy={!!listed?.pendingBuy}
                 />
               )}
               <div
@@ -153,40 +151,46 @@ export default function ExplorerNameDetail({
             </div>
           )}
 
-          {(result.status === "registered" || result.status === "listed") && (
+          {registered && (
             <div className="flex flex-col gap-1.5 text-sm">
               <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
                 <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
                   Address
                 </span>
                 <span className="min-w-0 flex-1 font-mono text-fg-muted break-all">
-                  {result.registration.address}
+                  {registered.registration.address}
                 </span>
                 <CopyIconButton
-                  onClick={() => copyValue(result.registration.address)}
+                  onClick={() => copyValue(registered.registration.address)}
                   ariaLabel="Copy address"
-                  title={copiedValue === result.registration.address ? "Copied!" : "Copy address"}
-                  copied={copiedValue === result.registration.address}
+                  title={copiedValue === registered.registration.address ? "Copied!" : "Copy address"}
+                  copied={copiedValue === registered.registration.address}
                 />
               </div>
               <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
                 <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
                   Block
                 </span>
-                <span className="text-fg-muted">{result.registration.height.toLocaleString()}</span>
+                <span className="text-fg-muted">{registered.registration.height.toLocaleString()}</span>
+              </div>
+              <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
+                <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+                  Expires
+                </span>
+                <span className="text-fg-muted">{expiryLabel(registered.registration.expiresAt)}</span>
               </div>
               <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
                 <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
                   Txid
                 </span>
                 <span className="min-w-0 flex-1 font-mono text-fg-muted break-all">
-                  {result.registration.txid}
+                  {registered.registration.txid}
                 </span>
                 <CopyIconButton
-                  onClick={() => copyValue(result.registration.txid)}
+                  onClick={() => copyValue(registered.registration.txid)}
                   ariaLabel="Copy registration txid"
-                  title={copiedValue === result.registration.txid ? "Copied!" : "Copy registration txid"}
-                  copied={copiedValue === result.registration.txid}
+                  title={copiedValue === registered.registration.txid ? "Copied!" : "Copy registration txid"}
+                  copied={copiedValue === registered.registration.txid}
                 />
               </div>
               <div
@@ -215,68 +219,14 @@ export default function ExplorerNameDetail({
                   <span className="inline-flex items-center leading-none">View on ZcashMe</span>
                 </a>
               </div>
-
-          {listed && (
-            <div className="flex flex-col gap-1.5 text-sm">
-              <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
-                <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-                  Payout
-                </span>
-                <span className="min-w-0 flex-1 font-mono text-fg-muted break-all">
-                  {listed.payTaddr}
-                </span>
-                <CopyIconButton
-                  onClick={() => copyValue(listed.payTaddr)}
-                  ariaLabel="Copy payout address"
-                  title={copiedValue === listed.payTaddr ? "Copied!" : "Copy payout address"}
-                  copied={copiedValue === listed.payTaddr}
-                />
-              </div>
-              {listed.pendingBuy && (
-                <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
-                  <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-                    Buyer
-                  </span>
-                  <span className="min-w-0 flex-1 font-mono text-fg-muted break-all">
-                    {listed.pendingBuy.buyer}
-                  </span>
-                  <CopyIconButton
-                    onClick={() => copyValue(listed.pendingBuy!.buyer)}
-                    ariaLabel="Copy buyer address"
-                    title={copiedValue === listed.pendingBuy!.buyer ? "Copied!" : "Copy buyer address"}
-                    copied={copiedValue === listed.pendingBuy!.buyer}
-                  />
-                </div>
-              )}
-              {listed.pendingBuy && (
-                <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
-                  <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-                    Price
-                  </span>
-                  <span className="text-fg-muted">
-                    {zatsToZec(listed.pendingBuy.price)} ZEC
-                  </span>
-                </div>
-              )}
-              {listed.pendingBuy && (
-                <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] items-start gap-2">
-                  <span className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-                    Expires
-                  </span>
-                  <span className="text-fg-muted">
-                    Block {listed.pendingBuy.expiresAt.toLocaleString()}
-                  </span>
-                </div>
-              )}
             </div>
           )}
-          {listed && (
+
+          {registered && (
             <div
               className="h-px w-full"
               style={{ background: "var(--leaders-card-border)" }}
             />
-          )}
-            </div>
           )}
 
           {events.length > 0 && (

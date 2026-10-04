@@ -17,13 +17,11 @@ const accentHoverClass =
 const HEADER_MENU_LINKS: MenuLink[] = [
   { label: "Explorer", href: "/explorer" },
   {
-    label: "Waitlist",
+    label: "Names",
     children: [
-      { label: "Join Waitlist", href: "/waitlist#waitlist-name-entry" },
-      { label: "View Waitlist", href: "/waitlist/view" },
-      { label: "Reserve Your Position", href: "/reserve" },
-      { label: "Your Referral Dashboard", href: "/leaders/ref" },
-      { label: "View Referral Leaderboard", href: "/leaders" },
+      { label: "Claim a Name", href: "/claim" },
+      { label: "Collections", href: "/collections" },
+      { label: "Network", href: "/network" },
     ],
   },
   {

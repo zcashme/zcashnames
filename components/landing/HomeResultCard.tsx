@@ -45,9 +45,8 @@ export default function HomeResultCard({
   const zcashMeUrl = `https://zcash.me/${encodedName}`;
 
   const isAvailable = availabilityState === "available";
-  const isForSale = availabilityState === "forsale";
-  const isUnavailable = availabilityState === "unavailable";
-  const showFeatureChips = isAvailable || isForSale;
+  const isUnavailable = availabilityState === "registered";
+  const showFeatureChips = isAvailable;
   const linkProximity = usePointerProximity<HTMLAnchorElement>({
     radius: 145,
     maxScaleBoost: 0.05,
@@ -59,13 +58,8 @@ export default function HomeResultCard({
         "No previous owners",
         ...(isPopularName ? ["Popular name"] : []),
       ]
-    : isForSale
-      ? [
-          `${charCount} characters`,
-          ...(isPopularName ? ["Popular name"] : []),
-        ]
-      : [];
-  const showFooterLinks = isForSale || isUnavailable;
+    : [];
+  const showFooterLinks = isUnavailable;
 
   return (
     <section
@@ -119,7 +113,7 @@ export default function HomeResultCard({
               {footerChips.map((chip) => (
                 <span
                   key={chip}
-                  className={isForSale ? "home-result-feature-chip" : "home-result-trust-pill"}
+                  className="home-result-trust-pill"
                 >
                   {chip}
                 </span>

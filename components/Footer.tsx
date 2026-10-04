@@ -8,7 +8,7 @@ import { SOCIAL_ICON_PATHS, socialIconKeyForLabel } from "@/lib/social-icons";
 
 export default function Footer() {
   const pathname = usePathname();
-  const showLandingDisclaimer = pathname === "/" || pathname === "/waitlist";
+  const showLandingDisclaimer = pathname === "/";
 
   return (
     <footer data-site-footer className="w-full bg-transparent">

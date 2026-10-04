@@ -1,351 +1,305 @@
 "use server";
 
-import crypto from "node:crypto";
-import type { Network } from "@/lib/types";
-
-// Local mirror of zcashname-sdk's PreparedAction — the SDK declares it in
-// zns.d.ts but doesn't formally export it (as of 0.10.0). Drop when upstream
-// adds it to its `export { ... }` list.
-interface PreparedAction {
-  readonly payload: string;
-  complete(signature: string, userPubkey?: string): { memo: string; uri: string };
-}
+import type { Network, ProtocolVerb } from "@/lib/types";
+import { getZns, normalizeUsername, isValidUsername, validateAddress } from "@/lib/zns/utils";
+import { getMintConfig, isMintNetworkEnabled } from "@/lib/zns/mint-config";
 import {
-  getZns,
-  normalizeUsername,
-  isValidUsername,
-  validateAddress,
-  isValidTransparentAddress,
-} from "@/lib/zns/utils";
-import { getNamePricing } from "@/lib/network-stats";
-import { MAX_LIST_FOR_SALE_AMOUNT } from "@/lib/types";
+  buildClaimRequest,
+  buildCodedClaimRequest,
+  buildUpdateRequest,
+  buildReleaseRequest,
+  buildOtpRespond,
+  isValidTerm,
+  isValidSixDigitCode,
+  type ClaimTerm,
+  type UpdateTerm,
+} from "@/lib/zns/request-memo";
 import {
-  getProtectedClaimGate,
-  markProtectedNameRedeemed,
-  verifyUnlockCode,
-} from "@/lib/zns/protected-claim";
-import { verifyProof, verifyProofKind, issueProof, parseProofSubject } from "@/lib/zns/proof";
-import { verifyOtp as _verifyOtp } from "@/lib/purchases/otp";
+  quoteClaimZats,
+  quoteRequestFeeZats,
+  quoteUpdateRespondZats,
+} from "@/lib/zns/pricing";
+import { zatsToZecString } from "@/lib/zns/pricing-static";
+import { zip321Uri } from "@/lib/purchases/zip321";
 
 //
-// Write-path server actions for name operations.
+// Write-path server actions for the Mint protocol.
 //
-// Every name mutation (claim, buy, update, list, delist, release) follows
-// the same pattern:
-//   1. Validate input (name format, address format, required proofs)
-//   2. Look up current on-chain state via the ZNS indexer
-//   3. Build a signed payload using the server's Ed25519 admin key
-//   4. Return a ZIP-321 payment URI the user opens in their wallet
+// The site never signs anything: it validates the request against the
+// resolver's public registry state, builds the whitepaper Request/Respond
+// memo, and hands back a ZIP-321 payment URI whose destination is the Mint
+// treasury Unified Address. The attested Mint evaluates the memo on-chain.
 //
-// The admin signing key is loaded once from ZNS_SIGNING_KEY_PATH (a 32-byte
-// hex seed) and cached in-process. The DER wrapper prepended to the seed
-// encodes the Ed25519 algorithm OID so Node's crypto.createPrivateKey() can
-// parse it as a PKCS#8 key.
-
-// ── Admin signing ───────────────────────────────────────────────────
-
-let cachedKey: crypto.KeyObject | null = null;
-
-function getSigningKey(): crypto.KeyObject {
-  if (cachedKey) return cachedKey;
-  const hex = process.env.ZNS_SIGNING_KEY_PATH;
-  if (!hex) throw new Error("ZNS_SIGNING_KEY_PATH environment variable is required");
-  const seed = Buffer.from(hex, "hex");
-  if (seed.length !== 32) throw new Error("ZNS_SIGNING_KEY_PATH must be a 32-byte hex seed");
-  cachedKey = crypto.createPrivateKey({
-    key: Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), seed]),
-    format: "der",
-    type: "pkcs8",
-  });
-  return cachedKey;
-}
-
-function sign(payload: string): string {
-  return crypto.sign(null, Buffer.from(payload, "utf-8"), getSigningKey()).toString("base64");
-}
-
-// Every ZNS action produces a PreparedAction (payload + a complete() method).
-// We sign the payload with the server's admin key, then call complete() which
-// embeds the signature and returns the ZIP-321 URI the wallet needs.
-// Complete a prepared action. If sovereign sig+pubkey are provided, the
-// client has already signed — embed them in the memo. Otherwise, admin-sign.
-function completeAction(
-  prepared: PreparedAction,
-  sovereignSig?: string,
-  sovereignPub?: string,
-): { memo: string; uri: string } {
-  if (sovereignSig && sovereignPub) {
-    return prepared.complete(sovereignSig, sovereignPub);
-  }
-  return prepared.complete(sign(prepared.payload));
-}
-
-// ── Server actions ───────────────────────────────────────────────────
-//
-// Each action below corresponds to one of the six domain Action variants.
-// The frontend (Zip321Modal) calls these directly as Server Actions —
-// they run on the server, so the admin signing key never leaves the backend.
+// Actions:
+//   claimRequest    → ZNS:claim:<term>:<name>:<ua>   + name price
+//   updateRequest   → ZNS:update:<term>:<name>:<ua>  + $1 request fee
+//   releaseRequest  → ZNS:release:<name>:<ua>        + $1 request fee
+//   otpRespond      → ZNS:otp:<otp>:<name>:<verb>:<ua>  (+ name payment for update)
 //
 
-// CLAIM: register an unowned name. Requires only a unified address.
-// Protected names additionally need an unlock proof from checkUnlockCode().
-export async function claimAction(
-  name: string,
-  address: string,
-  network: Network,
-  unlockProof?: string,
-  sovereignSig?: string,
-  sovereignPub?: string,
-): Promise<{ ok: true; uri: string; memo: string; paymentAddress: string; amountZec: string } | { ok: false; error: string }> {
-  const n = normalizeUsername(name);
-  if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
-  const addrResult = validateAddress(address.trim());
-  if (addrResult.status !== "unified") return { ok: false, error: addrResult.warning || "Unified address required." };
-
-  const protectedGate = await getProtectedClaimGate(n);
-  if (protectedGate) {
-    if (!unlockProof || !verifyProof(unlockProof, "unlock", n)) {
-      return { ok: false, error: "Unlock code required for this name." };
-    }
-  }
-
-  try {
-    const zns = getZns(network);
-    if (await zns.resolveName(n)) return { ok: false, error: `Name "${n}" is already registered.` };
-    const cost = await getNamePricing(network, n.length);
-    const prepared = zns.prepareClaim(n, address, cost);
-    const { memo, uri } = completeAction(prepared, sovereignSig, sovereignPub);
-    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: (prepared.cost / 1e8).toFixed(8) };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
-  }
+export interface PaymentReply {
+  ok: true;
+  uri: string;
+  memo: string;
+  paymentAddress: string;
+  amountZec: string;
+}
+export interface ErrorReply {
+  ok: false;
+  error: string;
 }
 
-// BUY: purchase a name that is currently listed for sale. The price is
-// determined by the seller's listing; we fall back to whatever is on-chain.
-export async function buyAction(
-  name: string,
-  address: string,
-  network: Network,
-  listingPriceZats?: number,
-  sovereignSig?: string,
-  sovereignPub?: string,
-): Promise<{ ok: true; uri: string; memo: string; paymentAddress: string; amountZec: string } | { ok: false; error: string }> {
-  const n = normalizeUsername(name);
-  if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
-  const addrResult = validateAddress(address.trim());
-  if (addrResult.status !== "unified") return { ok: false, error: addrResult.warning || "Unified address required." };
-
-  try {
-    const zns = getZns(network);
-    const reg = await zns.resolveName(n);
-    if (!reg?.listing) return { ok: false, error: `Name "${n}" is not listed for sale.` };
-    const price = listingPriceZats ?? reg.listing.price;
-    const { memo, uri } = completeAction(zns.prepareBuy(n, address, price), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: "0" };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
-  }
+function treasury(network: Network): string | null {
+  return getMintConfig(network).treasuryUa;
 }
 
-// UPDATE: change the unified address a registered name points to.
-// Requires OTP proof that the caller owns the current address.
-export async function updateAction(
-  name: string,
-  address: string,
-  network: Network,
-  otpProof?: string,
-  sovereignSig?: string,
-  sovereignPub?: string,
-): Promise<{ ok: true; uri: string; memo: string; paymentAddress: string; amountZec: string } | { ok: false; error: string }> {
-  const n = normalizeUsername(name);
-  if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
-  const addrResult = validateAddress(address.trim());
-  if (addrResult.status !== "unified") return { ok: false, error: addrResult.warning || "Unified address required." };
-
-  const zns = getZns(network);
-  const reg = await zns.resolveName(n);
-  if (!reg) return { ok: false, error: "Name is not registered." };
-
-  if (!otpProof || !verifyProofKind(otpProof, "otp")) return { ok: false, error: "Verification required." };
-  const parsed = parseProofSubject(otpProof);
-  if (!parsed || parsed.kind !== "otp") return { ok: false, error: "Verification invalid." };
-  const [, proofAddress] = parsed.subject.split(":");
-  if (proofAddress !== reg.address) return { ok: false, error: "Verification invalid." };
-
-  try {
-    const { memo, uri } = completeAction(zns.prepareUpdate(n, address, reg.nonce + 1), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: "" };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
-  }
-}
-
-// LIST: put a registered name up for sale at a given price (in zats).
-// The seller provides a transparent payout address (t-addr) where proceeds go.
-// Requires OTP proof of ownership.
-export async function listAction(
-  name: string,
-  priceZats: number,
-  payTaddr: string,
-  network: Network,
-  otpProof?: string,
-  sovereignSig?: string,
-  sovereignPub?: string,
-): Promise<{ ok: true; uri: string; memo: string; paymentAddress: string; amountZec: string } | { ok: false; error: string }> {
-  const n = normalizeUsername(name);
-  if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
-
-  const zns = getZns(network);
-  const reg = await zns.resolveName(n);
-  if (!reg) return { ok: false, error: `Name "${n}" is not registered.` };
-
-  if (!otpProof || !verifyProofKind(otpProof, "otp")) return { ok: false, error: "Verification required." };
-  const parsed = parseProofSubject(otpProof);
-  if (!parsed || parsed.kind !== "otp") return { ok: false, error: "Verification invalid." };
-  const [, proofAddress] = parsed.subject.split(":");
-  if (proofAddress !== reg.address) return { ok: false, error: "Verification invalid." };
-
-  // Full Base58Check (SDK only checks prefix/charset). Match the active network.
-  if (!isValidTransparentAddress(payTaddr.trim(), network)) {
-    return {
-      ok: false,
-      error:
-        network === "testnet"
-          ? "Enter a valid testnet transparent address (tm or tn) with a correct checksum."
-          : "Enter a valid transparent Zcash address (t1 or t3) with a correct checksum.",
-    };
-  }
-  const maxZats = MAX_LIST_FOR_SALE_AMOUNT * 100_000_000;
-  if (priceZats < 0 || priceZats > maxZats) {
-    return { ok: false, error: `Price must be between 0 and ${MAX_LIST_FOR_SALE_AMOUNT.toLocaleString()} ZEC.` };
-  }
-
-  try {
-    const status = await zns.status();
-    const commission = status.pricing ? zns.listCommission(status.pricing) : null;
-    if (commission == null) {
-      return { ok: false, error: "Pricing unavailable - indexer may be down." };
-    }
-    const { memo, uri } = completeAction(zns.prepareList(n, priceZats, payTaddr, reg.nonce + 1, commission), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: (commission / 1e8).toFixed(8) };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
-  }
-}
-
-// DELIST: remove an active listing, taking the name off the market.
-// Requires OTP proof of ownership.
-export async function delistAction(
-  name: string,
-  network: Network,
-  otpProof?: string,
-  sovereignSig?: string,
-  sovereignPub?: string,
-): Promise<{ ok: true; uri: string; memo: string; paymentAddress: string; amountZec: string } | { ok: false; error: string }> {
-  const n = normalizeUsername(name);
-  if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
-
-  const zns = getZns(network);
-  const reg = await zns.resolveName(n);
-  if (!reg) return { ok: false, error: `Name "${n}" is not registered.` };
-
-  if (!otpProof || !verifyProofKind(otpProof, "otp")) return { ok: false, error: "Verification required." };
-  const parsed = parseProofSubject(otpProof);
-  if (!parsed || parsed.kind !== "otp") return { ok: false, error: "Verification invalid." };
-  const [, proofAddress] = parsed.subject.split(":");
-  if (proofAddress !== reg.address) return { ok: false, error: "Verification invalid." };
-
-  try {
-    const { memo, uri } = completeAction(zns.prepareDelist(n, reg.nonce + 1), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: "" };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
-  }
-}
-
-// RELEASE: relinquish ownership of a name, returning it to the available pool.
-// Requires OTP proof of ownership.
-export async function releaseAction(
-  name: string,
-  network: Network,
-  otpProof?: string,
-  sovereignSig?: string,
-  sovereignPub?: string,
-): Promise<{ ok: true; uri: string; memo: string; paymentAddress: string; amountZec: string } | { ok: false; error: string }> {
-  const n = normalizeUsername(name);
-  if (!isValidUsername(n)) return { ok: false, error: "Invalid name." };
-
-  const zns = getZns(network);
-  const reg = await zns.resolveName(n);
-  if (!reg) return { ok: false, error: `Name "${n}" is not registered.` };
-
-  if (!otpProof || !verifyProofKind(otpProof, "otp")) return { ok: false, error: "Verification required." };
-  const parsed = parseProofSubject(otpProof);
-  if (!parsed || parsed.kind !== "otp") return { ok: false, error: "Verification invalid." };
-  const [, proofAddress] = parsed.subject.split(":");
-  if (proofAddress !== reg.address) return { ok: false, error: "Verification invalid." };
-
-  try {
-    const { memo, uri } = completeAction(zns.prepareRelease(n, reg.nonce + 1), sovereignSig, sovereignPub);
-    return { ok: true, uri, memo, paymentAddress: zns.registryAddress, amountZec: "" };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Transaction failed." };
-  }
-}
-
-//
-// OTP verification: the user sends a tiny amount of ZEC to the OTP sign-in
-// address with a specific memo. The server derives the expected 6-digit code
-// from the memo using HMAC and compares it to what the user entered.
-// Returns a signed proof token that the write-path actions require.
-//
-export async function verifyOtp(
+function payment(
   memo: string,
-  code: string,
-  expectedAddress: string,
-): Promise<{ ok: true; proof: string } | { ok: false; error: string }> {
-  return _verifyOtp(memo, code, expectedAddress);
+  address: string,
+  zats: number,
+): PaymentReply {
+  const amountZec = zatsToZecString(zats);
+  const { uri } = zip321Uri(address, amountZec, memo);
+  return { ok: true, uri, memo, paymentAddress: address, amountZec };
 }
 
+function guardNetwork(network: Network): ErrorReply | null {
+  if (!isMintNetworkEnabled(network)) {
+    return { ok: false, error: "This network's mint is not online yet." };
+  }
+  return null;
+}
+
+function guardName(rawName: string): { name: string } | ErrorReply {
+  const name = normalizeUsername(rawName);
+  if (!isValidUsername(name)) return { ok: false, error: "Invalid name." };
+  return { name };
+}
+
+function guardUa(rawAddress: string): ErrorReply | null {
+  const result = validateAddress(rawAddress.trim());
+  if (result.status !== "unified") {
+    return { ok: false, error: result.warning || "Unified address required." };
+  }
+  return null;
+}
+
+// ── CLAIM ──────────────────────────────────────────────────────────────
 //
-// Protected-name unlock: names with status=protected (not yet redeemed) are
-// set aside. The unlock code is an HMAC-derived 12-character code generated
-// server-side. Verifying it returns a proof token that claimAction() requires.
-//
-export async function checkUnlockCode(
+// `ZNS:claim:<term>:<name>:<ua>` (or `ZNS:claim:<code>:<term>:<name>:<ua>`
+// for protected names once access-code claiming is wired up). Payment is the
+// name price for the requested term. Passcode-free open claiming is what the
+// allowOpenClaims flag gates: mainnet keeps it false even after launch.
+
+export async function claimRequestAction(
   name: string,
-  code: string,
-): Promise<{ ok: true; proof: string } | { ok: false; error: string }> {
+  address: string,
+  term: string,
+  network: Network,
+  accessCode?: string,
+): Promise<PaymentReply | ErrorReply> {
+  const guard = guardNetwork(network);
+  if (guard) return guard;
+
+  const mint = getMintConfig(network);
+  const nameCheck = guardName(name);
+  if (!("name" in nameCheck)) return nameCheck;
+  const n = nameCheck.name;
+
+  const uaGuard = guardUa(address);
+  if (uaGuard) return uaGuard;
+  const ua = address.trim();
+
+  if (!isValidTerm(term)) {
+    return { ok: false, error: "Choose a term: forever or 1-99 years." };
+  }
+  const claimTerm = term as ClaimTerm;
+
+  // The resolver's public view decides "registered or not"; protected-name
+  // eligibility is Mint policy. Mainnet never allows open claims — every
+  // claim there must carry an access code.
   try {
-    const normalized = normalizeUsername(name);
-    const protectedGate = await getProtectedClaimGate(normalized);
-    if (!protectedGate) return { ok: false, error: "This name is not protected." };
-    if (!verifyUnlockCode(normalized, code)) return { ok: false, error: "Invalid unlock code." };
-    return { ok: true, proof: issueProof("unlock", normalized) };
+    const existing = await getZns(network).resolveName(n);
+    if (existing) return { ok: false, error: `Name "${n}" is already registered.` };
+  } catch {
+    return { ok: false, error: "Resolver unavailable — try again shortly." };
+  }
+
+  let memo: string;
+  try {
+    memo =
+      accessCode && accessCode.length > 0
+        ? buildCodedClaimRequest(accessCode, n, claimTerm, ua)
+        : buildClaimRequest(n, claimTerm, ua);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unlock verification failed.";
-    // Missing server secrets should not look like a bad unlock code.
-    if (message.includes("environment variable is required")) {
-      return { ok: false, error: "Server is missing unlock configuration. Try again later." };
+    return { ok: false, error: err instanceof Error ? err.message : "Invalid claim." };
+  }
+
+  if (!accessCode && !mint.allowOpenClaims) {
+    return { ok: false, error: "Open claims are not enabled on this network." };
+  }
+
+  let zats: number;
+  try {
+    zats = await quoteClaimZats(n, claimTerm);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Pricing unavailable." };
+  }
+
+  return payment(memo, mint.treasuryUa!, zats);
+}
+
+// ── UPDATE ─────────────────────────────────────────────────────────────
+//
+// Step 1 of the authorization procedure: `ZNS:update:<term>:<name>:<ua>`
+// plus the $1 request fee. term is "none" (carry the current expiration
+// forward), "<N>y" (extension), or "forever" (upgrade a fixed-term
+// registration). The Mint Relays the OTP to the currently bound address.
+
+export async function updateRequestAction(
+  name: string,
+  address: string,
+  term: string,
+  network: Network,
+): Promise<PaymentReply | ErrorReply> {
+  const guard = guardNetwork(network);
+  if (guard) return guard;
+
+  const nameCheck = guardName(name);
+  if (!("name" in nameCheck)) return nameCheck;
+  const n = nameCheck.name;
+
+  const uaGuard = guardUa(address);
+  if (uaGuard) return uaGuard;
+  const ua = address.trim();
+
+  if (!isValidTerm(term) && term !== "none") {
+    return { ok: false, error: "Choose a term: none, forever, or 1-99 years." };
+  }
+  const updateTerm = term as UpdateTerm;
+
+  try {
+    const current = await getZns(network).resolveName(n);
+    if (!current) return { ok: false, error: `Name "${n}" is not registered.` };
+    if (current.expiresAt === "none" && updateTerm === "forever") {
+      return { ok: false, error: "This registration has no fixed expiration to upgrade." };
     }
-    return { ok: false, error: message };
+    if (updateTerm !== "none" && current.expiresAt === "none") {
+      return { ok: false, error: "Registrations without fixed expiration cannot be extended." };
+    }
+  } catch {
+    return { ok: false, error: "Resolver unavailable — try again shortly." };
   }
+
+  let memo: string;
+  try {
+    memo = buildUpdateRequest(n, updateTerm, ua);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Invalid update." };
+  }
+
+  let feeZats: number;
+  try {
+    feeZats = await quoteRequestFeeZats();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Pricing unavailable." };
+  }
+
+  return payment(memo, treasury(network)!, feeZats);
 }
 
+// ── RELEASE (controller-requested) ─────────────────────────────────────
 //
-// After a protected CLAIM is mined, mark the matching protected row(s) redeemed
-// so the unlock gate is cleared.
-//
-export async function markProtectedNameRedeemedAction(
+// Step 1: `ZNS:release:<name>:<ua>` where <ua> is the address of the binding
+// being released, plus the $1 request fee. The Mint Relays the OTP.
+
+export async function releaseRequestAction(
   name: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const normalized = normalizeUsername(name);
-  if (!isValidUsername(normalized)) return { ok: false, error: "Invalid name." };
+  network: Network,
+): Promise<PaymentReply | ErrorReply> {
+  const guard = guardNetwork(network);
+  if (guard) return guard;
+
+  const nameCheck = guardName(name);
+  if (!("name" in nameCheck)) return nameCheck;
+  const n = nameCheck.name;
+
+  let boundUa: string | null = null;
   try {
-    await markProtectedNameRedeemed(normalized);
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Failed to mark name redeemed." };
+    const current = await getZns(network).resolveName(n);
+    if (!current) return { ok: false, error: `Name "${n}" is not registered.` };
+    boundUa = current.address;
+  } catch {
+    return { ok: false, error: "Resolver unavailable — try again shortly." };
   }
+
+  let memo: string;
+  try {
+    memo = buildReleaseRequest(n, boundUa);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Invalid release." };
+  }
+
+  let feeZats: number;
+  try {
+    feeZats = await quoteRequestFeeZats();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Pricing unavailable." };
+  }
+
+  return payment(memo, treasury(network)!, feeZats);
+}
+
+// ── OTP RESPOND ────────────────────────────────────────────────────────
+//
+// Step 3: the controller enters the six-digit code from the Mint's Relay
+// memo. The Respond copies the Relay encoding exactly and carries the name
+// payment for updates (extension/upgrade price; zero for carry-forward and
+// for releases).
+
+export async function otpRespondAction(
+  otp: string,
+  name: string,
+  verb: ProtocolVerb,
+  ua: string,
+  term: string,
+  network: Network,
+): Promise<PaymentReply | ErrorReply> {
+  const guard = guardNetwork(network);
+  if (guard) return guard;
+
+  if (verb !== "update" && verb !== "release") {
+    return { ok: false, error: "Invalid action." };
+  }
+  if (!isValidSixDigitCode(otp)) {
+    return { ok: false, error: "Enter the six-digit passcode from your wallet." };
+  }
+
+  const nameCheck = guardName(name);
+  if (!("name" in nameCheck)) return nameCheck;
+  const n = nameCheck.name;
+
+  const uaGuard = guardUa(ua);
+  if (uaGuard) return uaGuard;
+
+  let memo: string;
+  try {
+    memo = buildOtpRespond(otp, n, verb, ua.trim());
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Invalid passcode." };
+  }
+
+  let paymentZats = 0;
+  if (verb === "update" && term !== "none") {
+    if (!isValidTerm(term)) {
+      return { ok: false, error: "Invalid update term." };
+    }
+    try {
+      paymentZats = await quoteUpdateRespondZats(n, term as UpdateTerm);
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : "Pricing unavailable." };
+    }
+  }
+
+  return payment(memo, treasury(network)!, paymentZats);
 }

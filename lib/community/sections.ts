@@ -228,28 +228,6 @@ export const COMMUNITY_SECTIONS: CommunitySection[] = [
       "Community-facing tools for tracking growth, sharing referrals, and exploring the registry.",
     cards: [
       {
-        id: "leaderboard",
-        name: "Leaderboard",
-        label: "Rankings",
-        description:
-          "See who is growing the waitlist and compare momentum over time.",
-        href: "/leaders",
-        shareText: "Follow the ZcashNames community leaderboard.",
-        detail: "Community ranking",
-        themedIconSrc: themedCommunityIcon("leaderboard"),
-      },
-      {
-        id: "referrals-dashboard",
-        name: "Referrals Dashboard",
-        label: "Rankings",
-        description:
-          "Enter a referral code to view referrals, projected rewards, and dashboard details.",
-        href: "/leaders/ref",
-        shareText: "Track ZcashNames referrals from the community dashboard.",
-        detail: "Referral code dashboard",
-        themedIconSrc: themedCommunityIcon("referrals-dashboard"),
-      },
-      {
         id: "explorer",
         name: "Explorer",
         label: "Registry",

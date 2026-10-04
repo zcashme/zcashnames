@@ -115,8 +115,7 @@ export default function CollectionsView({
   const allNames = collection.clusters.flatMap((c) => c.names);
   const stats = {
     total: allNames.length,
-    forSale: allNames.filter((n) => n.forSale).length,
-    registered: allNames.filter((n) => !n.forSale && !n.unregistered).length,
+    registered: allNames.filter((n) => !n.unregistered).length,
     available: collection.seeds.filter((s) => s.status === "unregistered").length,
   };
 
@@ -229,7 +228,6 @@ export default function CollectionsView({
                 <span style={{ color: "var(--fg-heading)" }}>{stats.total}</span> names
                 {" · "}
                 <span style={{ color: "var(--fg-heading)" }}>{stats.registered}</span> registered
-                {stats.forSale > 0 && <> · <span style={{ color: "var(--home-result-status-forsale-fg)" }}>{stats.forSale}</span> for sale</>}
                 {stats.available > 0 && <> · <span style={{ color: "var(--fg-muted)" }}>{stats.available}</span> available</>}
               </p>
               <button

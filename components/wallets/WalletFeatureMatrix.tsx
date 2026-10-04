@@ -9,7 +9,7 @@ import {
   type WalletFeatures,
   type WalletVariant,
 } from "@/lib/wallets/catalog";
-import { resolveWalletDownloadHref } from "@/lib/beta/wallet-selection";
+import { resolveWalletDownloadHref } from "@/lib/wallets/wallet-selection";
 
 type FeatureRow = {
   kind: "feature";

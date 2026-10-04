@@ -1,19 +1,16 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback } from "react";
-import { switchToNetwork } from "@/lib/beta/actions";
 
-export type ZnsMode = "waitlist" | "mainnet" | "testnet";
+export type ZnsMode = "mainnet" | "testnet";
 
 type ZnsContextValue = {
   zns: { mode: ZnsMode };
-  hasBeta: boolean;
   setMode: (m: ZnsMode) => void;
 };
 
 export const NetworkContext = createContext<ZnsContextValue>({
-  zns: { mode: "waitlist" },
-  hasBeta: false,
+  zns: { mode: "testnet" },
   setMode: () => {},
 });
 
@@ -23,22 +20,19 @@ export function useZns() {
 
 export function NetworkProvider({
   children,
-  initialMode = "waitlist",
-  hasBeta = false,
+  initialMode = "testnet",
 }: {
   children: React.ReactNode;
   initialMode?: ZnsMode;
-  hasBeta?: boolean;
 }) {
   const [zns, setZns] = useState<{ mode: ZnsMode }>({ mode: initialMode });
 
   const setMode = useCallback((mode: ZnsMode) => {
     setZns({ mode });
-    if (mode !== "waitlist") switchToNetwork(mode);
   }, []);
 
   return (
-    <NetworkContext.Provider value={{ zns, hasBeta, setMode }}>
+    <NetworkContext.Provider value={{ zns, setMode }}>
       {children}
     </NetworkContext.Provider>
   );

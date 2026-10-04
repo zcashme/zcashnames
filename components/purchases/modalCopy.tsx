@@ -9,11 +9,8 @@ import AnimatedLoadingLabel, {
 
 export type PurchaseCopyState = {
   address?: string;
-  price?: string;
-  priceInput?: string;
-  /** Payment URI amount (ZEC string). Empty/zero means memo-only confirm copy. */
+  /** Payment URI amount (ZEC string). Empty/zero means memo-only copy. */
   amountZec?: string;
-  settleState?: ScanState;
 };
 
 export function shortAddress(address: string | undefined): string {
@@ -70,29 +67,21 @@ export function SentenceLines({
 }
 
 export function phaseHeader(action: Action, phase: Phase): string {
-  if (phase === "unlock") return "Protected Name";
   if (phase === "input") return `${ACTION_LABELS[action]}`;
-  if (phase === "otp") return "Verify Ownership";
-  if (phase === "confirm") return action === "BUY" ? "Intent to Purchase" : "Send Payment";
-  if (phase === "fund") return "Pay the seller";
-  if (phase === "settling") return "Finalising your purchase";
+  if (phase === "otp") return "Enter Passcode";
+  if (phase === "confirm") {
+    return action === "CLAIM" ? "Send Payment" : "Send Request Fee";
+  }
+  if (phase === "respond") return "Send Final Payment";
   return "Scanning";
 }
 
-export function inputDescription(action: Action, name: string, amount?: string): React.ReactNode {
+export function inputDescription(action: Action, name: string): React.ReactNode {
   switch (action) {
-    case "BUY":
-      return amount
-        ? <>Purchase for <strong>{amount}</strong>.</>
-        : <>Purchase.</>;
-    case "DELIST":
-      return <>Remove listing from sale.</>;
     case "RELEASE":
       return <>Allow others to claim it.</>;
     case "UPDATE":
       return <>Set a new address.</>;
-    case "LIST":
-      return <>Set a sale price.</>;
     case "CLAIM":
       return <>Control it with your wallet.</>;
   }
@@ -105,7 +94,7 @@ export function scanningStatusMessage(action: Action, scanState: ScanState): Rea
         <SentenceLines align="center">
           <span>
             <AnimatedLoadingLabel
-              label={`Your ${action === "BUY" ? "intent to purchase" : ACTION_NOUNS[action]} hasn\u2019t been detected yet`}
+              label={`Your ${ACTION_NOUNS[action]} hasn't been detected yet`}
               active
             />
           </span>
@@ -130,23 +119,6 @@ export function scanningStatusMessage(action: Action, scanState: ScanState): Rea
   }
 }
 
-export function settlingStatusMessage(action: Action, settleState: ScanState): React.ReactNode {
-  switch (settleState) {
-    case "not_detected":
-      return <>Waiting for the registry to detect your payment to the seller...</>;
-    case "in_mempool":
-    case "confirming":
-      return (
-        <SentenceLines align="center">
-          <span>Your {ACTION_NOUNS[action]} is being mined.</span>
-          <span>Hang tight &mdash; this should only take a moment.</span>
-        </SentenceLines>
-      );
-    case "mined":
-      return null;
-  }
-}
-
 export function minedMessage(action: Action, name: string, address?: string): React.ReactNode {
   switch (action) {
     case "CLAIM":
@@ -156,31 +128,11 @@ export function minedMessage(action: Action, name: string, address?: string): Re
           <span><NameBadge name={name} /> now resolves to <AddressBadge address={address} />.</span>
         </SentenceLines>
       );
-    case "BUY":
-      return (
-        <SentenceLines align="center" gap="relaxed">
-          <span>Purchase is confirmed on-chain!</span>
-          <span><NameBadge name={name} /> now resolves to <AddressBadge address={address} />.</span>
-        </SentenceLines>
-      );
     case "UPDATE":
       return (
         <SentenceLines align="center" gap="relaxed">
-          <span>Address is updated on-chain!</span>
+          <span>Update is confirmed on-chain!</span>
           <span><NameBadge name={name} /> now resolves to <AddressBadge address={address} />.</span>
-        </SentenceLines>
-      );
-    case "LIST":
-      return (
-        <SentenceLines align="center">
-          <span><NameBadge name={name} /> is now listed for sale.</span>
-        </SentenceLines>
-      );
-    case "DELIST":
-      return (
-        <SentenceLines align="center">
-          <span><NameBadge name={name} /> has been delisted.</span>
-          <span>It is no longer for sale.</span>
         </SentenceLines>
       );
     case "RELEASE":
@@ -197,73 +149,37 @@ export function modalDescription(
   action: Action,
   phase: Phase,
   name: string,
-  state: PurchaseCopyState,
-  options?: { isResume?: boolean; listingPriceZec?: number },
+  state: PurchaseCopyState = {},
 ): React.ReactNode {
-  if (phase === "unlock") {
-    return <><NameBadge name={name} /> is protected. Enter unlock code to continue.</>;
+  const nameBadge = <NameBadge name={name} />;
+
+  switch (phase) {
+    case "input":
+      return <>{inputDescription(action, name)}</>;
+    case "confirm":
+      if (action === "CLAIM") {
+        return <>{state.amountZec ? <>Send the name price to <strong>{nameBadge}</strong>'s mint request.</> : <>Preparing your claim request.</>}</>;
+      }
+      return <>Send the $1 request fee for <strong>{nameBadge}</strong>.</>;
+    case "otp":
+      return <>Enter the passcode the mint sent to the bound address.</>;
+    case "respond":
+      return <>{action === "UPDATE" ? <>Send the update payment to execute <strong>{nameBadge}</strong>'s update.</> : <>Send the release memo to release <strong>{nameBadge}</strong>.</>}</>;
+    case "scanning":
+      return <>Watching the chain for <strong>{nameBadge}</strong>.</>;
+    default:
+      return null;
   }
-  if (phase === "input") {
-    if (options?.isResume) {
-      return (
-        <SentenceLines>
-          <span>A purchase is already occurring for this name.</span>
-          <span>It will expire soon.</span>
-          <span>If you are the buyer, enter your address to complete the purchase.</span>
-        </SentenceLines>
-      );
-    }
-    return inputDescription(action, name, options?.listingPriceZec ? `${options.listingPriceZec} ZEC` : state.price);
-  }
-  if (phase === "otp") {
-    return <>Send exact amount and memo to address below to request verification code.</>;
-  }
-  if (phase === "confirm") {
-    if (action === "BUY") return <>You&rsquo;ll pay the seller the listing price next.</>;
-    // URI may be memo-only (zero/empty amount) or include a minimum commission amount.
-    const amountRequired = !!state.amountZec && Number(state.amountZec) > 0;
-    return amountRequired ? (
-      <>Send exact memo and minimum amount to address below to complete transaction.</>
-    ) : (
-      <>Send exact memo to address below to complete transaction.</>
-    );
-  }
-  if (phase === "fund") {
-    return <>Send <strong>{options?.listingPriceZec ?? 0} ZEC</strong> to <NameBadge name={name} />&rsquo;s transparent address.</>;
-  }
-  if (phase === "settling") {
-    if (state.settleState === "mined") return minedMessage("BUY", name, state.address);
-    return <>The registry is waiting for your payment to the seller to confirm on-chain.</>;
-  }
-  if (action === "BUY") {
-    return (
-      <>
-        Checking the mempool and resolver for your intent to purchase <NameBadge name={name} />
-        <AnimatedEllipsis active />
-      </>
-    );
-  }
-  return (
-    <>
-      Checking the mempool and resolver to {ACTION_NOUNS[action]} <NameBadge name={name} />
-      <AnimatedEllipsis active />
-    </>
-  );
 }
 
 export function progressFillForPhase(
   step: Phase,
   index: number,
   activeIndex: number,
-  scanState: ScanState,
+  scanState: ScanState = "not_detected",
 ): number {
   if (index < activeIndex) return 1;
   if (index > activeIndex) return 0;
-  if (step !== "scanning") return 1;
-  switch (scanState) {
-    case "not_detected": return 0;
-    case "in_mempool": return 1 / 3;
-    case "confirming": return 2 / 3;
-    case "mined": return 1;
-  }
+  if (step === "scanning") return scanState === "mined" ? 1 : scanState === "not_detected" ? 0.15 : 0.55;
+  return 0.15;
 }

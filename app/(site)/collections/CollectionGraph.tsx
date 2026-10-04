@@ -62,7 +62,7 @@ function NameNodeView({ data }: NodeProps<NameNode>) {
   const isHistorical = !!name.historical;
   return (
     <div
-      title={isUnregistered ? `${name.name} — not registered yet` : isHistorical ? `${name.name} — historical link` : name.forSale ? `${name.name} — listed for sale` : name.name}
+      title={isUnregistered ? `${name.name} — not registered yet` : isHistorical ? `${name.name} — historical link` : name.name}
       className="inline-flex max-w-[9rem] cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5"
       style={{
         background: isUnregistered ? "var(--home-result-status-positive-bg)" : "var(--color-raised)",
@@ -72,9 +72,7 @@ function NameNodeView({ data }: NodeProps<NameNode>) {
           ? "var(--hero-headline-accent)"
           : isUnregistered
             ? "var(--home-result-status-positive-fg)"
-            : name.forSale
-              ? "var(--home-result-status-forsale-border)"
-              : "var(--leaders-card-border)",
+            : "var(--leaders-card-border)",
         boxShadow: selected
           ? "0 0 0 2px var(--hero-headline-accent)"
           : isStar && !isUnregistered && !isHistorical
@@ -83,13 +81,6 @@ function NameNodeView({ data }: NodeProps<NameNode>) {
       }}
     >
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} isConnectable={false} />
-      {name.forSale && (
-        <span
-          className="h-1.5 w-1.5 shrink-0 rounded-full"
-          style={{ background: "var(--home-result-status-forsale-fg)" }}
-          aria-hidden="true"
-        />
-      )}
       <span
         className={`truncate text-[0.8rem] ${isStar && !isUnregistered && !isHistorical ? "font-bold" : "font-semibold"}`}
         style={{ color: isUnregistered ? "var(--home-result-status-positive-fg)" : isStar && !isHistorical ? "var(--fg-heading)" : "var(--fg-muted)" }}

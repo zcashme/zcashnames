@@ -2,34 +2,32 @@
 
 import {
   getZns,
-  registrationStatus,
   normalizeUsername,
   isValidUsername,
   zatsToZec,
 } from "@/lib/zns/utils";
-import type { Network, Action, ResolveName, Registration } from "@/lib/types";
-import { getProtectedClaimGate } from "@/lib/zns/protected-claim";
-import { getNamePricing } from "@/lib/network-stats";
+import type { Network, Registration, ResolveName, ZnsEvent } from "@/lib/types";
+import { quoteClaimZats } from "@/lib/zns/pricing";
 
 //
 // Server-side name resolution. These functions are the read path for the
 // explorer and search — every name lookup in the app flows through here.
 //
-// resolveName() is the central dispatch: it normalises the input, queries
-// the ZNS indexer, checks zn_protected_names (status=protected, not redeemed,
-// not past expires_at), computes the claim cost, and returns a typed
-// ResolveName union the UI can switch on.
+// resolveName() normalises the input, queries the network's Name Note
+// resolver, and returns a typed ResolveName union the UI can switch on.
+// Claim pricing is the site's display mirror of the Mint's published
+// schedule (see lib/zns/pricing.ts); the Mint is the pricing authority.
 //
-// The other exports (getCurrentRegistrations, getListings, getEvents,
-// getHomeStats) power the explorer page — they fetch paginated / filtered
-// data from the indexer and return it to the server component.
+// The other exports (getCurrentRegistrations, getNamesForAddress, getEvents)
+// power the explorer — they fetch paginated data from the resolver and
+// return it to the server component.
 //
 
 export async function getCurrentRegistrations(
   network: Network = "testnet",
   limit?: number,
   offset?: number,
-) {
+): Promise<Registration[]> {
   try {
     const registrations = await getZns(network).listAllRegistrations(limit, offset);
     return [...registrations].sort((a, b) => b.height - a.height || a.name.localeCompare(b.name));
@@ -45,70 +43,36 @@ export async function resolveName(
   const normalized = normalizeUsername(rawName);
 
   if (!isValidUsername(normalized)) {
-    throw new Error("Use 1-62 characters: lowercase letters and numbers only.");
+    throw new Error("Use 1-63 characters: lowercase letters and numbers only.");
   }
 
-  const zns = getZns(network);
-  const registration = await zns.resolveName(normalized);
-  const nameStatus = registrationStatus(registration);
+  let registration: Registration | null = null;
+  try {
+    registration = await getZns(network).resolveName(normalized);
+  } catch {
+    throw new Error("Resolver unavailable — try again shortly.");
+  }
 
-  // Name is unregistered — check protected-name gate, then compute cost.
-  // status=protected + !redeemed requires an unlock code (status "protected").
-  if (nameStatus === "available") {
-    const protectedGate = await getProtectedClaimGate(normalized);
-    const claimCostZats = await getNamePricing(network, normalized.length);
-
-    if (protectedGate) {
-      return {
-        status: "protected",
-        query: normalized,
-        claimCost: { zats: claimCostZats, zec: zatsToZec(claimCostZats) },
-      };
-    }
-
+  if (!registration) {
+    const zats = await quoteClaimZats(normalized, "1y");
     return {
       status: "available",
       query: normalized,
-      claimCost: { zats: claimCostZats, zec: zatsToZec(claimCostZats) },
-    };
-  }
-
-  // Name is registered — check whether it also has an active listing.
-  const reg = {
-    name: registration!.name,
-    address: registration!.address,
-    txid: registration!.txid,
-    height: registration!.height,
-    nonce: registration!.nonce,
-    pubkey: registration!.pubkey ?? null,
-  };
-
-  if (registration!.listing) {
-    return {
-      status: "listed",
-      query: normalized,
-      registration: reg,
-      listingPrice: {
-        zats: registration!.listing.price,
-        zec: zatsToZec(registration!.listing.price),
-      },
-      payTaddr: registration!.listing.payTaddr,
-      pendingBuy: registration!.listing.pendingBuy,
+      claimCost: { zats, zec: zatsToZec(zats) },
     };
   }
 
   return {
     status: "registered",
     query: normalized,
-    registration: reg,
+    registration,
   };
 }
-
 
 // Reverse lookup: every name currently pointing at a unified address. This is
 // the read primitive behind Collections — a UA is the only thing that clusters
 // a person's names, since the chain never links one human's addresses together.
-// Returns [] on any failure (invalid address, indexer down) to keep callers simple.
+// Returns [] on any failure (invalid address, resolver down) to keep callers simple.
 export async function getNamesForAddress(
   address: string,
   network: Network = "testnet",
@@ -123,28 +87,13 @@ export async function getNamesForAddress(
   }
 }
 
-export async function getListings(
-  network: Network = "testnet",
-  limit?: number,
-  offset?: number,
-) {
-  try {
-    return await getZns(network).listings(limit, offset);
-  } catch {
-    return { listings: [], total: 0 };
-  }
-}
-
 export async function getEvents(
-  params: Record<string, unknown> = {},
+  params: { name?: string; action?: ZnsEvent["action"]; limit?: number; offset?: number } = {},
   network: Network = "testnet",
 ) {
   try {
-    // The SDK's events() method accepts camelCase filter keys and converts them
-    // to the snake_case JSON-RPC params the indexer expects. Query parameters
-    // like { name, action, limit, offset } all get passed through transparently.
     return await getZns(network).events(params);
   } catch {
-    return { events: [], total: 0 };
+    return { events: [], total: 0, limit: 0, offset: 0 };
   }
 }

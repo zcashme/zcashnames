@@ -1,8 +1,9 @@
 import { getChainStats } from "@/lib/network-stats";
-import type { Listing, Network, Registration, ZnsEvent } from "@/lib/types";
-import { getCurrentRegistrations, getEvents, getListings } from "@/lib/zns/resolve";
-import { ACTIONS } from "@/lib/types";
-import { filterEvents, filterListings, filterRegistrations } from "@/lib/zns/utils";
+import { getMintConfig } from "@/lib/zns/mint-config";
+import type { Network, Registration, ZnsEvent } from "@/lib/types";
+import { getCurrentRegistrations, getEvents } from "@/lib/zns/resolve";
+import { ACTIONS, ACTION_VERB } from "@/lib/types";
+import { filterEvents, filterRegistrations } from "@/lib/zns/utils";
 import type {
   ExplorerSearchMode,
   ExplorerSortDirection,
@@ -25,14 +26,14 @@ export type ExplorerListData = {
   allEventsCount: number;
   tabCounts: ExplorerTabCounts;
   registrations: Registration[];
-  listings: Listing[];
   events: ZnsEvent[];
   stats: {
+    online: boolean;
     claimed: number;
-    forSale: number;
     syncedHeight: number;
-    uivk: string;
-    uivkVerified: boolean;
+    synced: boolean;
+    /** The Mint registry UFVK baked into this deployment (null for offline networks). */
+    registryUfvk: string | null;
   };
 };
 
@@ -56,37 +57,6 @@ function sortRegistrations(
       return result || compareNumbers(left.height, right.height, "desc");
     }
 
-    if (sortKey === "status") {
-      const leftStatus = left.listing ? "listed" : "registered";
-      const rightStatus = right.listing ? "listed" : "registered";
-      const result = compareStrings(leftStatus, rightStatus, sortDirection);
-      return result || compareNumbers(left.height, right.height, "desc");
-    }
-
-    return compareNumbers(left.height, right.height, sortDirection) || compareStrings(left.name, right.name, "asc");
-  });
-}
-
-function sortListings(
-  rows: Listing[],
-  sortKey: ExplorerSortKey,
-  sortDirection: ExplorerSortDirection,
-) {
-  return [...rows].sort((left, right) => {
-    if (sortKey === "name") {
-      const result = compareStrings(left.name, right.name, sortDirection);
-      return result || compareNumbers(left.height, right.height, "desc");
-    }
-
-    if (sortKey === "price") {
-      const result = compareNumbers(left.price, right.price, sortDirection);
-      return result || compareNumbers(left.height, right.height, "desc");
-    }
-
-    if (sortKey === "status") {
-      return compareNumbers(left.height, right.height, "desc");
-    }
-
     return compareNumbers(left.height, right.height, sortDirection) || compareStrings(left.name, right.name, "asc");
   });
 }
@@ -107,7 +77,12 @@ function sortEvents(
       return result || compareNumbers(left.height, right.height, "desc");
     }
 
-    return compareNumbers(left.height, right.height, sortDirection) || compareStrings(left.action, right.action, "asc");
+    // Default: canonical order (height asc, then action index) reads like a
+    // ledger — but newest-first is the explorer convention, so flip height.
+    return (
+      compareNumbers(left.height, right.height, sortDirection) ||
+      compareNumbers(left.actionIndex, right.actionIndex, sortDirection)
+    );
   });
 }
 
@@ -151,21 +126,19 @@ async function getAllEvents(network: Network) {
 
 function buildTabCounts(args: {
   registrations: Registration[];
-  listings: Listing[];
   events: ZnsEvent[];
 }): ExplorerTabCounts {
-  const { registrations, listings, events } = args;
+  const { registrations, events } = args;
   const actionCounts = Object.fromEntries(
     ACTIONS.map((action) => [
       action,
-      events.filter((row) => row.action === action).length,
+      events.filter((row) => row.action === ACTION_VERB[action]).length,
     ]),
   ) as Record<(typeof ACTIONS)[number], number>;
 
   return {
     all: events.length,
     registered: registrations.length,
-    forsale: listings.length,
     ...actionCounts,
   };
 }
@@ -192,24 +165,20 @@ export async function getExplorerListData(args: {
   } = args;
   const statsPromise = getChainStats(network);
   const activeSearchQuery = searchMode === "contains" ? normalizeSearchQuery(searchQuery) : "";
-  const [stats, allRegistrations, allListingsResult, allEventsResult] = await Promise.all([
+  const [stats, allRegistrations, allEventsResult] = await Promise.all([
     statsPromise,
     getCurrentRegistrations(network),
-    getListings(network),
     getAllEvents(network),
   ]);
   const filteredRegistrations = filterRegistrations(allRegistrations, activeSearchQuery);
-  const filteredListings = filterListings(allListingsResult.listings, activeSearchQuery);
   const filteredEvents = filterEvents(allEventsResult.events, activeSearchQuery);
   const tabCounts = buildTabCounts({
     registrations: filteredRegistrations,
-    listings: filteredListings,
     events: filteredEvents,
   });
 
   if (tab === "registered") {
-    const filtered = filteredRegistrations;
-    const sorted = sortRegistrations(filtered, sortKey, sortDirection);
+    const sorted = sortRegistrations(filteredRegistrations, sortKey, sortDirection);
     return {
       network,
       tab,
@@ -223,29 +192,6 @@ export async function getExplorerListData(args: {
       allEventsCount: allEventsResult.total,
       tabCounts,
       registrations: paginateRows(sorted, page, pageSize),
-      listings: [],
-      events: [],
-      stats,
-    };
-  }
-
-  if (tab === "forsale") {
-    const filtered = filteredListings;
-    const sorted = sortListings(filtered, sortKey, sortDirection);
-    return {
-      network,
-      tab,
-      page,
-      pageSize,
-      sortKey,
-      sortDirection,
-      searchQuery: activeSearchQuery,
-      searchMode,
-      totalCount: sorted.length,
-      allEventsCount: allEventsResult.total,
-      tabCounts,
-      registrations: [],
-      listings: paginateRows(sorted, page, pageSize),
       events: [],
       stats,
     };
@@ -253,7 +199,9 @@ export async function getExplorerListData(args: {
 
   const action = ACTIONS.includes(tab as (typeof ACTIONS)[number]) ? tab : undefined;
   const filtered = action
-    ? filteredEvents.filter((row) => row.action === action)
+    ? filteredEvents.filter(
+        (row) => action !== undefined && row.action === ACTION_VERB[action as keyof typeof ACTION_VERB],
+      )
     : filteredEvents;
   const sorted = sortEvents(filtered, sortKey, sortDirection);
   return {
@@ -269,7 +217,6 @@ export async function getExplorerListData(args: {
     allEventsCount: allEventsResult.total,
     tabCounts,
     registrations: [],
-    listings: [],
     events: paginateRows(sorted, page, pageSize),
     stats,
   };

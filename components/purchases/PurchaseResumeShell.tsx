@@ -48,7 +48,7 @@ export default function PurchaseResumeShell() {
       {visible && snapshot && (
         <ResumeBanner
           snapshot={snapshot}
-          hiddenByFullModal={externalModalOpen || onFormPage}
+          hiddenByMinimized={externalModalOpen || onFormPage}
           onResume={handleResume}
           onDismiss={dismiss}
         />

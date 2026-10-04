@@ -85,7 +85,7 @@ const nextConfig: NextConfig = {
       {
         source: "/api/confirm",
         has: [{ type: "query", key: "token", value: "(?<token>.+)" }],
-        destination: "/waitlist?token=:token",
+        destination: "/",
         permanent: false,
       },
       {

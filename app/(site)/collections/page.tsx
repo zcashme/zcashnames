@@ -8,7 +8,6 @@
  *
  * Network is inherited from the shared stage cookie (set on the home page).
  */
-import { readCurrentStage } from "@/lib/beta/gate";
 import { buildCollection } from "@/lib/zns/collection";
 import { resolveName, getEvents } from "@/lib/zns/resolve";
 import type { Network, ResolveName, ZnsEvent } from "@/lib/types";
@@ -48,7 +47,8 @@ export default async function CollectionsPage({
   searchParams: Promise<{ c?: string; name?: string; history?: string }>;
 }) {
   const params = await searchParams;
-  const network: Network = (await readCurrentStage()) ?? "mainnet";
+  // Testnet is the live network; mainnet mint is offline (mint-config).
+  const network: Network = "testnet";
   // The collection rides in one base64url ?c= token. Cap keeps a pasted URL
   // from fanning out unbounded.
   const names = decodeNames(params.c).slice(0, 50);

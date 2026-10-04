@@ -5,16 +5,13 @@ import LandingActionLink from "@/components/landing/LandingActionLink";
 import SectionHeaderPill from "@/components/landing/SectionHeaderPill";
 import type { NetworkStats } from "@/lib/network-stats";
 
-type StatKey = "claimed" | "forSale" | "syncedHeight" | "waitlist" | "referred" | "rewardsPot";
+type StatKey = "claimed" | "online" | "syncedHeight";
 
 type StatItem = {
   key: StatKey;
   label: string;
   value: string;
   helpText: string;
-  deltaDayValue?: string | null;
-  deltaWeekValue?: string | null;
-  deltaMonthValue?: string | null;
 };
 
 function LeaderboardLink() {
@@ -58,22 +55,18 @@ function DashboardLink() {
   );
 }
 
-function WaitlistLink() {
+function ExplorerLink() {
   return (
     <LandingActionLink
-      proximityId="waitlist-link"
-      href="/waitlist/view"
-      label="Waitlist"
+      proximityId="explorer-link"
+      href="/explorer"
+      label="Explorer"
       variant="text"
       showArrow
       icon={
         <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
-          <path d="M8 6H20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          <path d="M8 12H20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          <path d="M8 18H20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          <path d="M4 6H4.01" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-          <path d="M4 12H4.01" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-          <path d="M4 18H4.01" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.6" />
+          <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
       }
     />
@@ -81,62 +74,33 @@ function WaitlistLink() {
 }
 
 function actionLinkForStat(key: StatKey) {
-  if (key === "waitlist") return <WaitlistLink />;
-  if (key === "referred") return <LeaderboardLink />;
-  if (key === "rewardsPot") return <DashboardLink />;
+  if (key === "claimed") return <ExplorerLink />;
   return null;
 }
 
-function formatSignedCount(value: number | null): string {
-  if (value === null) return "--";
-  return `${value > 0 ? "+" : ""}${value.toLocaleString()}`;
-}
-
-function formatSignedZecDecimal(value: number | null): string {
-  if (value === null) return "--";
-  const formatted = Math.abs(value).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${value > 0 ? "+" : value < 0 ? "-" : ""}${formatted}`;
-}
-
 function buildItems(stats: NetworkStats): StatItem[] {
-  if (stats.mode === "waitlist") {
-    return [
-      {
-        key: "waitlist",
-        label: "Waitlist",
-        value: stats.waitlist.toLocaleString(),
-        helpText: "Number of people gaining early access to claim their ZcashName.",
-        deltaDayValue: formatSignedCount(stats.deltas.waitlist.day),
-        deltaWeekValue: formatSignedCount(stats.deltas.waitlist.week),
-        deltaMonthValue: formatSignedCount(stats.deltas.waitlist.month),
-      },
-      {
-        key: "referred",
-        label: "Referred",
-        value: stats.referred.toLocaleString(),
-        helpText: "Number of waitlist members who were referred by someone.",
-        deltaDayValue: formatSignedCount(stats.deltas.referred.day),
-        deltaWeekValue: formatSignedCount(stats.deltas.referred.week),
-        deltaMonthValue: formatSignedCount(stats.deltas.referred.month),
-      },
-      {
-        key: "rewardsPot",
-        label: "Rewards",
-        value: `${Math.floor(stats.rewardsPot).toLocaleString()} ZEC`,
-        helpText: "Estimated total rewards to be issued when names are purchased during early access.",
-        deltaDayValue: formatSignedZecDecimal(stats.deltas.rewardsPot.day),
-        deltaWeekValue: formatSignedZecDecimal(stats.deltas.rewardsPot.week),
-        deltaMonthValue: formatSignedZecDecimal(stats.deltas.rewardsPot.month),
-      },
-    ];
-  }
   return [
-    { key: "claimed", label: "Claimed", value: stats.claimed.toLocaleString(), helpText: "Claimed means this .zcash name is already registered to an owner on-chain." },
-    { key: "forSale", label: "For Sale", value: stats.forSale.toLocaleString(), helpText: "For Sale means the current owner has listed the name and can accept a purchase." },
-    { key: "syncedHeight", label: "Block", value: stats.syncedHeight.toLocaleString(), helpText: "The latest block height synced by the ZNS indexer." },
+    {
+      key: "claimed",
+      label: "Claimed",
+      value: stats.claimed.toLocaleString(),
+      helpText: "Claimed means this .zcash name is already registered to an owner on-chain.",
+    },
+    {
+      key: "online",
+      label: "Mint",
+      value: stats.online ? "Live" : "Offline",
+      helpText:
+        stats.mode === "testnet"
+          ? "The testnet mint is live and accepting requests."
+          : "The mainnet mint is not online yet. Testnet is live.",
+    },
+    {
+      key: "syncedHeight",
+      label: "Block",
+      value: stats.syncedHeight.toLocaleString(),
+      helpText: "The latest block height synced by the ZNS resolver.",
+    },
   ];
 }
 
@@ -151,18 +115,6 @@ export default function MarketStats({
   const [hoverKey, setHoverKey] = useState<StatKey | null>(null);
 
   const items = buildItems(stats);
-  const isWaitlistMode = stats.mode === "waitlist";
-  const deltaValueWidthCh = isWaitlistMode
-    ? Math.max(
-        2,
-        ...items.flatMap((item) => [
-          item.deltaDayValue?.length ?? 2,
-          item.deltaWeekValue?.length ?? 2,
-          item.deltaMonthValue?.length ?? 2,
-        ]),
-      )
-    : 0;
-  const deltaSideWidthCh = Math.max(deltaValueWidthCh, 3);
   const activeItem = items.find((item) => item.key === activeKey);
   const isHelpVisible = Boolean(activeItem);
   const activeAction = activeItem ? actionLinkForStat(activeItem.key) : null;
@@ -202,62 +154,21 @@ export default function MarketStats({
                 onBlur={() => setHoverKey((curr) => curr === item.key ? null : curr)}
                 className="cursor-pointer px-3 py-2 text-center transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--partner-card-border-hover)] sm:px-5 sm:py-3"
               >
-                <div
-                  className={`mx-1 rounded-[0.8rem] px-2 transition-colors duration-200 ease-out sm:px-3 ${isWaitlistMode ? "py-3 sm:py-3.5" : "py-2 sm:py-2.5"}`}
-                >
-                  {isWaitlistMode ? (
-                    <div className="flex min-h-[8.75rem] flex-col items-center justify-center gap-3 text-center">
-                      <div
-                        className="text-[0.74rem] font-semibold uppercase tracking-[0.08em] sm:text-[0.78rem]"
-                        style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-dim)" }}
-                      >
-                        {item.label}
-                      </div>
-                      <div
-                        className="tabular-nums text-[clamp(1.4rem,2.8vw,2rem)] font-semibold leading-none tracking-[-0.015em] transition-colors"
-                        style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-heading)" }}
-                      >
-                        {item.value}
-                      </div>
-                      <div
-                        className="flex flex-col items-center gap-1 tabular-nums text-[0.68rem] font-medium leading-none transition-colors sm:text-[0.72rem]"
-                        style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-muted)" }}
-                      >
-                        {[
-                          { value: item.deltaDayValue ?? "--", label: "1d" },
-                          { value: item.deltaWeekValue ?? "--", label: "7d" },
-                          { value: item.deltaMonthValue ?? "--", label: "30d" },
-                        ].map((delta) => (
-                          <div
-                            key={`${item.key}-${delta.label}`}
-                            className="grid items-baseline justify-center"
-                            style={{ gridTemplateColumns: `${deltaSideWidthCh}ch 0.9ch ${deltaSideWidthCh}ch` }}
-                          >
-                            <span className="inline-block text-right">
-                              {delta.value}
-                            </span>
-                            <span aria-hidden="true" />
-                            <span className="inline-block text-left">{delta.label}</span>
-                          </div>
-                        ))}
-                      </div>
+                <div className="mx-1 rounded-[0.8rem] px-2 py-2 transition-colors duration-200 ease-out sm:px-3 sm:py-2.5">
+                  <>
+                    <div
+                      className="tabular-nums text-[clamp(1.25rem,2.5vw,1.85rem)] font-semibold leading-none tracking-[-0.015em] transition-colors"
+                      style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-heading)" }}
+                    >
+                      {item.value}
                     </div>
-                  ) : (
-                    <>
-                      <div
-                        className="tabular-nums text-[clamp(1.25rem,2.5vw,1.85rem)] font-semibold leading-none tracking-[-0.015em] transition-colors"
-                        style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-heading)" }}
-                      >
-                        {item.value}
-                      </div>
-                      <div
-                        className="mt-1 text-[0.74rem] font-semibold uppercase tracking-[0.08em] transition-colors sm:mt-1.5 sm:text-[0.78rem]"
-                        style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-dim)" }}
-                      >
-                        {item.label}
-                      </div>
-                    </>
-                  )}
+                    <div
+                      className="mt-1 text-[0.74rem] font-semibold uppercase tracking-[0.08em] transition-colors sm:mt-1.5 sm:text-[0.78rem]"
+                      style={{ color: isHighlighted ? "var(--color-accent-interactive)" : "var(--fg-dim)" }}
+                    >
+                      {item.label}
+                    </div>
+                  </>
                 </div>
               </button>
             );

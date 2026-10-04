@@ -9,8 +9,8 @@ export type SiteNavLink = {
   children?: SiteNavLink[];
 };
 
-/** Landing-page anchors (home or waitlist shell). */
-export function buildLandingSectionLinks(basePath: "/" | "/waitlist" = "/"): SiteNavLink[] {
+/** Landing-page anchors. */
+export function buildLandingSectionLinks(basePath: "/" = "/"): SiteNavLink[] {
   return [
     { label: "Get Names", href: `${basePath}#names` },
     { label: "Partners", href: `${basePath}#supporters` },
@@ -20,12 +20,6 @@ export function buildLandingSectionLinks(basePath: "/" | "/waitlist" = "/"): Sit
     { label: "Newsletter", href: `${basePath}#newsletter` },
   ];
 }
-
-export const NAV_LEADERBOARD_CHILDREN: SiteNavLink[] = [
-  { label: "Dashboard", href: "/leaders/ref" },
-  { label: "Share Kit", href: "/sharekit" },
-  { label: "Terms", href: "/leaders/terms" },
-];
 
 export const NAV_LEARN_CHILDREN: SiteNavLink[] = [
   { label: "What is Zcash Names?", href: "/docs/learn/what-is-zns" },
@@ -41,13 +35,6 @@ export const NAV_DEVELOPER_CHILDREN: SiteNavLink[] = [
   { label: "Indexer & RPC", href: "/docs/indexer/running" },
 ];
 
-export const NAV_BETA_CHILDREN: SiteNavLink[] = [
-  { label: "Wallets", href: "/beta/wallets" },
-  { label: "Instructions", href: "/beta/instructions" },
-  { label: "Apply", href: "/beta/apply" },
-  { label: "Refund", href: "/beta/refund" },
-];
-
 /** Full footer sitemap sections (href is unique per top-level entry). */
 export const SITEMAP_SECTIONS: SiteNavLink[] = [
   {
@@ -61,14 +48,6 @@ export const SITEMAP_SECTIONS: SiteNavLink[] = [
     ],
   },
   {
-    label: "Waitlist",
-    href: "/waitlist",
-    children: [
-      { label: "Waitlist view", href: "/waitlist/view" },
-      { label: "Reserve", href: "/reserve" },
-    ],
-  },
-  {
     label: "Names",
     href: "/explorer",
     children: [
@@ -77,16 +56,6 @@ export const SITEMAP_SECTIONS: SiteNavLink[] = [
       { label: "Suggest a name", href: "/protected/suggest" },
       { label: "Request a name", href: "/protected/request" },
     ],
-  },
-  {
-    label: "Leaderboard",
-    href: "/leaders",
-    children: NAV_LEADERBOARD_CHILDREN,
-  },
-  {
-    label: "Beta",
-    href: "/beta",
-    children: NAV_BETA_CHILDREN,
   },
   {
     label: "Learn",

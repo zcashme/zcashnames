@@ -1,5 +1,6 @@
 import { ZNS } from "zcashname-sdk";
-import type { Listing, Network, Registration, ResolveName, NameAvailabilityState, ZnsEvent } from "@/lib/types";
+import type { Network, NameAvailabilityState, ResolveName, ZnsEvent } from "@/lib/types";
+import { getMintConfig } from "@/lib/zns/mint-config";
 import {
   validateAddress,
   isValidTransparentAddress,
@@ -8,12 +9,44 @@ import {
   type AddressValidationResult,
 } from "@/lib/zns/address-validation";
 
+//
+// Resolver clients — one read-only zcashname-sdk (v0.13) instance per
+// network, pointing at the network's Name Note resolver JSON-RPC endpoint.
+//
+// The SDK has no network option; the URL selects the deployment. Resolver
+// URLs come from the environment:
+//   ZNS_TESTNET_RESOLVER_URL / ZNS_MAINNET_RESOLVER_URL
+//
 const instances: Record<Network, ZNS> = {
-  testnet: new ZNS({ network: "testnet", url: process.env.ZNS_TESTNET_RPC_URL }),
-  mainnet: new ZNS({ network: "mainnet", url: process.env.ZNS_MAINNET_RPC_URL }),
+  testnet: new ZNS({ url: process.env.ZNS_TESTNET_RESOLVER_URL ?? "" }),
+  mainnet: new ZNS({ url: process.env.ZNS_MAINNET_RESOLVER_URL ?? "" }),
 };
 
 export const getZns = (network: Network): ZNS => instances[network];
+
+/**
+ * Verify the resolver is the one anchored to this deployment's Mint: the
+ * viewing key it reports MUST equal the registry UFVK in mint-config.
+ * Returns the status on success, null on any mismatch or error.
+ */
+export async function getVerifiedStatus(
+  network: Network,
+): Promise<{ syncedHeight: number; synced: boolean; registered: number } | null> {
+  const { registryUfvk } = getMintConfig(network);
+  if (!registryUfvk) return null;
+  try {
+    const status = await instances[network].status();
+    if (status.viewingKey !== registryUfvk) return null;
+    return {
+      syncedHeight: status.syncedHeight,
+      synced: status.synced,
+      registered: status.registered,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export { validateAddress, isValidTransparentAddress, decodeTransparentAddress };
 export type { AddressStatus, AddressValidationResult };
 
@@ -24,7 +57,7 @@ export type { AddressStatus, AddressValidationResult };
 
 // Must mirror SDK's isValidName regex — SDK exports it only as a ZNS instance
 // method, not a free function, so we duplicate the regex here for client/hook use.
-const NAME_RE = /^[a-z0-9]{1,62}$/;
+const NAME_RE = /^[a-z0-9]{1,63}$/;
 
 export function normalizeUsername(raw: string): string {
   return raw.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -112,37 +145,17 @@ function matchesExplorerSearch(
   return false;
 }
 
-export function filterRegistrations(
-  registrations: Registration[],
+export function filterRegistrations<T extends { name: string; address: string; txid: string }>(
+  registrations: T[],
   searchQuery: string,
-): Registration[] {
+): T[] {
   const index = buildExplorerSearchIndex(searchQuery);
   if (!index) return registrations;
   return registrations.filter((registration) =>
     matchesExplorerSearch(index, {
       names: [registration.name],
-      txids: [
-        registration.txid,
-        registration.listing?.txid,
-        registration.listing?.pendingBuy?.txid,
-      ],
-      addresses: [
-        registration.address,
-        registration.listing?.payTaddr,
-        registration.listing?.pendingBuy?.buyer,
-      ],
-    }),
-  );
-}
-
-export function filterListings(listings: Listing[], searchQuery: string): Listing[] {
-  const index = buildExplorerSearchIndex(searchQuery);
-  if (!index) return listings;
-  return listings.filter((listing) =>
-    matchesExplorerSearch(index, {
-      names: [listing.name],
-      txids: [listing.txid, listing.pendingBuy?.txid],
-      addresses: [listing.payTaddr, listing.pendingBuy?.buyer],
+      txids: [registration.txid],
+      addresses: [registration.address],
     }),
   );
 }
@@ -154,19 +167,20 @@ export function filterEvents(events: ZnsEvent[], searchQuery: string): ZnsEvent[
     matchesExplorerSearch(index, {
       names: [event.name],
       txids: [event.txid],
-      addresses: [event.ua],
+      addresses: [event.address],
     }),
   );
 }
 
-// Quick tri-state check from the SDK registration object. Does NOT look up
-// listings separately — callers that need listing data use resolveName().
+/**
+ * Tri-state availability from a resolver record. The Mint owns claim
+ * eligibility (protected names, access codes); from the resolver's public
+ * view a name is simply registered or not.
+ */
 export function registrationStatus(
-  reg: { listing: unknown } | null,
-): "available" | "registered" | "forsale" {
-  if (!reg) return "available";
-  if (reg.listing) return "forsale";
-  return "registered";
+  reg: { lastAction?: string } | null | undefined,
+): NameAvailabilityState {
+  return reg ? "registered" : "available";
 }
 
 export function zatsToZec(zats: number): number {
@@ -195,22 +209,13 @@ export interface CardProps {
 export function buildCardProps(result: ResolveName): CardProps {
   switch (result.status) {
     case "available":
-    case "protected": {
-      const zec = result.claimCost.zec;
       return {
-        availabilityState: result.status,
-        priceLabel: `~${zec.toFixed(6)} ZEC`,
-        usdLabel: formatUsdEquivalent(zec, null),
-      };
-    }
-    case "listed":
-      return {
-        availabilityState: "forsale",
-        priceLabel: `${result.listingPrice.zec} ZEC`,
-        usdLabel: formatUsdEquivalent(result.listingPrice.zec, null),
+        availabilityState: "available",
+        priceLabel: `~${result.claimCost.zec.toFixed(6)} ZEC`,
+        usdLabel: formatUsdEquivalent(result.claimCost.zec, null),
       };
     case "registered":
-      return { availabilityState: "unavailable" };
+      return { availabilityState: "registered" };
     case "blocked":
       return { availabilityState: "blocked" };
   }
