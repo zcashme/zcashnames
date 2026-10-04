@@ -19,6 +19,8 @@ Shared-link team submissions with required receipts. Review stays on admin crede
 
 The first visit with the shared link sets an httpOnly cookie on `/expenses` and strips `access` from the URL. Later visits from that browser can submit without the query string.
 
+The form posts JSON to `/expenses/upload` and `/expenses/submit` (same cookie path) so a second report after "Submit another" does not go through Next.js Server Actions.
+
 Localhost skips the shared-link check so you can fill the form at `http://localhost:3000/expenses`.
 
 ## Data

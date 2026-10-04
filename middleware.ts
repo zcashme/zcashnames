@@ -43,7 +43,8 @@ async function handleExpenseAccess(request: NextRequest) {
   }
 
   const provided = request.nextUrl.searchParams.get(EXPENSE_ACCESS_QUERY_PARAM)?.trim() ?? "";
-  if (provided && constantTimeEqual(provided, secret)) {
+  const isDocumentGet = request.method === "GET" || request.method === "HEAD";
+  if (provided && isDocumentGet && constantTimeEqual(provided, secret)) {
     const url = request.nextUrl.clone();
     url.searchParams.delete(EXPENSE_ACCESS_QUERY_PARAM);
     const response = NextResponse.redirect(url);

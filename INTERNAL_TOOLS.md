@@ -71,6 +71,7 @@ These routes remain local-only and are the main reason this repo exists.
 #### Expenses
 
 - Team form: `/expenses` (shared link, receipts required)
+- Submit APIs: `/expenses/upload`, `/expenses/submit`
 - Review inbox: `/admin/expenses`
 - SQL: `sql/2026-09-23-zn-expenses.sql`
 - Deployed submitters use `EXPENSE_FORM_SECRET` via `/expenses?access=...`. That secret must stay separate from admin basic auth.

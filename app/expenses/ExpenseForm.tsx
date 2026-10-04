@@ -10,10 +10,10 @@ import {
   categoryLabel,
 } from "@/lib/expenses/config";
 import { inferReceiptContentType } from "@/lib/expenses/parse";
-import {
-  prepareExpenseReceiptUpload,
-  submitExpenseReport,
-} from "@/app/expenses/actions";
+import type {
+  ExpenseSubmitResult,
+  ReceiptUploadSlotResult,
+} from "@/lib/expenses/api";
 
 const accept = EXPENSE_ALLOWED_RECEIPT_TYPES.join(",");
 
@@ -26,6 +26,35 @@ function todayIsoDate(): string {
 
 function fieldClassName(): string {
   return "mt-1 w-full rounded-lg border px-3 py-2 text-sm text-fg outline-none focus:border-amber-400";
+}
+
+async function postExpenseJson<T extends { ok: boolean; error?: string }>(
+  url: string,
+  body: unknown,
+  fallback: string,
+): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error(fallback);
+  }
+
+  let payload: T;
+  try {
+    payload = (await response.json()) as T;
+  } catch {
+    throw new Error(fallback);
+  }
+  return payload;
 }
 
 export default function ExpenseForm() {
@@ -75,25 +104,35 @@ export default function ExpenseForm() {
       const grants: string[] = [];
       for (const file of files) {
         const contentType = inferReceiptContentType(file.name, file.type);
-        const slot = await prepareExpenseReceiptUpload({
-          name: file.name,
-          contentType,
-          size: file.size,
-        });
+        const slot = await postExpenseJson<ReceiptUploadSlotResult>(
+          "/expenses/upload",
+          {
+            name: file.name,
+            contentType,
+            size: file.size,
+          },
+          "Could not start the receipt upload. Try again.",
+        );
         if (!slot.ok) {
           setError(slot.error);
           return;
         }
 
-        const uploaded = await fetch(slot.signedUrl, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${slot.token}`,
-            "Content-Type": contentType,
-            "x-upsert": "false",
-          },
-          body: file,
-        });
+        let uploaded: Response;
+        try {
+          uploaded = await fetch(slot.signedUrl, {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${slot.token}`,
+              "Content-Type": contentType,
+              "x-upsert": "false",
+            },
+            body: file,
+          });
+        } catch {
+          setError("Could not upload a receipt. Check your connection and try again.");
+          return;
+        }
         if (!uploaded.ok) {
           setError("Could not upload a receipt. Try a smaller PDF or image.");
           return;
@@ -101,17 +140,21 @@ export default function ExpenseForm() {
         grants.push(slot.grant);
       }
 
-      const result = await submitExpenseReport({
-        submitterName: String(data.get("submitterName") ?? ""),
-        submitterEmail: String(data.get("submitterEmail") ?? ""),
-        amount: String(data.get("amount") ?? ""),
-        currency: String(data.get("currency") ?? ""),
-        expenseDate: String(data.get("expenseDate") ?? ""),
-        category: String(data.get("category") ?? ""),
-        merchant: String(data.get("merchant") ?? ""),
-        description: String(data.get("description") ?? ""),
-        receiptGrants: grants,
-      });
+      const result = await postExpenseJson<ExpenseSubmitResult>(
+        "/expenses/submit",
+        {
+          submitterName: String(data.get("submitterName") ?? ""),
+          submitterEmail: String(data.get("submitterEmail") ?? ""),
+          amount: String(data.get("amount") ?? ""),
+          currency: String(data.get("currency") ?? ""),
+          expenseDate: String(data.get("expenseDate") ?? ""),
+          category: String(data.get("category") ?? ""),
+          merchant: String(data.get("merchant") ?? ""),
+          description: String(data.get("description") ?? ""),
+          receiptGrants: grants,
+        },
+        "Could not submit the expense. Try again.",
+      );
       if (!result.ok) {
         setError(result.error);
         return;
@@ -131,7 +174,7 @@ export default function ExpenseForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-4">
+    <form method="post" onSubmit={onSubmit} className="grid gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm text-fg-muted">
           Name
