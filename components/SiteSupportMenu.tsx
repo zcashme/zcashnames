@@ -84,9 +84,7 @@ function ActionIcon({ label }: { label: SupportAction["label"] }) {
 }
 
 export default function SiteSupportMenu({
-  feedbackLauncherEnabled,
 }: {
-  feedbackLauncherEnabled: boolean;
 }) {
   const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -94,7 +92,7 @@ export default function SiteSupportMenu({
   const [menuHeight, setMenuHeight] = useState(112);
   const [footerHidden, setFooterHidden] = useState(false);
 
-  const shouldHideForFeedback = pathname === "/" && feedbackLauncherEnabled;
+  const shouldHideForFeedback = false;
   const supportActions = useMemo<SupportAction[]>(
     () => [
       ...COMMUNITIES.filter(

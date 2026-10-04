@@ -89,9 +89,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   ]);
   const hasBeta = !!cookieStore.get(BETA_COOKIE_NAME)?.value;
   const initialMode = stage ?? "waitlist";
-  const feedbackLauncherEnabled =
-    (session?.kind === "tester" && session.tester.cohort === "v2") ||
-    (session?.kind === "shared" && session.testerId === "shared_mainnet");
 
   return (
     <>
@@ -115,7 +112,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </div>
         {children}
         <PurchaseResumeShell />
-        <SiteSupportMenu feedbackLauncherEnabled={feedbackLauncherEnabled} />
+        <SiteSupportMenu />
         <div data-site-chrome="true">
         <Footer />
         </div>
