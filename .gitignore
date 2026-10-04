@@ -70,8 +70,7 @@ sql/*
 docs/security-competition.md
 !tests/
 tests/*
-!tests/reservation-refunds.spec.ts
-!tests/noir-wallet.spec.ts
+!tests/protocol.spec.ts
 !tests/referral-rewards.spec.ts
 !tests/protected-referral-human-codes.spec.ts
 !tests/security-competition.spec.ts
