@@ -18,6 +18,9 @@ out
 Thumbs.db
 *.tmp
 
+# local scratch / verification artifacts
+tmp-*/
+
 # TypeScript
 *.tsbuildinfo
 
