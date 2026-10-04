@@ -120,10 +120,11 @@ export default function BetaV2Brief() {
           </p>
         </details>
         <p style={p}>
-          Use the feedback panel to report anything you encounter during testing. It will be
-          available on the right side of the user interface. It can be expanded, collapsed, or
-          opened in a separate window. All bug reports, UX feedback, screenshots, txids, and
-          reproduction details should be submitted there.
+          Report anything you encounter during testing through the community channels in{" "}
+          <Link href="#get-in-touch" style={linkStyle}>Get In Touch</Link>, or privately at{" "}
+          <a href="mailto:support@zcashnames.com" style={linkStyle}>support@zcashnames.com</a> for
+          unfixed bugs or anything confidential. All bug reports, UX feedback, screenshots, txids,
+          and reproduction details should go there.
         </p>
         <p style={p}>
           Good reports include what happened, what you expected, steps to reproduce it, screenshots,
@@ -136,7 +137,7 @@ export default function BetaV2Brief() {
         <p style={p}>
           <s>
             Rewards go to the first person to report an issue we can reproduce and confirm through the
-            feedback panel. Minor confirmed bugs receive 0.05 ZEC. Critical confirmed bugs
+            community channels. Minor confirmed bugs receive 0.05 ZEC. Critical confirmed bugs
             receive 0.5 ZEC.
           </s>
         </p>
@@ -155,7 +156,7 @@ export default function BetaV2Brief() {
         <p style={p}>
           Beta names are temporary. They will not carry over to Early Access. Beta prices are 1% of
           planned launch pricing. Claim and listing fees may be refundable during testing if requested
-          through the feedback panel.
+          via support@zcashnames.com or /beta/refund.
         </p>
         <p style={p}>
           We will only contact you about this beta round.
@@ -164,8 +165,8 @@ export default function BetaV2Brief() {
           We will never ask you for your wallet passphrase.
         </p>
         <p style={p}>
-          Join Signal, Discord, or Telegram for questions and community discussion. Submit bug
-          reports through the feedback panel, not chat.
+          Join Signal, Discord, or Telegram for questions and community discussion. Send
+          confidential or unfixed bug reports to support@zcashnames.com rather than chat.
         </p>
         <ul className="list-disc pl-5">
           {community.map((social) => (

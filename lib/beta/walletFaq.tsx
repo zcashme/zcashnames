@@ -363,8 +363,8 @@ const BASE_FAQ_TEMPLATE: readonly WalletFaqSectionTemplate[] = [
               exercise real mainnet flows at a lower cost.
             </p>
             <p>
-              Claim fees and listing fees may be refundable during testing if requested through the
-              feedback panel. Secondary-market purchases between users should be treated as real
+              Claim fees and listing fees may be refundable during testing if requested at /beta/refund
+              or via support@zcashnames.com. Secondary-market purchases between users should be treated as real
               trades and are not generally refundable by the Zcash Names team.
             </p>
           </>
@@ -457,7 +457,7 @@ const BASE_FAQ_TEMPLATE: readonly WalletFaqSectionTemplate[] = [
               Beta testers help shape the live wallet experience
               <s>
                 {" "}and may qualify for bug-bounty rewards when they report confirmed, reproducible
-                issues through the feedback panel.
+                issues through the community channels.
               </s>
             </p>
             <p>

@@ -1,13 +1,8 @@
 import Link from "next/link";
 import { BRAND } from "@/lib/zns/brand";
 import {
-  InlineCollapseChevron,
   InlineNetworkToggle,
-  InlinePopoutIcon,
   InlinePreview,
-  InlineReadMeBtn,
-  InlineReportingBanner,
-  InlineSubmitFeedbackBtn,
 } from "./BriefInline";
 
 const SOCIAL_PATHS: Record<string, string> = {
@@ -27,7 +22,7 @@ export const BETA_INSTRUCTIONS_SECTIONS: { id: string; label: string }[] = [
   { id: "how-it-works", label: "How It Works" },
   { id: "structure", label: "Beta Structure" },
   { id: "what-to-test", label: "What to Test" },
-  { id: "submitting-feedback", label: "The Feedback Panel" },
+  { id: "submitting-feedback", label: "Submitting Feedback" },
   { id: "before-bug", label: "Confidentiality" },
   { id: "bounties", label: "Bug Bounties" },
   { id: "what-you-need", label: "What You Need" },
@@ -167,16 +162,13 @@ export default function BetaInstructionsBrief() {
             When the password modal appears, enter the <strong>invite code</strong> you received.
           </li>
           <li style={li}>
-            You&apos;ll see a welcome toast and a floating <strong>Submit Feedback</strong> button in
-            the bottom-right corner. Reports filed from this session are auto-attributed to you.
-            <InlinePreview>
-              <InlineSubmitFeedbackBtn />
-            </InlinePreview>
+            You&apos;ll see a welcome toast confirming the session. You are now signed in and ready
+            to test.
           </li>
         </ol>
         <p style={{ ...p, marginTop: "1rem" }}>
-          See <a href="#submitting-feedback" style={{ color: "var(--fg-heading)", textDecoration: "underline" }}>The Feedback Panel</a>{" "}
-          below for the reporting flow before you begin.
+          See <a href="#submitting-feedback" style={{ color: "var(--fg-heading)", textDecoration: "underline" }}>Submitting Feedback</a>{" "}
+          below for how to report findings before you begin.
         </p>
       </section>
 
@@ -215,8 +207,8 @@ export default function BetaInstructionsBrief() {
       <section id="what-to-test">
         <h2 style={h2}>What to Test</h2>
         <p style={p}>
-          The full beta test plan lives in the <strong>Checklist</strong> tab of the feedback panel.
-          It contains every individual test and helps you track progress.
+          Work through every flow available in the beta, end to end, and confirm the behavior
+          matches the explorer.
         </p>
         <p style={p}>
           Record which wallet, version, and operating system you are using as part of any report.
@@ -233,69 +225,27 @@ export default function BetaInstructionsBrief() {
       <hr style={divider} />
 
       <section id="submitting-feedback">
-        <h2 style={h2}>The Feedback Panel</h2>
+        <h2 style={h2}>Submitting Feedback</h2>
         <p style={p}>
-          Once you have unlocked Mainnet on the home page, a floating{" "}
-          <strong>Submit Feedback</strong> button stays pinned to the bottom-right corner. Clicking it
-          opens the reporting panel while keeping the site usable beside it. The chevron{" "}
-          <InlineCollapseChevron /> collapses the panel again.
+          The in-product feedback panel has been retired. Report findings directly through the
+          channels listed in <a href="#contacts" style={{ color: "var(--fg-heading)", textDecoration: "underline" }}>Get In Touch</a>{" "}
+          below &mdash; Signal or Discord is best for anything time-sensitive. For confidential
+          findings &mdash; unfixed bugs, security issues, anything with screenshots you would rather
+          not post publicly &mdash; email{" "}
+          <a href="mailto:support@zcashnames.com" style={{ color: "var(--fg-heading)", textDecoration: "underline" }}>support@zcashnames.com</a>.
         </p>
-
-        <h3 style={h3}>The two tabs</h3>
-        <p style={p}>The panel has two tabs and opens on <strong>Checklist</strong> the first time:</p>
-        <ul className="list-disc pl-5">
-          <li style={li}>
-            <strong>Checklist</strong> tracks your test plan with checkboxes and lets you choose the
-            active reporting target.
-          </li>
-          <li style={li}>
-            <strong>Report</strong> is the bug report and feedback form. Every report should be tied
-            to a checklist item.
-          </li>
-        </ul>
-
-        <h3 style={h3}>Checklist to Report flow</h3>
-        <ul className="list-disc pl-5">
-          <li style={li}>
-            The active item shows a green outline in Checklist and a green reporting banner above the
-            Report tab.
-            <InlinePreview>
-              <InlineReportingBanner />
-            </InlinePreview>
-          </li>
-          <li style={li}>
-            Submitting a report does not check off the item. Mark the box only when you consider that
-            test complete.
-          </li>
-          <li style={li}>
-            Wallet, version, and OS are remembered across reports until you change them.
-          </li>
-          <li style={li}>
-            You need at least one of wallet, steps, expected, actual, txid, notes, or a screenshot
-            before you can submit.
-          </li>
-        </ul>
-
-        <h3 style={h3}>Test in one window, write in another</h3>
         <p style={p}>
-          The popout icon <InlinePopoutIcon /> opens the same form in a standalone window. It shares
-          the same attribution, wallet details, and checklist progress across tabs and windows.
-        </p>
-
-        <h3 style={h3}>Re-reading the instructions</h3>
-        <p style={p}>
-          The Read Me button <InlineReadMeBtn /> opens these instructions in a new tab whenever you
-          need them.
+          A good report includes: the wallet you were using and its version, your operating system,
+          the steps to reproduce, what you expected, what happened instead, and the transaction ID
+          when one is involved. Screenshots help.
         </p>
       </section>
-
-      <hr style={divider} />
 
       <section id="before-bug">
         <h2 style={h2}>Confidentiality</h2>
         <p style={p}>
-          Do not share screenshots or disclose bugs publicly until they are fixed. Use the feedback
-          panel or contact channels directly.
+          Do not share screenshots or disclose bugs publicly until they are fixed. Use private
+          contact channels directly.
         </p>
       </section>
 
@@ -357,8 +307,7 @@ export default function BetaInstructionsBrief() {
       <section id="contacts">
         <h2 style={h2}>Get In Touch</h2>
         <p style={p}>
-          For casual feedback, questions, or anything that does not fit the structured form, message
-          us on Signal, Discord, or Telegram.
+          For casual feedback and questions, message us on Signal, Discord, or Telegram.
         </p>
         <div className="mt-4 flex flex-col gap-2">
           {featuredChannels.map(({ label, href }) => {

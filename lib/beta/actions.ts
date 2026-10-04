@@ -34,12 +34,9 @@ import {
   setStageCookie,
   setTesterCookie,
 } from "./gate";
-import { cookieOptions } from "@/lib/cookie";
 
-const FEEDBACK_BUCKET = "beta-feedback";
 const REFUND_BUCKET = "beta-refund-attachments";
 const FEEDBACK_PROGRAM = "v2";
-const DEFAULT_FEEDBACK_ITEM_ID = "ux-e1";
 
 // ---------------------------------------------------------------------------
 // Beta gate session helpers.
@@ -69,13 +66,6 @@ export async function verifyBetaPassword(
   }
 
   return { ok: false };
-}
-
-export async function signOutBetaTester(): Promise<{ ok: true }> {
-  const store = await cookies();
-  store.set(BETA_COOKIE_NAME, "", cookieOptions(0));
-  store.set(BETA_STAGE_COOKIE_NAME, "", cookieOptions(0));
-  return { ok: true };
 }
 
 export async function switchToNetwork(network: Network): Promise<void> {
@@ -366,26 +356,7 @@ export async function getCurrentBetaRefundDefaults(): Promise<BetaRefundDefaults
 
 // ---------------------------------------------------------------------------
 
-export interface FeedbackPayload {
-  severity: "high" | "low" | "none";
-  experienceRating?: number | null;
-  wallet: string;
-  network: "testnet" | "mainnet";
-  steps: string;
-  expected: string;
-  actual: string;
-  txid?: string;
-  notes?: string;
-  walletVariantId?: WalletVariantId | null;
-}
-
-export type FeedbackResult =
-  | { ok: true }
-  | { ok: false; error: string };
-
 const MAX_FIELD_LEN = 4000;
-const MAX_SCREENSHOTS = 5;
-const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 const MAX_REFUND_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 
 function isLegacyBetaTesterForeignKeyError(error: { code?: string; message?: string } | null | undefined): boolean {
@@ -394,157 +365,9 @@ function isLegacyBetaTesterForeignKeyError(error: { code?: string; message?: str
   return typeof error.message === "string" && error.message.includes("beta_feedback_tester_id_fkey");
 }
 
-function appendFeedbackServerTag(clientEnv: string | null, tag: string): string {
-  const base = clientEnv?.trim() ?? "";
-  const suffix = ` ${tag}`;
-  if (!base) return tag.slice(0, 200);
-  return `${base}${suffix}`.slice(0, 200);
-}
-
 function sanitizeFilename(name: string): string {
   // Strip path separators + anything weird, keep extension.
   return name.replace(/[^\w.\-]+/g, "_").slice(0, 80) || "file";
-}
-
-export async function submitBetaFeedback(formData: FormData): Promise<FeedbackResult> {
-  const session = await readCurrentBetaAccessSession();
-  const tester = session?.kind === "tester" ? session.tester : null;
-  const isSharedMainnet = session?.kind === "shared" && session.testerId === "shared_mainnet";
-
-  if (!isSharedMainnet && tester?.cohort !== "v2") {
-    return { ok: false, error: "Feedback is only available for the current beta cohort." };
-  }
-  const testerId = tester?.id ?? null;
-  const testerName = tester?.displayName ?? (isSharedMainnet ? "shared_mainnet" : "anonymous");
-
-  const reqHeaders = await headers();
-  const userAgent = reqHeaders.get("user-agent")?.slice(0, 500) ?? null;
-
-  const severity = String(formData.get("severity") ?? "");
-  const wallet = String(formData.get("wallet") ?? "").trim();
-  const network = String(formData.get("network") ?? "");
-  const steps = String(formData.get("steps") ?? "").trim();
-  const expected = String(formData.get("expected") ?? "").trim();
-  const actual = String(formData.get("actual") ?? "").trim();
-  const txid = String(formData.get("txid") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim();
-  const experienceRatingRaw = String(formData.get("experience_rating") ?? "").trim();
-  const checklistItemIdRaw = String(formData.get("checklistItemId") ?? "").trim().slice(0, 64);
-  const checklistItemId = checklistItemIdRaw || DEFAULT_FEEDBACK_ITEM_ID;
-  const clientEnv = String(formData.get("client_env") ?? "").trim().slice(0, 200);
-  const walletVariantIdRaw = String(formData.get("wallet_variant_id") ?? "").trim();
-  const experienceRating = experienceRatingRaw ? Number(experienceRatingRaw) : null;
-  const walletVariantId = isWalletVariantId(walletVariantIdRaw) ? walletVariantIdRaw : null;
-
-  if (severity !== "high" && severity !== "low" && severity !== "none") {
-    return { ok: false, error: "Pick a severity." };
-  }
-  if (network !== "testnet" && network !== "mainnet") {
-    return { ok: false, error: "Pick a network." };
-  }
-  if (
-    experienceRating !== null &&
-    (!Number.isInteger(experienceRating) || experienceRating < 1 || experienceRating > 5)
-  ) {
-    return { ok: false, error: "Pick a rating from 1 to 5." };
-  }
-  for (const [k, v] of [["wallet", wallet], ["steps", steps], ["expected", expected], ["actual", actual], ["txid", txid], ["notes", notes]] as const) {
-    if (v.length > MAX_FIELD_LEN) return { ok: false, error: `${k} is too long.` };
-  }
-
-  const hasMinimumContent = !!notes || experienceRating !== null || !!expected || !!actual;
-  if (!hasMinimumContent) {
-    return {
-      ok: false,
-      error: "Add notes, a rating, expected behavior, or actual behavior before submitting.",
-    };
-  }
-
-  const validFiles: File[] = [];
-  const rawFiles = formData.getAll("screenshots");
-  if (rawFiles.length > MAX_SCREENSHOTS) {
-    return { ok: false, error: `Up to ${MAX_SCREENSHOTS} screenshots.` };
-  }
-  for (const f of rawFiles) {
-    if (!(f instanceof File)) continue;
-    if (f.size === 0) continue;
-    if (!f.type.startsWith("image/")) {
-      return { ok: false, error: "Screenshots must be images." };
-    }
-    if (f.size > MAX_SCREENSHOT_BYTES) {
-      return { ok: false, error: "Each screenshot must be under 5 MB." };
-    }
-    validFiles.push(f);
-  }
-
-  // Allocate a UUID up front so screenshot paths can use it as a folder.
-  const reportId = randomUUID();
-  const screenshotPaths: string[] = [];
-  const screenshotUrls: string[] = [];
-
-  for (const f of validFiles) {
-    const path = `${testerId ?? "anonymous"}/${reportId}/${sanitizeFilename(f.name)}`;
-    const { error: uploadError } = await db.storage
-      .from(FEEDBACK_BUCKET)
-      .upload(path, f, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: f.type,
-      });
-    if (uploadError) {
-      console.error("[beta-feedback] storage upload failed:", uploadError);
-      return { ok: false, error: "Couldn't upload a screenshot. Try again." };
-    }
-    screenshotPaths.push(path);
-    const { data } = db.storage.from(FEEDBACK_BUCKET).getPublicUrl(path);
-    screenshotUrls.push(data.publicUrl);
-  }
-
-  const baseInsertPayload = {
-    id: reportId,
-    tester_id: testerId,
-    tester_name_snapshot: testerName,
-    beta_version: FEEDBACK_PROGRAM,
-    stage: network,
-    item_id: checklistItemId,
-    severity,
-    experience_rating: experienceRating,
-    wallet: wallet || null,
-    wallet_variant_id: walletVariantId,
-    steps: steps || null,
-    expected: expected || null,
-    actual: actual || null,
-    txid: txid || null,
-    notes: notes || null,
-    screenshot_paths: screenshotUrls,
-    user_agent: userAgent,
-    client_env: clientEnv || null,
-  };
-
-  let { error: insertError } = await db.from("beta_feedback").insert(baseInsertPayload);
-
-  // Some deployed databases still have a legacy foreign key that points
-  // beta_feedback.tester_id at beta_testers (v1 only). Retry v2 inserts with a
-  // null tester_id so reports are not dropped while the schema catches up.
-  if (insertError && tester?.cohort === "v2" && isLegacyBetaTesterForeignKeyError(insertError)) {
-    console.warn("[beta-feedback] retrying v2 report insert without tester_id due to legacy foreign key");
-    ({ error: insertError } = await db.from("beta_feedback").insert({
-      ...baseInsertPayload,
-      tester_id: null,
-      client_env: appendFeedbackServerTag(clientEnv || null, `tester_id=${tester.id}`),
-    }));
-  }
-
-  if (insertError) {
-    console.error("[beta-feedback] insert failed:", insertError);
-    // Best-effort cleanup of any uploaded screenshots so we don't leak orphans.
-    if (screenshotPaths.length > 0) {
-      await db.storage.from(FEEDBACK_BUCKET).remove(screenshotPaths).catch(() => {});
-    }
-    return { ok: false, error: "Couldn't save your report. Try again." };
-  }
-
-  return { ok: true };
 }
 
 export type BetaRefundResult =
