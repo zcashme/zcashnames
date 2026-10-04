@@ -1,24 +1,20 @@
 "use client";
 
 // Module-scoped scanning watcher. One poll per (name, network), shared by
-// all subscribers (modal + resume banner) via reference counting. Each tick
-// fires checkMempool and resolveName in parallel — the indexer is the source
-// of truth for "mined", the mempool result is intermediate UX flavor.
+// all subscribers (form + resume banner) via reference counting.
 //
-// The watcher emits RAW signals only. Subscribers compute their own
-// scanState via `deriveScanState`, because the "is this mined" check
-// depends on per-subscriber `expected` post-action state (claim destination
-// address, listing price, etc).
+// The resolver is the source of truth: every tick re-resolves the name and
+// emits the current Registration (or null once a release has landed).
+// Subscribers compare against their own baseline to derive ScanState —
+// "is this mined" depends on the per-subscriber expectation (claim appears,
+// update txid changes, release disappears).
 
-import type { Action, Network, ResolveName, ScanState } from "@/lib/types";
-import { checkMempool } from "@/lib/zns/mempool";
+import type { Network, Registration, ScanState } from "@/lib/types";
 import { resolveName } from "@/lib/zns/resolve";
 
 export interface ScanTick {
-  mempool: Awaited<ReturnType<typeof checkMempool>>;
-  // null when resolveName threw (network/parsing). Subscribers treat as
-  // "not yet observed" — never as "mined".
-  registration: ResolveName | null;
+  /** Latest resolver state for the name — null when no live registration. */
+  registration: Registration | null;
 }
 
 type Listener = (tick: ScanTick) => void;
@@ -29,7 +25,7 @@ interface Entry {
   lastTick: ScanTick | null;
 }
 
-const POLL_MS = 2000;
+const POLL_MS = 2500;
 const entries = new Map<string, Entry>();
 
 function key(name: string, network: Network): string {
@@ -37,13 +33,16 @@ function key(name: string, network: Network): string {
 }
 
 async function pollOnce(name: string, network: Network, k: string): Promise<void> {
-  const [mempool, registration] = await Promise.all([
-    checkMempool(name, network),
-    resolveName(name, network).catch(() => null),
-  ]);
+  let registration: Registration | null = null;
+  try {
+    const result = await resolveName(name, network);
+    if (result.status === "registered") registration = result.registration;
+  } catch {
+    // Resolver hiccup — emit the previous tick so listeners don't flap.
+  }
   const entry = entries.get(k);
   if (!entry) return;
-  const tick: ScanTick = { mempool, registration };
+  const tick: ScanTick = { registration };
   entry.lastTick = tick;
   entry.listeners.forEach((fn) => fn(tick));
 }
@@ -58,81 +57,62 @@ export function watchScanning(
   const k = key(name, network);
   let entry = entries.get(k);
   if (!entry) {
-    entry = { listeners: new Set(), intervalId: 0, lastTick: null };
+    entry = {
+      listeners: new Set(),
+      intervalId: 0,
+      lastTick: null,
+    };
+    entry.intervalId = window.setInterval(() => {
+      void pollOnce(name, network, k);
+    }, POLL_MS);
+    void pollOnce(name, network, k);
     entries.set(k, entry);
-    const id = window.setInterval(() => pollOnce(name, network, k), POLL_MS);
-    entry.intervalId = id;
-    pollOnce(name, network, k);
   }
   entry.listeners.add(listener);
   if (entry.lastTick) listener(entry.lastTick);
 
   return () => {
-    const e = entries.get(k);
-    if (!e) return;
-    e.listeners.delete(listener);
-    if (e.listeners.size === 0) {
-      window.clearInterval(e.intervalId);
+    const current = entries.get(k);
+    if (!current) return;
+    current.listeners.delete(listener);
+    if (current.listeners.size === 0) {
+      window.clearInterval(current.intervalId);
       entries.delete(k);
     }
   };
 }
 
-// Subscriber-provided post-action state. Compared against the resolver
-// registration to decide whether the action has been mined.
-export interface Expected {
-  action: Action;
-  address?: string;   // CLAIM / BUY / UPDATE
-  priceZats?: number; // LIST
-}
-
-// True if the resolver reflects `expected` — i.e. the action is mined per
-// the registry, the source of truth.
-export function isExpectedMined(reg: ResolveName | null, expected: Expected): boolean {
-  if (!reg) return false;
-  switch (expected.action) {
-    case "CLAIM":
-    case "UPDATE":
-      if (!expected.address) return false;
-      if (reg.status !== "registered" && reg.status !== "listed") return false;
-      return reg.registration.address === expected.address;
-    case "BUY":
-      // "Mined" for BUY = the BUY-intent has landed and the registry has
-      // locked the name to this buyer. The registration.address flip to the
-      // buyer happens later, during settling (after the seller payment).
-      // Also accept the post-settlement state so a reopened modal rehydrates
-      // cleanly into "mined" without a transient "not_detected" tick.
-      if (!expected.address) return false;
-      if (reg.status === "listed" && reg.pendingBuy?.buyer === expected.address) return true;
-      if (reg.status === "registered" && reg.registration.address === expected.address) return true;
-      return false;
-    case "LIST":
-      if (reg.status !== "listed") return false;
-      if (expected.priceZats == null) return false;
-      return reg.listingPrice.zats === expected.priceZats;
-    case "DELIST":
-      return reg.status === "registered";
-    case "RELEASE":
-      return reg.status === "available" || reg.status === "protected";
-  }
-}
-
-// State machine: indexer is the source of truth for "mined"; mempool is
-// only used for the in-mempool / confirming / not_detected UX flavor.
-// `sawMempool` latches so we never regress to not_detected after a glimpse.
+// What "done" looks like, per action, against the flow's baseline:
+//   CLAIM   a live registration exists (optionally matching the target UA)
+//   UPDATE  the live registration's txid differs from the baseline
+//   RELEASE no live registration remains
 export function deriveScanState(
   tick: ScanTick,
-  expected: Expected,
-  prev: { sawMempool: boolean },
-): { scanState: ScanState; sawMempool: boolean } {
-  if (isExpectedMined(tick.registration, expected)) {
-    return { scanState: "mined", sawMempool: prev.sawMempool };
+  expected: {
+    action: "CLAIM" | "UPDATE" | "RELEASE";
+    targetAddress?: string;
+    baselineTxid: string;
+  },
+): ScanState {
+  const { registration } = tick;
+
+  if (expected.action === "RELEASE") {
+    return registration === null ? "mined" : "not_detected";
   }
-  if (tick.mempool.found) {
-    return { scanState: "in_mempool", sawMempool: true };
+
+  if (registration === null) return "not_detected";
+
+  if (expected.action === "CLAIM") {
+    if (expected.targetAddress && registration.address !== expected.targetAddress) {
+      // Someone else's claim won the race; still "done" for this name.
+      return "mined";
+    }
+    return "mined";
   }
-  if (prev.sawMempool) {
-    return { scanState: "confirming", sawMempool: true };
+
+  // UPDATE: any new Name Note for the name (txid moved off the baseline).
+  if (expected.baselineTxid && registration.txid === expected.baselineTxid) {
+    return "not_detected";
   }
-  return { scanState: "not_detected", sawMempool: false };
+  return "mined";
 }

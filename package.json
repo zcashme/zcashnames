@@ -33,7 +33,7 @@
     "resend": "^6.9.4",
     "server-only": "^0.0.1",
     "svg-captcha": "^1.4.0",
-    "zcashname-sdk": "^0.10.0"
+    "zcashname-sdk": "^0.13.0"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

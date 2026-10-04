@@ -35,8 +35,8 @@ export interface CollectionName {
   name: string;
   /** The UA this name resolves to. Glue, not a display node. Empty for unregistered names. */
   address: string;
-  forSale: boolean;
-  listingPriceZats: number | null;
+  /** "none" or a Unix timestamp string — the registration's committed expiry. */
+  expiresAt: string;
   height: number;
   /** True when the user typed this exact name as a seed — the cluster's "star". */
   isSeed: boolean;
@@ -78,8 +78,7 @@ function toCollectionName(reg: Registration, seedNames: Set<string>, historical 
   return {
     name: reg.name,
     address: reg.address,
-    forSale: !!reg.listing,
-    listingPriceZats: reg.listing ? reg.listing.price : null,
+    expiresAt: reg.expiresAt,
     height: reg.height,
     isSeed: seedNames.has(reg.name),
     historical: historical || undefined,
@@ -107,7 +106,7 @@ async function classifySeed(
   }
 
   const result = await resolveName(name, network);
-  if (result.status === "registered" || result.status === "listed") {
+  if (result.status === "registered") {
     return {
       resolved: { seed: name, kind: "name", status: "found" },
       address: result.registration.address,
@@ -166,12 +165,12 @@ export async function buildCollection(
     );
     for (const result of eventResults) {
       for (const ev of result.events) {
-        if (ev.ua) {
-          const ua = ev.ua.toLowerCase();
+        if (ev.address) {
+          const ua = ev.address.toLowerCase();
           if (!addrSeen.has(ua)) {
             addrSeen.add(ua);
             historicalAddrs.add(ua);
-            addresses.push(ev.ua);
+            addresses.push(ev.address);
           }
         }
       }
@@ -207,7 +206,7 @@ export async function buildCollection(
       clusters.push({
         key: `name:${seed.seed}`,
         address: "",
-        names: [{ name: seed.seed, address: "", forSale: false, listingPriceZats: null, height: 0, isSeed: true, unregistered: true }],
+        names: [{ name: seed.seed, address: "", expiresAt: "none", height: 0, isSeed: true, unregistered: true }],
       });
     }
   }

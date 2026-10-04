@@ -1,43 +1,43 @@
-// Shared purchase-flow state for Zip321Modal and NameActionForm.
+// Shared purchase-flow state for NameActionForm and Zip321Modal.
 // Phase ownership table + reducer live here so both UIs share one source of truth.
+//
+// The flow mirrors the whitepaper authorization procedure:
+//   CLAIM   input → confirm (name price) → scanning
+//   UPDATE  input → confirm ($1 request fee) → otp → respond → scanning
+//   RELEASE confirm ($1 request fee) → otp → respond → scanning
+//
+// Two payment screens: `confirm` renders the Request memo ZIP-321 (name price
+// for claims, the $1 request fee for update/release); `respond` renders the
+// Respond memo ZIP-321 carrying the OTP and the update's name payment.
 
 import type { Phase, ScanState } from "@/lib/types";
 
 export type PurchaseFlowState = {
   step: number;
-  // accumulated across phases
+  // input phase
   address: string;
-  price: string;
-  payTaddrInput: string;
+  addressInput: string;
+  termInput: string; // "forever" | "none" | "<N>y"
+  inputError: string;
+  // confirm phase — the Request payment (claim price / $1 request fee)
   uri: string;
   memo: string;
   paymentAddress: string;
   amountZec: string;
-  // unlock phase
-  unlockCode: string;
-  unlockError: string;
-  unlockLoading: boolean;
-  unlockProof: string;
-  // input phase
-  addressInput: string;
-  priceInput: string;
-  inputError: string;
-  // otp phase
-  otpMemo: string;
-  otpUri: string;
+  // otp phase — the six-digit code from the Mint's Relay memo
   otpCode: string;
   otpError: string;
   otpLoading: boolean;
-  otpSent: boolean;
-  otpNoirSentAt: number;
-  otpAttempts: number;
   otpVerified: boolean;
-  // scanning phase (watches memo'd tx on the mempool watcher)
+  // respond phase — the Respond payment (OTP + update name payment)
+  respondUri: string;
+  respondMemo: string;
+  respondAmountZec: string;
+  // scanning phase — watches the resolver until the Name Note lands
   scanState: ScanState;
   successFired: boolean;
-  // settling phase (BUY only): watches the indexer until the seller payment
-  // has been observed and ownership has flipped to the buyer.
-  settleState: ScanState;
+  // baseline captured when the flow opened, for scan expectation
+  baselineTxid: string;
 };
 
 export type PurchaseFlowMsg =
@@ -47,31 +47,23 @@ export type PurchaseFlowMsg =
 export const PURCHASE_FLOW_INIT: PurchaseFlowState = {
   step: 0,
   address: "",
-  price: "",
-  payTaddrInput: "",
+  addressInput: "",
+  termInput: "",
+  inputError: "",
   uri: "",
   memo: "",
   paymentAddress: "",
   amountZec: "",
-  unlockCode: "",
-  unlockError: "",
-  unlockLoading: false,
-  unlockProof: "",
-  addressInput: "",
-  priceInput: "",
-  inputError: "",
-  otpMemo: "",
-  otpUri: "",
   otpCode: "",
   otpError: "",
   otpLoading: false,
-  otpSent: false,
-  otpNoirSentAt: 0,
-  otpAttempts: 0,
   otpVerified: false,
+  respondUri: "",
+  respondMemo: "",
+  respondAmountZec: "",
   scanState: "not_detected",
   successFired: false,
-  settleState: "not_detected",
+  baselineTxid: "",
 };
 
 export function purchaseFlowReducer(
@@ -90,37 +82,18 @@ export function purchaseFlowReducer(
 // those fields get cleared. Keeping this as a table (not procedural code)
 // means adding a new phase = adding one row, not editing goto().
 //
-//   unlock:   proof itself survives (one-shot, can't be re-generated)
 //   input:    user inputs survive (they typed them; don't make them retype)
-//   otp:      memo/uri/sent/attempts survive (paid for the OTP session)
-//   confirm:  server-dispatched URI fields are owned here — back-nav clears
-//   fund:     nothing local (UTXO state is on-chain)
+//   confirm:  server-dispatched Request fields are owned here — back-nav clears
+//   otp:      entered code clears on back-nav; the Request payment already
+//             happened on-chain, so backing into confirm keeps it
+//   respond:  server-built Respond fields are owned here
 //   scanning: scanState is reset on entry anyway, but owning it makes the
 //             back-nav semantics explicit.
 export const PHASE_OWNS: Record<Phase, ReadonlyArray<keyof PurchaseFlowState>> = {
-  unlock: ["unlockCode", "unlockError"],
   input: [],
-  // Back-nav past otp burns the session (memo/uri/sent/attempts) so the next
-  // forward pass requests a fresh passcode.
-  otp: [
-    "otpCode",
-    "otpError",
-    "otpMemo",
-    "otpUri",
-    "otpSent",
-    "otpNoirSentAt",
-    "otpAttempts",
-    "otpVerified",
-  ],
   confirm: ["uri", "memo", "paymentAddress", "amountZec"],
+  otp: ["otpCode", "otpError", "otpVerified"],
+  respond: ["respondUri", "respondMemo", "respondAmountZec"],
   scanning: ["scanState"],
-  fund: [],
-  settling: ["settleState", "successFired"],
+  unlock: [],
 };
-
-export function parsePrice(raw: string): number | null {
-  const n = raw.replace(/,/g, "").trim();
-  if (!n) return null;
-  const num = Number(n);
-  return Number.isFinite(num) && num >= 0 ? num : null;
-}

@@ -1,21 +1,16 @@
 import type { Action, Network, ResolveName } from "@/lib/types";
+import { isMintNetworkEnabled, getMintConfig } from "@/lib/zns/mint-config";
 
 /** Lowercase path segment → Action */
 const ACTION_FROM_SLUG: Record<string, Action> = {
   claim: "CLAIM",
-  buy: "BUY",
   update: "UPDATE",
-  list: "LIST",
-  delist: "DELIST",
   release: "RELEASE",
 };
 
 const SLUG_FROM_ACTION: Record<Action, string> = {
   CLAIM: "claim",
-  BUY: "buy",
   UPDATE: "update",
-  LIST: "list",
-  DELIST: "delist",
   RELEASE: "release",
 };
 
@@ -35,12 +30,9 @@ export function isActionSlug(slug: string): boolean {
 export function actionsForResolve(resolve: ResolveName): Action[] {
   switch (resolve.status) {
     case "available":
-    case "protected":
       return ["CLAIM"];
     case "registered":
-      return ["UPDATE", "LIST", "RELEASE"];
-    case "listed":
-      return ["BUY", "DELIST", "RELEASE"];
+      return ["UPDATE", "RELEASE"];
     case "blocked":
       return [];
   }
@@ -49,7 +41,7 @@ export function actionsForResolve(resolve: ResolveName): Action[] {
 export type ActionDenial = {
   ok: false;
   reason: string;
-  /** Optional link rendered on its own line after `reason` (e.g. BUY on available → claim). */
+  /** Optional link rendered on its own line after `reason` (e.g. UPDATE on available → claim). */
   link?: { href: string; label: string; prefix?: string; suffix?: string };
 };
 
@@ -58,55 +50,42 @@ export type ActionGateResult = { ok: true } | ActionDenial;
 function denialForAction(
   action: Action,
   resolve: ResolveName,
-  network: Network = "mainnet",
+  network: Network,
 ): ActionDenial {
   const status = resolve.status;
 
-  if (action === "DELIST" && status === "listed" && resolve.pendingBuy) {
-    return { ok: false, reason: "Cannot delist while a purchase is pending." };
+  if (action === "RELEASE" && status !== "registered") {
+    return { ok: false, reason: "You cannot release a name that is not claimed." };
   }
 
-  if (action === "LIST" && (status === "available" || status === "protected" || status === "blocked")) {
-    return { ok: false, reason: "You cannot list a name that is not yet claimed." };
-  }
-  if (action === "LIST" && status === "listed") {
-    return { ok: false, reason: "This name is already listed for sale." };
-  }
-
-  if (action === "DELIST" && (status === "available" || status === "protected" || status === "blocked" || status === "registered")) {
-    return { ok: false, reason: "You cannot delist a name that is not listed in the marketplace." };
-  }
-
-  if (action === "RELEASE" && (status === "available" || status === "protected" || status === "blocked")) {
-    return { ok: false, reason: "You cannot release a name that is not yet claimed." };
-  }
-
-  if (action === "UPDATE" && (status === "available" || status === "protected" || status === "blocked")) {
-    return { ok: false, reason: "You cannot update a name that is not yet claimed." };
-  }
-
-  if (action === "BUY" && (status === "available" || status === "protected")) {
+  if (action === "UPDATE" && status !== "registered") {
     return {
       ok: false,
-      reason: "You cannot buy a name that is not listed in the marketplace.",
-      link: {
-        href: nameActionHref("CLAIM", resolve.query, network),
-        label: "claimed",
-        // Rendered on its own line after reason: "However, this name can be claimed!"
-        prefix: "However, this name can be ",
-        suffix: "!",
-      },
+      reason: "You cannot update a name that is not claimed.",
+      link: status === "available"
+        ? {
+            href: nameActionHref("CLAIM", resolve.query, network),
+            label: "claimed",
+            prefix: "However, this name can be ",
+            suffix: "!",
+          }
+        : undefined,
     };
   }
-  if (action === "BUY" && (status === "registered" || status === "blocked")) {
-    return { ok: false, reason: "You cannot buy a name that is not listed in the marketplace." };
-  }
 
-  if (action === "CLAIM" && (status === "registered" || status === "listed")) {
-    return { ok: false, reason: "This name has already been claimed." };
-  }
-  if (action === "CLAIM" && status === "blocked") {
-    return { ok: false, reason: "This name cannot be registered." };
+  if (action === "CLAIM") {
+    if (status === "registered") {
+      return { ok: false, reason: "This name has already been claimed." };
+    }
+    if (status === "blocked") {
+      return { ok: false, reason: "This name cannot be registered." };
+    }
+    if (!getMintConfig(network).allowOpenClaims) {
+      return {
+        ok: false,
+        reason: "Open claims are not enabled on this network yet.",
+      };
+    }
   }
 
   return {
@@ -118,13 +97,17 @@ function denialForAction(
 export function isActionAllowed(
   action: Action,
   resolve: ResolveName,
-  network: Network = "mainnet",
+  network: Network = "testnet",
 ): ActionGateResult {
+  // The whole network can be offline (mainnet for now): every action is denied.
+  if (!isMintNetworkEnabled(network)) {
+    return {
+      ok: false,
+      reason: "The mint for this network is not online yet. Testnet is live.",
+    };
+  }
   const allowed = actionsForResolve(resolve);
   if (!allowed.includes(action)) {
-    return denialForAction(action, resolve, network);
-  }
-  if (action === "DELIST" && resolve.status === "listed" && resolve.pendingBuy) {
     return denialForAction(action, resolve, network);
   }
   return { ok: true };
@@ -158,4 +141,3 @@ export function parseNetworkParam(raw: string | null | undefined): Network {
   if (raw === "testnet") return "testnet";
   return "mainnet";
 }
-
