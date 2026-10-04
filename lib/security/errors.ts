@@ -27,5 +27,5 @@ export const SECURITY_MESSAGES = {
 } as const;
 
 export function wrongAmountMessage(feeZec: string): string {
-  return `The payment amount is below the ${feeZec} ZEC submission fee.`;
+  return `The payment amount is below the ${feeZec} ZEC submission deposit.`;
 }

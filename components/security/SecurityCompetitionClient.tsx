@@ -301,14 +301,14 @@ function PaymentCard({
       ? autoWindowActive
         ? `${quiet} We'll keep checking for a couple of minutes.`
         : `${quiet} Tap Refresh Status to check again.`
-      : "Tap Refresh Status to check for the submission fee.";
+      : "Tap Refresh Status to check for the submission deposit.";
 
   return (
     <Panel>
       <div className="grid gap-4">
         <TicketLine ticketId={session.ticketId} />
         <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>
-          Send {session.feeZec} ZEC with the memo below. The fee is non-refundable — have your GHSA link ready and submit it right after this step.
+          Send {session.feeZec} ZEC with the memo below. Have your GHSA link ready and submit it right after this step. Deposits for abandoned submissions are not refunded.
         </p>
       </div>
       <div
@@ -581,7 +581,7 @@ export default function SecurityCompetitionClient({ model }: { model: SecurityPa
           {session.finalSeverity ? <p className="text-sm" style={{ color: "var(--fg-body)" }}>Final severity: {session.finalSeverity}</p> : null}
           {session.githubUsername ? <p className="text-sm" style={{ color: "var(--fg-body)" }}>GitHub username: @{session.githubUsername}</p> : null}
           {session.payoutAddress ? <p className="break-all font-mono text-xs" style={{ color: "var(--fg-body)" }}>Payout address: {session.payoutAddress}</p> : null}
-          {session.paymentTxid ? <p className="break-all font-mono text-xs" style={{ color: "var(--fg-muted)" }}>Fee payment: {session.paymentTxid}</p> : null}
+          {session.paymentTxid ? <p className="break-all font-mono text-xs" style={{ color: "var(--fg-muted)" }}>Deposit payment: {session.paymentTxid}</p> : null}
           {model.submissionsOpen ? (
             <button type="button" onClick={reset} className={primaryButtonClass} style={primaryButtonStyle}>
               Submit another finding
@@ -601,8 +601,8 @@ export default function SecurityCompetitionClient({ model }: { model: SecurityPa
             <span className="font-semibold" style={{ color: "var(--fg-heading)" }}>First, write your private GitHub Security Advisory</span> with the finding and a reproducible proof of concept.{' '}
             <a href="https://github.com/zcashme/zns-mint/security/advisories/new" target="_blank" rel="noreferrer" className="underline underline-offset-4" style={{ color: "var(--color-accent-interactive)" }}>Create a GitHub Security Advisory ↗</a>
           </li>
-          <li><span className="font-semibold" style={{ color: "var(--fg-heading)" }}>Then start here</span> and pay the {model.feeZec} ZEC fee to get your ticket and payment memo.</li>
-          <li><span className="font-semibold" style={{ color: "var(--fg-heading)" }}>Right after paying</span>, submit the GHSA link with your severity and GitHub username. Keep this tab open until submitted — the fee is non-refundable.</li>
+          <li><span className="font-semibold" style={{ color: "var(--fg-heading)" }}>Then start here</span> and pay the {model.feeZec} ZEC deposit to get your ticket and payment memo.</li>
+          <li><span className="font-semibold" style={{ color: "var(--fg-heading)" }}>Right after paying</span>, submit the GHSA link with your severity and GitHub username. Keep this tab open until submitted. Deposits for abandoned submissions are not refunded.</li>
         </ol>
         {model.closedMessage ? (
           <p className="text-sm leading-6" style={{ color: "var(--fg-body)" }}>{model.closedMessage}</p>
