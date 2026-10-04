@@ -32,14 +32,14 @@ import {
 } from "./listConfig";
 import type { ExplorerListData } from "./listData";
 
-function UivkVerifiedBadge({ value, verified }: { value: string; verified: boolean }) {
+function UivkVerifiedBadge({ value, verified }: { value: string | null; verified: boolean }) {
   if (!value) return null;
   if (verified) {
     return (
       <span
         className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.08em]"
         style={{ background: "rgba(34,197,94,0.15)", color: "rgb(34,197,94)" }}
-        title="Matches the UIVK baked into the SDK for this network"
+        title="The resolver's viewing key matches this deployment's Mint registry UFVK"
       >
         <svg viewBox="0 0 16 16" fill="none" className="h-2.5 w-2.5" aria-hidden="true">
           <path d="M3 8.5l3 3 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -52,7 +52,7 @@ function UivkVerifiedBadge({ value, verified }: { value: string; verified: boole
     <span
       className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.08em]"
       style={{ background: "rgba(239,68,68,0.15)", color: "rgb(239,68,68)" }}
-      title="Indexer returned a UIVK that does not match the SDK's known value for this network"
+      title="The resolver's viewing key does not match this deployment's Mint registry UFVK"
     >
       <svg viewBox="0 0 16 16" fill="none" className="h-2.5 w-2.5" aria-hidden="true">
         <path d="M8 3v6M8 12v.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
@@ -278,8 +278,8 @@ export default function ExplorerView({
   }
 
   function copyUivk() {
-    if (!currentListData.stats.uivk) return;
-    navigator.clipboard.writeText(currentListData.stats.uivk);
+    if (!currentListData.stats.registryUfvk) return;
+    navigator.clipboard.writeText(currentListData.stats.registryUfvk);
     setUivkCopied(true);
     window.setTimeout(() => setUivkCopied(false), 2000);
   }
@@ -312,7 +312,7 @@ export default function ExplorerView({
     const observer = new ResizeObserver(() => recompute());
     observer.observe(row);
     return () => observer.disconnect();
-  }, [blockHeightLabel, currentListData.stats.uivk, isPending]);
+  }, [blockHeightLabel, currentListData.stats.registryUfvk, isPending]);
 
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-6">
@@ -340,7 +340,7 @@ export default function ExplorerView({
                   <path d="M12.5 2v3h-3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </span>
-              {currentListData.stats.uivk ? (
+              {currentListData.stats.registryUfvk ? (
                 <span
                   className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em]"
                   style={{ borderColor: "var(--leaders-card-border)" }}
@@ -398,7 +398,7 @@ export default function ExplorerView({
               />
             </svg>
           </button>
-          {currentListData.stats.uivk ? (
+          {currentListData.stats.registryUfvk ? (
             <button
               type="button"
               onClick={() => setUivkOpen(true)}
@@ -491,7 +491,7 @@ export default function ExplorerView({
                 className="min-w-0 flex-1 font-bold tracking-tight text-balance"
                 style={{ fontSize: "var(--type-section-subtitle)", color: "var(--fg-heading)" }}
               >
-                Unified incoming view key
+                Registry viewing key (UFVK)
               </h2>
               <button
                 type="button"
@@ -511,18 +511,18 @@ export default function ExplorerView({
                   <div className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
                     {currentNetwork === "mainnet" ? "Mainnet" : "Testnet"}
                   </div>
-                  <UivkVerifiedBadge value={currentListData.stats.uivk} verified={currentListData.stats.uivkVerified} />
+                  <UivkVerifiedBadge value={currentListData.stats.registryUfvk ?? ""} verified={currentListData.stats.online} />
                 </div>
                 <CopyIconButton
                   onClick={copyUivk}
                   ariaLabel={`Copy ${currentNetwork} UIVK`}
                   title={uivkCopied ? "Copied!" : `Copy ${currentNetwork} UIVK`}
                   copied={uivkCopied}
-                  disabled={!currentListData.stats.uivk}
+                  disabled={!currentListData.stats.registryUfvk}
                 />
               </div>
               <p className="min-w-0 break-all font-mono text-xs leading-relaxed text-fg-muted">
-                {currentListData.stats.uivk || "Unavailable"}
+                {currentListData.stats.registryUfvk || "Unavailable"}
               </p>
             </div>
           </div>

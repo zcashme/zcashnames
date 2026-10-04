@@ -1,11 +1,15 @@
 import { ACTION_COLORS } from "@/lib/types";
 
-// Renders a colored pill badge for ZNS action types (CLAIM, BUY, UPDATE, etc.)
+// Renders a colored pill badge for ZNS action types (CLAIM, UPDATE, RELEASE).
 // Used across the explorer and activity feeds to visually distinguish actions.
 // Colors are centrally defined in ACTION_COLORS (types.ts) and bound to the action
-// name at render time. Falls back to DELIST colors for unknown actions.
+// name at render time. Falls back to neutral colors for unknown actions.
 export default function ActionBadge({ action }: { action: string }) {
-  const c = (ACTION_COLORS as Record<string, { bg: string; text: string }>)[action] ?? ACTION_COLORS.DELIST;
+  const c =
+    (ACTION_COLORS as Record<string, { bg: string; text: string }>)[action] ?? {
+      bg: "rgba(156,163,175,0.15)",
+      text: "var(--fg-muted)",
+    };
 
   return (
     <span

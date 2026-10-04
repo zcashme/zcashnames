@@ -7,27 +7,22 @@ import { NextRequest, NextResponse } from "next/server";
 // are rewritten to the /docs path internally, so the docs subdomain serves
 // the same Nextra-powered documentation as zcashnames.com/docs.
 //
-// Mainnet mode and name-action form pages require the zn_beta cookie
-// (set via shared password or invite). Without it, redirect to /waitlist.
+// Legacy paths: /reserve (waitlist-era reservation page) redirects home.
 // Action slugs must stay in sync with lib/purchases/nameActionHref.ts.
 //
 // App Router matching is case-sensitive on Linux (Vercel). Canonicalize
-// /Reserve, /RESERVE, etc. to /reserve so shared links keep working.
+// /Reserve, /RESERVE, etc. so shared links keep working.
 //
 // The matcher config excludes static assets and prefetch requests to avoid
 // running this logic on every CSS/JS/image load.
 //
 const ACTION_SLUGS = new Set([
   "claim",
-  "buy",
   "update",
-  "list",
-  "delist",
   "release",
 ]);
 
-function isBetaGatedPath(pathname: string): boolean {
-  if (pathname === "/") return true;
+function isActionPath(pathname: string): boolean {
   const firstSegment = pathname.split("/").filter(Boolean)[0]?.toLowerCase();
   return firstSegment != null && ACTION_SLUGS.has(firstSegment);
 }
@@ -67,10 +62,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  if (isBetaGatedPath(pathname) && !request.cookies.get("zn_beta")) {
+  // Legacy waitlist-era /reserve page is gone — send it home (308 for SEO).
+  if (pathname === "/reserve" || pathname === "/waitlist") {
     const url = request.nextUrl.clone();
-    url.pathname = "/waitlist";
-    return NextResponse.redirect(url);
+    url.pathname = "/";
+    return NextResponse.redirect(url, 308);
+  }
+
+  // Name-action pages are public: the Mint gates claims on-chain.
+  if (isActionPath(pathname)) {
+    return NextResponse.next();
   }
 
   return NextResponse.next();

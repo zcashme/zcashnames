@@ -13,25 +13,16 @@
  */
 import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "next-themes";
-import { cookies } from "next/headers";
 import { NetworkProvider } from "@/components/hooks/useZns";
-import {
-  BETA_COOKIE_NAME,
-  readCurrentBetaAccessSession,
-  readCurrentStage,
-} from "@/lib/beta/gate";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CabalLaunchBar from "@/components/influencer/CabalLaunchBar";
-import BetaApplyBar from "@/components/waitlist/BetaApplyBar";
-import { VerifyEarlyAccessNotice } from "@/components/verify/WaitlistVerifyClient";
 import { Analytics } from "@vercel/analytics/next";
 import { BRAND } from "@/lib/zns/brand";
 import PwaShellClient from "@/components/PwaShellClient";
 import PurchaseResumeShell from "@/components/purchases/PurchaseResumeShell";
 import SiteSupportMenu from "@/components/SiteSupportMenu";
 import SiteThemeScope from "@/components/SiteThemeScope";
-import { WAITLIST_VIEW_EARLY_ACCESS_START_AT } from "@/lib/waitlist/view";
 
 const previewImage = {
   url: BRAND.previewImage,
@@ -81,18 +72,7 @@ export const viewport: Viewport = {
 
 /* ── Layout ─────────────────────────────────────────────────────────── */
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [cookieStore, stage, session] = await Promise.all([
-    cookies(),
-    readCurrentStage(),
-    readCurrentBetaAccessSession(),
-  ]);
-  const hasBeta = !!cookieStore.get(BETA_COOKIE_NAME)?.value;
-  const initialMode = stage ?? "waitlist";
-  const feedbackLauncherEnabled =
-    (session?.kind === "tester" && session.tester.cohort === "v2") ||
-    (session?.kind === "shared" && session.testerId === "shared_mainnet");
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <PwaShellClient />
@@ -102,20 +82,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         defaultTheme="light"
         themes={["dark", "light", "monochrome"]}
       >
-        <NetworkProvider initialMode={initialMode} hasBeta={hasBeta}>
+        <NetworkProvider initialMode="testnet">
 
         <div data-site-chrome="true">
-        <VerifyEarlyAccessNotice
-          earlyAccessStartAt={WAITLIST_VIEW_EARLY_ACCESS_START_AT}
-          hideOnWide={false}
-        />
-        <BetaApplyBar />
         <CabalLaunchBar />
         <Header />
         </div>
         {children}
         <PurchaseResumeShell />
-        <SiteSupportMenu feedbackLauncherEnabled={feedbackLauncherEnabled} />
+        <SiteSupportMenu />
         <div data-site-chrome="true">
         <Footer />
         </div>

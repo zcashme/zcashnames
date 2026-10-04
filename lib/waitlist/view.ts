@@ -1,6 +1,5 @@
 import "server-only";
 
-import { NETWORKS } from "zcashname-sdk";
 import { db } from "@/lib/db";
 import { fetchAllSupabaseRows } from "@/lib/supabase/fetch-all";
 import {
@@ -24,7 +23,9 @@ export {
   WAITLIST_VIEW_INDIRECT_REFERRALS_PER_SPOT,
   WAITLIST_VIEW_REFERRALS_PER_SPOT,
 } from "@/lib/waitlist/referral-spots";
-export const WAITLIST_VIEW_ADMIN_WALLET_UIVK = NETWORKS.mainnet.uivk;
+// Legacy waitlist-era constant. The old SDK carried per-network UIVKs; with
+// the Name Note protocol the registry key ships from mint-config instead.
+export const WAITLIST_VIEW_ADMIN_WALLET_UIVK = "";
 export const WAITLIST_VIEW_PAGE_SIZE = 10;
 const WAITLIST_VIEW_SOURCE_BATCH_SIZE = 1000;
 const WAITLIST_VIEW_SNAPSHOT_WRITE_BATCH_SIZE = 500;

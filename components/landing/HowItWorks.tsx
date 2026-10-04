@@ -26,21 +26,21 @@ type Step = {
 const steps: Step[] = [
   {
     id: "step-1",
-    eyebrow: "Join the waitlist",
+    eyebrow: "Pick your name",
     description:
-      "Invites go out in order, so reserve your spot to get first pick of the best Zcash names before the crowd shows up.",
+      "Search the registry, choose a term, and send the claim request with your payment from any shielded Zcash wallet.",
   },
   {
     id: "step-2",
-    eyebrow: "Climb the queue",
+    eyebrow: "The mint attests",
     description:
-      "Referrals push you toward the front of the line, improving your odds of landing high-demand names. If they claim one, you earn ZEC.",
+      "The ZNS mint runs the naming policy inside a TEE and records every accepted name on Zcash — permanent, ordered, and public.",
   },
   {
     id: "step-3",
-    eyebrow: "Lock it in",
+    eyebrow: "Own it on-chain",
     description:
-      "When your turn opens, you get an email. Log in, choose your Zcash name, and secure it before public launch. Keep it, use it, or sell it later.",
+      "Your name points at your unified address. Update it any time with an in-wallet passcode, and nobody can rewrite history.",
   },
 ];
 
@@ -222,30 +222,30 @@ function separatorClassName(flags: {
 const FEATURE_ROTATION_DURATION = 10_000;
 type FeatureTransitionDirection = "forward" | "backward";
 
-function TryBetaLink() {
+function ClaimNameLink() {
   return (
     <LandingActionLink
-      proximityId="try-beta-link"
-      href="/beta/"
-      label="Try it in beta"
+      proximityId="claim-name-link"
+      href="/explorer"
+      label="Find your name"
       variant="text"
       showArrow
       icon={
         <svg viewBox="0 0 24 24" fill="none" style={{ width: "1.08em", height: "1.08em" }} aria-hidden="true">
-          <path d="M9 3h6M10 3v5.25l-4.9 7.85A3.25 3.25 0 0 0 7.86 21h8.28a3.25 3.25 0 0 0 2.76-4.9L14 8.25V3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M8.1 16h7.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.6" />
+          <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
       }
     />
   );
 }
 
-function ViewWaitlistLink() {
+function ReadDocsLink() {
   return (
     <LandingActionLink
-      proximityId="view-waitlist-link"
-      href="/waitlist/view"
-      label="View Waitlist"
+      proximityId="read-docs-link"
+      href="/docs/learn/what-is-zns"
+      label="Read the docs"
       variant="text"
       showArrow
       icon={
@@ -500,14 +500,14 @@ export default function HowItWorks() {
       <BenefitsBento />
 
       <div className="mt-5 flex justify-center">
-        <TryBetaLink />
+        <ClaimNameLink />
       </div>
 
       <div className="mt-24">
         <div id="how-it-works" className="features-intro scroll-mt-24">
           <span className="features-intro-eyebrow">Get your name</span>
-          <h2>Claim your name early.</h2>
-          <p>Reserve your spot, climb the queue through referrals, and choose your name when your invite arrives.</p>
+          <h2>Claim your name.</h2>
+          <p>Three verbs on the chain: claim a name, update where it points, release it when you&#39;re done.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-0 lg:grid-cols-3">
@@ -590,7 +590,7 @@ export default function HowItWorks() {
         </div>
 
         <div className="mt-5 flex justify-center">
-          <ViewWaitlistLink />
+          <ReadDocsLink />
         </div>
       </div>
     </section>

@@ -9,9 +9,8 @@ import DataViewTabs from "@/components/table/DataViewTabs";
 import { TableRowsMenu, TableSortMenu } from "@/components/table/TableIconMenus";
 import TableLoadingOverlay from "@/components/table/TableLoadingOverlay";
 import useCachedRemoteTableData from "@/components/table/useCachedRemoteTableData";
-import { ACTIONS, ACTION_COLORS, ACTION_LABELS } from "@/lib/types";
-import { zatsToZec } from "@/lib/zns/utils";
-import type { Listing, Network, Registration, ZnsEvent } from "@/lib/types";
+import { ACTIONS, ACTION_LABELS } from "@/lib/types";
+import type { Network, Registration, ZnsEvent } from "@/lib/types";
 import {
   buildExplorerListCacheKey,
   EXPLORER_CACHE_LIMIT,
@@ -33,7 +32,6 @@ import type { ExplorerListData } from "./listData";
 const PRIMARY_TABS: { key: ExplorerTab; label: string }[] = [
   { key: "all", label: "All" },
   { key: "registered", label: "Registered" },
-  { key: "forsale", label: "For Sale" },
 ];
 
 type ExplorerListPaneProps = {
@@ -199,18 +197,11 @@ export default function ExplorerListPane({
     onDataChange(data);
   }, [data, onDataChange]);
 
-  function getRegistrationStatusBadgeStyle(listing: boolean) {
-    if (listing) {
-      return {
-        background: ACTION_COLORS.LIST.bg,
-        color: ACTION_COLORS.LIST.text,
-      };
-    }
-
-    return {
-      background: ACTION_COLORS.CLAIM.bg,
-      color: ACTION_COLORS.CLAIM.text,
-    };
+  function expiryLabel(expiresAt: string): string {
+    if (expiresAt === "none") return "Never";
+    const ms = Number(expiresAt) * 1000;
+    if (!Number.isFinite(ms)) return expiresAt;
+    return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   }
 
   function renderEventsTable(rows: ZnsEvent[]) {
@@ -307,8 +298,8 @@ export default function ExplorerListPane({
                   className="hidden sm:table-cell px-4 py-3 sm:px-6"
                   style={{ borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)" }}
                 >
-                  {row.ua ? (
-                    <span className="font-mono text-fg-muted text-xs truncate max-w-[14rem] inline-block align-middle">{row.ua}</span>
+                  {row.address ? (
+                    <span className="font-mono text-fg-muted text-xs truncate max-w-[14rem] inline-block align-middle">{row.address}</span>
                   ) : (
                     <span className="text-fg-muted">-</span>
                   )}
@@ -354,7 +345,7 @@ export default function ExplorerListPane({
                 borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
               }}
             >
-              Status
+              Expires
             </th>
             <th
               className="hidden sm:table-cell px-4 py-3 sm:px-6"
@@ -402,126 +393,16 @@ export default function ExplorerListPane({
                   </button>
                 </td>
                 <td
-                  className="px-4 py-3 sm:px-6"
+                  className="px-4 py-3 text-fg-muted sm:px-6"
                   style={{ borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)" }}
                 >
-                  <span
-                    className="rounded px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
-                    style={getRegistrationStatusBadgeStyle(!!row.listing)}
-                  >
-                    {row.listing ? "Listed" : "Registered"}
-                  </span>
+                  {expiryLabel(row.expiresAt)}
                 </td>
                 <td
                   className="hidden sm:table-cell px-4 py-3 sm:px-6"
                   style={{ borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)" }}
                 >
                   <span className="font-mono text-fg-muted text-xs truncate max-w-[14rem] inline-block align-middle">{row.address}</span>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    );
-  }
-
-  function renderListingsTable(rows: Listing[]) {
-    return (
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr
-            className="border-b text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-fg-muted"
-            style={{ borderColor: "var(--leaders-card-border)" }}
-          >
-            <th
-              className="px-4 py-3 sm:px-6"
-              style={{
-                background: "var(--table-header-bg)",
-                borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
-              }}
-            >
-              Block
-            </th>
-            <th
-              className="px-4 py-3 sm:px-6"
-              style={{
-                background: "var(--table-header-bg)",
-                borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
-              }}
-            >
-              Name
-            </th>
-            <th
-              className="px-4 py-3 text-right sm:px-6"
-              style={{
-                background: "var(--table-header-bg)",
-                borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
-              }}
-            >
-              Price
-            </th>
-            <th
-              className="px-4 py-3 sm:px-6"
-              style={{
-                background: "var(--table-header-bg)",
-                borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)",
-              }}
-            >
-              Status
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length === 0 ? (
-            <tr>
-              <td colSpan={4} className="px-4 py-12 text-center text-fg-muted">
-                No names listed for sale.
-              </td>
-            </tr>
-          ) : (
-            rows.map((row) => (
-              <tr
-                key={row.txid}
-                className="border-b last:border-b-0 transition-colors"
-                style={{ borderColor: "var(--leaders-card-border)" }}
-              >
-                <td
-                  className="px-4 py-3 tabular-nums text-fg-muted text-xs sm:px-6"
-                  style={{ borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)" }}
-                >
-                  {row.height.toLocaleString()}
-                </td>
-                <td
-                  className="px-4 py-3 sm:px-6"
-                  style={{ borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)" }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      router.push(buildUrl({ name: row.name, searchMode: "exact", search: null, page: 1 }));
-                    }}
-                    className="font-semibold text-fg-heading hover:underline cursor-pointer"
-                  >
-                    {row.name}
-                  </button>
-                </td>
-                <td
-                  className="px-4 py-3 text-right tabular-nums text-fg-muted sm:px-6"
-                  style={{ borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)" }}
-                >
-                  {zatsToZec(row.price)} ZEC
-                </td>
-                <td
-                  className="px-4 py-3 sm:px-6"
-                  style={{ borderRight: "1px solid color-mix(in srgb, var(--leaders-card-border) 78%, transparent)" }}
-                >
-                  <span
-                    className="rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-fg-muted"
-                    style={{ background: "var(--market-stats-segment-active-bg)" }}
-                  >
-                    Active
-                  </span>
                 </td>
               </tr>
             ))
@@ -613,9 +494,7 @@ export default function ExplorerListPane({
           <div className="overflow-x-auto">
             {tab === "registered"
               ? renderRegistrationsTable(data.registrations)
-              : tab === "forsale"
-                ? renderListingsTable(data.listings)
-                : renderEventsTable(data.events)}
+              : renderEventsTable(data.events)}
           </div>
 
           {loadError ? (

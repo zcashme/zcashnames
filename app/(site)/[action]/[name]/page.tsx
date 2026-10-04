@@ -25,31 +25,25 @@ type PageProps = {
 
 function toAvailabilityState(result: ResolveName): NameAvailabilityState {
   if (result.status === "available") return "available";
-  if (result.status === "listed") return "forsale";
-  if (result.status === "registered") return "unavailable";
-  if (result.status === "protected") return "protected";
+  if (result.status === "registered") return "registered";
   return "blocked";
 }
 
 function priceZecFor(result: ResolveName): number | null {
-  if (result.status === "available" || result.status === "protected") {
+  if (result.status === "available") {
     return result.claimCost.zec;
-  }
-  if (result.status === "listed") {
-    return result.listingPrice.zec;
   }
   return null;
 }
 
 /** Mirrors NameStatus.statusSupportsPrice without importing the client module. */
 function statusSupportsPrice(status: NameAvailabilityState): boolean {
-  return status === "available" || status === "forsale" || status === "protected";
+  return status === "available";
 }
 
 /**
- * Feature chips for the action-page status row / hero.
- * Available / for-sale mirror the home search result card; protected names
- * (zn_protected_names status=protected) also get a Protected chip.
+ * Feature chips for the action-page status row / hero. Available mirrors the
+ * home search result card.
  */
 function featureChipsFor(
   availability: NameAvailabilityState,
@@ -62,14 +56,6 @@ function featureChipsFor(
   if (availability === "available") {
     chips.push(charLabel, "No previous owners");
     if (popular) chips.push("Popular name");
-  } else if (availability === "forsale") {
-    // Character-count chip is replaced by NameForSaleShareButton in FeatureChips.
-    if (popular) chips.push("Popular name");
-  } else if (availability === "protected") {
-    // Claimable protected names: available-style chips + Protected
-    chips.push(charLabel, "No previous owners");
-    if (popular) chips.push("Popular name");
-    chips.push("Protected");
   }
 
   return chips;
@@ -79,14 +65,8 @@ function heroCopy(action: Action): string {
   switch (action) {
     case "CLAIM":
       return "Register this name to your Zcash address.";
-    case "BUY":
-      return "Purchase a listed name.";
     case "UPDATE":
       return "Point this name at a new unified address.";
-    case "LIST":
-      return "List this name for sale.";
-    case "DELIST":
-      return "Remove this name from the marketplace.";
     case "RELEASE":
       return "Relinquish ownership so others can claim this name.";
   }
@@ -139,12 +119,12 @@ export default async function NameActionPage({ params, searchParams }: PageProps
           formAllowed={gate.ok}
           statusLeft={
             <>
-              {availability !== "unavailable" ? (
+              {availability !== "registered" ? (
                 <NameStatusBadge status={availability} />
               ) : null}
               {showPrice ? (
                 <p className="m-0 text-[var(--home-result-price-color)] text-[clamp(1.02rem,1.85vw,1.3rem)] font-extrabold tracking-[-0.012em]">
-                  {priceZec} ZEC
+                  ~{priceZec} ZEC
                 </p>
               ) : null}
             </>
@@ -173,7 +153,7 @@ export default async function NameActionPage({ params, searchParams }: PageProps
           denial={
             !gate.ok ? (
               <div
-                className="w-full rounded-2xl border px-5 py-8 sm:px-6 sm:py-10 text-center"
+                className="w-full rounded-2xl border px-5 py-8 text-center sm:px-6 sm:py-10"
                 style={{
                   borderColor: "var(--faq-border)",
                   background:

@@ -1,10 +1,4 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
-import {
-  parseStageCookieValue,
-  BETA_STAGE_COOKIE_NAME,
-  readCurrentBetaAccessSession,
-} from "@/lib/beta/gate";
 import { listLandingBlogPosts } from "@/lib/blogs";
 import { getChainStats } from "@/lib/network-stats";
 import NetworkPageClient from "./NetworkPageClient";
@@ -28,13 +22,10 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const store = await cookies();
-  const stageCookie = store.get(BETA_STAGE_COOKIE_NAME)?.value;
-  const parsed = stageCookie ? parseStageCookieValue(stageCookie) : null;
-  const network = parsed?.stage ?? "mainnet";
-  const [stats, session, homepagePosts] = await Promise.all([
+  // Testnet is the live network; the mainnet mint is offline (mint-config).
+  const network = "testnet" as const;
+  const [stats, homepagePosts] = await Promise.all([
     getChainStats(network),
-    readCurrentBetaAccessSession(),
     listLandingBlogPosts({ limit: 4 }),
   ]);
 
@@ -47,15 +38,10 @@ export default async function HomePage() {
     excerpt: post.excerpt,
   }));
 
-  const feedbackEnabled =
-    (session?.kind === "tester" && session.tester.cohort === "v2") ||
-    (session?.kind === "shared" && session.testerId === "shared_mainnet");
-
   return (
     <NetworkPageClient
       network={network}
       stats={stats}
-      feedbackEnabled={feedbackEnabled}
       recentBlogPosts={recentBlogPosts}
     />
   );
