@@ -233,7 +233,7 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
           The table below lists all ZNS SDK features as rows. Each column shows whether that app
           supports the feature during beta. Support may vary by app, platform, or device, and may
           change in later releases. You should request features that you want to see in the next
-          release of {brand.displayName} through the feedback panel.
+          release of {brand.displayName} through the community channels or support@zcashnames.com.
         </p>
         <WalletFeatureMatrix variants={variants} />
       </section>
@@ -248,10 +248,9 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
           JSON-RPC behavior.
         </p>
         <p style={p}>
-          Use the feedback panel to report anything you encounter during testing. It will be
-          available on the right side of the user interface. It can be expanded, collapsed, or
-          opened in a separate window. All bug reports, UX feedback, screenshots, txids, and
-          reproduction details should be submitted there.
+          Report anything you encounter during testing through the community channels or privately
+          at support@zcashnames.com. All bug reports, UX feedback, screenshots, txids, and
+          reproduction details should go there.
         </p>
         <p style={p}>
           Good reports include what happened, what you expected, steps to reproduce it, screenshots,
@@ -263,7 +262,8 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
         <SectionTitle id="rewards" title="Rewards" />
         <p style={p}>
           <s>
-            Rewards go to the first person to report a reproducible issue through the feedback panel.
+            Rewards go to the first person to report a reproducible issue through the community channels
+            or support@zcashnames.com.
             Minor confirmed bugs receive 0.05 ZEC. Critical confirmed bugs receive 0.5 ZEC.
           </s>
         </p>
@@ -288,7 +288,7 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
         </p>
         <p style={p}>
           Claim and listing fees can be refunded during testing. To request a refund, submit the
-          request through the feedback panel.
+          request at /beta/refund or via support@zcashnames.com.
         </p>
         {downloads.length > 0 && (
           <div>
@@ -316,8 +316,8 @@ export default function BetaWalletBrief({ brandSlug }: { brandSlug: WalletBrandS
           <a href={telegramHref} target="_blank" rel="noreferrer" style={linkStyle}>
             Telegram
           </a>{" "}
-          for questions and community discussion. To submit bug reports, use the feedback panel,
-          not chats.
+          for questions and community discussion. For confidential or unfixed bug reports, use
+          support@zcashnames.com rather than chat.
         </p>
       </section>
 

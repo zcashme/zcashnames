@@ -229,7 +229,10 @@ export default function BetaInstructionsBrief() {
         <p style={p}>
           The in-product feedback panel has been retired. Report findings directly through the
           channels listed in <a href="#contacts" style={{ color: "var(--fg-heading)", textDecoration: "underline" }}>Get In Touch</a>{" "}
-          below &mdash; Signal or Discord is best for anything time-sensitive.
+          below &mdash; Signal or Discord is best for anything time-sensitive. For confidential
+          findings &mdash; unfixed bugs, security issues, anything with screenshots you would rather
+          not post publicly &mdash; email{" "}
+          <a href="mailto:support@zcashnames.com" style={{ color: "var(--fg-heading)", textDecoration: "underline" }}>support@zcashnames.com</a>.
         </p>
         <p style={p}>
           A good report includes: the wallet you were using and its version, your operating system,
@@ -304,8 +307,7 @@ export default function BetaInstructionsBrief() {
       <section id="contacts">
         <h2 style={h2}>Get In Touch</h2>
         <p style={p}>
-          For casual feedback, questions, or anything that does not fit the structured form, message
-          us on Signal, Discord, or Telegram.
+          For casual feedback and questions, message us on Signal, Discord, or Telegram.
         </p>
         <div className="mt-4 flex flex-col gap-2">
           {featuredChannels.map(({ label, href }) => {

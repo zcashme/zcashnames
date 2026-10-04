@@ -945,7 +945,7 @@ export const FAQ_SECTIONS: FaqSection[] = [
         answer: (
           <>
             Yes. Live mainnet beta claim prices are 1/100th of the intended production tiers. Claim
-            and listing fees may be refundable during testing if requested through the feedback panel.
+            and listing fees may be refundable during testing if requested at /beta/refund.
             Secondary-market purchases between users are real trades and are not generally refundable
             by the Zcash Names team. See <FaqA href="/docs/learn/pricing">pricing</FaqA>.
           </>
@@ -962,7 +962,7 @@ export const FAQ_SECTIONS: FaqSection[] = [
         question: "How do beta refunds work?",
         answer: (
           <>
-            Use <FaqA href="/beta/refund">/beta/refund</FaqA> and the in-product feedback panel.
+            Use <FaqA href="/beta/refund">/beta/refund</FaqA>.
             Refunds are aimed at protocol claim and listing fees from testing, not at marketplace
             trades between users.
           </>
@@ -974,7 +974,7 @@ export const FAQ_SECTIONS: FaqSection[] = [
         answer: (
           <>
             <s>
-              Testers who report confirmed, reproducible issues through the feedback panel may
+              Testers who report confirmed, reproducible issues may
               qualify. Current targets are 0.05 ZEC for minor confirmed bugs and 0.5 ZEC for
               critical confirmed bugs, typically to the first valid report.
             </s>{" "}

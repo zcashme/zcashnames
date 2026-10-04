@@ -34,7 +34,6 @@ import {
   setStageCookie,
   setTesterCookie,
 } from "./gate";
-import { cookieOptions } from "@/lib/cookie";
 
 const REFUND_BUCKET = "beta-refund-attachments";
 const FEEDBACK_PROGRAM = "v2";
@@ -67,13 +66,6 @@ export async function verifyBetaPassword(
   }
 
   return { ok: false };
-}
-
-export async function signOutBetaTester(): Promise<{ ok: true }> {
-  const store = await cookies();
-  store.set(BETA_COOKIE_NAME, "", cookieOptions(0));
-  store.set(BETA_STAGE_COOKIE_NAME, "", cookieOptions(0));
-  return { ok: true };
 }
 
 export async function switchToNetwork(network: Network): Promise<void> {
