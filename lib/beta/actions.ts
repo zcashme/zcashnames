@@ -364,19 +364,6 @@ export async function getCurrentBetaRefundDefaults(): Promise<BetaRefundDefaults
 
 // ---------------------------------------------------------------------------
 
-export interface FeedbackPayload {
-  severity: "high" | "low" | "none";
-  experienceRating?: number | null;
-  wallet: string;
-  network: "testnet" | "mainnet";
-  steps: string;
-  expected: string;
-  actual: string;
-  txid?: string;
-  notes?: string;
-  walletVariantId?: WalletVariantId | null;
-}
-
 const MAX_FIELD_LEN = 4000;
 const MAX_REFUND_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 
