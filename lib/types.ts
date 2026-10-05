@@ -205,6 +205,8 @@ export interface Registration {
   lastAction: string;
   pubkey: string | null;
   listing: Listing | null;
+  /** Name Note committed expiry: "none" or a Unix timestamp string (testnet). */
+  expiresAt?: string;
 }
 
 export interface ZnsEvent {
@@ -244,6 +246,10 @@ export type ResolveName =
       registration: {
         name: string; address: string; txid: string; height: number; nonce: number;
         pubkey?: string | null;
+        /** "claim" | "update" | "release" (Name Note verb; testnet). */
+        lastAction?: string;
+        /** Name Note committed expiry: "none" or a Unix timestamp string (testnet). */
+        expiresAt?: string;
       };
     }
   | {
@@ -252,6 +258,8 @@ export type ResolveName =
       registration: {
         name: string; address: string; txid: string; height: number; nonce: number;
         pubkey?: string | null;
+        lastAction?: string;
+        expiresAt?: string;
       };
       listingPrice: { zats: number; zec: number };
       payTaddr: string;

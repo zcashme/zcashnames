@@ -1,6 +1,9 @@
 import type { Action, Network } from "@/lib/types";
 import { ACTIONS } from "@/lib/types";
 
+/** Verbs that exist in the Name Note protocol (testnet explorer). */
+export const NOTE_ACTIONS: Action[] = ["CLAIM", "UPDATE", "RELEASE"];
+
 export type ExplorerTab = "all" | "registered" | "forsale" | Action;
 export type ExplorerSortKey = "action" | "name" | "status" | "price" | "block";
 export type ExplorerSortDirection = "asc" | "desc";
@@ -10,11 +13,19 @@ export const DEFAULT_PAGE_SIZE = 25;
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 export const EXPLORER_CACHE_LIMIT = 25;
 
-const ALL_TABS: ExplorerTab[] = ["all", "registered", "forsale", ...ACTIONS];
+/** Tab set per network: testnet has no marketplace. */
+export function allTabsFor(network: Network): ExplorerTab[] {
+  if (network === "testnet") return ["all", "registered", ...NOTE_ACTIONS];
+  return ["all", "registered", "forsale", ...ACTIONS];
+}
 
-export function parseExplorerTab(tab: string | undefined): ExplorerTab {
+export function parseExplorerTab(
+  tab: string | undefined,
+  network: Network = "mainnet",
+): ExplorerTab {
   if (!tab) return "all";
-  return ALL_TABS.includes(tab as ExplorerTab) ? (tab as ExplorerTab) : "all";
+  const allowed = allTabsFor(network);
+  return allowed.includes(tab as ExplorerTab) ? (tab as ExplorerTab) : "all";
 }
 
 export function parseExplorerNetwork(env: string | null | undefined): Network {
