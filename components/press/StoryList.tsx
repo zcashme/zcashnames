@@ -347,12 +347,12 @@ export function StoryList() {
 
   function toggle(id: string) {
     if (window.matchMedia(WIDE_QUERY).matches) {
-      showOnSide(activeId === id ? null : id);
+      const closing = activeId === id;
+      showOnSide(closing ? null : id);
+      setOpenIds(closing ? [] : [id]);
       return;
     }
-    setOpenIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    );
+    setOpenIds((current) => (current.includes(id) ? [] : [id]));
   }
 
   const shown = POINTS.find((point) => point.id === shownId);

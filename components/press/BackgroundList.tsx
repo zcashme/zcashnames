@@ -117,19 +117,17 @@ const ROWS: { id: string; title: string; body?: ReactNode }[] = [
 ];
 
 export function BackgroundList() {
-  const [openIds, setOpenIds] = useState<string[]>(ROWS.map((row) => row.id));
+  const [openId, setOpenId] = useState<string | null>(ROWS[0]?.id ?? null);
 
   function toggle(id: string) {
-    setOpenIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    );
+    setOpenId((current) => (current === id ? null : id));
   }
 
   return (
     <div className="-mx-5 sm:-mx-6">
       <ol>
         {ROWS.map((row, index) => {
-          const open = openIds.includes(row.id);
+          const open = openId === row.id;
           const panelId = `background-${row.id}`;
           return (
             <li
