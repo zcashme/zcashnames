@@ -27,7 +27,7 @@ import CopyIconButton from "@/components/CopyIconButton";
 import { reservedReferralSpotPhrase } from "@/lib/waitlist/referral-spots";
 
 const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
-const RESERVED_CHART_COLOR = "var(--color-accent-interactive)";
+const RESERVED_CHART_COLOR = "var(--leaders-area-reserved)";
 const PERIOD_COLUMN_STYLE = { width: "8.75rem", minWidth: "8.75rem" } as const;
 const PERIOD_HEADER_STYLE = {
   ...PERIOD_COLUMN_STYLE,

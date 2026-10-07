@@ -124,6 +124,12 @@ export const OG_VARIANTS: Record<string, Omit<OgRenderOptions, "pillText"> & { p
     pillText: "Brand Kit",
     ...PILL_ON_LIGHT_OR_DARK,
   },
+  press: {
+    backgroundImage: BG.light,
+    overlay: LIGHT_OVERLAY,
+    pillText: "Press",
+    ...PILL_ON_LIGHT_OR_DARK,
+  },
   indexers: {
     backgroundImage: BG.light,
     overlay: LIGHT_COOL_OVERLAY,

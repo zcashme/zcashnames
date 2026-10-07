@@ -148,6 +148,7 @@
   --leaders-area-referred: #F4B728;
   --leaders-area-non-referred: #3b82f6;
   --leaders-area-rewards: #22c55e;
+  --leaders-area-reserved: #a855f7;
   --leaders-rank-gold: linear-gradient(135deg, #F4B728, #ffe08b);
   --leaders-rank-silver: linear-gradient(135deg, #94a3b8, #cbd5e1);
   --leaders-rank-bronze: linear-gradient(135deg, #cd7f32, #e6a55a);
@@ -378,6 +379,7 @@ html:not([data-theme]),
   --leaders-area-referred: #F4B728;
   --leaders-area-non-referred: #3b82f6;
   --leaders-area-rewards: #22c55e;
+  --leaders-area-reserved: #a855f7;
   --leaders-rank-gold: linear-gradient(135deg, #F4B728, #ffe08b);
   --leaders-rank-silver: linear-gradient(135deg, #94a3b8, #cbd5e1);
   --leaders-rank-bronze: linear-gradient(135deg, #cd7f32, #e6a55a);
@@ -565,6 +567,7 @@ html:not([data-theme]),
   --leaders-area-referred: #F4B728;
   --leaders-area-non-referred: #3b82f6;
   --leaders-area-rewards: #22c55e;
+  --leaders-area-reserved: #a855f7;
   --leaders-rank-gold: linear-gradient(135deg, var(--mono-3), var(--mono-2));
   --leaders-rank-silver: linear-gradient(135deg, var(--mono-2), var(--mono-1));
   --leaders-rank-bronze: linear-gradient(135deg, var(--mono-2), var(--mono-1));

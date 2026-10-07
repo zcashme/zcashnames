@@ -274,7 +274,7 @@ function PhoneZodl({ mode }: { mode: string | null }) {
       <div style={{ margin: "16px 20px 10px" }}>
         <div style={{ fontSize: 11, color: "#888", marginBottom: 5, textTransform: "uppercase", letterSpacing: 0.5 }}>To</div>
         <div style={{ background: "#2c2c2e", borderRadius: 12, padding: "12px 14px", border: "1px solid rgba(91,55,245,0.4)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 14, color: "#fff" }}>{applySuffix("zooko.zcash", mode)}</span>
+          <span style={{ fontSize: 14, color: "#fff" }}>{applySuffix("zooko.zec", mode)}</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
         </div>
       </div>
@@ -303,7 +303,7 @@ function PhoneCakeWallet({ mode }: { mode: string | null }) {
       <div style={{ margin: "0 20px 10px" }}>
         <div style={{ fontSize: 11, color: "#7a90b0", marginBottom: 5, textTransform: "uppercase", letterSpacing: 0.5 }}>Recipient</div>
         <div style={{ background: "rgba(255,255,255,0.07)", borderRadius: 12, padding: "12px 14px", border: "1px solid rgba(0,184,250,0.3)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 14, color: "#fff" }}>{applySuffix("satoshi.zcash", mode)}</span>
+          <span style={{ fontSize: 14, color: "#fff" }}>{applySuffix("satoshi.zec", mode)}</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a90b0" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
         </div>
       </div>
@@ -397,11 +397,11 @@ function PhoneAddressBook({ mode }: { mode: string | null }) {
 
 function PhoneMessages({ mode }: { mode: string | null }) {
   const messages: { sender: string; text: string; time: string; outgoing: boolean; compact?: boolean }[] = [
-    { sender: applySuffix("satoshi.zcash", mode), text: "Hey, just sent 2 ZEC your way", time: "Mar 24, 10:22", outgoing: true },
-    { sender: applySuffix("hal.zcash", mode), text: "Got it, thanks! What was it for?", time: "Mar 24, 10:23", outgoing: false },
-    { sender: applySuffix("satoshi.zcash", mode), text: "For the server costs last month", time: "Mar 24, 10:24", outgoing: true },
-    { sender: applySuffix("hal.zcash", mode), text: "Perfect, appreciate it", time: "Mar 24, 10:25", outgoing: false, compact: true },
-    { sender: applySuffix("satoshi.zcash", mode), text: "Anytime", time: "Mar 24, 10:26", outgoing: true, compact: true },
+    { sender: applySuffix("satoshi.zec", mode), text: "Hey, just sent 2 ZEC your way", time: "Mar 24, 10:22", outgoing: true },
+    { sender: applySuffix("hal.zec", mode), text: "Got it, thanks! What was it for?", time: "Mar 24, 10:23", outgoing: false },
+    { sender: applySuffix("satoshi.zec", mode), text: "For the server costs last month", time: "Mar 24, 10:24", outgoing: true },
+    { sender: applySuffix("hal.zec", mode), text: "Perfect, appreciate it", time: "Mar 24, 10:25", outgoing: false, compact: true },
+    { sender: applySuffix("satoshi.zec", mode), text: "Anytime", time: "Mar 24, 10:26", outgoing: true, compact: true },
   ];
 
   return (
@@ -747,4 +747,96 @@ export default function PhoneStage({ embedded = false, phoneSuffixMode = null }:
   }
 
   return <section className="phone-stage w-full pt-8 pb-20 md:pt-2 md:-mt-4 overflow-visible relative z-20">{carouselContent}</section>;
+}
+
+const SOLO_PHONE_ADVANCE_MS = 5200;
+
+/** One landing-page phone at a time. Used by the press hero, left of the copy. */
+export function PhoneSoloCarousel({ className = "" }: { className?: string }) {
+  const phones = [
+    { key: "zodl", label: "Send with a Zcash name", node: <PhoneZodl mode={null} /> },
+    { key: "address-book", label: "Address book", node: <PhoneAddressBook mode={null} /> },
+    { key: "messages", label: "Messages", node: <PhoneMessages mode={null} /> },
+  ];
+  const [index, setIndex] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const apply = () => setReduceMotion(media.matches);
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion || paused) return;
+    const id = window.setInterval(() => {
+      setIndex((current) => (current + 1) % phones.length);
+    }, SOLO_PHONE_ADVANCE_MS);
+    return () => window.clearInterval(id);
+  }, [reduceMotion, paused, phones.length, index]);
+
+  const active = phones[index];
+
+  return (
+    <div
+      className={`flex shrink-0 flex-col items-center ${className}`}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div
+        className="relative h-[248px] w-[120px] overflow-hidden rounded-[22px] sm:h-[364px] sm:w-[176px] sm:rounded-[32px] lg:h-[447px] lg:w-[216px] lg:rounded-[39px]"
+        role="group"
+        aria-roledescription="carousel"
+        aria-label="Zcash Names on a phone"
+      >
+        {phones.map((phone, phoneIndex) => {
+          const showing = phoneIndex === index;
+          return (
+            <div
+              key={phone.key}
+              className="pointer-events-none absolute left-0 top-0 origin-top-left scale-[0.4166667] sm:scale-[0.611111] lg:scale-75"
+              style={{
+                width: 288,
+                height: 596,
+                opacity: showing ? 1 : 0,
+                transition: reduceMotion ? "none" : "opacity 420ms ease",
+              }}
+              aria-hidden="true"
+            >
+              {phone.node}
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          className="absolute inset-0 z-10 cursor-pointer border-0 bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-interactive)]"
+          aria-label={`Next screen. Showing ${active.label}`}
+          onClick={() => setIndex((current) => (current + 1) % phones.length)}
+        />
+      </div>
+      <div className="relative z-20 mt-3 flex items-center justify-center gap-1.5" role="tablist" aria-label="Phone screens">
+        {phones.map((phone, phoneIndex) => {
+          const selected = phoneIndex === index;
+          return (
+            <button
+              key={phone.key}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              aria-label={phone.label}
+              onClick={() => setIndex(phoneIndex)}
+              className="h-1.5 rounded-full transition-all duration-300"
+              style={{
+                width: selected ? 18 : 6,
+                background: selected ? "var(--phone-stage-indicator-active)" : "var(--phone-stage-indicator-inactive)",
+              }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
 }

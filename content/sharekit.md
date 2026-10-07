@@ -56,13 +56,9 @@ Shows how Zcash Names combines simpler usability with shielded-address privacy.
 
 ## Post 1
 
-Most crypto name services aren't private. Actually, none of them are. 
+The name can be public. Shielded payments to that address stay private.
 
-Look one up on and you can see everything transaction tied to it.
-
-That's a disaster waiting to happen.
-
-@ZcashNames points to shielded addresses, so the name is simple but activity stays hidden.
+@ZcashNames points to shielded addresses, so the name is simple and the payment history stays shielded.
 
 If that matters to you: [your link]
 
@@ -156,3 +152,45 @@ Get your @ZcashName before it's taken:
 [your link]
 
 You'll get your own referral link to earn rewards too.
+
+---
+
+# Press
+
+Posts that match the press page. Use them when the story is the launch, the privacy property, or the waitlist.
+
+## Zcash now has names
+
+Zcash now has names.
+
+alice.zcash, instead of a long address.
+
+Early Access opens 15 October 2026, 12:00 PM Eastern.
+
+[your link]
+
+## Readable, payments stay shielded
+
+The name can be public. Shielded payments to that address stay private.
+
+Human-readable does not have to mean financially transparent.
+
+[your link]
+
+## No general-purpose smart contracts
+
+Zcash has no general-purpose smart contracts.
+
+The naming rules run in the Mint. Zcash keeps the ordered record. Resolvers rebuild the namespace from that record.
+
+[your link]
+
+## Waitlist and reservations
+
+10,485 names on the waitlist and 809 paid reservations, as of 29 Sep 2026.
+
+A reservation is a 0.005 ZEC queue payment for that name. It is queue position and an Early Access code. It is not ownership.
+
+Counts move. The press page has the live figures.
+
+[your link]

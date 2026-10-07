@@ -19,33 +19,39 @@ End: 2026-05-08
 
 --- II. Test
 
-# Beta v1  [`Apply Now`](https://zcashme.com/beta/apply)
-Beta testers can try names in supported wallets, start a name collection, and sell names in a dedicated marketplace.
+# Beta v1  `Complete`
+Beta testers can try names in supported wallets and start a name collection.
 Start: 2026-05-18
 End: 2026-06-09
-- Marketplace can transfer names through non-custodial transactions.
-- The personal dashboard shows all names associated with an address. 
+- The personal dashboard shows all names associated with an address.
 - Mempool feedback improves transaction transparency.
 
-# Beta v2  `TBA`
-Beta testers can unlock protected names, claim names with emojis, and test how renewal and expiry rules respond to activity.
+# Beta v2  `Complete`
+Beta testers can unlock protected names and test how renewal and expiry rules respond to activity.
 Start: 2026-06-19
 End: 2026-06-30
 - Reserved names can be claimed with an unlock code.
-- Names containing emojis can be claimed.
 - Zcash Names is integrated with ZcashMe.
 - Name expiration and auto-renewal rules respond to user activity.
 
-# Beta v3  `TBA`
-Beta users can create subdomains, participate in auctions, and access ZcashMe profiles. 
+# Beta v3  `Complete`
+Beta users can buy and sell names and access ZcashMe profiles.
 Start: 2026-07-06
 End: 2026-07-20
-- Subdomains allow multiple addresses under one name.
-- Auction pricing introduced.
+- Users can buy names.
+- Users can sell names.
 - The SDK can verify name records using Merkle proofs.
 - Release notes and status page are provided.
 
 --- III. Launch
+
+# Security Review  `In progress`
+The spec sheet and whitepaper are published, the bug bounty is open, and Strahn Cryptography is performing an external audit.
+Start: 2026-07-21
+End: 2026-10-14
+- Spec sheet and whitepaper: https://github.com/zcashme/zns-whitepaper
+- Bug bounty: https://www.zcashnames.com/security
+- Enlisted Strahn Cryptography to perform an external audit.
 
 # Early Access  `TBA`
 Waitlisted users can claim names in ordered waves, with referral activity helping users move up the line.

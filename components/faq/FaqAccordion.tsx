@@ -9,11 +9,13 @@ export function FaqAccordion({
   openId,
   onToggle,
   variant = "plain",
+  maxAnswerPx = 1600,
 }: {
   items: readonly FaqItem[];
   openId: string | null;
   onToggle: (id: string) => void;
   variant?: FaqAccordionVariant;
+  maxAnswerPx?: number;
 }) {
   if (variant === "card" || variant === "separated") {
     return (
@@ -32,6 +34,7 @@ export function FaqAccordion({
               isLast={isLast}
               variant={variant}
               onToggle={onToggle}
+              maxAnswerPx={maxAnswerPx}
             />
           );
         })}
@@ -51,6 +54,7 @@ export function FaqAccordion({
             isLast={false}
             variant="plain"
             onToggle={onToggle}
+            maxAnswerPx={maxAnswerPx}
           />
         );
       })}
@@ -64,17 +68,21 @@ function FaqAccordionItem({
   isLast,
   variant,
   onToggle,
+  maxAnswerPx,
 }: {
   item: FaqItem;
   isOpen: boolean;
   isLast: boolean;
   variant: FaqAccordionVariant;
   onToggle: (id: string) => void;
+  maxAnswerPx: number;
 }) {
   const answerClassName =
-    variant === "card" || variant === "separated"
-      ? "px-6 pb-5 type-body [&_a]:underline [&_code]:rounded [&_code]:px-1 [&_li]:mt-1.5 [&_p+p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5"
-      : "pb-5 type-body [&_a]:underline [&_code]:rounded [&_code]:px-1 [&_li]:mt-1.5 [&_p+p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5";
+    variant === "card"
+      ? "px-6 py-5 type-body [&_a]:underline [&_code]:rounded [&_code]:px-1 [&_li]:mt-1.5 [&_p+p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5"
+      : variant === "separated"
+        ? "px-6 pb-5 type-body [&_a]:underline [&_code]:rounded [&_code]:px-1 [&_li]:mt-1.5 [&_p+p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5"
+        : "pb-5 type-body [&_a]:underline [&_code]:rounded [&_code]:px-1 [&_li]:mt-1.5 [&_p+p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5";
 
   return (
     <div
@@ -134,7 +142,7 @@ function FaqAccordionItem({
         id={`${item.id}-answer`}
         className="overflow-hidden transition-all duration-300 ease-in-out"
         style={{
-          maxHeight: isOpen ? "1600px" : "0px",
+          maxHeight: isOpen ? `${maxAnswerPx}px` : "0px",
           opacity: isOpen ? 1 : 0,
         }}
       >

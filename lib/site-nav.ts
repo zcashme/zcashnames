@@ -51,28 +51,12 @@ export const NAV_BETA_CHILDREN: SiteNavLink[] = [
 /** Full footer sitemap sections (href is unique per top-level entry). */
 export const SITEMAP_SECTIONS: SiteNavLink[] = [
   {
-    label: "Home",
-    href: "/",
-    children: [
-      { label: "Get Names", href: "/#names" },
-      { label: "Get yours", href: "/#how-it-works" },
-      { label: "FAQs", href: "/#faq" },
-      { label: "Newsletter", href: "/#newsletter" },
-    ],
-  },
-  {
-    label: "Waitlist",
-    href: "/waitlist",
-    children: [
-      { label: "Waitlist view", href: "/waitlist/view" },
-      { label: "Reserve", href: "/reserve" },
-    ],
-  },
-  {
     label: "Names",
     href: "/explorer",
     children: [
-      { label: "Explorer", href: "/explorer" },
+      { label: "View Waitlist", href: "/waitlist/view" },
+      { label: "Reserve a name", href: "/reserve" },
+      { label: "Beta Explorer", href: "/explorer" },
       { label: "Protected names", href: "/protected" },
       { label: "Suggest a name", href: "/protected/suggest" },
       { label: "Request a name", href: "/protected/request" },
@@ -111,6 +95,7 @@ export const SITEMAP_SECTIONS: SiteNavLink[] = [
     children: [
       { label: "Blogs", href: "/blogs" },
       { label: "Careers", href: "/careers" },
+      { label: "Press", href: "/press" },
       { label: "Security competition", href: "/security" },
       { label: "Brand Kit", href: "/brandkit" },
       { label: "Roadmap", href: "/roadmap" },

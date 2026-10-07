@@ -7,6 +7,7 @@
  */
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
+import Link from "next/link";
 import HeroShareButton from "@/components/HeroShareButton";
 import SiteRouteTitle from "@/components/SiteRouteTitle";
 
@@ -210,6 +211,11 @@ export default async function BrandKitPage({
               Brand{" "}
               <span style={{ color: "var(--color-accent-interactive)" }}>Kit</span>
             </h1>
+            <p className="mt-4 text-sm" style={{ color: "var(--fg-body)" }}>
+              <Link href="/press" className="font-semibold" style={{ color: "var(--color-accent-interactive)" }}>
+                Press page
+              </Link>
+            </p>
             <div className="mt-8 rounded-2xl border border-border-muted bg-transparent p-4 text-center sm:mt-9">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">
                 Typography

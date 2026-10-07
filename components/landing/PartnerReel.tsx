@@ -32,7 +32,6 @@ const PARTNER_ICON_LAYOUT_BY_ID: Partial<Record<string, PartnerIconLayout>> = {
   edge: { scale: 0.70, y: 1 },
   cake: { scale: 0.98, x: 1, y: 1 },
   unstoppable: { scale: 0.68 },
-  zipher: { scale: 1.25, y: -1 },
   zingo: { scale: 1.2, x: 2, y: 1 },
   noir: { scale: 1.2 },
   cipherscan: { scale: 0.65 },
@@ -115,12 +114,19 @@ function isPartnerWithAppIcon(brand: WalletBrand): brand is WalletBrand & { appI
   return brand.partner && !!brand.appIcon;
 }
 
-function toPartnerReelItem(brand: WalletBrand & { appIcon: WalletBrandAppIcon }): PartnerReelItem {
+function partnerWebsite(brand: WalletBrand): string | undefined {
+  return brand.websiteUrl;
+}
+
+function toPartnerReelItem(
+  brand: WalletBrand & { appIcon: WalletBrandAppIcon },
+  linkToWebsite: boolean,
+): PartnerReelItem {
   return {
     id: brand.slug,
     displayName: brand.displayName.replace(/\s+Wallet$/, ""),
     iconSrc: brand.appIcon.src,
-    href: `/beta/${brand.slug}`,
+    href: linkToWebsite ? partnerWebsite(brand) ?? `/beta/${brand.slug}` : `/beta/${brand.slug}`,
   };
 }
 
@@ -442,16 +448,35 @@ function MarqueeRow({
   );
 }
 
-export default function PartnerReel({ compactTopSpacing = false }: { compactTopSpacing?: boolean }) {
+export default function PartnerReel({
+  compactTopSpacing = false,
+  embedded = false,
+}: {
+  compactTopSpacing?: boolean;
+  /** Logo reel only, for a section that already has its own frame. */
+  embedded?: boolean;
+}) {
   const partners = useMemo(
     () =>
-      [...WALLET_BRANDS.filter(isPartnerWithAppIcon).map(toPartnerReelItem), ...EXTRA_PARTNERS].sort(
-        comparePartnerReelItems,
-      ),
-    [],
+      [
+        ...WALLET_BRANDS.filter(isPartnerWithAppIcon)
+          .filter((brand) => brand.slug !== "zipher")
+          .filter((brand) => !(embedded && brand.slug === "zingo"))
+          .map((brand) => toPartnerReelItem(brand, embedded)),
+        ...EXTRA_PARTNERS,
+      ].sort(comparePartnerReelItems),
+    [embedded],
   );
 
   if (partners.length === 0) return null;
+
+  if (embedded) {
+    return (
+      <div className="w-full">
+        <MarqueeRow items={partners} direction="left" speed={20} />
+      </div>
+    );
+  }
 
   return (
     <section

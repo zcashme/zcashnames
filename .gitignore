@@ -71,6 +71,7 @@ sql/*
 !sql/2026-10-02-security-competition.sql
 !sql/2026-10-03-security-ticket-derived-ids.sql
 docs/security-competition.md
+docs/press-docs-differ.md
 !tests/
 tests/*
 !tests/reservation-refunds.spec.ts

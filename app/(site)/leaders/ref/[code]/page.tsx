@@ -49,7 +49,7 @@ import { usePwaInstall } from "@/components/hooks/usePwaInstall";
 const DIRECT_CHART_COLOR = "var(--leaders-area-referred)";
 const INDIRECT_CHART_COLOR = "var(--leaders-area-non-referred)";
 const REWARDS_CHART_COLOR = "var(--leaders-area-rewards)";
-const RESERVED_CHART_COLOR = "var(--color-accent-interactive)";
+const RESERVED_CHART_COLOR = "var(--leaders-area-reserved)";
 type AxisSide = "left" | "right";
 
 interface EndpointGuideLine {

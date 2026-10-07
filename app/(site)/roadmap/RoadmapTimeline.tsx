@@ -31,6 +31,30 @@ function formatRange(startIso: string, endIso: string): string {
   return `${rangeFormatter.format(start)} - ${rangeFormatter.format(end)}`;
 }
 
+function TaskText({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/[^\s)]+)/g);
+  return (
+    <span>
+      {parts.map((part, index) =>
+        part.startsWith("http") ? (
+          <a
+            key={index}
+            href={part}
+            className="underline"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "var(--color-accent-interactive)" }}
+          >
+            {part.replace(/^https?:\/\/(?:www\.)?/, "")}
+          </a>
+        ) : (
+          <span key={index}>{part}</span>
+        ),
+      )}
+    </span>
+  );
+}
+
 function periodsStart(periods: RoadmapPeriod[]): Date {
   let earliest = parseIsoDateUtc(periods[0].startDate);
 
@@ -444,7 +468,7 @@ function ListRoadmapCard({
                   className="flex items-start gap-3 bg-transparent py-1 text-sm leading-6 text-fg-body"
                 >
                   <span className={taskMarkerClassName} aria-hidden="true" />
-                  <span>{task}</span>
+                  <TaskText text={task} />
                 </li>
               ))}
             </ul>
