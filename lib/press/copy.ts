@@ -202,7 +202,6 @@ function pickQuestions(ids: readonly string[]): Qa[] {
   });
 }
 
-export const HOW_MECHANISM = pickQuestions(["five-minutes"]);
 export const HOW_GETTING_A_NAME = pickQuestions([
   "early-access",
   "referral-rewards",
@@ -211,7 +210,7 @@ export const HOW_GETTING_A_NAME = pickQuestions([
 ]);
 export const HOW_NAME_IN_USE = pickQuestions(["names-and-addresses", "what-stays-private"]);
 
-export const QUESTIONS_ON_CHAIN = pickQuestions(["written"]);
+export const HOW_DESIGN = pickQuestions(["written", "five-minutes"]);
 export const QUESTIONS_WHO_CAN_CHANGE = pickQuestions([
   "who-controls",
   "admin-key",
@@ -220,7 +219,6 @@ export const QUESTIONS_WHO_CAN_CHANGE = pickQuestions([
   "disappears",
 ]);
 export const QUESTIONS_TRUST = pickQuestions(["resolver", "trust-required", "sdk", "other-chain"]);
-export const QUESTIONS_IRONWOOD = pickQuestions(["pool", "orchard-ironwood"]);
 
 export const WALLETS = [
   { name: "Cake", href: "https://cakewallet.com/", icon: "/wallets/cake/app-icon.png" },

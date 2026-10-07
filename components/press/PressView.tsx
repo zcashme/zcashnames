@@ -8,12 +8,10 @@ import { FaqAccordion } from "@/components/faq/FaqAccordion";
 import type { FaqItem } from "@/lib/faq";
 import {
   APPS,
+  HOW_DESIGN,
   HOW_GETTING_A_NAME,
-  HOW_MECHANISM,
   HOW_NAME_IN_USE,
   LAUNCH_PRICES,
-  QUESTIONS_IRONWOOD,
-  QUESTIONS_ON_CHAIN,
   QUESTIONS_TRUST,
   QUESTIONS_WHO_CAN_CHANGE,
   STORY,
@@ -34,7 +32,6 @@ const JUMPS = [
   ["story", "Story"],
   ["background", "Background"],
   ["how", "How it works"],
-  ["questions", "Questions"],
   ["ens", "ENS versus ZNS"],
   ["integrations", "Integrations"],
   ["statistics", "Statistics"],
@@ -458,7 +455,6 @@ export default function PressView({
         </Section>
 
         <Section id="how" title="How it works">
-          <QuestionGroup title="The mechanism" items={toFaqItems(HOW_MECHANISM)} openId={openId} onToggle={toggleQuestion} />
           <QuestionGroup
             title="Getting a name"
             items={[...toFaqItems(HOW_GETTING_A_NAME), pricingTableItem()]}
@@ -466,13 +462,7 @@ export default function PressView({
             onToggle={toggleQuestion}
           />
           <QuestionGroup title="A name in use" items={toFaqItems(HOW_NAME_IN_USE)} openId={openId} onToggle={toggleQuestion} />
-        </Section>
-
-        <Section id="questions" title="Questions">
-          <p className="text-sm" style={{ color: "var(--fg-muted)" }}>
-            Launch-design answers from the press brief.
-          </p>
-          <QuestionGroup title="On the chain" items={toFaqItems(QUESTIONS_ON_CHAIN)} openId={openId} onToggle={toggleQuestion} />
+          <QuestionGroup title="Design" items={toFaqItems(HOW_DESIGN)} openId={openId} onToggle={toggleQuestion} />
           <QuestionGroup
             title="Who can change a name"
             items={toFaqItems(QUESTIONS_WHO_CAN_CHANGE)}
@@ -485,7 +475,6 @@ export default function PressView({
             openId={openId}
             onToggle={toggleQuestion}
           />
-          <QuestionGroup title="Ironwood" items={toFaqItems(QUESTIONS_IRONWOOD)} openId={openId} onToggle={toggleQuestion} />
         </Section>
 
         <Section id="ens" title="ENS versus ZNS">
