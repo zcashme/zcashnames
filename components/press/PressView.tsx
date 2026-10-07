@@ -384,9 +384,9 @@ export default function PressView({
               Personal names for shielded addresses.
             </p>
           </div>
-          <div className="flex items-start gap-4 sm:gap-10">
+          <div className="flex items-start justify-center gap-4 sm:justify-start sm:gap-10">
             <PhoneSoloCarousel className="sm:mt-1" />
-            <div className="min-w-0 flex-1 text-left">
+            <div className="w-fit max-w-[12rem] min-w-0 text-left sm:w-auto sm:max-w-none sm:flex-1">
               <div className="hidden max-w-2xl text-left sm:block">
                 <p className="text-3xl font-bold leading-tight" style={{ color: "var(--fg-heading)" }}>
                   Alice.zec
