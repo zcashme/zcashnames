@@ -358,7 +358,7 @@ export default function PressView({
   stats: PressStats;
   signupSeries: TimeSeriesPoint[];
 }) {
-  const [openId, setOpenId] = useState<string | null>("five-minutes");
+  const [openId, setOpenId] = useState<string | null>(null);
   const toggleQuestion = (id: string) => setOpenId((current) => (current === id ? null : id));
   const when = formatWhen(stats);
   const asOfLabel = heroAsOf(when);
