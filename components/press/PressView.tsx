@@ -577,10 +577,6 @@ export default function PressView({
               </Link>
               <InProgressPill />
               ,{" "}
-              <Link href="/docs/learn/pricing" className="underline" style={{ color: "var(--color-accent-interactive)" }}>
-                pricing
-              </Link>
-              ,{" "}
               <Link href="/roadmap" className="underline" style={{ color: "var(--color-accent-interactive)" }}>
                 roadmap
               </Link>
